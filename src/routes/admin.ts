@@ -5,7 +5,7 @@
  * applied globally in src/index.ts
  */
 import { Hono } from "hono";
-import type { AuthVariables, JWTPayload } from "../middleware/auth";
+import type { AuthVariables } from "../middleware/auth";
 import { Invite } from "../models/Invite";
 import { User } from "../models/User";
 import { randomToken, hashTokenSha256 } from "../utils/crypto";
@@ -30,7 +30,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
     return c.json({ invites });
   })
   .post("/invites", inviteRateLimiter, async (c) => {
-    const payload = c.get("jwtPayload") as JWTPayload;
+    const payload = c.get("jwtPayload");
     const body = await c.req.json();
 
     const { email, role } = body;

@@ -1,5 +1,5 @@
 /**
- * JWT utilities using Hono's built-in JWT helpers
+ * JWT utilities
  */
 import { sign } from "hono/jwt";
 
@@ -25,8 +25,8 @@ const SECRET: string = JWT_SECRET || (() => {
  * - iat: Issued at - Standard JWT claim
  * - exp: Expiration - Standard JWT claim
  */
-export interface AccessTokenPayload {
-  sub: string;              // Standard "subject" claim (user ID)
+export type AccessTokenPayload = {
+  sub: string;
   email: string;
   role: "admin" | "operator";
   iat?: number;
@@ -54,7 +54,7 @@ export async function signAccessToken(
 
   return await sign(
     {
-      sub: payload.userId,  // Map userId to standard "sub" claim
+      sub: payload.userId,
       email: payload.email,
       role: payload.role,
       iat: now,

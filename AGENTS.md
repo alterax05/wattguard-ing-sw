@@ -80,20 +80,6 @@ This project is a Bun + React application using TailwindCSS and Hono. We use **V
   export type AppType = typeof app
   ```
   
-- **Middleware Application:** 
-  - Apply **global middleware** in `src/index.ts` for routes that share common requirements (e.g., authentication)
-  - Use **local middleware** in route files only when specific to that route
-  - **MUST use method chaining** when applying middleware:
-    ```ts
-    // ✅ CORRECT: Chained middleware
-    app.use("/api/admin/*", jwt({ secret }), loadUserDoc(), requireRole("admin"))
-    
-    // ✅ CORRECT: Inline chained middleware in route definition
-    const app = new Hono()
-      .use("*", someMiddleware)
-      .get("/route", handler)
-    ```
-  
 - **Authentication & JWT:**
   - **MUST use Hono's built-in JWT middleware** (`hono/jwt`) instead of custom implementations
   - JWT middleware automatically supports **both** `Authorization` header and cookie fallback:
@@ -113,18 +99,6 @@ This project is a Bun + React application using TailwindCSS and Hono. We use **V
     - `exp` for expiration
     - Custom claims (like `email`, `role`) are allowed
   - Access JWT payload in routes via `c.get("jwtPayload")`
-  
-- **Context Variables:**
-  - Extend Hono's built-in types (e.g., `JwtVariables`) when adding custom context:
-    ```ts
-    import type { JwtVariables } from "hono/jwt"
-    
-    type AuthVariables = JwtVariables & {
-      userDoc: IUser
-    }
-    
-    const app = new Hono<{ Variables: AuthVariables }>()
-    ```
   
 - **API Response:** Use `c.json({ ... })` for API endpoints.
 

@@ -5,7 +5,7 @@
  */
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
-import type { AuthVariables, JWTPayload } from "../middleware/auth";
+import type { AuthVariables } from "../middleware/auth";
 import { sendTestEmail } from "../email/mailer";
 
 /**
@@ -15,8 +15,7 @@ import { sendTestEmail } from "../email/mailer";
  */
 const app = new Hono<{ Variables: AuthVariables }>()
   .get("/me", async (c) => {
-    // JWT authentication and user loading applied globally in index.ts
-    const payload = c.get("jwtPayload") as JWTPayload;
+    const payload = c.get("jwtPayload");
     const userDoc = c.get("userDoc");
 
     return c.json({
@@ -38,9 +37,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     return c.json({ success: true });
   })
   .post("/admin/test-email", async (c) => {
-    // JWT authentication, user loading, and admin role check applied globally in index.ts
     try {
-      const body = await c.req.json().catch(() => ({}));
+      const body = await c.req.json();
       const to = body.to;
 
       await sendTestEmail(to);

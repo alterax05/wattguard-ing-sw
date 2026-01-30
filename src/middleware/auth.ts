@@ -2,7 +2,7 @@
  * Authentication middleware for Hono
  * Uses Hono's built-in JWT middleware with custom user loading and role checking
  */
-import type { Context, Next, MiddlewareHandler } from "hono";
+import { createMiddleware } from "hono/factory";
 import type { JwtVariables } from "hono/jwt";
 import { User, type IUser } from "../models/User";
 import type { AccessTokenPayload } from "../auth/jwt";
@@ -10,7 +10,7 @@ import type { AccessTokenPayload } from "../auth/jwt";
 /**
  * Extend Hono's JwtVariables with our custom userDoc
  */
-export type AuthVariables = JwtVariables & {
+export type AuthVariables = JwtVariables<AccessTokenPayload> & {
   userDoc: IUser;
 };
 
@@ -29,30 +29,30 @@ export type JWTPayload = AccessTokenPayload;
  * - Checks if the user is disabled
  * - Attaches userDoc to context for downstream use
  */
-export function loadUserDoc(): MiddlewareHandler {
-  return async (c: Context, next: Next) => {
-    const payload = c.get("jwtPayload") as JWTPayload;
+export const loadUserDoc = () => createMiddleware<{
+  Variables: AuthVariables;
+}>(async (c, next) => {
+  const payload = c.get("jwtPayload");
 
-    if (!payload || !payload.sub) {
-      return c.json({ error: "Unauthorized: Invalid token payload" }, 401);
-    }
+  if (!payload || !payload.sub) {
+    return c.json({ error: "Unauthorized: Invalid token payload" }, 401);
+  }
 
-    // Fetch user from DB to ensure still exists and not disabled
-    const userDoc = await User.findById(payload.sub);
-    if (!userDoc) {
-      return c.json({ error: "Unauthorized: User not found" }, 401);
-    }
+  // Fetch user from DB to ensure still exists and not disabled
+  const userDoc = await User.findById(payload.sub);
+  if (!userDoc) {
+    return c.json({ error: "Unauthorized: User not found" }, 401);
+  }
 
-    if (userDoc.isDisabled) {
-      return c.json({ error: "Forbidden: Account disabled" }, 403);
-    }
+  if (userDoc.isDisabled) {
+    return c.json({ error: "Forbidden: Account disabled" }, 403);
+  }
 
-    // Attach userDoc to context
-    c.set("userDoc", userDoc);
+  // Attach userDoc to context
+  c.set("userDoc", userDoc);
 
-    await next();
-  };
-}
+  await next();
+});
 
 /**
  * Middleware to require a specific role
@@ -60,9 +60,11 @@ export function loadUserDoc(): MiddlewareHandler {
  * 
  * @param roles - One or more roles that are allowed to access the route
  */
-export function requireRole(...roles: ("admin" | "operator")[]) {
-  return async (c: Context, next: Next) => {
-    const payload = c.get("jwtPayload") as JWTPayload | undefined;
+export const requireRole = (...roles: ("admin" | "operator")[]) => 
+  createMiddleware<{
+    Variables: JwtVariables<AccessTokenPayload>;
+  }>(async (c, next) => {
+    const payload = c.get("jwtPayload");
 
     if (!payload) {
       return c.json(
@@ -79,5 +81,4 @@ export function requireRole(...roles: ("admin" | "operator")[]) {
     }
 
     await next();
-  };
-}
+  });
