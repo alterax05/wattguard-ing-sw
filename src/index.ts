@@ -49,7 +49,29 @@ const app = new Hono()
     loadUserDoc(),
     requireRole("admin"),
   )
-  .get("/api/health",describeRoute({tags: ["Health"]}), (c) => c.json({ status: "ok" }))
+  .get(
+    "/api/health",
+    describeRoute({
+      tags: ["Health"],
+      responses: {
+        200: {
+          description: "Server is running correctly",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: { type: "string" },
+                },
+                required: ["status"],
+              },
+            },
+          },
+        },
+      },
+    }),
+    (c) => c.json({ status: "ok" }),
+  )
   .route("/api/invites", invites)
   .route("/api/auth", auth)
   .route("/api/auth/local", authLocal)
