@@ -2,7 +2,6 @@
  * Rate limiting middleware
  */
 import { rateLimiter } from "hono-rate-limiter";
-import type { JWTPayload } from "./auth";
 
 /**
  * Rate limiter for login attempts
@@ -45,7 +44,7 @@ export const inviteRateLimiter = rateLimiter({
   keyGenerator: (c) => {
     // Use userId from JWT payload if available, otherwise IP
     try {
-      const payload = c.get("jwtPayload" as never) as JWTPayload | undefined;
+      const payload = c.get("jwtPayload");
       return payload?.sub || c.req.header("x-forwarded-for") || "unknown";
     } catch {
       return c.req.header("x-forwarded-for") || "unknown";

@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"bun run --watch src/index.ts\"",
-    "dev:frontend": "vite",
-    "dev:backend": "bun run --watch src/index.ts",
+    "dev": "bunx --bun vite & bun --watch src/index.ts",
+    "dev:frontend": "bunx --bun vite",
+    "dev:backend": "bun --watch src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",
     "build": "vite build && bun run build.ts",
     "test": "bun test",
