@@ -305,6 +305,215 @@ describe("Authentication Integration Tests", () => {
     });
   });
 
+  describe("Validation Edge Cases", () => {
+    test("should normalize email to lowercase on login", async () => {
+      // Create user with lowercase email
+      await User.create({
+        email: "user@test.com",
+        role: "operator",
+        passwordHash: await Bun.password.hash("password123", {
+          algorithm: "bcrypt",
+          cost: 10,
+        }),
+      });
+
+      // Login with uppercase email
+      const res = await app.request("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "USER@TEST.COM",
+          password: "password123",
+        }),
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.user.email).toBe("user@test.com");
+    });
+
+    test("should normalize email with mixed case on login", async () => {
+      // Create user
+      await User.create({
+        email: "user@test.com",
+        role: "operator",
+        passwordHash: await Bun.password.hash("password123", {
+          algorithm: "bcrypt",
+          cost: 10,
+        }),
+      });
+
+      // Login with mixed case email
+      const res = await app.request("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "User@Test.COM",
+          password: "password123",
+        }),
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+    });
+
+    test("should reject invalid email format on login", async () => {
+      const res = await app.request("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "not-an-email",
+          password: "password123",
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      // Zod validation returns array of errors
+      expect(Array.isArray(data.error) ? JSON.stringify(data.error) : data.error).toContain("email");
+    });
+
+    test("should reject password shorter than 8 characters on setup", async () => {
+      // Create invite
+      const token = randomToken(32);
+      const tokenHash = hashTokenSha256(token);
+
+      const admin = await User.create({
+        email: "admin@test.com",
+        role: "admin",
+        passwordHash: await Bun.password.hash("admin123", {
+          algorithm: "bcrypt",
+          cost: 10,
+        }),
+      });
+
+      await Invite.create({
+        email: "user@test.com",
+        role: "operator",
+        tokenHash,
+        status: "pending",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdBy: admin._id,
+      });
+
+      // Try to setup with short password
+      const res = await app.request("/api/auth/local/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inviteToken: token,
+          password: "short",
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      // Zod validation returns array of errors or string
+      const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
+      expect(errorText).toMatch(/8|Password/);
+    });
+
+    test("should reject empty password field", async () => {
+      const res = await app.request("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "user@test.com",
+          password: "",
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBeTruthy();
+    });
+
+    test("should reject missing email field", async () => {
+      const res = await app.request("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: "password123",
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBeTruthy();
+    });
+
+    test("should reject missing password field", async () => {
+      const res = await app.request("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "user@test.com",
+        }),
+      });
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBeTruthy();
+    });
+
+    test("should reject malformed JSON request body", async () => {
+      const res = await app.request("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{ invalid json",
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    test("should normalize email on invite validation", async () => {
+      // Create invite
+      const token = randomToken(32);
+      const tokenHash = hashTokenSha256(token);
+
+      const admin = await User.create({
+        email: "admin@test.com",
+        role: "admin",
+        passwordHash: await Bun.password.hash("admin123", {
+          algorithm: "bcrypt",
+          cost: 10,
+        }),
+      });
+
+      await Invite.create({
+        email: "user@test.com",
+        role: "operator",
+        tokenHash,
+        status: "pending",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdBy: admin._id,
+      });
+
+      // Validate invite
+      const res = await app.request(`/api/invites/validate?token=${token}`);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.valid).toBe(true);
+      expect(data.email).toBe("user@test.com");
+    });
+
+    test("should reject missing token query parameter", async () => {
+      const res = await app.request("/api/invites/validate");
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBeTruthy();
+    });
+
+    test("should reject empty token query parameter", async () => {
+      const res = await app.request("/api/invites/validate?token=");
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBeTruthy();
+    });
+  });
+
   describe("Password Reset Flow", () => {
     test("should request password reset for existing user", async () => {
       // Create user
