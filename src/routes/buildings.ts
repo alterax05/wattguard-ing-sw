@@ -6,7 +6,7 @@ import { Building, type IBuilding } from "../models/Building";
 import { BuildingType, type IBuildingType } from "../models/BuildingType";
 import { Sensor } from "../models/Sensor";
 import { SensorReading, type ISensorReading } from "../models/SensorReading";
-import { logCreate, logUpdate, logDelete } from "../middleware/audit";
+
 import {
   SearchBuildingsQuerySchema,
   SearchBuildingsResponseSchema,
@@ -198,7 +198,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         status: "active",
       });
 
-      await logCreate("building", building._id, building.toObject(), userDoc._id);
+      
 
       // Populate buildingType for response
       await building.populate("buildingType", "name description");
@@ -380,8 +380,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Building not found" }, 404);
       }
 
-      // Store old state for audit log
-      const oldBuilding = building.toObject();
+      
 
       // Validate building type if being updated
       if (updates.buildingType) {
@@ -407,7 +406,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       await building.save();
 
-      await logUpdate("building", building._id, oldBuilding, building.toObject(), userDoc._id);
+      
 
       // Populate for response
       await building.populate("buildingType", "name description");
@@ -494,15 +493,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Building not found" }, 404);
       }
 
-      // Store for audit log
-      const buildingData = building.toObject();
+      
 
       // Cascade delete: first delete sensor readings, then sensors, then building
       await SensorReading.deleteMany({ "metadata.buildingId": new Types.ObjectId(id) });
       await Sensor.deleteMany({ buildingId: id });
       await Building.findByIdAndDelete(id);
 
-      await logDelete("building", building._id, buildingData, userDoc._id);
+      
 
       return c.json({
         success: true,

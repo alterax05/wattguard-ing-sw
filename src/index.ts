@@ -16,7 +16,6 @@ import admin from "./routes/admin";
 import buildingTypes from "./routes/building-types";
 import buildings from "./routes/buildings";
 import sensors from "./routes/sensors";
-import auditLogs from "./routes/audit-logs";
 
 // Import JWT utilities and middleware
 import { getJWTSecret } from "./auth/jwt";
@@ -73,12 +72,7 @@ const app = new Hono()
     loadUserDoc(),
     requireRole("admin", "operator"),
   )
-  .use(
-    "/api/audit-logs/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token" }),
-    loadUserDoc(),
-    requireRole("admin"),
-  )
+
   .get(
     "/api/health",
     describeRoute({
@@ -109,8 +103,7 @@ const app = new Hono()
   .route("/api/admin", admin)
   .route("/api/building-types", buildingTypes)
   .route("/api/buildings", buildings)
-  .route("/api/sensors", sensors)
-  .route("/api/audit-logs", auditLogs);
+  .route("/api/sensors", sensors);
 
 app
   .get(

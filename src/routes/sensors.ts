@@ -5,7 +5,7 @@ import type { AuthVariables } from "../middleware/auth";
 import { Sensor } from "../models/Sensor";
 import { Building } from "../models/Building";
 import { SensorReading, type ISensorReading } from "../models/SensorReading";
-import { logCreate, logUpdate, logDelete } from "../middleware/audit";
+
 import {
   CreateSensorRequestSchema,
   CreateSensorResponseSchema,
@@ -89,7 +89,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         updatedBy: userDoc._id,
       });
 
-      await logCreate("sensor", sensor._id, sensor.toObject(), userDoc._id);
+      
 
       return c.json(
         {
@@ -235,8 +235,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Sensor not found" }, 404);
       }
 
-      // Store old state for audit log
-      const oldSensor = sensor.toObject();
+      
 
       // Check for duplicate serial number if being updated
       if (updates.serialNumber && updates.serialNumber !== sensor.serialNumber) {
@@ -258,7 +257,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       await sensor.save();
 
-      await logUpdate("sensor", sensor._id, oldSensor, sensor.toObject(), userDoc._id);
+      
 
       return c.json({
         success: true,
@@ -325,8 +324,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Sensor not found" }, 404);
       }
 
-      // Store for audit log
-      const sensorData = sensor.toObject();
+      
 
       // Delete associated readings
       await SensorReading.deleteMany({ "metadata.sensorId": id });
@@ -334,8 +332,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Delete sensor
       await Sensor.findByIdAndDelete(id);
 
-      // Audit log
-      await logDelete("sensor", id, sensorData, userDoc._id);
+      
 
       return c.json({
         success: true,
