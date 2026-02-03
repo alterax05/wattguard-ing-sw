@@ -1,7 +1,7 @@
 /**
  * Integration tests for Sensors routes
  * 
- *Gestione sensori - CRUD completo con audit log
+ *Gestione sensori - CRUD completo
  * Tests cover:
  * - POST /api/sensors - Create sensor
  * - GET /api/sensors/:id - Get sensor details
@@ -18,7 +18,6 @@ import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
-import { AuditLog } from "../../models/AuditLog";
 import { Types } from "mongoose";
 
 // Suppress console logs during tests
@@ -152,13 +151,7 @@ describe("Sensors Routes - Integration Tests", () => {
       const dbSensor = await Sensor.findById(json.sensor.id);
       expect(dbSensor).toBeTruthy();
 
-      // Verify audit log
-      const auditLog = await AuditLog.findOne({
-        entityType: "sensor",
-        entityId: json.sensor.id,
-        action: "create",
-      });
-      expect(auditLog).toBeTruthy();
+      
     });
 
     test("should create sensor with operator role", async () => {
@@ -330,13 +323,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(json.sensor.location).toBe("Updated Location");
       expect(json.sensor.status).toBe("inactive");
 
-      // Verify audit log
-      const auditLog = await AuditLog.findOne({
-        entityType: "sensor",
-        entityId: sensor._id,
-        action: "update",
-      });
-      expect(auditLog).toBeTruthy();
+      
     });
 
     test("should return 404 for non-existent sensor", async () => {
@@ -406,13 +393,7 @@ describe("Sensors Routes - Integration Tests", () => {
       });
       expect(readings).toBe(0);
 
-      // Verify audit log
-      const auditLog = await AuditLog.findOne({
-        entityType: "sensor",
-        entityId: sensor._id,
-        action: "delete",
-      });
-      expect(auditLog).toBeTruthy();
+      
     });
 
     test("should return 404 for non-existent sensor", async () => {

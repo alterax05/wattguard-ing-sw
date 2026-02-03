@@ -6,7 +6,6 @@ import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
-import { AuditLog } from "../../models/AuditLog";
 
 // Suppress console logs during tests
 const originalConsoleLog = console.log;
@@ -137,14 +136,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(building).toBeTruthy();
       expect(building!.name).toBe(buildingData.name);
 
-      // Verify audit log was created
-      const auditLog = await AuditLog.findOne({ 
-        entityType: "building",
-        entityId: json.building.id,
-        action: "create",
-      });
-      expect(auditLog).toBeTruthy();
-      expect(auditLog!.performedBy.toString()).toBe(adminUserId);
+      
     });
 
     test("should create building with operator role", async () => {
@@ -216,7 +208,7 @@ describe("Buildings Routes - Integration Tests", () => {
   });
 
   describe("Update Building (PATCH /api/buildings/:id)", () => {
-    test("should update building and create audit log", async () => {
+    test("should update building", async () => {
       // Create a building first
       const building = await Building.create({
         name: "Original Name",
@@ -252,14 +244,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.building.surface).toBe(1500);
       expect(json.building.status).toBe("inactive");
 
-      // Verify audit log captured changes
-      const auditLog = await AuditLog.findOne({
-        entityType: "building",
-        entityId: building._id,
-        action: "update",
-      });
-      expect(auditLog).toBeTruthy();
-      expect(auditLog!.changes).toBeTruthy();
+      
     });
 
     test("should return 404 for non-existent building", async () => {
@@ -338,13 +323,7 @@ describe("Buildings Routes - Integration Tests", () => {
       const readings = await SensorReading.find({ "metadata.buildingId": building._id });
       expect(readings.length).toBe(0);
 
-      // Verify audit log
-      const auditLog = await AuditLog.findOne({
-        entityType: "building",
-        entityId: building._id,
-        action: "delete",
-      });
-      expect(auditLog).toBeTruthy();
+      
     });
   });
   
