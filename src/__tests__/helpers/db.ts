@@ -5,6 +5,11 @@ import mongoose from "mongoose";
 import { User } from "../../models/User";
 import { Invite } from "../../models/Invite";
 import { PasswordResetToken } from "../../models/PasswordResetToken";
+import { BuildingType } from "../../models/BuildingType";
+import { Building } from "../../models/Building";
+import { Sensor } from "../../models/Sensor";
+import { SensorReading } from "../../models/SensorReading";
+import { AuditLog } from "../../models/AuditLog";
 
 const TEST_MONGO_URI = process.env.MONGO_URI_TEST!;
 
@@ -26,5 +31,10 @@ export async function clearTestDB() {
     User.deleteMany({}),
     Invite.deleteMany({}),
     PasswordResetToken.deleteMany({}),
+    AuditLog.deleteMany({}),
+    SensorReading.deleteMany({}),
+    Sensor.deleteMany({}),
+    Building.deleteMany({}),
+    BuildingType.deleteMany({}),
   ]);
 }
