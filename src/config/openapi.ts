@@ -55,21 +55,5 @@ export const openapiConfig = {
       name: 'Health',
       description: 'API health check endpoints',
     },
-    {
-      name: 'Building Types',
-      description: 'Building type management - CRUD operations for configurable building types (school, office, library, etc.)',
-    },
-    {
-      name: 'Buildings',
-      description: 'Building management',
-    },
-    {
-      name: 'Sensors',
-      description: 'Sensor management',
-    },
-    {
-      name: 'Audit Logs',
-      description: 'Audit log queries - View change history for entities (admin only)',
-    },
   ],
 };
