@@ -5,7 +5,7 @@ import { Sensor } from "../../models/Sensor";
 import { Building } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
-import { Types } from "mongoose";
+import { Types, Error as MongooseError } from "mongoose";
 
 describe("SensorReading Model", () => {
   let userId: Types.ObjectId;
@@ -96,7 +96,8 @@ describe("SensorReading Model", () => {
           },
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.timestamp).toBeDefined();
       }
@@ -114,7 +115,8 @@ describe("SensorReading Model", () => {
           },
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.value).toBeDefined();
       }
@@ -132,7 +134,8 @@ describe("SensorReading Model", () => {
           },
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.unit).toBeDefined();
       }
@@ -147,10 +150,11 @@ describe("SensorReading Model", () => {
           metadata: {
             buildingId: buildingId,
             sensorType: "internal_temp",
-          } as any,
+          },
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors["metadata.sensorId"]).toBeDefined();
       }
@@ -165,10 +169,12 @@ describe("SensorReading Model", () => {
           metadata: {
             sensorId: sensorId,
             sensorType: "internal_temp",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors["metadata.buildingId"]).toBeDefined();
       }
@@ -183,10 +189,12 @@ describe("SensorReading Model", () => {
           metadata: {
             sensorId: sensorId,
             buildingId: buildingId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors["metadata.sensorType"]).toBeDefined();
       }

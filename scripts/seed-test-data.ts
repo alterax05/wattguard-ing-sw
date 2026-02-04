@@ -34,7 +34,7 @@ async function seedTestData() {
 
     // Get or create building types
     console.log("📋 Checking building types...");
-    let buildingTypes = await BuildingType.find();
+    const buildingTypes = await BuildingType.find();
     
     if (buildingTypes.length === 0) {
       console.log("No building types found. Please run seed-building-types.ts first.");
@@ -173,7 +173,7 @@ async function seedTestData() {
     for (const sensor of createdSensors) {
       if (sensor.status === "inactive") continue; // Skip inactive sensors
 
-      const building = createdBuildings.find((b: any) => b._id.equals(sensor.buildingId));
+      const building = createdBuildings.find((b) => b._id.equals(sensor.buildingId));
       if (!building) continue;
 
       // Generate readings every 5 minutes for the last 7 days
@@ -194,7 +194,7 @@ async function seedTestData() {
             value = 5 + Math.sin(currentTime.getTime() / (24 * 60 * 60 * 1000)) * 8 + (Math.random() - 0.5) * 3;
             unit = "°C";
             break;
-          case "energy_meter":
+          case "energy_meter": {
             // Energy consumption: 50-300 kW (varies by time of day)
             const hour = currentTime.getHours();
             const isWorkingHours = hour >= 8 && hour <= 18;
@@ -202,6 +202,7 @@ async function seedTestData() {
             value = baseConsumption + (Math.random() - 0.5) * 50;
             unit = "kW";
             break;
+          }
           case "humidity":
             // Humidity: 40-60%
             value = 50 + Math.sin(currentTime.getTime() / (12 * 60 * 60 * 1000)) * 8 + (Math.random() - 0.5) * 4;

@@ -27,7 +27,6 @@ const originalConsoleError = console.error;
 let adminToken: string;
 let operatorToken: string;
 let adminUserId: string;
-let operatorUserId: string;
 let buildingId: string;
 
 beforeAll(async () => {
@@ -63,12 +62,11 @@ beforeEach(async () => {
     cost: 10,
   });
 
-  const operator = await User.create({
+  await User.create({
     email: "operator@test.com",
     role: "operator",
     passwordHash: operatorPasswordHash,
   });
-  operatorUserId = operator._id.toString();
 
   // Login to get tokens
   const adminLoginRes = await app.request("/api/auth/local/login", {

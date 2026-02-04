@@ -1,10 +1,10 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { Sensor } from "../../models/Sensor";
-import { Building } from "../../models/Building";
+import { Building, type IBuilding } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
-import { Types } from "mongoose";
+import { Types, Error as MongooseError } from "mongoose";
 
 describe("Sensor Model", () => {
   let userId: Types.ObjectId;
@@ -120,7 +120,8 @@ describe("Sensor Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.buildingId).toBeDefined();
       }
@@ -136,7 +137,8 @@ describe("Sensor Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.sensorType).toBeDefined();
       }
@@ -152,7 +154,8 @@ describe("Sensor Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.location).toBeDefined();
       }
@@ -230,14 +233,15 @@ describe("Sensor Model", () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
-          sensorType: "invalid_type" as any,
+          sensorType: "invalid_type",
           location: "Test",
           installationDate: new Date(),
           createdBy: userId,
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.sensorType).toBeDefined();
       }
@@ -308,12 +312,13 @@ describe("Sensor Model", () => {
           sensorType: "internal_temp",
           location: "Test",
           installationDate: new Date(),
-          status: "invalid" as any,
+          status: "invalid",
           createdBy: userId,
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.status).toBeDefined();
       }
@@ -375,7 +380,8 @@ describe("Sensor Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.transmissionInterval).toBeDefined();
       }
@@ -393,7 +399,8 @@ describe("Sensor Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.transmissionInterval).toBeDefined();
       }
@@ -423,7 +430,8 @@ describe("Sensor Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as { code: number };
         expect(error.code).toBe(11000); // MongoDB duplicate key error
       }
     });
@@ -655,7 +663,7 @@ describe("Sensor Model", () => {
       const populated = await Sensor.findById(sensor._id).populate("buildingId");
 
       expect(populated).not.toBeNull();
-      expect((populated!.buildingId as any).name).toBe("Test Building");
+      expect((populated!.buildingId as unknown as IBuilding).name).toBe("Test Building");
     });
 
     test("should delete sensor", async () => {

@@ -4,7 +4,7 @@ import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
-import { Sensor } from "../../models/Sensor";
+import { Sensor, type ISensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 
 // Suppress console logs during tests
@@ -14,7 +14,6 @@ const originalConsoleError = console.error;
 let adminToken: string;
 let operatorToken: string;
 let adminUserId: string;
-let operatorUserId: string;
 let buildingTypeId: string;
 
 beforeAll(async () => {
@@ -50,12 +49,11 @@ beforeEach(async () => {
     cost: 10,
   });
 
-  const operator = await User.create({
+  await User.create({
     email: "operator@test.com",
     role: "operator",
     passwordHash: operatorPasswordHash,
   });
-  operatorUserId = operator._id.toString();
 
   // Login to get tokens
   const adminLoginRes = await app.request("/api/auth/local/login", {
@@ -576,7 +574,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.sensors.length).toBe(3);
       
       // Verify sensor details
-      const internalTempSensor = json.sensors.find((s: any) => s.sensorType === "internal_temp");
+      const internalTempSensor = json.sensors.find((s: ISensor) => s.sensorType === "internal_temp");
       expect(internalTempSensor).toBeTruthy();
       expect(internalTempSensor.status).toBe("active");
       expect(internalTempSensor.lastReading).toBeTruthy();
@@ -826,7 +824,7 @@ describe("Buildings Routes - Integration Tests", () => {
       
       // Should only include readings from the last 24 hours
       expect(json.data.length).toBeGreaterThan(0);
-      json.data.forEach((point: any) => {
+      json.data.forEach((point: { timestamp: string }) => {
         const timestamp = new Date(point.timestamp);
         expect(timestamp.getTime()).toBeGreaterThanOrEqual(oneDayAgo.getTime());
       });
