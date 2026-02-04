@@ -1,9 +1,9 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { Building } from "../../models/Building";
-import { BuildingType } from "../../models/BuildingType";
+import { BuildingType, type IBuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
-import { Types } from "mongoose";
+import { Types, Error as MongooseError } from "mongoose";
 
 describe("Building Model", () => {
   let userId: Types.ObjectId;
@@ -107,7 +107,8 @@ describe("Building Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false); // Should not reach here
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.name).toBeDefined();
       }
@@ -125,7 +126,8 @@ describe("Building Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.address).toBeDefined();
       }
@@ -143,7 +145,8 @@ describe("Building Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.surface).toBeDefined();
       }
@@ -161,7 +164,8 @@ describe("Building Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.buildingType).toBeDefined();
       }
@@ -179,7 +183,8 @@ describe("Building Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.createdBy).toBeDefined();
       }
@@ -245,7 +250,8 @@ describe("Building Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.surface).toBeDefined();
       }
@@ -316,7 +322,8 @@ describe("Building Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.constructionYear).toBeDefined();
       }
@@ -337,7 +344,8 @@ describe("Building Model", () => {
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.constructionYear).toBeDefined();
       }
@@ -402,12 +410,13 @@ describe("Building Model", () => {
           buildingType: buildingTypeId,
           heatingSystemType: "caldaia_gas",
           geographicZone: "Centro",
-          status: "invalid_status" as any,
+          status: "invalid_status",
           createdBy: userId,
           updatedBy: userId,
         });
         expect(true).toBe(false);
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.status).toBeDefined();
       }
@@ -631,7 +640,7 @@ describe("Building Model", () => {
       const populated = await Building.findById(building._id).populate("buildingType");
 
       expect(populated).not.toBeNull();
-      expect((populated!.buildingType as any).name).toBe("Residenziale");
+      expect((populated!.buildingType as IBuildingType).name).toBe("Residenziale");
     });
   });
 });

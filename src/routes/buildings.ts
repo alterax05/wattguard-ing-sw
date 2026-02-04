@@ -92,7 +92,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Apply sorting
       const sortBy = query.sortBy || "updatedAt";
       const sortOrder = query.sortOrder === "asc" ? 1 : -1;
-      const sort: Record<string, any> = { [sortBy]: sortOrder };
+      const sort: Record<string, 1 | -1> = { [sortBy]: sortOrder };
 
       // Execute query with pagination
       const buildings = await Building.find(filter)
@@ -182,60 +182,53 @@ const app = new Hono<{ Variables: AuthVariables }>()
     validator("json", CreateBuildingRequestSchema),
     async (c) => {
       const userDoc = c.get("userDoc");
-      const data = c.req.valid("json");
+      const buildingData = c.req.valid("json");
 
-      // Validate building type exists
-      const buildingType = await BuildingType.findById(data.buildingType);
+      const buildingType = await BuildingType.findById(buildingData.buildingType);
       if (!buildingType) {
         return c.json({ error: "Building type not found" }, 404);
       }
 
-      // Create building
-      const building = await Building.create({
-        ...data,
+      const building = new Building({
+        ...buildingData,
         createdBy: userDoc._id,
         updatedBy: userDoc._id,
-        status: "active",
       });
 
-      
-
-      // Populate buildingType for response
+      await building.save();
       await building.populate("buildingType", "name description");
+
       const bt = building.buildingType!;
 
-      return c.json(
-        {
-          success: true,
-          building: {
-            id: building._id.toString(),
-            name: building.name,
-            address: building.address,
-            surface: building.surface,
-            buildingType: (bt instanceof mongoose.Types.ObjectId)
-              ? bt.toString()
-              : {
-                  id: (bt as IBuildingType & Document)._id.toString(),
-                  name: (bt as IBuildingType & Document).name,
-                  description: (bt as IBuildingType & Document).description,
-                },
-            heatingSystemType: building.heatingSystemType,
-            status: building.status,
-            geographicZone: building.geographicZone,
-            constructionYear: building.constructionYear,
-            createdBy: building.createdBy.toString(),
-            updatedBy: building.updatedBy.toString(),
-            createdAt: building.createdAt?.toISOString(),
-            updatedAt: building.updatedAt?.toISOString(),
-          },
+      return c.json({
+        success: true,
+        building: {
+          id: building._id.toString(),
+          name: building.name,
+          address: building.address,
+          surface: building.surface,
+          buildingType: (bt instanceof mongoose.Types.ObjectId)
+            ? bt.toString()
+            : {
+                id: (bt as IBuildingType & Document)._id.toString(),
+                name: (bt as IBuildingType & Document).name,
+                description: (bt as IBuildingType & Document).description,
+              },
+          heatingSystemType: building.heatingSystemType,
+          status: building.status,
+          geographicZone: building.geographicZone,
+          constructionYear: building.constructionYear,
+          createdBy: building.createdBy.toString(),
+          updatedBy: building.updatedBy.toString(),
+          createdAt: building.createdAt?.toISOString(),
+          updatedAt: building.updatedAt?.toISOString(),
         },
-        201
-      );
+      }, 201);
     }
   )
 
   /**
-   * GET /api/buildings/:id - Get building details 
+   * GET /api/buildings/:id - Get building details
    */
   .get(
     "/:id",
@@ -485,7 +478,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
     }),
     validator("param", DeleteBuildingParamsSchema),
     async (c) => {
-      const userDoc = c.get("userDoc");
       const { id } = c.req.valid("param");
 
       const building = await Building.findById(id);
@@ -728,7 +720,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
     validator("query", GetBuildingHistoryQuerySchema),
     async (c) => {
       const { id } = c.req.valid("param");
-      const { startDate, endDate, sensorType, interval } = c.req.valid("query");
+      const { startDate, endDate, sensorType } = c.req.valid("query");
 
       const building = await Building.findById(id);
       if (!building) {

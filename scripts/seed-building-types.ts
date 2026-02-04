@@ -9,7 +9,7 @@
  */
 
 import mongoose from "mongoose";
-import { BuildingType } from "../src/models/BuildingType";
+import { BuildingType, type IBuildingType } from "../src/models/BuildingType";
 
 // Default building types for Italian public buildings
 const defaultBuildingTypes = [
@@ -105,7 +105,7 @@ async function seedBuildingTypes() {
     const results = await BuildingType.insertMany(defaultBuildingTypes);
     
     console.log(`✅ Successfully created ${results.length} building types:`);
-    results.forEach((type: any) => {
+    results.forEach((type: IBuildingType) => {
       console.log(`   - ${type.name}: ${type.description}`);
     });
 

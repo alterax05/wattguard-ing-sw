@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { BuildingType } from "../../models/BuildingType";
+import { Error as MongooseError } from "mongoose";
 
 describe("BuildingType Model", () => {
   beforeAll(async () => {
@@ -44,7 +45,8 @@ describe("BuildingType Model", () => {
           description: "Test description",
         });
         expect(true).toBe(false); // Should not reach here
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as MongooseError.ValidationError;
         expect(error.name).toBe("ValidationError");
         expect(error.errors.name).toBeDefined();
       }
@@ -79,7 +81,8 @@ describe("BuildingType Model", () => {
           name: "Residenziale",
         });
         expect(true).toBe(false); // Should not reach here
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as { code: number };
         expect(error.code).toBe(11000); // MongoDB duplicate key error
       }
     });

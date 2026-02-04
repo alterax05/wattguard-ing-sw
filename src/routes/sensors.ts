@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import type { QueryFilter } from "mongoose";
+import type { QueryFilter, Document } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Sensor } from "../models/Sensor";
-import { Building } from "../models/Building";
+import { Building, type IBuilding } from "../models/Building";
 import { SensorReading, type ISensorReading } from "../models/SensorReading";
 
 import {
@@ -152,7 +152,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Sensor not found" }, 404);
       }
 
-      const building = sensor.buildingId as any;
+      const building = sensor.buildingId as unknown as IBuilding & Document;
 
       return c.json({
         sensor: {
@@ -253,6 +253,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.transmissionInterval !== undefined)
         sensor.transmissionInterval = updates.transmissionInterval;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       sensor.updatedBy = userDoc._id as any;
 
       await sensor.save();
@@ -316,7 +317,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
     }),
     validator("param", DeleteSensorParamsSchema),
     async (c) => {
-      const userDoc = c.get("userDoc");
       const { id } = c.req.valid("param");
 
       const sensor = await Sensor.findById(id);
@@ -469,7 +469,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       if (query.startDate || query.endDate) {
         filter.timestamp = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (query.startDate) (filter.timestamp as any).$gte = new Date(query.startDate);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (query.endDate) (filter.timestamp as any).$lte = new Date(query.endDate);
       }
 
