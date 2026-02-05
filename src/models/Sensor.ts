@@ -9,6 +9,14 @@ export interface ILastReading {
   unit: string;
 }
 
+export interface ISimulationConfig {
+  baseValue?: number;
+  amplitude?: number; // For sine wave
+  noise?: number; // Random deviation
+  min?: number;
+  max?: number;
+}
+
 export interface ISensor {
   buildingId: Types.ObjectId;
   sensorType: SensorType;
@@ -18,11 +26,23 @@ export interface ISensor {
   status: SensorStatus;
   lastReading?: ILastReading;
   transmissionInterval: number; 
+  simulationConfig?: ISimulationConfig;
   createdBy: Types.ObjectId;
   updatedBy: Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+const simulationConfigSchema = new Schema<ISimulationConfig>(
+  {
+    baseValue: Number,
+    amplitude: Number,
+    noise: Number,
+    min: Number,
+    max: Number,
+  },
+  { _id: false }
+);
 
 const lastReadingSchema = new Schema<ILastReading>(
   {
@@ -88,6 +108,10 @@ const sensorSchema = new Schema<ISensor>(
       default: 90,
       min: [10, "Transmission interval must be at least 10 seconds"],
       max: [3600, "Transmission interval cannot exceed 1 hour"],
+    },
+    simulationConfig: {
+      type: simulationConfigSchema,
+      required: false,
     },
     createdBy: {
       type: Schema.Types.ObjectId,

@@ -21,17 +21,22 @@ import sensors from "./routes/sensors";
 import { getJWTSecret } from "./auth/jwt";
 import { loadUserDoc, requireRole } from "./middleware/auth";
 
+// Import MQTT client
+import { connectAndSubscribe } from "./lib/mqtt";
+
 // Import OpenAPI configuration
 import { openapiConfig } from "./config/openapi";
 
 // MongoDB connection (skip in test mode)
 if (process.env.NODE_ENV !== "test") {
-  const MONGO_URI = process.env.MONGO_URI!;
+  const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/wattguard";
 
   mongoose
     .connect(MONGO_URI)
     .then(() => {
       console.log("✅ Connected to MongoDB");
+      // Start MQTT client after DB connection
+      connectAndSubscribe();
     })
     .catch((err) => console.error("❌ MongoDB connection error:", err));
 }
