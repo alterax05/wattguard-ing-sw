@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Types, type PopulatedDoc } from "mongoose";
+import mongoose, { Schema, Types, type PopulatedDoc } from "mongoose";
 import type { IBuildingType } from "./BuildingType";
 
 export type BuildingStatus = "active" | "inactive" | "decommissioned";
@@ -7,7 +7,7 @@ export interface IBuilding {
   name: string;
   address: string;
   surface: number; // m²
-  buildingType: PopulatedDoc<IBuildingType & Document>;
+  buildingType: PopulatedDoc<IBuildingType>;
   heatingSystemType: string;
   constructionYear?: number;
   geographicZone: string;

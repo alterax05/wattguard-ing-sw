@@ -3,6 +3,7 @@
  * 
  * Shared schemas used across multiple routes
  */
+
 import { z } from "zod";
 
 /**
@@ -44,10 +45,18 @@ export const UserRoleSchema = z
   .describe("User role in the system");
 
 /**
+ * MongoDB ObjectId validation schema
+ */
+export const ObjectIdSchema = z
+  .string()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId format")
+  .describe("MongoDB ObjectId");
+
+/**
  * User response schema
  */
 export const UserSchema = z.object({
-  id: z.string().describe("Unique user identifier"),
+  id: ObjectIdSchema.describe("Unique user identifier"),
   email: z.email().describe("User email address"),
   role: UserRoleSchema,
   isDisabled: z.boolean().optional().describe("Whether the user account is disabled"),
@@ -60,14 +69,6 @@ export const UserSchema = z.object({
 export const TokenQuerySchema = z.object({
   token: z.string().min(1, "Token is required").describe("Authentication or validation token"),
 });
-
-/**
- * MongoDB ObjectId validation schema
- */
-export const ObjectIdSchema = z
-  .string()
-  .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId format")
-  .describe("MongoDB ObjectId");
 
 /**
  * Building status enum
@@ -91,23 +92,9 @@ export const SensorStatusSchema = z
   .describe("Sensor operational status");
 
 /**
- * Heating system type enum (common types in Italy)
+ * Heating system type
  */
-export const HeatingSystemTypeSchema = z
-  .enum([
-    "caldaia_gas",
-    "caldaia_gasolio",
-    "pompa_calore",
-    "teleriscaldamento",
-    "stufa_pellet",
-    "fotovoltaico",
-    "altro",
-  ])
-  .describe("Type of heating system");
-
-
-
-
+export const HeatingSystemTypeSchema = z.string().describe("Type of heating system");
 
 /**
  * Pagination query parameters

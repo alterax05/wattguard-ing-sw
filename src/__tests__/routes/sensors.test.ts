@@ -147,7 +147,7 @@ describe("Sensors Routes - Integration Tests", () => {
 
       // Verify in database
       const dbSensor = await Sensor.findById(json.sensor.id);
-      expect(dbSensor).toBeTruthy();
+      expect(dbSensor).toBeDefined();
 
       
     });
@@ -266,10 +266,10 @@ describe("Sensors Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.sensor.id).toBeTruthy();
+      expect(json.sensor.id).toBeDefined();
       expect(json.sensor.sensorType).toBe("internal_temp");
       expect(json.sensor.location).toBe("Piano 2");
-      expect(json.sensor.lastReading).toBeTruthy();
+      expect(json.sensor.lastReading).toBeDefined();
       expect(json.sensor.lastReading.value).toBe(22.5);
     });
 
@@ -446,7 +446,7 @@ describe("Sensors Routes - Integration Tests", () => {
 
       // Verify lastReading updated on sensor
       const updatedSensor = await Sensor.findById(sensor._id);
-      expect(updatedSensor!.lastReading).toBeTruthy();
+      expect(updatedSensor!.lastReading).toBeDefined();
       expect(updatedSensor!.lastReading!.value).toBe(23.5);
     });
 

@@ -169,7 +169,7 @@ describe("Admin Routes", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
 
     test("should reject missing email field", async () => {
@@ -188,7 +188,7 @@ describe("Admin Routes", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
 
     test("should reject missing role field", async () => {
@@ -207,7 +207,7 @@ describe("Admin Routes", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
 
     test("should reject operator from creating invites", async () => {
@@ -276,9 +276,9 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.invites).toBeArrayOfSize(2);
-      expect(data.invites[0].email).toBeTruthy();
-      expect(data.invites[0].role).toBeTruthy();
-      expect(data.invites[0].status).toBeTruthy();
+      expect(data.invites[0].email).toBeDefined();
+      expect(data.invites[0].role).toBeDefined();
+      expect(data.invites[0].status).toBeDefined();
     });
 
     test("should return empty array when no invites exist", async () => {

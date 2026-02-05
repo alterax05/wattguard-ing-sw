@@ -13,14 +13,14 @@ import { SensorSchema } from "./sensors";
  * Building response schema
  */
 export const BuildingSummarySchema = z.object({
-  id: z.string().describe("Unique building identifier"),
+  id: ObjectIdSchema.describe("Unique building identifier"),
   name: z.string().describe("Building name"),
   address: z.string().describe("Building address"),
   surface: z.number().describe("Surface area in square meters"),
   buildingType: z.union([
     z.string(), // ID
     z.object({
-      id: z.string(),
+      id: ObjectIdSchema,
       name: z.string(),
       description: z.string().optional(),
     }),
@@ -161,19 +161,19 @@ export const RealTimeDataSchema = z.object({
     value: z.number().nullable(),
     unit: z.string(),
     timestamp: z.iso.datetime().nullable(),
-    sensorId: z.string().nullable(),
+    sensorId: ObjectIdSchema.nullable(),
   }).describe("Current internal temperature"),
   externalTemperature: z.object({
     value: z.number().nullable(),
     unit: z.string(),
     timestamp: z.iso.datetime().nullable(),
-    sensorId: z.string().nullable(),
+    sensorId: ObjectIdSchema.nullable(),
   }).describe("Current external temperature"),
   energyConsumption: z.object({
     value: z.number().nullable(),
     unit: z.string(),
     timestamp: z.iso.datetime().nullable(),
-    sensorId: z.string().nullable(),
+    sensorId: ObjectIdSchema.nullable(),
   }).describe("Current instantaneous energy consumption"),
 });
 
@@ -181,7 +181,7 @@ export const RealTimeDataSchema = z.object({
  * GET /api/buildings/:id/real-time - Get building real-time data response
  */
 export const GetBuildingRealTimeResponseSchema = z.object({
-  buildingId: z.string(),
+  buildingId: ObjectIdSchema,
   buildingName: z.string(),
   timestamp: z.iso.datetime().describe("Timestamp of this snapshot"),
   data: RealTimeDataSchema,
@@ -191,8 +191,8 @@ export const GetBuildingRealTimeResponseSchema = z.object({
  * GET /api/buildings/:id/history - Get building historical data query parameters
  */
 export const GetBuildingHistoryQuerySchema = z.object({
-  startDate: z.string().datetime().describe("Start date for historical data (ISO 8601)"),
-  endDate: z.string().datetime().describe("End date for historical data (ISO 8601)"),
+  startDate: z.iso.datetime().describe("Start date for historical data"),
+  endDate: z.iso.datetime().describe("End date for historical data"),
   sensorType: z.enum(["internal_temp", "external_temp", "energy_meter"]).optional().describe("Filter by sensor type"),
   interval: z.enum(["minute", "hour", "day"]).optional().describe("Data aggregation interval (default: hour)"),
 });
@@ -204,7 +204,7 @@ export const HistoricalDataPointSchema = z.object({
   timestamp: z.iso.datetime(),
   value: z.number(),
   unit: z.string(),
-  sensorType: z.string(),
+  sensorType: ObjectIdSchema,
   sensorId: z.string().optional(),
 });
 
@@ -212,7 +212,7 @@ export const HistoricalDataPointSchema = z.object({
  * GET /api/buildings/:id/history - Get building historical data response
  */
 export const GetBuildingHistoryResponseSchema = z.object({
-  buildingId: z.string(),
+  buildingId: ObjectIdSchema,
   buildingName: z.string(),
   period: z.object({
     startDate: z.iso.datetime(),

@@ -21,8 +21,8 @@ export const LastReadingSchema = z.object({
  * Sensor response schema
  */
 export const SensorSchema = z.object({
-  id: z.string().describe("Unique sensor identifier"),
-  buildingId: z.string().describe("Building identifier this sensor belongs to"),
+  id: ObjectIdSchema.describe("Unique sensor identifier"),
+  buildingId: ObjectIdSchema.describe("Building identifier this sensor belongs to"),
   sensorType: SensorTypeSchema,
   location: z.string().describe("Physical location of the sensor in the building"),
   serialNumber: z.string().optional().describe("Optional sensor serial number"),
@@ -30,8 +30,8 @@ export const SensorSchema = z.object({
   status: SensorStatusSchema,
   lastReading: LastReadingSchema.optional().describe("Most recent reading (denormalized for performance)"),
   transmissionInterval: z.number().describe("Data transmission interval in seconds (default: 90)"),
-  createdBy: z.string().optional().describe("User who created this sensor"),
-  updatedBy: z.string().optional().describe("User who last updated this sensor"),
+  createdBy: ObjectIdSchema.optional().describe("User who created this sensor"),
+  updatedBy: ObjectIdSchema.optional().describe("User who last updated this sensor"),
   createdAt: z.iso.datetime().optional().describe("Creation timestamp"),
   updatedAt: z.iso.datetime().optional().describe("Last update timestamp"),
 });
@@ -126,14 +126,14 @@ export const DeleteSensorResponseSchema = z.object({
  * SensorReading schema (for historical data)
  */
 export const SensorReadingSchema = z.object({
-  id: z.string().optional().describe("Reading identifier"),
+  id: ObjectIdSchema.optional().describe("Reading identifier"),
   timestamp: z.iso.datetime().describe("Reading timestamp"),
   value: z.number().describe("Reading value"),
   unit: z.string().describe("Unit of measurement"),
   metadata: z.object({
-    sensorId: z.string(),
-    buildingId: z.string(),
-    sensorType: z.string(),
+    sensorId: ObjectIdSchema,
+    buildingId: ObjectIdSchema,
+    sensorType: ObjectIdSchema,
   }).optional(),
 });
 
