@@ -23,8 +23,11 @@ import {
   GetBuildingRealTimeResponseSchema,
   GetBuildingHistoryQuerySchema,
   GetBuildingHistoryResponseSchema,
+  GetBuildingEfficiencyQuerySchema,
+  GetBuildingEfficiencyResponseSchema,
   ErrorSchema,
 } from "../schemas/buildings";
+import { getCoordinates, getAverageHistoricalTemperature } from "../lib/weather";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
@@ -759,6 +762,231 @@ const app = new Hono<{ Variables: AuthVariables }>()
           sensorType: r.metadata.sensorType,
           sensorId: r.metadata.sensorId?.toString(),
         })),
+      });
+    }
+  )
+  .get(
+    "/:id/efficiency",
+    describeRoute({
+      description: "Calculate building thermal efficiency over a time period",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Efficiency metrics calculated successfully",
+          content: {
+            "application/json": {
+              schema: resolver(GetBuildingEfficiencyResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid request parameters",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Building not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", GetBuildingParamsSchema),
+    validator("query", GetBuildingEfficiencyQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { startDate, endDate } = c.req.valid("query");
+
+      const building = await Building.findById(id);
+      if (!building) {
+        return c.json({ error: "Building not found" }, 404);
+      }
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      // Use MongoDB Aggregation for efficient calculation
+      const aggregationResult = await SensorReading.aggregate([
+        {
+          $match: {
+            "metadata.buildingId": new Types.ObjectId(id),
+            timestamp: { $gte: start, $lte: end },
+            "metadata.sensorType": { $in: ["energy_meter", "internal_temp", "external_temp"] }
+          }
+        },
+        {
+          $facet: {
+            // 1. Energy Calculation (Trapezoidal Integration)
+            energy: [
+              { $match: { "metadata.sensorType": "energy_meter" } },
+              { $sort: { timestamp: 1 } },
+              {
+                $setWindowFields: {
+                  sortBy: { timestamp: 1 },
+                  output: {
+                    prevTimestamp: { $shift: { output: "$timestamp", by: -1 } },
+                    prevValue: { $shift: { output: "$value", by: -1 } },
+                    prevUnit: { $shift: { output: "$unit", by: -1 } }
+                  }
+                }
+              },
+              {
+                $match: { prevTimestamp: { $ne: null } }
+              },
+              {
+                $project: {
+                  // Normalize to kW
+                  val_kW: {
+                    $cond: { if: { $eq: ["$unit", "W"] }, then: { $divide: ["$value", 1000] }, else: "$value" }
+                  },
+                  prev_val_kW: {
+                    $cond: { if: { $eq: ["$prevUnit", "W"] }, then: { $divide: ["$prevValue", 1000] }, else: "$prevValue" }
+                  },
+                  // Time diff in hours
+                  dt_hours: {
+                    $divide: [
+                      { $subtract: ["$timestamp", "$prevTimestamp"] },
+                      3600000
+                    ]
+                  }
+                }
+              },
+              {
+                $project: {
+                  energyStep: {
+                    $multiply: [
+                      { $avg: ["$val_kW", "$prev_val_kW"] },
+                      "$dt_hours"
+                    ]
+                  }
+                }
+              },
+              {
+                $group: {
+                  _id: null,
+                  totalEnergyConsumed: { $sum: "$energyStep" }
+                }
+              }
+            ],
+            // 2. Internal Temperature (Delta & Avg)
+            internal: [
+              { $match: { "metadata.sensorType": "internal_temp" } },
+              { $sort: { timestamp: 1 } },
+              {
+                $group: {
+                  _id: null,
+                  first: { $first: "$value" },
+                  last: { $last: "$value" },
+                  avg: { $avg: "$value" }
+                }
+              }
+            ],
+            // 3. External Temperature (Avg)
+            external: [
+              { $match: { "metadata.sensorType": "external_temp" } },
+              {
+                $group: {
+                  _id: null,
+                  avg: { $avg: "$value" }
+                }
+              }
+            ]
+          }
+        }
+      ]);
+
+      const result = aggregationResult[0];
+      const totalEnergyConsumed = result.energy[0]?.totalEnergyConsumed || 0;
+      
+      const internalData = result.internal[0];
+      let temperatureChange = 0;
+      let avgInternalTemp: number | null = null;
+      
+      if (internalData) {
+        temperatureChange = internalData.last - internalData.first;
+        avgInternalTemp = internalData.avg;
+      }
+
+      let averageExternalTemperature: number | null = result.external[0]?.avg || null;
+
+      if (averageExternalTemperature === null) {
+        // Fallback to Weather API if no sensors
+        const coords = await getCoordinates(building.address);
+        if (coords) {
+          averageExternalTemperature = await getAverageHistoricalTemperature(
+            coords.lat,
+            coords.lon,
+            start,
+            end
+          );
+        }
+      }
+
+      // 4. Calculate Efficiency Index (kWh / (m² * °C))
+      // Only meaningful if temperature increased and surface is > 0
+      let efficiencyIndex: number | null = null;
+      if (temperatureChange > 0.1 && totalEnergyConsumed > 0 && building.surface > 0) {
+        efficiencyIndex = totalEnergyConsumed / (temperatureChange * building.surface);
+      }
+
+      // 5. Calculate Theoretical Carnot COP
+      // COP = T_hot / (T_hot - T_cold)  [Temperatures in Kelvin]
+      // T_hot = avgInternal, T_cold = avgExternal
+      let theoreticalCop: number | null = null;
+
+      if (avgInternalTemp !== null && averageExternalTemperature !== null) {
+        const tHotK = avgInternalTemp + 273.15;
+        const tColdK = averageExternalTemperature + 273.15;
+        
+        // Ensure T_hot > T_cold for heating mode COP
+        if (tHotK > tColdK) {
+          theoreticalCop = tHotK / (tHotK - tColdK);
+        }
+      }
+
+      return c.json({
+        buildingId: building._id.toString(),
+        buildingName: building.name,
+        period: {
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        },
+        metrics: {
+          totalEnergyConsumed: Number(totalEnergyConsumed.toFixed(2)),
+          temperatureChange: Number(temperatureChange.toFixed(2)),
+          averageExternalTemperature: averageExternalTemperature !== null 
+            ? Number(averageExternalTemperature.toFixed(2)) 
+            : null,
+          efficiencyIndex: efficiencyIndex !== null 
+            ? Number(efficiencyIndex.toFixed(2)) 
+            : null,
+          theoreticalCop: theoreticalCop !== null
+            ? Number(theoreticalCop.toFixed(2))
+            : null,
+        },
       });
     }
   );

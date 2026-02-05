@@ -221,5 +221,32 @@ export const GetBuildingHistoryResponseSchema = z.object({
   data: z.array(HistoricalDataPointSchema).describe("Historical data points for graphing"),
 });
 
+/**
+ * GET /api/buildings/:id/efficiency - Efficiency query parameters
+ */
+export const GetBuildingEfficiencyQuerySchema = z.object({
+  startDate: z.iso.datetime().describe("Start date for efficiency calculation"),
+  endDate: z.iso.datetime().describe("End date for efficiency calculation"),
+});
+
+/**
+ * GET /api/buildings/:id/efficiency - Efficiency response
+ */
+export const GetBuildingEfficiencyResponseSchema = z.object({
+  buildingId: ObjectIdSchema,
+  buildingName: z.string(),
+  period: z.object({
+    startDate: z.iso.datetime(),
+    endDate: z.iso.datetime(),
+  }),
+  metrics: z.object({
+    totalEnergyConsumed: z.number().describe("Total energy consumed in kWh"),
+    temperatureChange: z.number().describe("Internal temperature change in °C"),
+    averageExternalTemperature: z.number().nullable().describe("Average external temperature during period"),
+    efficiencyIndex: z.number().nullable().describe("Energy efficiency index (kWh / (m² · °C)) - Lower is better"),
+    theoreticalCop: z.number().nullable().describe("Theoretical Carnot COP (max efficiency based on temp delta)"),
+  }),
+});
+
 // Re-export for convenience
 export { ErrorSchema };
