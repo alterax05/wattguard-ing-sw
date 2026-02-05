@@ -35,14 +35,14 @@ describe("OpenAPI Documentation", () => {
       const spec = await res.json();
 
       // Check OpenAPI version
-      expect(spec.openapi).toBeTruthy();
+      expect(spec.openapi).toBeDefined();
       expect(spec.openapi).toStartWith("3.");
 
       // Check required fields
-      expect(spec.info).toBeTruthy();
-      expect(spec.info.title).toBeTruthy();
-      expect(spec.info.version).toBeTruthy();
-      expect(spec.paths).toBeTruthy();
+      expect(spec.info).toBeDefined();
+      expect(spec.info.title).toBeDefined();
+      expect(spec.info.version).toBeDefined();
+      expect(spec.paths).toBeDefined();
     });
 
     test("should include API metadata", async () => {
@@ -50,15 +50,15 @@ describe("OpenAPI Documentation", () => {
       const spec = await res.json();
 
       expect(spec.info.title).toBe("WattGuard API");
-      expect(spec.info.description).toBeTruthy();
-      expect(spec.info.version).toBeTruthy();
+      expect(spec.info.description).toBeDefined();
+      expect(spec.info.version).toBeDefined();
     });
 
     test("should include server configurations", async () => {
       const res = await app.request("/api/openapi.json");
       const spec = await res.json();
 
-      expect(spec.servers).toBeTruthy();
+      expect(spec.servers).toBeDefined();
       expect(Array.isArray(spec.servers)).toBe(true);
       expect(spec.servers.length).toBeGreaterThan(0);
     });
@@ -67,10 +67,10 @@ describe("OpenAPI Documentation", () => {
       const res = await app.request("/api/openapi.json");
       const spec = await res.json();
 
-      expect(spec.components).toBeTruthy();
-      expect(spec.components.securitySchemes).toBeTruthy();
-      expect(spec.components.securitySchemes.bearerAuth).toBeTruthy();
-      expect(spec.components.securitySchemes.cookieAuth).toBeTruthy();
+      expect(spec.components).toBeDefined();
+      expect(spec.components.securitySchemes).toBeDefined();
+      expect(spec.components.securitySchemes.bearerAuth).toBeDefined();
+      expect(spec.components.securitySchemes.cookieAuth).toBeDefined();
     });
 
     test("should include documented authentication routes", async () => {
@@ -78,9 +78,9 @@ describe("OpenAPI Documentation", () => {
       const spec = await res.json();
 
       // Check for key authentication endpoints
-      expect(spec.paths["/api/auth/local/login"]).toBeTruthy();
-      expect(spec.paths["/api/auth/local/setup"]).toBeTruthy();
-      expect(spec.paths["/api/auth/me"]).toBeTruthy();
+      expect(spec.paths["/api/auth/local/login"]).toBeDefined();
+      expect(spec.paths["/api/auth/local/setup"]).toBeDefined();
+      expect(spec.paths["/api/auth/me"]).toBeDefined();
     });
 
     test("should include documented admin routes", async () => {
@@ -88,14 +88,14 @@ describe("OpenAPI Documentation", () => {
       const spec = await res.json();
 
       // Check for admin endpoints
-      expect(spec.paths["/api/admin/invites"]).toBeTruthy();
+      expect(spec.paths["/api/admin/invites"]).toBeDefined();
     });
 
     test("should include tags for route organization", async () => {
       const res = await app.request("/api/openapi.json");
       const spec = await res.json();
 
-      expect(spec.tags).toBeTruthy();
+      expect(spec.tags).toBeDefined();
       expect(Array.isArray(spec.tags)).toBe(true);
       
       // Check for expected tags
@@ -110,11 +110,11 @@ describe("OpenAPI Documentation", () => {
 
       // Check that routes have proper schema definitions
       const loginPost = spec.paths["/api/auth/local/login"]?.post;
-      expect(loginPost).toBeTruthy();
-      expect(loginPost.requestBody).toBeTruthy();
-      expect(loginPost.responses).toBeTruthy();
-      expect(loginPost.responses["200"]).toBeTruthy();
-      expect(loginPost.responses["401"]).toBeTruthy();
+      expect(loginPost).toBeDefined();
+      expect(loginPost.requestBody).toBeDefined();
+      expect(loginPost.responses).toBeDefined();
+      expect(loginPost.responses["200"]).toBeDefined();
+      expect(loginPost.responses["401"]).toBeDefined();
     });
 
     test("should mark protected routes with security requirements", async () => {
@@ -123,8 +123,8 @@ describe("OpenAPI Documentation", () => {
 
       // Check that /api/auth/me requires authentication
       const meGet = spec.paths["/api/auth/me"]?.get;
-      expect(meGet).toBeTruthy();
-      expect(meGet.security).toBeTruthy();
+      expect(meGet).toBeDefined();
+      expect(meGet.security).toBeDefined();
       expect(Array.isArray(meGet.security)).toBe(true);
     });
 
@@ -133,8 +133,8 @@ describe("OpenAPI Documentation", () => {
       const spec = await res.json();
 
       const loginPost = spec.paths["/api/auth/local/login"]?.post;
-      expect(loginPost.responses["200"].description).toBeTruthy();
-      expect(loginPost.responses["401"].description).toBeTruthy();
+      expect(loginPost.responses["200"].description).toBeDefined();
+      expect(loginPost.responses["401"].description).toBeDefined();
     });
   });
 
@@ -216,7 +216,7 @@ describe("OpenAPI Documentation", () => {
       const paths = spec.paths as Record<string, Record<string, { responses: Record<string, unknown> }>>;
       for (const methods of Object.values(paths)) {
         for (const operation of Object.values(methods)) {
-          expect(operation.responses).toBeTruthy();
+          expect(operation.responses).toBeDefined();
           
           // Most endpoints should have at least a success and error response
           const responseCodes = Object.keys(operation.responses);

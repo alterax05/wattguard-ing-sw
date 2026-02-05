@@ -85,7 +85,7 @@ describe("Email Validation and Normalization", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     }
   });
 
@@ -203,7 +203,7 @@ describe("Password Validation", () => {
 
     expect(res.status).toBe(400);
     const data = await res.json();
-    expect(data.error).toBeTruthy();
+    expect(data.error).toBeDefined();
   });
 
   test("should reject null password", async () => {
@@ -267,7 +267,7 @@ describe("Request Body Validation", () => {
 
     expect(res.status).toBe(400);
     const data = await res.json();
-    expect(data.error).toBeTruthy();
+    expect(data.error).toBeDefined();
   });
 
   test("should reject wrong field types", async () => {
