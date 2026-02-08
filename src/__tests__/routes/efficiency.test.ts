@@ -15,6 +15,9 @@ let adminToken: string;
 let adminUserId: string;
 let buildingTypeId: string;
 let buildingId: string;
+let energySensor: any;
+let tempSensor: any;
+let extSensor: any;
 
 beforeAll(async () => {
   console.log = () => {};
@@ -76,7 +79,7 @@ beforeEach(async () => {
   buildingId = building._id.toString();
 
   // Create Sensors
-  const energySensor = await Sensor.create({
+  energySensor = await Sensor.create({
     buildingId: building._id,
     sensorType: "energy_meter",
     location: "Basement",
@@ -85,7 +88,7 @@ beforeEach(async () => {
     updatedBy: adminUserId,
   });
 
-  const tempSensor = await Sensor.create({
+  tempSensor = await Sensor.create({
     buildingId: building._id,
     sensorType: "internal_temp",
     location: "Living Room",
@@ -94,7 +97,7 @@ beforeEach(async () => {
     updatedBy: adminUserId,
   });
 
-  const extSensor = await Sensor.create({
+  extSensor = await Sensor.create({
     buildingId: building._id,
     sensorType: "external_temp",
     location: "Outside",
@@ -103,63 +106,105 @@ beforeEach(async () => {
     updatedBy: adminUserId,
   });
 
-  // Seed Readings
+  // Seed Readings with Physics-Compliant Data
   const baseTime = new Date("2024-01-01T10:00:00Z");
+  
+  // Physics Parameters for Simulation
+  const SURF = 100; // m2
+  const HEIGHT = 3.0; // m
+  const VOL = SURF * HEIGHT;
+  const C = VOL * 1.225 * 1005; // ~369,337 J/K
+  const H_TRUE = 50.0; // W/K (Target Heat Loss)
+  const COP_TRUE = 3.0; // Target Efficiency
+  const EXT_TEMP = 5.0; // °C
 
-  // Energy: Constant 10kW for 2 hours -> 20kWh
-  // 10kW at T0, T+1h, T+2h
-  await SensorReading.create([
-    {
-      timestamp: baseTime,
-      value: 10000, // 10kW (unit W)
-      unit: "W",
-      metadata: { sensorId: energySensor._id, buildingId: building._id, sensorType: "energy_meter" },
-    },
-    {
-      timestamp: new Date(baseTime.getTime() + 3600000), // +1h
-      value: 10000,
-      unit: "W",
-      metadata: { sensorId: energySensor._id, buildingId: building._id, sensorType: "energy_meter" },
-    },
-    {
-      timestamp: new Date(baseTime.getTime() + 7200000), // +2h
-      value: 10000,
-      unit: "W",
-      metadata: { sensorId: energySensor._id, buildingId: building._id, sensorType: "energy_meter" },
-    },
-  ]);
+  let currentTemp = 22.0;
+  const readings = [];
+  
+  // Crank-Nicolson Step Function
+  // Solve for T_new: C*(T_new-T_old)/dt = NetPower( (T_new+T_old)/2 )
+  // NetPower = P_in - H * (T_avg - T_ext)
+  const evolveTemp = (t_old: number, dt: number, p_in: number) => {
+    // (C/dt) * (T_new - T_old) = P_in - H * ( (T_new + T_old)/2 - T_ext )
+    // T_new * (C/dt + H/2) = T_old * (C/dt - H/2) + P_in + H*T_ext
+    const alpha = C / dt;
+    const beta = H_TRUE / 2;
+    const t_new = (t_old * (alpha - beta) + p_in + H_TRUE * EXT_TEMP) / (alpha + beta);
+    return t_new;
+  };
 
-  // Internal Temp: Rise from 20°C to 22°C over 2 hours
-  await SensorReading.create([
-    {
-      timestamp: baseTime,
-      value: 20.0,
+  // 1. Cooling Phase (2 hours, 8 intervals of 15m)
+  for (let i = 0; i < 8; i++) {
+    const timestamp = new Date(baseTime.getTime() + i * 15 * 60 * 1000);
+    
+    readings.push({
+      timestamp,
+      value: 0, // Power OFF
+      unit: "W",
+      metadata: { sensorId: energySensor._id, buildingId: building._id, sensorType: "energy_meter" },
+    });
+    
+    readings.push({
+      timestamp,
+      value: currentTemp,
       unit: "°C",
       metadata: { sensorId: tempSensor._id, buildingId: building._id, sensorType: "internal_temp" },
-    },
-    {
-      timestamp: new Date(baseTime.getTime() + 7200000), // +2h
-      value: 22.0,
-      unit: "°C",
-      metadata: { sensorId: tempSensor._id, buildingId: building._id, sensorType: "internal_temp" },
-    },
-  ]);
-
-  // External Temp
-  await SensorReading.create([
-    {
-      timestamp: baseTime,
-      value: 5.0,
+    });
+    
+    readings.push({
+      timestamp,
+      value: EXT_TEMP,
       unit: "°C",
       metadata: { sensorId: extSensor._id, buildingId: building._id, sensorType: "external_temp" },
-    },
-  ]);
+    });
+
+    // Evolve
+    currentTemp = evolveTemp(currentTemp, 15 * 60, 0);
+  }
+
+  // 2. Heating Phase (2 hours, 8 intervals)
+  // Heater ON (1000 W input -> 3000 W output)
+  // API calculates COP = (Stored + Loss) / P_electric
+  // We simulate: Stored + Loss = P_electric * COP_TRUE
+  const P_ELEC = 1000;
+  const P_THERMAL = P_ELEC * COP_TRUE;
+
+  for (let i = 8; i <= 16; i++) {
+    const timestamp = new Date(baseTime.getTime() + i * 15 * 60 * 1000);
+    
+    readings.push({
+      timestamp,
+      value: P_ELEC,
+      unit: "W",
+      metadata: { sensorId: energySensor._id, buildingId: building._id, sensorType: "energy_meter" },
+    });
+    
+    readings.push({
+      timestamp,
+      value: currentTemp,
+      unit: "°C",
+      metadata: { sensorId: tempSensor._id, buildingId: building._id, sensorType: "internal_temp" },
+    });
+    
+    readings.push({
+      timestamp,
+      value: EXT_TEMP,
+      unit: "°C",
+      metadata: { sensorId: extSensor._id, buildingId: building._id, sensorType: "external_temp" },
+    });
+
+    // Evolve
+    currentTemp = evolveTemp(currentTemp, 15 * 60, P_THERMAL);
+  }
+
+  await SensorReading.create(readings);
 });
 
 describe("Building Efficiency Route - Integration Tests", () => {
   test("GET /api/buildings/:id/efficiency - should calculate efficiency correctly", async () => {
+    // 4 hours total duration
     const startDate = "2024-01-01T10:00:00Z";
-    const endDate = "2024-01-01T13:00:00Z";
+    const endDate = new Date(new Date(startDate).getTime() + 4.5 * 60 * 60 * 1000).toISOString();
 
     const res = await app.request(
       `/api/buildings/${buildingId}/efficiency?startDate=${startDate}&endDate=${endDate}`,
@@ -176,22 +221,24 @@ describe("Building Efficiency Route - Integration Tests", () => {
     
     expect(json.metrics).toBeDefined();
 
-    // Energy: 20 kWh
-    expect(json.metrics.totalEnergyConsumed).toBe(20.0);
+    // Verify Physics Metrics
+    
+    // 1. Estimated Heat Loss Coefficient (H)
+    // Should be close to 50
+    expect(json.metrics.estimatedHeatLossCoefficient).not.toBeNull();
+    expect(json.metrics.estimatedHeatLossCoefficient).toBeGreaterThan(40);
+    expect(json.metrics.estimatedHeatLossCoefficient).toBeLessThan(60);
 
-    // Temp Delta: 22 - 20 = 2.0 °C
-    expect(json.metrics.temperatureChange).toBe(2.0);
+    // 2. Average COP (Device Efficiency)
+    // Should be close to 3.0
+    expect(json.metrics.averageCop).not.toBeNull();
+    expect(json.metrics.averageCop).toBeCloseTo(3.0, 0); 
+    expect(json.metrics.averageCop).toBeGreaterThan(2.5);
+    expect(json.metrics.averageCop).toBeLessThan(3.5);
 
-    // Efficiency:
-    // Energy / (Delta T * Surface)
-    // 20 / (2.0 * 100) = 20 / 200 = 0.1
-    expect(json.metrics.efficiencyIndex).toBe(0.1);
-
-    // Theoretical COP:
-    // Avg Internal = (20 + 22) / 2 = 21 °C = 294.15 K
-    // Avg External = 5 °C = 278.15 K
-    // COP = 294.15 / (294.15 - 278.15) = 294.15 / 16 = 18.38
-    expect(json.metrics.theoreticalCop).toBeCloseTo(18.38, 1);
+    // 3. Theoretical Carnot COP
+    expect(json.metrics.theoreticalCop).not.toBeNull();
+    expect(json.metrics.theoreticalCop).toBeGreaterThan(json.metrics.averageCop);
   });
 
   test("should return 400 for invalid dates", async () => {

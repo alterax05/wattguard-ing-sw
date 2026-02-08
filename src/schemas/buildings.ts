@@ -245,6 +245,8 @@ export const GetBuildingEfficiencyResponseSchema = z.object({
     averageExternalTemperature: z.number().nullable().describe("Average external temperature during period"),
     efficiencyIndex: z.number().nullable().describe("Energy efficiency index (kWh / (m² · °C)) - Lower is better"),
     theoreticalCop: z.number().nullable().describe("Theoretical Carnot COP (max efficiency based on temp delta)"),
+    estimatedHeatLossCoefficient: z.number().nullable().describe("Estimated Heat Loss Coefficient (W/K)"),
+    averageCop: z.number().nullable().describe("Average Coefficient of Performance (COP)"),
   }),
 });
 
