@@ -828,8 +828,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const start = new Date(startDate);
       const end = new Date(endDate);
 
-      // Use MongoDB Aggregation for efficient calculation
-      const aggregationResult = await SensorReading.aggregate([
+      // Physics Constants
+      const CEILING_HEIGHT = 3.0; // meters
+      const AIR_DENSITY = 1.225; // kg/m³
+      const SPECIFIC_HEAT_AIR = 1005; // J/(kg·K)
+      const ROOM_HEAT_CAPACITY = building.surface * CEILING_HEIGHT * AIR_DENSITY * SPECIFIC_HEAT_AIR;
+
+      // MongoDB Aggregation Pipeline for Physics-Based Efficiency
+      const pipeline: any[] = [
+        // 1. Match & Filter
         {
           $match: {
             "metadata.buildingId": new Types.ObjectId(id),
@@ -837,103 +844,179 @@ const app = new Hono<{ Variables: AuthVariables }>()
             "metadata.sensorType": { $in: ["energy_meter", "internal_temp", "external_temp"] }
           }
         },
+        // 2. Bucket (Group by 15m)
         {
-          $facet: {
-            // 1. Energy Calculation (Trapezoidal Integration)
-            energy: [
-              { $match: { "metadata.sensorType": "energy_meter" } },
-              { $sort: { timestamp: 1 } },
-              {
-                $setWindowFields: {
-                  sortBy: { timestamp: 1 },
-                  output: {
-                    prevTimestamp: { $shift: { output: "$timestamp", by: -1 } },
-                    prevValue: { $shift: { output: "$value", by: -1 } },
-                    prevUnit: { $shift: { output: "$unit", by: -1 } }
-                  }
+          $group: {
+            _id: {
+              $toDate: {
+                $subtract: [
+                  { $toLong: "$timestamp" },
+                  { $mod: [{ $toLong: "$timestamp" }, 15 * 60 * 1000] }
+                ]
+              }
+            },
+            avgInternalTemp: {
+              $avg: {
+                $cond: [{ $eq: ["$metadata.sensorType", "internal_temp"] }, "$value", null]
+              }
+            },
+            avgExternalTemp: {
+              $avg: {
+                $cond: [{ $eq: ["$metadata.sensorType", "external_temp"] }, "$value", null]
+              }
+            },
+            avgPowerKW: {
+              $avg: {
+                $cond: [
+                  { $eq: ["$metadata.sensorType", "energy_meter"] },
+                  {
+                    $cond: [{ $eq: ["$unit", "W"] }, { $divide: ["$value", 1000] }, "$value"]
+                  },
+                  null
+                ]
+              }
+            }
+          }
+        },
+        { $sort: { _id: 1 } },
+        // 3. Window Fields (Get Prev Values)
+        {
+          $setWindowFields: {
+            sortBy: { _id: 1 },
+            output: {
+              prevTimestamp: { $shift: { output: "$_id", by: -1 } },
+              prevInternalTemp: { $shift: { output: "$avgInternalTemp", by: -1 } },
+              prevExternalTemp: { $shift: { output: "$avgExternalTemp", by: -1 } }
+            }
+          }
+        },
+        // 4. Calculate Derivatives & Physics Variables
+        {
+          $project: {
+            avgInternalTemp: 1,
+            avgExternalTemp: 1,
+            avgPowerKW: 1,
+            dt_seconds: {
+              $divide: [{ $subtract: ["$_id", "$prevTimestamp"] }, 1000]
+            },
+            tempChange: { $subtract: ["$avgInternalTemp", "$prevInternalTemp"] },
+            avgInternal: { $avg: ["$avgInternalTemp", "$prevInternalTemp"] },
+            // Fill missing external temp with previous if null
+            avgExternal: { $ifNull: ["$avgExternalTemp", "$prevExternalTemp"] },
+            powerWatts: { $multiply: ["$avgPowerKW", 1000] }
+          }
+        },
+        // Filter out invalid time steps
+        { $match: { dt_seconds: { $gt: 0 } } },
+        // 5. Calculate Rates and H_est
+        {
+          $addFields: {
+            tempChangeRate: { $divide: ["$tempChange", "$dt_seconds"] },
+            tempDiff: { $subtract: ["$avgInternal", "$avgExternal"] },
+            C: ROOM_HEAT_CAPACITY
+          }
+        },
+        {
+          $addFields: {
+            // Estimate H (Heat Loss Coefficient) only during Cooling Phases
+            // Cooling: Power < 10W, Temp Dropping < 0, TempDiff > 2
+            H_est: {
+              $cond: {
+                if: {
+                  $and: [
+                    { $lt: ["$powerWatts", 10] },
+                    { $lt: ["$tempChangeRate", 0] },
+                    { $gt: [{ $abs: "$tempDiff" }, 2] },
+                    { $ne: ["$tempDiff", 0] }
+                  ]
+                },
+                then: {
+                  $divide: [
+                    { $multiply: [-1, "$C", "$tempChangeRate"] },
+                    "$tempDiff"
+                  ]
+                },
+                else: null
+              }
+            },
+            // Identify Heating Phase candidates
+            isHeating: {
+              $cond: {
+                if: { $gt: ["$powerWatts", 100] },
+                then: true,
+                else: false
+              }
+            }
+          }
+        },
+        // 6. Global Aggregation
+        {
+          $group: {
+            _id: null,
+            avgH: { $avg: "$H_est" },
+            // Collect heating buckets to calculate COP later
+            heatingBuckets: {
+              $push: {
+                $cond: {
+                  if: "$isHeating",
+                  then: {
+                    C: "$C",
+                    tempChangeRate: "$tempChangeRate",
+                    tempDiff: "$tempDiff",
+                    powerWatts: "$powerWatts"
+                  },
+                  else: "$$REMOVE"
                 }
-              },
-              {
-                $match: { prevTimestamp: { $ne: null } }
-              },
-              {
-                $project: {
-                  // Normalize to kW
-                  val_kW: {
-                    $cond: { if: { $eq: ["$unit", "W"] }, then: { $divide: ["$value", 1000] }, else: "$value" }
-                  },
-                  prev_val_kW: {
-                    $cond: { if: { $eq: ["$prevUnit", "W"] }, then: { $divide: ["$prevValue", 1000] }, else: "$prevValue" }
-                  },
-                  // Time diff in hours
-                  dt_hours: {
+              }
+            },
+            // Legacy Metrics
+            totalEnergyConsumed: { 
+              $sum: { 
+                $multiply: ["$avgPowerKW", { $divide: ["$dt_seconds", 3600] }] 
+              } 
+            },
+            totalTempChange: { $sum: "$tempChange" },
+            avgInternalTempForCarnot: { $avg: "$avgInternalTemp" },
+            avgExternalTemp: { $avg: "$avgExternal" }
+          }
+        },
+        // 7. Calculate Average COP using the calculated avgH
+        {
+          $project: {
+            avgH: 1,
+            totalEnergyConsumed: { $round: ["$totalEnergyConsumed", 2] },
+            totalTempChange: { $round: ["$totalTempChange", 2] },
+            avgInternalTempForCarnot: 1,
+            avgExternalTemp: 1,
+            averageCop: {
+              $avg: {
+                $map: {
+                  input: "$heatingBuckets",
+                  as: "b",
+                  in: {
                     $divide: [
-                      { $subtract: ["$timestamp", "$prevTimestamp"] },
-                      3600000
+                      {
+                        $add: [
+                          { $multiply: ["$$b.C", "$$b.tempChangeRate"] },
+                          { $multiply: ["$avgH", "$$b.tempDiff"] }
+                        ]
+                      },
+                      "$$b.powerWatts"
                     ]
                   }
                 }
-              },
-              {
-                $project: {
-                  energyStep: {
-                    $multiply: [
-                      { $avg: ["$val_kW", "$prev_val_kW"] },
-                      "$dt_hours"
-                    ]
-                  }
-                }
-              },
-              {
-                $group: {
-                  _id: null,
-                  totalEnergyConsumed: { $sum: "$energyStep" }
-                }
               }
-            ],
-            // 2. Internal Temperature (Delta & Avg)
-            internal: [
-              { $match: { "metadata.sensorType": "internal_temp" } },
-              { $sort: { timestamp: 1 } },
-              {
-                $group: {
-                  _id: null,
-                  first: { $first: "$value" },
-                  last: { $last: "$value" },
-                  avg: { $avg: "$value" }
-                }
-              }
-            ],
-            // 3. External Temperature (Avg)
-            external: [
-              { $match: { "metadata.sensorType": "external_temp" } },
-              {
-                $group: {
-                  _id: null,
-                  avg: { $avg: "$value" }
-                }
-              }
-            ]
+            }
           }
         }
-      ]);
+      ];
 
-      const result = aggregationResult[0];
-      const totalEnergyConsumed = result.energy[0]?.totalEnergyConsumed || 0;
-      
-      const internalData = result.internal[0];
-      let temperatureChange = 0;
-      let avgInternalTemp: number | null = null;
-      
-      if (internalData) {
-        temperatureChange = internalData.last - internalData.first;
-        avgInternalTemp = internalData.avg;
-      }
+      const aggResult = await SensorReading.aggregate(pipeline);
+      const metrics = aggResult[0] || {};
 
-      let averageExternalTemperature: number | null = result.external[0]?.avg || null;
-
+      // Legacy Fallbacks
+      let averageExternalTemperature = metrics.avgExternalTemp || null;
       if (averageExternalTemperature === null) {
-        // Fallback to Weather API if no sensors
         const coords = await getCoordinates(building.address);
         if (coords) {
           averageExternalTemperature = await getAverageHistoricalTemperature(
@@ -945,23 +1028,17 @@ const app = new Hono<{ Variables: AuthVariables }>()
         }
       }
 
-      // 4. Calculate Efficiency Index (kWh / (m² * °C))
-      // Only meaningful if temperature increased and surface is > 0
+      // Efficiency Index
       let efficiencyIndex: number | null = null;
-      if (temperatureChange > 0.1 && totalEnergyConsumed > 0 && building.surface > 0) {
-        efficiencyIndex = totalEnergyConsumed / (temperatureChange * building.surface);
+      if ((metrics.totalTempChange || 0) > 0.1 && (metrics.totalEnergyConsumed || 0) > 0 && building.surface > 0) {
+        efficiencyIndex = metrics.totalEnergyConsumed / (metrics.totalTempChange * building.surface);
       }
 
-      // 5. Calculate Theoretical Carnot COP
-      // COP = T_hot / (T_hot - T_cold)  [Temperatures in Kelvin]
-      // T_hot = avgInternal, T_cold = avgExternal
+      // Theoretical COP
       let theoreticalCop: number | null = null;
-
-      if (avgInternalTemp !== null && averageExternalTemperature !== null) {
-        const tHotK = avgInternalTemp + 273.15;
+      if (metrics.avgInternalTempForCarnot && averageExternalTemperature !== null) {
+        const tHotK = metrics.avgInternalTempForCarnot + 273.15;
         const tColdK = averageExternalTemperature + 273.15;
-        
-        // Ensure T_hot > T_cold for heating mode COP
         if (tHotK > tColdK) {
           theoreticalCop = tHotK / (tHotK - tColdK);
         }
@@ -975,8 +1052,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           endDate: end.toISOString(),
         },
         metrics: {
-          totalEnergyConsumed: Number(totalEnergyConsumed.toFixed(2)),
-          temperatureChange: Number(temperatureChange.toFixed(2)),
+          totalEnergyConsumed: metrics.totalEnergyConsumed || 0,
+          temperatureChange: metrics.totalTempChange || 0,
           averageExternalTemperature: averageExternalTemperature !== null 
             ? Number(averageExternalTemperature.toFixed(2)) 
             : null,
@@ -986,6 +1063,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           theoreticalCop: theoreticalCop !== null
             ? Number(theoreticalCop.toFixed(2))
             : null,
+          estimatedHeatLossCoefficient: metrics.avgH ? Number(metrics.avgH.toFixed(2)) : null,
+          averageCop: metrics.averageCop ? Number(metrics.averageCop.toFixed(2)) : null
         },
       });
     }
