@@ -1,9 +1,11 @@
 import mqtt from "mqtt";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
+import { Alert } from "../models/Alert";
 
 export function connectAndSubscribe() {
   const brokerUrl = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
+  
   const client = mqtt.connect(brokerUrl);
 
   client.on("connect", () => {
@@ -42,10 +44,41 @@ export function connectAndSubscribe() {
       const readingTimestamp = timestamp ? new Date(timestamp) : new Date();
 
       // Find the sensor to ensure it exists and get metadata
-      const sensor = await Sensor.findById(sensorId);
+      const sensor = await Sensor.findById(sensorId).populate("buildingId");
       if (!sensor) {
         console.warn(`⚠️ Received reading for unknown sensor: ${sensorId}`);
         return;
+      }
+
+      // Check thresholds and generate alerts
+      if (
+        (sensor.minThreshold !== undefined && value < sensor.minThreshold) ||
+        (sensor.maxThreshold !== undefined && value > sensor.maxThreshold)
+      ) {
+        const type = "threshold_exceeded";
+        // Check if an active alert already exists for this sensor and type
+        const existingAlert = await Alert.findOne({
+          sensorId: sensor._id,
+          type,
+          status: "active",
+        });
+
+        if (!existingAlert) {
+          const isMin = sensor.minThreshold !== undefined && value < sensor.minThreshold;
+          const limit = isMin ? sensor.minThreshold : sensor.maxThreshold;
+          const severity = "high";
+          const message = `Valore fuori soglia rilevato per il sensore ${sensor.sensorType} (${sensor.location}): ${value}${unit} (Limite: ${limit}${unit})`;
+
+          await Alert.create({
+            buildingId: sensor.buildingId._id,
+            buildingName: (sensor.buildingId as unknown as { name: string }).name || "Edificio Sconosciuto",
+            sensorId: sensor._id,
+            type,
+            severity,
+            message,
+            status: "active",
+          });
+        }
       }
 
       // Create the reading document
@@ -66,6 +99,10 @@ export function connectAndSubscribe() {
         timestamp: readingTimestamp,
         unit,
       };
+      // If the sensor was auto-marked inactive, a new reading means it's back online.
+      if (sensor.status === "inactive") {
+        sensor.status = "active";
+      }
       await sensor.save();
     } catch (error) {
       console.error(`❌ Error processing MQTT message on ${topic}:`, error);

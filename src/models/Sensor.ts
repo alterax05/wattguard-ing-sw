@@ -1,6 +1,6 @@
 import mongoose, { Schema, Types } from "mongoose";
 
-export type SensorType = "internal_temp" | "external_temp" | "energy_meter";
+export type SensorType = "internal_temp" | "external_temp" | "energy_meter" | "gas_meter";
 export type SensorStatus = "active" | "inactive" | "maintenance" | "error";
 
 export interface ILastReading {
@@ -25,24 +25,14 @@ export interface ISensor {
   installationDate: Date;
   status: SensorStatus;
   lastReading?: ILastReading;
-  transmissionInterval: number; 
-  simulationConfig?: ISimulationConfig;
+  transmissionInterval: number;
+  minThreshold?: number;
+  maxThreshold?: number;
   createdBy: Types.ObjectId;
   updatedBy: Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
 }
-
-const simulationConfigSchema = new Schema<ISimulationConfig>(
-  {
-    baseValue: Number,
-    amplitude: Number,
-    noise: Number,
-    min: Number,
-    max: Number,
-  },
-  { _id: false }
-);
 
 const lastReadingSchema = new Schema<ILastReading>(
   {
@@ -53,6 +43,7 @@ const lastReadingSchema = new Schema<ILastReading>(
     timestamp: {
       type: Date,
       required: true,
+      default: Date.now,
     },
     unit: {
       type: String,
@@ -60,7 +51,7 @@ const lastReadingSchema = new Schema<ILastReading>(
       trim: true,
     },
   },
-  { _id: false } // Don't create _id for subdocument
+  { _id: false }
 );
 
 const sensorSchema = new Schema<ISensor>(
@@ -73,7 +64,7 @@ const sensorSchema = new Schema<ISensor>(
     },
     sensorType: {
       type: String,
-      enum: ["internal_temp", "external_temp", "energy_meter"],
+      enum: ["internal_temp", "external_temp", "energy_meter", "gas_meter"],
       required: true,
       index: true,
     },
@@ -84,14 +75,12 @@ const sensorSchema = new Schema<ISensor>(
     },
     serialNumber: {
       type: String,
-      required: false,
-      unique: true,
-      sparse: true, // allows multiple null values
       trim: true,
     },
     installationDate: {
       type: Date,
       required: true,
+      default: Date.now,
     },
     status: {
       type: String,
@@ -105,13 +94,16 @@ const sensorSchema = new Schema<ISensor>(
     },
     transmissionInterval: {
       type: Number,
+      required: true,
       default: 90,
-      min: [10, "Transmission interval must be at least 10 seconds"],
-      max: [3600, "Transmission interval cannot exceed 1 hour"],
+      min: 10,
+      max: 3600,
     },
-    simulationConfig: {
-      type: simulationConfigSchema,
-      required: false,
+    minThreshold: {
+      type: Number,
+    },
+    maxThreshold: {
+      type: Number,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
@@ -129,7 +121,6 @@ const sensorSchema = new Schema<ISensor>(
   }
 );
 
-sensorSchema.index({ buildingId: 1, status: 1 });
 sensorSchema.index({ buildingId: 1, sensorType: 1 });
 
 export const Sensor = mongoose.model<ISensor>("Sensor", sensorSchema);
