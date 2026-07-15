@@ -2,11 +2,8 @@ services:
   mqtt:
     image: eclipse-mosquitto:2.0
     ports:
-      - "1884:1884"
+      - "1883:1883"
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
-
-volumes:
-  mongo-data:

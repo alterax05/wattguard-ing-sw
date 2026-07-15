@@ -1,16 +1,14 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
 import { connectAndSubscribe } from "./mqtt";
 import mqtt from "mqtt";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
 
 // Mock Mongoose models
-const mockSensorFindById = mock();
-const mockSensorSave = mock();
-const mockReadingCreate = mock();
+let sensorFindByIdSpy: ReturnType<typeof spyOn>;
+let readingCreateSpy: ReturnType<typeof spyOn>;
 
-Sensor.findById = mockSensorFindById;
-SensorReading.create = mockReadingCreate;
+const mockSensorSave = mock();
 
 // Mock MQTT Client
 const mockOn = mock();
@@ -25,9 +23,10 @@ describe("MQTT Service", () => {
   let connectCallback: () => void;
 
   beforeEach(() => {
-    mockSensorFindById.mockReset();
+    sensorFindByIdSpy = spyOn(Sensor, "findById");
+    readingCreateSpy = spyOn(SensorReading, "create");
+
     mockSensorSave.mockReset();
-    mockReadingCreate.mockReset();
     mockOn.mockReset();
     mockSubscribe.mockReset();
 
@@ -41,6 +40,11 @@ describe("MQTT Service", () => {
     // Mock the connect function
     // @ts-ignore
     mqtt.connect = mock(() => mockMqttClient);
+  });
+
+  afterEach(() => {
+    sensorFindByIdSpy.mockRestore();
+    readingCreateSpy.mockRestore();
   });
 
   test("should connect and subscribe on initialization", () => {
@@ -66,8 +70,12 @@ describe("MQTT Service", () => {
       sensorType: "internal_temp",
       save: mockSensorSave,
     };
-    mockSensorFindById.mockResolvedValue(mockSensorDoc);
-    mockReadingCreate.mockResolvedValue({});
+    
+    // Mock populate chain
+    sensorFindByIdSpy.mockReturnValue({
+      populate: () => Promise.resolve(mockSensorDoc)
+    });
+    readingCreateSpy.mockResolvedValue({});
 
     // Trigger message
     const topic = "sensors/sensor123/readings";
