@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import mongoose from "mongoose";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { User } from "../../models/User";
@@ -12,12 +13,12 @@ const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
 
 let adminToken: string;
-let adminUserId: string;
-let buildingTypeId: string;
+let adminUserId: mongoose.Types.ObjectId;
+let buildingTypeId: mongoose.Types.ObjectId;
 let buildingId: string;
-let energySensor: any;
-let tempSensor: any;
-let extSensor: any;
+let energySensor;
+let tempSensor;
+let extSensor;
 
 beforeAll(async () => {
   console.log = () => {};
@@ -45,7 +46,7 @@ beforeEach(async () => {
     role: "admin",
     passwordHash: adminPasswordHash,
   });
-  adminUserId = admin._id.toString();
+  adminUserId = admin._id as mongoose.Types.ObjectId;
 
   // Login to get token
   const loginRes = await app.request("/api/auth/local/login", {
@@ -64,7 +65,7 @@ beforeEach(async () => {
 
   // Create Fixtures
   const buildingType = await BuildingType.create({ name: "Residential" });
-  buildingTypeId = buildingType._id.toString();
+  buildingTypeId = buildingType._id as mongoose.Types.ObjectId;
 
   const building = await Building.create({
     name: "Efficiency Test Building",
@@ -73,6 +74,7 @@ beforeEach(async () => {
     buildingType: buildingTypeId,
     heatingSystemType: "electric",
     geographicZone: "Zone A",
+    location: { type: "Point", coordinates: [11.1167, 46.0667] },
     createdBy: adminUserId,
     updatedBy: adminUserId,
   });
@@ -235,10 +237,6 @@ describe("Building Efficiency Route - Integration Tests", () => {
     expect(json.metrics.averageCop).toBeCloseTo(3.0, 0); 
     expect(json.metrics.averageCop).toBeGreaterThan(2.5);
     expect(json.metrics.averageCop).toBeLessThan(3.5);
-
-    // 3. Theoretical Carnot COP
-    expect(json.metrics.theoreticalCop).not.toBeNull();
-    expect(json.metrics.theoreticalCop).toBeGreaterThan(json.metrics.averageCop);
   });
 
   test("should return 400 for invalid dates", async () => {

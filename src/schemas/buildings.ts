@@ -6,8 +6,20 @@ import {
   HeatingSystemTypeSchema,
   PaginationQuerySchema,
   SortOrderSchema,
+  SensorTypeSchema,
 } from "./common";
 import { SensorSchema } from "./sensors";
+
+/**
+ * GeoJSON Point schema — { type: "Point", coordinates: [longitude, latitude] }
+ */
+export const GeoJSONPointSchema = z.object({
+  type: z.literal("Point").describe("GeoJSON type"),
+  coordinates: z.tuple([
+    z.number().min(-180).max(180).describe("Longitude"),
+    z.number().min(-90).max(90).describe("Latitude"),
+  ]).describe("GeoJSON coordinates [longitude, latitude]"),
+});
 
 /**
  * Building response schema
@@ -17,6 +29,8 @@ export const BuildingSummarySchema = z.object({
   name: z.string().describe("Building name"),
   address: z.string().describe("Building address"),
   surface: z.number().describe("Surface area in square meters"),
+  ceilingHeight: z.number().describe("Ceiling height in meters"),
+  location: GeoJSONPointSchema.describe("Geographic location as GeoJSON Point"),
   buildingType: z.union([
     z.string(), // ID
     z.object({
@@ -28,6 +42,8 @@ export const BuildingSummarySchema = z.object({
   heatingSystemType: z.string().describe("Type of heating system"),
   status: BuildingStatusSchema,
   geographicZone: z.string().describe("Geographic zone"),
+  activeSensors: z.number().describe("Count of active sensors"),
+  currentConsumption: z.number().nullable().describe("Latest energy meter reading in kWh, or null if unavailable"),
   updatedAt: z.iso.datetime().describe("Last update timestamp"),
 });
 
@@ -74,6 +90,8 @@ export const CreateBuildingRequestSchema = z.object({
   name: z.string().min(1, "Name is required").trim().describe("Building name"),
   address: z.string().min(1, "Address is required").trim().describe("Building address"),
   surface: z.number().min(0, "Surface must be positive").describe("Surface area in square meters"),
+  ceilingHeight: z.number().min(0.5, "Height must be at least 0.5m").max(20).default(3.0).describe("Ceiling height in meters"),
+  location: GeoJSONPointSchema.describe("Geographic location as GeoJSON Point"),
   buildingType: ObjectIdSchema.describe("Building type identifier"),
   heatingSystemType: HeatingSystemTypeSchema.describe("Type of heating system"),
   constructionYear: z.number().min(1000).max(new Date().getFullYear() + 10).optional().describe("Year of construction"),
@@ -116,6 +134,8 @@ export const UpdateBuildingRequestSchema = z.object({
   name: z.string().min(1).trim().optional().describe("Building name"),
   address: z.string().min(1).trim().optional().describe("Building address"),
   surface: z.number().min(0).optional().describe("Surface area in square meters"),
+  ceilingHeight: z.number().min(0.5).max(20).optional().describe("Ceiling height in meters"),
+  location: GeoJSONPointSchema.optional().describe("Geographic location as GeoJSON Point"),
   buildingType: ObjectIdSchema.optional().describe("Building type identifier"),
   heatingSystemType: HeatingSystemTypeSchema.optional().describe("Type of heating system"),
   constructionYear: z.number().min(1000).max(new Date().getFullYear() + 10).optional().describe("Year of construction"),
@@ -193,7 +213,7 @@ export const GetBuildingRealTimeResponseSchema = z.object({
 export const GetBuildingHistoryQuerySchema = z.object({
   startDate: z.iso.datetime().describe("Start date for historical data"),
   endDate: z.iso.datetime().describe("End date for historical data"),
-  sensorType: z.enum(["internal_temp", "external_temp", "energy_meter"]).optional().describe("Filter by sensor type"),
+  sensorType: z.enum(["internal_temp", "external_temp", "energy_meter", "gas_meter"]).optional().describe("Filter by sensor type"),
   interval: z.enum(["minute", "hour", "day"]).optional().describe("Data aggregation interval (default: hour)"),
 });
 
@@ -204,7 +224,7 @@ export const HistoricalDataPointSchema = z.object({
   timestamp: z.iso.datetime(),
   value: z.number(),
   unit: z.string(),
-  sensorType: ObjectIdSchema,
+  sensorType: SensorTypeSchema,
   sensorId: z.string().optional(),
 });
 
@@ -241,11 +261,9 @@ export const GetBuildingEfficiencyResponseSchema = z.object({
   }),
   metrics: z.object({
     totalEnergyConsumed: z.number().describe("Total energy consumed in kWh"),
-    temperatureChange: z.number().describe("Internal temperature change in °C"),
     averageExternalTemperature: z.number().nullable().describe("Average external temperature during period"),
-    efficiencyIndex: z.number().nullable().describe("Energy efficiency index (kWh / (m² · °C)) - Lower is better"),
-    theoreticalCop: z.number().nullable().describe("Theoretical Carnot COP (max efficiency based on temp delta)"),
     estimatedHeatLossCoefficient: z.number().nullable().describe("Estimated Heat Loss Coefficient (W/K)"),
+    insulationQuality: z.number().nullable().describe("Insulation Quality (W/(m²·K))"),
     averageCop: z.number().nullable().describe("Average Coefficient of Performance (COP)"),
   }),
 });
