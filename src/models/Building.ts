@@ -3,10 +3,17 @@ import type { IBuildingType } from "./BuildingType";
 
 export type BuildingStatus = "active" | "inactive" | "decommissioned";
 
+export interface IGeoJSONPoint {
+  type: "Point";
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
 export interface IBuilding {
   name: string;
   address: string;
   surface: number; // m²
+  ceilingHeight: number; // m
+  location: IGeoJSONPoint;
   buildingType: PopulatedDoc<IBuildingType>;
   heatingSystemType: string;
   constructionYear?: number;
@@ -17,6 +24,21 @@ export interface IBuilding {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+const pointSchema = new Schema(
+  {
+    type: {
+      type: String,
+      enum: ["Point"],
+      required: true,
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+    },
+  },
+  { _id: false }
+);
 
 const buildingSchema = new Schema<IBuilding>(
   {
@@ -36,6 +58,18 @@ const buildingSchema = new Schema<IBuilding>(
       type: Number,
       required: true,
       min: [0, "Surface must be positive"],
+    },
+    ceilingHeight: {
+      type: Number,
+      required: true,
+      default: 3.0,
+      min: [0.5, "Ceiling height must be at least 0.5m"],
+      max: [20, "Ceiling height must be reasonable"],
+    },
+    location: {
+      type: pointSchema,
+      required: true,
+      index: "2dsphere",
     },
     buildingType: {
       type: Schema.Types.ObjectId,

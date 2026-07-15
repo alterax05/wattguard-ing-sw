@@ -14,3 +14,6 @@ export * from "./admin";
 
 // Invite schemas
 export * from "./invites";
+
+// Settings schemas
+export * from "./settings";

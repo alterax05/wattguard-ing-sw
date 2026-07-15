@@ -4,7 +4,7 @@ import mongoose, { Types, type QueryFilter, type Document } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Building, type IBuilding } from "../models/Building";
 import { BuildingType, type IBuildingType } from "../models/BuildingType";
-import { Sensor } from "../models/Sensor";
+import { Sensor, type ISensor } from "../models/Sensor";
 import { SensorReading, type ISensorReading } from "../models/SensorReading";
 
 import {
@@ -27,7 +27,7 @@ import {
   GetBuildingEfficiencyResponseSchema,
   ErrorSchema,
 } from "../schemas/buildings";
-import { getCoordinates, getAverageHistoricalTemperature } from "../lib/weather";
+import { getAverageHistoricalTemperature } from "../lib/weather";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
@@ -104,14 +104,57 @@ const app = new Hono<{ Variables: AuthVariables }>()
         .limit(query.limit)
         .skip(query.offset);
 
+      // Enrich with active sensor counts and current consumption
+      const buildingIds = buildings.map((b) => b._id);
+
+      // Count active sensors per building
+      const sensorCounts = await Sensor.aggregate<{
+        _id: Types.ObjectId;
+        count: number;
+      }>([
+        { $match: { buildingId: { $in: buildingIds }, status: "active" } },
+        { $group: { _id: "$buildingId", count: { $sum: 1 } } },
+      ]);
+      const sensorCountMap = new Map(
+        sensorCounts.map((s) => [s._id.toString(), s.count])
+      );
+
+      // Get latest energy_meter reading per building (from sensor lastReading)
+      const energySensors = await Sensor.aggregate<{
+        _id: Types.ObjectId;
+        value: number;
+      }>([
+        {
+          $match: {
+            buildingId: { $in: buildingIds },
+            sensorType: "energy_meter",
+            status: "active",
+            "lastReading.value": { $exists: true },
+          },
+        },
+        { $sort: { "lastReading.timestamp": -1 } },
+        {
+          $group: {
+            _id: "$buildingId",
+            value: { $first: "$lastReading.value" },
+          },
+        },
+      ]);
+      const consumptionMap = new Map(
+        energySensors.map((s) => [s._id.toString(), s.value])
+      );
+
       return c.json({
         buildings: buildings.map((b) => {
           const buildingType = b.buildingType;
+          const bid = b._id.toString();
           return {
-            id: b._id.toString(),
+            id: bid,
             name: b.name,
             address: b.address,
             surface: b.surface,
+            ceilingHeight: b.ceilingHeight,
+            location: b.location,
             buildingType: (buildingType instanceof mongoose.Types.ObjectId)
               ? buildingType.toString()
               : {
@@ -122,6 +165,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
             heatingSystemType: b.heatingSystemType,
             status: b.status,
             geographicZone: b.geographicZone,
+            activeSensors: sensorCountMap.get(bid) ?? 0,
+            currentConsumption: consumptionMap.get(bid) ?? null,
             updatedAt: b.updatedAt?.toISOString(),
           };
         }),
@@ -136,7 +181,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/",
     describeRoute({
-      description: "Create a new building (Gestione edifici)",
+      description: "Create a new building",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -210,6 +255,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           name: building.name,
           address: building.address,
           surface: building.surface,
+          ceilingHeight: building.ceilingHeight,
+          location: building.location,
           buildingType: (bt instanceof mongoose.Types.ObjectId)
             ? bt.toString()
             : {
@@ -220,6 +267,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
+          activeSensors: 0,
+          currentConsumption: null,
           constructionYear: building.constructionYear,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
@@ -286,12 +335,25 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const bt = building.buildingType!;
 
+      // Enrich with active sensor count and current consumption
+      const [activeSensorsCount, energySensor] = await Promise.all([
+        Sensor.countDocuments({ buildingId: building._id, status: "active" }),
+        Sensor.findOne({
+          buildingId: building._id,
+          sensorType: "energy_meter",
+          status: "active",
+          "lastReading.value": { $exists: true },
+        }).sort({ "lastReading.timestamp": -1 }),
+      ]);
+
       return c.json({
         building: {
           id: building._id.toString(),
           name: building.name,
           address: building.address,
           surface: building.surface,
+          ceilingHeight: building.ceilingHeight,
+          location: building.location,
           buildingType: (bt instanceof mongoose.Types.ObjectId)
             ? bt.toString()
             : {
@@ -302,6 +364,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
+          activeSensors: activeSensorsCount,
+          currentConsumption: energySensor?.lastReading?.value ?? null,
           constructionYear: building.constructionYear,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
@@ -318,7 +382,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .patch(
     "/:id",
     describeRoute({
-      description: "Update a building (Gestione edifici)",
+      description: "Update a building",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -376,8 +440,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Building not found" }, 404);
       }
 
-      
-
       // Validate building type if being updated
       if (updates.buildingType) {
         const buildingType = await BuildingType.findById(updates.buildingType);
@@ -390,6 +452,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.name !== undefined) building.name = updates.name;
       if (updates.address !== undefined) building.address = updates.address;
       if (updates.surface !== undefined) building.surface = updates.surface;
+      if (updates.ceilingHeight !== undefined) building.ceilingHeight = updates.ceilingHeight;
+      if (updates.location !== undefined) building.location = updates.location;
       if (updates.buildingType !== undefined) building.buildingType = new Types.ObjectId(updates.buildingType);
       if (updates.heatingSystemType !== undefined)
         building.heatingSystemType = updates.heatingSystemType;
@@ -408,6 +472,17 @@ const app = new Hono<{ Variables: AuthVariables }>()
       await building.populate("buildingType", "name description");
       const bt = building.buildingType!;
 
+      // Enrich with active sensor count and current consumption
+      const [activeSensorsCount, energySensor] = await Promise.all([
+        Sensor.countDocuments({ buildingId: building._id, status: "active" }),
+        Sensor.findOne({
+          buildingId: building._id,
+          sensorType: "energy_meter",
+          status: "active",
+          "lastReading.value": { $exists: true },
+        }).sort({ "lastReading.timestamp": -1 }),
+      ]);
+
       return c.json({
         success: true,
         building: {
@@ -415,6 +490,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           name: building.name,
           address: building.address,
           surface: building.surface,
+          ceilingHeight: building.ceilingHeight,
+          location: building.location,
           buildingType: (bt instanceof mongoose.Types.ObjectId)
             ? bt.toString()
             : {
@@ -425,6 +502,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
+          activeSensors: activeSensorsCount,
+          currentConsumption: energySensor?.lastReading?.value ?? null,
           constructionYear: building.constructionYear,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
@@ -434,7 +513,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
     }
   )
-
   /**
    * DELETE /api/buildings/:id - Delete a building with cascade
    */
@@ -503,7 +581,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
     }
   )
-
   /**
    * GET /api/buildings/:id/sensors - Get building sensors
    */
@@ -568,6 +645,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           status: s.status,
           installationDate: s.installationDate?.toISOString(),
           transmissionInterval: s.transmissionInterval,
+          minThreshold: s.minThreshold,
+          maxThreshold: s.maxThreshold,
           lastReading: s.lastReading ? {
             value: s.lastReading.value,
             unit: s.lastReading.unit,
@@ -638,9 +717,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const sensors = await Sensor.find({ buildingId: id, status: "active" });
 
       // Find sensors by type and get their last readings
-      const internalTempSensor = sensors.find((s) => s.sensorType === "internal_temp");
-      const externalTempSensor = sensors.find((s) => s.sensorType === "external_temp");
-      const energyMeterSensor = sensors.find((s) => s.sensorType === "energy_meter");
+      const internalTempSensor = sensors.find((s: ISensor) => s.sensorType === "internal_temp");
+      const externalTempSensor = sensors.find((s: ISensor) => s.sensorType === "external_temp");
+      const energyMeterSensor = sensors.find((s: ISensor) => s.sensorType === "energy_meter");
 
       return c.json({
         buildingId: building._id.toString(),
@@ -669,7 +748,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
     }
   )
-  // ... (rest of file) ...
   .get(
     "/:id/history",
     describeRoute({
@@ -828,30 +906,221 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const start = new Date(startDate);
       const end = new Date(endDate);
 
-      // Physics Constants
-      const CEILING_HEIGHT = 3.0; // meters
+      // ── Heating system classification ──────────────────────────────────────
+      const heatingType = building.heatingSystemType.toLowerCase();
+      const isGasBoiler = heatingType.includes("gas")
+        || heatingType.includes("caldaia")
+        || heatingType.includes("centralizzato");
+      const isDistrictHeating = heatingType.includes("teleriscaldamento")
+        || heatingType.includes("district");
+
+      // Natural gas lower heating value (Italy standard)
+      const GAS_LHV_KWH_PER_M3 = 10.55;
+
+      // Physics Constants (for COP / heat-loss estimation)
+      const CEILING_HEIGHT = building.ceilingHeight || 3.0; // meters (fallback to default)
       const AIR_DENSITY = 1.225; // kg/m³
       const SPECIFIC_HEAT_AIR = 1005; // J/(kg·K)
       const ROOM_HEAT_CAPACITY = building.surface * CEILING_HEIGHT * AIR_DENSITY * SPECIFIC_HEAT_AIR;
 
-      // MongoDB Aggregation Pipeline for Physics-Based Efficiency
-      const pipeline: any[] = [
-        // 1. Match & Filter
-        {
-          $match: {
+      // ── Sensor match ───────────────────────────────────────────────────────
+      // Gas boiler buildings use gas_meter instead of energy_meter.
+      const energySensorType = isGasBoiler ? "gas_meter" : "energy_meter";
+      const sensorMatch = {
+        "metadata.buildingId": new Types.ObjectId(id),
+        timestamp: { $gte: start, $lte: end },
+        "metadata.sensorType": { $in: [energySensorType, "internal_temp", "external_temp"] }
+      };
+
+      // ── Gas pre-aggregation ────────────────────────────────────────────────
+      // For gas boiler buildings only: convert cumulative m³ readings into
+      // per-minute average fuel power (kW), used by the physics pipeline.
+      // Formula: power_kW = deltaM3 / deltaTHours × GAS_LHV_KWH_PER_M3
+      type GasBucket = { _id: Date; avgGasPowerKW: number };
+      let gasPowerByMinute = new Map<string, number>(); // minuteISO → kW
+
+      if (isGasBoiler) {
+        const gasReadings: GasBucket[] = await SensorReading.aggregate([
+          {
+            $match: {
+              "metadata.buildingId": new Types.ObjectId(id),
+              timestamp: { $gte: start, $lte: end },
+              "metadata.sensorType": "gas_meter",
+            }
+          },
+          { $sort: { timestamp: 1 } },
+          {
+            $setWindowFields: {
+              sortBy: { timestamp: 1 },
+              output: {
+                prevValue:     { $shift: { output: "$value",     by: -1 } },
+                prevTimestamp: { $shift: { output: "$timestamp", by: -1 } }
+              }
+            }
+          },
+          // Drop the first document (no previous reading → no delta)
+          { $match: { prevValue: { $exists: true } } },
+          {
+            $addFields: {
+              deltaM3: { $subtract: ["$value", "$prevValue"] },
+              deltaTHours: {
+                $divide: [
+                  { $subtract: [{ $toLong: "$timestamp" }, { $toLong: "$prevTimestamp" }] },
+                  3600000
+                ]
+              },
+              minuteBucket: {
+                $toDate: {
+                  $subtract: [
+                    { $toLong: "$timestamp" },
+                    { $mod: [{ $toLong: "$timestamp" }, 60000] }
+                  ]
+                }
+              }
+            }
+          },
+          // Discard negatives (meter resets) and zero-duration intervals
+          { $match: { deltaM3: { $gte: 0 }, deltaTHours: { $gt: 0 } } },
+          {
+            $addFields: {
+              // Convert m³ flow rate to kW of fuel energy input
+              gasPowerKW: {
+                $multiply: [
+                  { $divide: ["$deltaM3", "$deltaTHours"] },
+                  GAS_LHV_KWH_PER_M3
+                ]
+              }
+            }
+          },
+          {
+            $group: {
+              _id: "$minuteBucket",
+              avgGasPowerKW: { $avg: "$gasPowerKW" }
+            }
+          }
+        ]);
+
+        gasPowerByMinute = new Map(
+          gasReadings.map((r) => [r._id.toISOString(), r.avgGasPowerKW])
+        );
+      }
+
+      // ── Aggregation 1: Basic metrics ────────────────────────────────────────
+      // For gas buildings: totalEnergyConsumed = (lastM3 − firstM3) × GAS_LHV_KWH_PER_M3
+      // For others: avgPowerKW × elapsed hours.
+      let totalEnergyConsumed = 0;
+      let avgExternalTempFromBasic: number | null = null;
+
+      if (isGasBoiler) {
+        // Fetch first and last gas_meter readings in the period
+        const [firstGas] = await SensorReading.find({
+          "metadata.buildingId": new Types.ObjectId(id),
+          timestamp: { $gte: start, $lte: end },
+          "metadata.sensorType": "gas_meter",
+        }).sort({ timestamp: 1 }).limit(1);
+
+        const [lastGas] = await SensorReading.find({
+          "metadata.buildingId": new Types.ObjectId(id),
+          timestamp: { $gte: start, $lte: end },
+          "metadata.sensorType": "gas_meter",
+        }).sort({ timestamp: -1 }).limit(1);
+
+        if (firstGas && lastGas && lastGas.value >= firstGas.value) {
+          const consumedM3 = lastGas.value - firstGas.value;
+          totalEnergyConsumed = Number((consumedM3 * GAS_LHV_KWH_PER_M3).toFixed(2));
+        }
+
+        // External temperature average for gas buildings
+        const [extResult] = await SensorReading.aggregate([
+          {
+            $match: {
+              "metadata.buildingId": new Types.ObjectId(id),
+              timestamp: { $gte: start, $lte: end },
+              "metadata.sensorType": "external_temp",
+            }
+          },
+          { $group: { _id: null, avg: { $avg: "$value" } } }
+        ]);
+        avgExternalTempFromBasic = extResult?.avg ?? null;
+
+      } else {
+        const [basicResult] = await SensorReading.aggregate([
+          { $match: sensorMatch },
+          {
+            $group: {
+              _id: null,
+              avgPowerKW: {
+                $avg: {
+                  $cond: [
+                    { $eq: ["$metadata.sensorType", "energy_meter"] },
+                    // Normalise W → kW; values already in kW pass through as-is
+                    { $cond: [{ $eq: ["$unit", "W"] }, { $divide: ["$value", 1000] }, "$value"] },
+                    null
+                  ]
+                }
+              },
+              avgExternalTemp: {
+                $avg: {
+                  $cond: [{ $eq: ["$metadata.sensorType", "external_temp"] }, "$value", null]
+                }
+              },
+              minTimestamp: { $min: "$timestamp" },
+              maxTimestamp: { $max: "$timestamp" }
+            }
+          },
+          {
+            $project: {
+              avgExternalTemp: 1,
+              totalEnergyConsumed: {
+                $round: [
+                  {
+                    $multiply: [
+                      "$avgPowerKW",
+                      { $divide: [{ $subtract: ["$maxTimestamp", "$minTimestamp"] }, 3600000] }
+                    ]
+                  },
+                  2
+                ]
+              },
+            }
+          }
+        ]);
+
+        totalEnergyConsumed = basicResult?.totalEnergyConsumed ?? 0;
+        avgExternalTempFromBasic = basicResult?.avgExternalTemp ?? null;
+      }
+
+      // ── Aggregation 2: Physics metrics (COP & heat-loss) ────────────────────
+      // Requires ≥ 2 one-minute buckets with consecutive time deltas.
+      // For gas buildings: powerWatts comes from the gas pre-aggregation map (joined in app code).
+      // For other buildings: powerWatts comes from energy_meter readings in the bucket.
+      // Returns null for avgH / averageCop when no cooling phases are detected.
+
+      // Match only temperature sensors for gas buildings (energy handled separately above)
+      const physicsSensorMatch = isGasBoiler
+        ? {
             "metadata.buildingId": new Types.ObjectId(id),
             timestamp: { $gte: start, $lte: end },
-            "metadata.sensorType": { $in: ["energy_meter", "internal_temp", "external_temp"] }
+            "metadata.sensorType": { $in: ["internal_temp", "external_temp"] }
           }
-        },
-        // 2. Bucket (Group by 15m)
+        : sensorMatch;
+
+      type PhysicsBucket = {
+        _id: Date;
+        avgInternalTemp: number | null;
+        avgExternalTemp: number | null;
+        avgPowerKW: number | null;
+      };
+
+      const tempBuckets: PhysicsBucket[] = await SensorReading.aggregate([
+        { $match: physicsSensorMatch },
         {
           $group: {
             _id: {
               $toDate: {
                 $subtract: [
                   { $toLong: "$timestamp" },
-                  { $mod: [{ $toLong: "$timestamp" }, 15 * 60 * 1000] }
+                  { $mod: [{ $toLong: "$timestamp" }, 1 * 60 * 1000] }
                 ]
               }
             },
@@ -869,179 +1138,110 @@ const app = new Hono<{ Variables: AuthVariables }>()
               $avg: {
                 $cond: [
                   { $eq: ["$metadata.sensorType", "energy_meter"] },
-                  {
-                    $cond: [{ $eq: ["$unit", "W"] }, { $divide: ["$value", 1000] }, "$value"]
-                  },
+                  { $cond: [{ $eq: ["$unit", "W"] }, { $divide: ["$value", 1000] }, "$value"] },
                   null
                 ]
               }
             }
           }
         },
-        { $sort: { _id: 1 } },
-        // 3. Window Fields (Get Prev Values)
-        {
-          $setWindowFields: {
-            sortBy: { _id: 1 },
-            output: {
-              prevTimestamp: { $shift: { output: "$_id", by: -1 } },
-              prevInternalTemp: { $shift: { output: "$avgInternalTemp", by: -1 } },
-              prevExternalTemp: { $shift: { output: "$avgExternalTemp", by: -1 } }
-            }
+        { $sort: { _id: 1 } }
+      ]);
+
+      // For gas buildings: inject gas power from the pre-aggregation map
+      if (isGasBoiler) {
+        for (const bucket of tempBuckets) {
+          const key = bucket._id.toISOString();
+          const gasPowerKW = gasPowerByMinute.get(key) ?? null;
+          bucket.avgPowerKW = gasPowerKW;
+        }
+      }
+
+      // Weather API fallback for external temperature
+      const hasSensorExternalTemp = tempBuckets.some((b) => b.avgExternalTemp !== null)
+        || avgExternalTempFromBasic !== null;
+
+      let weatherFallbackExtTemp: number | null = null;
+      if (!hasSensorExternalTemp) {
+        weatherFallbackExtTemp = await getAverageHistoricalTemperature(
+          building.location.coordinates[1],
+          building.location.coordinates[0],
+          start,
+          end
+        );
+      }
+
+      // Compute physics (H_est, COP) in application code from the per-minute buckets
+      let avgH: number | null = null;
+      let averageCop: number | null = null;
+
+      if (tempBuckets.length >= 2) {
+        const C = ROOM_HEAT_CAPACITY;
+        const hEstimates: number[] = [];
+        const copValues: number[] = [];
+
+        for (let i = 1; i < tempBuckets.length; i++) {
+          const prev = tempBuckets[i - 1]!;
+          const curr = tempBuckets[i]!;
+
+          if (curr.avgInternalTemp === null || prev.avgInternalTemp === null) continue;
+
+          const dtSeconds = (curr._id.getTime() - prev._id.getTime()) / 1000;
+          if (dtSeconds <= 0) continue;
+
+          const tempChange     = curr.avgInternalTemp - prev.avgInternalTemp;
+          const tempChangeRate = tempChange / dtSeconds;
+          const avgInternal    = (curr.avgInternalTemp + prev.avgInternalTemp) / 2;
+          // Fall back to weather API temperature when no external_temp sensor data
+          // is available for either the current or previous bucket.
+          const avgExternal    = curr.avgExternalTemp ?? prev.avgExternalTemp ?? weatherFallbackExtTemp ?? null;
+          const tempDiff       = avgExternal !== null ? avgInternal - avgExternal : null;
+          const powerWatts     = curr.avgPowerKW !== null ? curr.avgPowerKW * 1000 : null;
+
+          // H_est: only during natural cooling (heater off, temp falling, meaningful ΔT)
+          if (
+            powerWatts !== null && powerWatts < 10 &&
+            tempChangeRate < 0 &&
+            tempDiff !== null && Math.abs(tempDiff) > 2
+          ) {
+            const hEst = (-1 * C * tempChangeRate) / tempDiff;
+            hEstimates.push(hEst);
           }
-        },
-        // 4. Calculate Derivatives & Physics Variables
-        {
-          $project: {
-            avgInternalTemp: 1,
-            avgExternalTemp: 1,
-            avgPowerKW: 1,
-            dt_seconds: {
-              $divide: [{ $subtract: ["$_id", "$prevTimestamp"] }, 1000]
-            },
-            tempChange: { $subtract: ["$avgInternalTemp", "$prevInternalTemp"] },
-            avgInternal: { $avg: ["$avgInternalTemp", "$prevInternalTemp"] },
-            // Fill missing external temp with previous if null
-            avgExternal: { $ifNull: ["$avgExternalTemp", "$prevExternalTemp"] },
-            powerWatts: { $multiply: ["$avgPowerKW", 1000] }
-          }
-        },
-        // Filter out invalid time steps
-        { $match: { dt_seconds: { $gt: 0 } } },
-        // 5. Calculate Rates and H_est
-        {
-          $addFields: {
-            tempChangeRate: { $divide: ["$tempChange", "$dt_seconds"] },
-            tempDiff: { $subtract: ["$avgInternal", "$avgExternal"] },
-            C: ROOM_HEAT_CAPACITY
-          }
-        },
-        {
-          $addFields: {
-            // Estimate H (Heat Loss Coefficient) only during Cooling Phases
-            // Cooling: Power < 10W, Temp Dropping < 0, TempDiff > 2
-            H_est: {
-              $cond: {
-                if: {
-                  $and: [
-                    { $lt: ["$powerWatts", 10] },
-                    { $lt: ["$tempChangeRate", 0] },
-                    { $gt: [{ $abs: "$tempDiff" }, 2] },
-                    { $ne: ["$tempDiff", 0] }
-                  ]
-                },
-                then: {
-                  $divide: [
-                    { $multiply: [-1, "$C", "$tempChangeRate"] },
-                    "$tempDiff"
-                  ]
-                },
-                else: null
-              }
-            },
-            // Identify Heating Phase candidates
-            isHeating: {
-              $cond: {
-                if: { $gt: ["$powerWatts", 100] },
-                then: true,
-                else: false
-              }
-            }
-          }
-        },
-        // 6. Global Aggregation
-        {
-          $group: {
-            _id: null,
-            avgH: { $avg: "$H_est" },
-            // Collect heating buckets to calculate COP later
-            heatingBuckets: {
-              $push: {
-                $cond: {
-                  if: "$isHeating",
-                  then: {
-                    C: "$C",
-                    tempChangeRate: "$tempChangeRate",
-                    tempDiff: "$tempDiff",
-                    powerWatts: "$powerWatts"
-                  },
-                  else: "$$REMOVE"
-                }
-              }
-            },
-            // Legacy Metrics
-            totalEnergyConsumed: { 
-              $sum: { 
-                $multiply: ["$avgPowerKW", { $divide: ["$dt_seconds", 3600] }] 
-              } 
-            },
-            totalTempChange: { $sum: "$tempChange" },
-            avgInternalTempForCarnot: { $avg: "$avgInternalTemp" },
-            avgExternalTemp: { $avg: "$avgExternal" }
-          }
-        },
-        // 7. Calculate Average COP using the calculated avgH
-        {
-          $project: {
-            avgH: 1,
-            totalEnergyConsumed: { $round: ["$totalEnergyConsumed", 2] },
-            totalTempChange: { $round: ["$totalTempChange", 2] },
-            avgInternalTempForCarnot: 1,
-            avgExternalTemp: 1,
-            averageCop: {
-              $avg: {
-                $map: {
-                  input: "$heatingBuckets",
-                  as: "b",
-                  in: {
-                    $divide: [
-                      {
-                        $add: [
-                          { $multiply: ["$$b.C", "$$b.tempChangeRate"] },
-                          { $multiply: ["$avgH", "$$b.tempDiff"] }
-                        ]
-                      },
-                      "$$b.powerWatts"
-                    ]
-                  }
-                }
-              }
-            }
+
+          // COP: only during heating (power > 100 W)
+          if (
+            powerWatts !== null && powerWatts > 100 &&
+            tempDiff !== null
+          ) {
+            // avgH may not be computed yet — use best estimate so far (or 0 if none)
+            // We'll do a second pass after avgH is determined
+            copValues.push({ C, tempChangeRate, tempDiff, powerWatts } as unknown as number);
           }
         }
-      ];
 
-      const aggResult = await SensorReading.aggregate(pipeline);
-      const metrics = aggResult[0] || {};
+        if (hEstimates.length > 0) {
+          avgH = hEstimates.reduce((a, b) => a + b, 0) / hEstimates.length;
+        }
 
-      // Legacy Fallbacks
-      let averageExternalTemperature = metrics.avgExternalTemp || null;
+        // Second pass for COP now that avgH is known
+        if (avgH !== null && copValues.length > 0) {
+          const cops = (copValues as unknown as { C: number; tempChangeRate: number; tempDiff: number; powerWatts: number }[])
+            .map(({ C: c, tempChangeRate, tempDiff, powerWatts }) =>
+              (c * tempChangeRate + avgH! * tempDiff) / powerWatts
+            );
+          averageCop = cops.reduce((a, b) => a + b, 0) / cops.length;
+        }
+      }
+
+      // Fallback for average external temperature if not provided by sensors or basic aggregation: use weather API value
+      let averageExternalTemperature: number | null = avgExternalTempFromBasic;
       if (averageExternalTemperature === null) {
-        const coords = await getCoordinates(building.address);
-        if (coords) {
-          averageExternalTemperature = await getAverageHistoricalTemperature(
-            coords.lat,
-            coords.lon,
-            start,
-            end
-          );
-        }
-      }
-
-      // Efficiency Index
-      let efficiencyIndex: number | null = null;
-      if ((metrics.totalTempChange || 0) > 0.1 && (metrics.totalEnergyConsumed || 0) > 0 && building.surface > 0) {
-        efficiencyIndex = metrics.totalEnergyConsumed / (metrics.totalTempChange * building.surface);
-      }
-
-      // Theoretical COP
-      let theoreticalCop: number | null = null;
-      if (metrics.avgInternalTempForCarnot && averageExternalTemperature !== null) {
-        const tHotK = metrics.avgInternalTempForCarnot + 273.15;
-        const tColdK = averageExternalTemperature + 273.15;
-        if (tHotK > tColdK) {
-          theoreticalCop = tHotK / (tHotK - tColdK);
-        }
+        averageExternalTemperature = weatherFallbackExtTemp ?? await getAverageHistoricalTemperature(
+          building.location.coordinates[1],
+          building.location.coordinates[0],
+          start,
+          end
+        );
       }
 
       return c.json({
@@ -1052,19 +1252,18 @@ const app = new Hono<{ Variables: AuthVariables }>()
           endDate: end.toISOString(),
         },
         metrics: {
-          totalEnergyConsumed: metrics.totalEnergyConsumed || 0,
-          temperatureChange: metrics.totalTempChange || 0,
-          averageExternalTemperature: averageExternalTemperature !== null 
-            ? Number(averageExternalTemperature.toFixed(2)) 
+          totalEnergyConsumed,
+          averageExternalTemperature: averageExternalTemperature !== null
+            ? Number(averageExternalTemperature.toFixed(2))
             : null,
-          efficiencyIndex: efficiencyIndex !== null 
-            ? Number(efficiencyIndex.toFixed(2)) 
+          estimatedHeatLossCoefficient: avgH ? Number(avgH.toFixed(2)) : null,
+          insulationQuality: avgH && building.surface > 0
+            ? Number((avgH / building.surface).toFixed(2))
             : null,
-          theoreticalCop: theoreticalCop !== null
-            ? Number(theoreticalCop.toFixed(2))
-            : null,
-          estimatedHeatLossCoefficient: metrics.avgH ? Number(metrics.avgH.toFixed(2)) : null,
-          averageCop: metrics.averageCop ? Number(metrics.averageCop.toFixed(2)) : null
+          // District heating: COP is a plant-level metric, meaningless at building level
+          averageCop: isDistrictHeating
+            ? null
+            : averageCop ? Number(averageCop.toFixed(2)) : null
         },
       });
     }

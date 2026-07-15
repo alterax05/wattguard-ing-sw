@@ -58,9 +58,11 @@ export const ObjectIdSchema = z
 export const UserSchema = z.object({
   id: ObjectIdSchema.describe("Unique user identifier"),
   email: z.email().describe("User email address"),
+  name: z.string().optional().describe("User display name"),
   role: UserRoleSchema,
   isDisabled: z.boolean().optional().describe("Whether the user account is disabled"),
   lastLoginAt: z.iso.datetime().optional().describe("Timestamp of last login"),
+  createdAt: z.iso.datetime().optional().describe("Account creation timestamp"),
 });
 
 /**
@@ -81,8 +83,8 @@ export const BuildingStatusSchema = z
  * Sensor type enum
  */
 export const SensorTypeSchema = z
-  .enum(["internal_temp", "external_temp", "energy_meter"])
-  .describe("Type of sensor (internal temperature, external temperature, or energy meter)");
+  .enum(["internal_temp", "external_temp", "energy_meter", "gas_meter"])
+  .describe("Type of sensor (internal temperature, external temperature, energy meter, or gas meter)");
 
 /**
  * Sensor status enum
