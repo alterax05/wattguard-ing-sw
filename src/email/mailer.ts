@@ -61,7 +61,7 @@ export async function sendInviteEmail(
   token: string,
   role: "admin" | "operator"
 ): Promise<void> {
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.VITE_FRONTEND_URL || "http://localhost:5173";
   const inviteUrl = `${frontendUrl}/accept-invite?token=${token}`;
 
   await sendEmail({
@@ -86,7 +86,7 @@ export async function sendPasswordResetEmail(
   email: string,
   token: string
 ): Promise<void> {
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.VITE_FRONTEND_URL || "http://localhost:5173";
   const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
   await sendEmail({

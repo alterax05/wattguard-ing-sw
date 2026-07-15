@@ -1,7 +1,14 @@
 /**
  * Google OAuth routes
+ *
+ * Two flows share a single /callback:
+ *   1. Invite flow  – GET /start?inviteToken=...  (new user accepting an invite)
+ *   2. Login flow   – GET /login                  (existing user signing in)
+ *
+ * The `oauth_mode` cookie ("invite" | "login") tells the callback which path
+ * to follow.
  */
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { setCookie, getCookie } from "hono/cookie";
 import { User } from "../models/User";
 import { Invite } from "../models/Invite";
@@ -10,14 +17,106 @@ import { signAccessToken } from "../auth/jwt";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/auth/google/callback";
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const GOOGLE_REDIRECT_URI =
+  process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/auth/google/callback";
+const FRONTEND_URL = process.env.VITE_FRONTEND_URL || "http://localhost:5173";
+
+/* ── Helpers ──────────────────────────────────────────────────────────────── */
+
+/** Short-lived cookie options (5 min). */
+const tempCookieOptions = () =>
+  ({
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax" as const,
+    maxAge: 5 * 60,
+    path: "/",
+  }) as const;
+
+/** Build the Google OAuth authorization URL. */
+function buildGoogleAuthUrl(state: string): string {
+  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  url.searchParams.set("client_id", GOOGLE_CLIENT_ID);
+  url.searchParams.set("redirect_uri", GOOGLE_REDIRECT_URI);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("scope", "openid email profile");
+  url.searchParams.set("state", state);
+  return url.toString();
+}
+
+/** Exchange the authorisation code for Google tokens + userinfo. */
+async function exchangeCodeForUser(code: string) {
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: GOOGLE_REDIRECT_URI,
+      grant_type: "authorization_code",
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    const text = await tokenResponse.text();
+    console.error("Token exchange failed:", text);
+    return null;
+  }
+
+  const tokens = (await tokenResponse.json()) as { access_token: string };
+
+  const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+
+  if (!userInfoResponse.ok) {
+    console.error("UserInfo fetch failed:", await userInfoResponse.text());
+    return null;
+  }
+
+  const info = (await userInfoResponse.json()) as {
+    id: string;
+    email: string;
+    name?: string;
+    verified_email: boolean;
+  };
+
+  return info;
+}
+
+/** Set the JWT access_token cookie and clear temp OAuth cookies. */
+async function finaliseLogin(
+  c: Context,
+  userId: string,
+  email: string,
+  role: "admin" | "operator",
+): Promise<void> {
+  const token = await signAccessToken({ userId, email, role });
+
+  setCookie(c, "access_token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
+    maxAge: 8 * 60 * 60,
+    path: "/",
+  });
+
+  // Clear temporary cookies
+  setCookie(c, "invite_token", "", { maxAge: 0, path: "/" });
+  setCookie(c, "oauth_state", "", { maxAge: 0, path: "/" });
+  setCookie(c, "oauth_mode", "", { maxAge: 0, path: "/" });
+}
+
+/* ── Routes ───────────────────────────────────────────────────────────────── */
 
 /**
- * GET /api/auth/google/start - Start Google OAuth flow
- * GET /api/auth/google/callback - Google OAuth callback
+ * GET /api/auth/google/start    - Start invite-based Google OAuth flow
+ * GET /api/auth/google/login    - Start Google OAuth login for existing users
+ * GET /api/auth/google/callback - Shared callback for both flows
  */
 const app = new Hono()
+  /* ── Invite flow (existing) ─────────────────────────────────────────── */
   .get("/start", async (c) => {
     const inviteToken = c.req.query("inviteToken");
 
@@ -25,7 +124,6 @@ const app = new Hono()
       return c.json({ error: "inviteToken is required" }, 400);
     }
 
-    // Validate invite exists and is pending
     const tokenHash = hashTokenSha256(inviteToken);
     const invite = await Invite.findOne({ tokenHash, status: "pending" });
 
@@ -39,164 +137,140 @@ const app = new Hono()
       return c.json({ error: "Invite has expired" }, 400);
     }
 
-    // Generate OAuth state
     const state = randomToken(32);
+    const opts = tempCookieOptions();
 
-    // Set short-lived cookies (5 minutes)
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax" as const,
-      maxAge: 5 * 60, // 5 minutes
-      path: "/",
-    };
+    setCookie(c, "invite_token", inviteToken, opts);
+    setCookie(c, "oauth_state", state, opts);
+    setCookie(c, "oauth_mode", "invite", opts);
 
-    setCookie(c, "invite_token", inviteToken, cookieOptions);
-    setCookie(c, "oauth_state", state, cookieOptions);
-
-    // Redirect to Google
-    const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-    authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
-    authUrl.searchParams.set("redirect_uri", GOOGLE_REDIRECT_URI);
-    authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("scope", "openid email profile");
-    authUrl.searchParams.set("state", state);
-
-    return c.redirect(authUrl.toString());
+    return c.redirect(buildGoogleAuthUrl(state));
   })
+
+  /* ── Login flow (new) ───────────────────────────────────────────────── */
+  .get("/login", async (c) => {
+    const state = randomToken(32);
+    const opts = tempCookieOptions();
+
+    setCookie(c, "oauth_state", state, opts);
+    setCookie(c, "oauth_mode", "login", opts);
+
+    return c.redirect(buildGoogleAuthUrl(state));
+  })
+
+  /* ── Shared callback ────────────────────────────────────────────────── */
   .get("/callback", async (c) => {
     const code = c.req.query("code");
     const state = c.req.query("state");
 
     if (!code || !state) {
-      return c.redirect(`${FRONTEND_URL}?error=missing_params`);
+      return c.redirect(`${FRONTEND_URL}/login?error=missing_params`);
     }
 
     // Verify state
     const savedState = getCookie(c, "oauth_state");
     if (!savedState || savedState !== state) {
-      return c.redirect(`${FRONTEND_URL}?error=invalid_state`);
+      return c.redirect(`${FRONTEND_URL}/login?error=invalid_state`);
     }
 
-    // Get invite token
-    const inviteToken = getCookie(c, "invite_token");
-    if (!inviteToken) {
-      return c.redirect(`${FRONTEND_URL}?error=missing_invite`);
-    }
+    const mode = getCookie(c, "oauth_mode") || "invite";
 
     try {
-      // Exchange code for tokens
-      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          code,
-          client_id: GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
-          redirect_uri: GOOGLE_REDIRECT_URI,
-          grant_type: "authorization_code",
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        console.error("Token exchange failed:", await tokenResponse.text());
-        return c.redirect(`${FRONTEND_URL}?error=token_exchange_failed`);
+      // Exchange code for Google user info
+      const userInfo = await exchangeCodeForUser(code);
+      if (!userInfo) {
+        return c.redirect(`${FRONTEND_URL}/login?error=token_exchange_failed`);
       }
 
-      const tokens = await tokenResponse.json();
-
-      // Get user info
-      const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
-      });
-
-      if (!userInfoResponse.ok) {
-        console.error("UserInfo fetch failed:", await userInfoResponse.text());
-        return c.redirect(`${FRONTEND_URL}?error=userinfo_failed`);
-      }
-
-      const userInfo = await userInfoResponse.json();
-
-      // Verify email is verified
       if (!userInfo.verified_email) {
-        return c.redirect(`${FRONTEND_URL}?error=email_not_verified`);
+        return c.redirect(`${FRONTEND_URL}/login?error=email_not_verified`);
       }
 
       const googleEmail = userInfo.email.toLowerCase().trim();
       const googleSub = userInfo.id;
+      const googleName = userInfo.name || undefined;
 
-      // Validate invite
+      /* ── LOGIN mode: existing user only ────────────────────────────── */
+      if (mode === "login") {
+        // Look up user by email
+        const user = await User.findOne({ email: googleEmail });
+
+        if (!user) {
+          return c.redirect(`${FRONTEND_URL}/login?error=no_account`);
+        }
+
+        if (user.isDisabled) {
+          return c.redirect(`${FRONTEND_URL}/login?error=account_disabled`);
+        }
+
+        // Auto-link Google sub if first Google login for this user
+        if (!user.googleSub) {
+          user.googleSub = googleSub;
+          if (!user.name && googleName) {
+            user.name = googleName;
+          }
+        } else if (user.googleSub !== googleSub) {
+          return c.redirect(`${FRONTEND_URL}/login?error=account_mismatch`);
+        }
+
+        user.lastLoginAt = new Date();
+        await user.save();
+
+        await finaliseLogin(c, user._id.toString(), user.email, user.role);
+        return c.redirect(`${FRONTEND_URL}/dashboard`);
+      }
+
+      /* ── INVITE mode: accept invite (original flow) ────────────────── */
+      const inviteToken = getCookie(c, "invite_token");
+      if (!inviteToken) {
+        return c.redirect(`${FRONTEND_URL}/login?error=missing_invite`);
+      }
+
       const tokenHash = hashTokenSha256(inviteToken);
       const invite = await Invite.findOne({ tokenHash, status: "pending" });
 
       if (!invite || invite.expiresAt < new Date()) {
-        return c.redirect(`${FRONTEND_URL}?error=invalid_invite`);
+        return c.redirect(`${FRONTEND_URL}/login?error=invalid_invite`);
       }
 
-      // Verify email matches invite
       if (invite.email !== googleEmail) {
-        return c.redirect(`${FRONTEND_URL}?error=email_mismatch`);
+        return c.redirect(`${FRONTEND_URL}/login?error=email_mismatch`);
       }
 
-      // Check if user exists
       let user = await User.findOne({ email: googleEmail });
 
       if (user) {
-        // User exists: auto-link if googleSub is empty
         if (!user.googleSub) {
           user.googleSub = googleSub;
+          if (!user.name && googleName) {
+            user.name = googleName;
+          }
           await user.save();
         } else if (user.googleSub !== googleSub) {
-          // Different Google account
-          return c.redirect(`${FRONTEND_URL}?error=account_mismatch`);
+          return c.redirect(`${FRONTEND_URL}/login?error=account_mismatch`);
         }
       } else {
-        // Create new user
         user = await User.create({
           email: googleEmail,
+          name: googleName,
           role: invite.role,
           isDisabled: false,
           googleSub,
         });
       }
 
-      // Mark invite as accepted
-      if (invite.status === "pending") {
-        invite.status = "accepted";
-        invite.acceptedAt = new Date();
-        await invite.save();
-      }
+      invite.status = "accepted";
+      invite.acceptedAt = new Date();
+      await invite.save();
 
-      // Update last login
       user.lastLoginAt = new Date();
       await user.save();
 
-      // Sign JWT
-      const token = await signAccessToken({
-        userId: user._id.toString(),
-        email: user.email,
-        role: user.role,
-      });
-
-      // Set httpOnly cookie
-      const isProduction = process.env.NODE_ENV === "production";
-      setCookie(c, "access_token", token, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: "Lax",
-        maxAge: 8 * 60 * 60, // 8 hours
-        path: "/",
-      });
-
-      // Clear temporary cookies
-      setCookie(c, "invite_token", "", { maxAge: 0, path: "/" });
-      setCookie(c, "oauth_state", "", { maxAge: 0, path: "/" });
-
-      // Redirect to frontend
+      await finaliseLogin(c, user._id.toString(), user.email, user.role);
       return c.redirect(FRONTEND_URL);
     } catch (err) {
       console.error("OAuth callback error:", err);
-      return c.redirect(`${FRONTEND_URL}?error=server_error`);
+      return c.redirect(`${FRONTEND_URL}/login?error=server_error`);
     }
   });
 

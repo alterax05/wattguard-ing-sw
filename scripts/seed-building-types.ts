@@ -9,9 +9,9 @@
  */
 
 import mongoose from "mongoose";
+import * as readline from 'readline';
 import { BuildingType, type IBuildingType } from "../src/models/BuildingType";
 
-// Default building types for Italian public buildings
 const defaultBuildingTypes = [
   {
     name: "Scuola",
@@ -82,6 +82,19 @@ async function seedBuildingTypes() {
     await mongoose.connect(MONGO_URI);
     console.log("✅ Connected to MongoDB");
 
+    function askChoice(): Promise<string> {
+      return new Promise((resolve) => {
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        rl.question('Enter your choice (1-3): ', (answer) => {
+          rl.close();
+          resolve(answer.trim());
+        });
+      });
+    }
+
     // Check if building types already exist
     const existingCount = await BuildingType.countDocuments();
     
@@ -92,24 +105,49 @@ async function seedBuildingTypes() {
       console.log("  2. Add missing types only");
       console.log("  3. Delete all and recreate");
       
-      // For now, we'll skip if data exists
-      // In production, you could use readline to get user input
-      console.log("Skipping seed - data already exists.");
-      await mongoose.connection.close();
-      return;
+      const choice = await askChoice();
+      
+      switch (choice) {
+        case '1':
+          console.log("Skipping seed - data already exists.");
+          await mongoose.connection.close();
+          return;
+        case '2': {
+          const existingNames = await BuildingType.find({}, 'name').then(types => types.map(t => t.name));
+          const missingTypes = defaultBuildingTypes.filter(type => !existingNames.includes(type.name));
+          if (missingTypes.length === 0) {
+            console.log("All building types already exist.");
+          } else {
+            const results = await BuildingType.insertMany(missingTypes);
+            console.log(`✅ Successfully added ${results.length} missing building types:`);
+            results.forEach((type: IBuildingType) => {
+              console.log(`   - ${type.name}: ${type.description}`);
+            });
+          }
+          break;
+        }
+        case '3': {
+          await BuildingType.deleteMany({});
+          const results = await BuildingType.insertMany(defaultBuildingTypes);
+          console.log(`✅ Successfully recreated ${results.length} building types:`);
+          results.forEach((type: IBuildingType) => {
+            console.log(`   - ${type.name}: ${type.description}`);
+          });
+          break;
+        }
+        default:
+          console.log("Invalid choice. Skipping.");
+          break;
+      }
+    } else {
+      console.log(`📝 Creating ${defaultBuildingTypes.length} building types...`);
+      const results = await BuildingType.insertMany(defaultBuildingTypes);
+      console.log(`✅ Successfully created ${results.length} building types:`);
+      results.forEach((type: IBuildingType) => {
+        console.log(`   - ${type.name}: ${type.description}`);
+      });
     }
 
-    console.log(`📝 Creating ${defaultBuildingTypes.length} building types...`);
-
-    // Insert all building types
-    const results = await BuildingType.insertMany(defaultBuildingTypes);
-    
-    console.log(`✅ Successfully created ${results.length} building types:`);
-    results.forEach((type: IBuildingType) => {
-      console.log(`   - ${type.name}: ${type.description}`);
-    });
-
-    // Close connection
     await mongoose.connection.close();
     console.log("🔌 MongoDB connection closed");
     console.log("\n✨ Seed completed successfully!");

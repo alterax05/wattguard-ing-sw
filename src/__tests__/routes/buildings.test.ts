@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import mongoose from "mongoose";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { User } from "../../models/User";
@@ -13,8 +14,8 @@ const originalConsoleError = console.error;
 
 let adminToken: string;
 let operatorToken: string;
-let adminUserId: string;
-let buildingTypeId: string;
+let adminUserId: mongoose.Types.ObjectId;
+let buildingTypeId: mongoose.Types.ObjectId;
 
 beforeAll(async () => {
   console.log = () => {};
@@ -42,7 +43,7 @@ beforeEach(async () => {
     role: "admin",
     passwordHash: adminPasswordHash,
   });
-  adminUserId = admin._id.toString();
+  adminUserId = admin._id as mongoose.Types.ObjectId;
 
   const operatorPasswordHash = await Bun.password.hash("operator123", {
     algorithm: "bcrypt",
@@ -92,7 +93,7 @@ beforeEach(async () => {
     name: "Scuola",
     description: "Edificio scolastico",
   });
-  buildingTypeId = buildingType._id.toString();
+  buildingTypeId = buildingType._id as mongoose.Types.ObjectId;
 });
 
 describe("Buildings Routes - Integration Tests", () => {
@@ -106,6 +107,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 2500,
         constructionYear: 1985,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
       };
 
       const res = await app.request("/api/buildings", {
@@ -146,6 +148,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1500,
         constructionYear: 2010,
         heatingSystemType: "pompa_calore",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
       };
 
       const res = await app.request("/api/buildings", {
@@ -188,6 +191,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       };
@@ -216,6 +220,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -272,6 +277,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -337,6 +343,7 @@ describe("Buildings Routes - Integration Tests", () => {
           surface: 2500,
           constructionYear: 1985,
           heatingSystemType: "caldaia_gas",
+          location: { type: "Point", coordinates: [11.1167, 46.0667] },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "active",
@@ -349,6 +356,7 @@ describe("Buildings Routes - Integration Tests", () => {
           surface: 3000,
           constructionYear: 1995,
           heatingSystemType: "teleriscaldamento",
+          location: { type: "Point", coordinates: [11.1167, 46.0667] },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "active",
@@ -361,6 +369,7 @@ describe("Buildings Routes - Integration Tests", () => {
           surface: 1500,
           constructionYear: 2010,
           heatingSystemType: "pompa_calore",
+          location: { type: "Point", coordinates: [11.1167, 46.0667] },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "inactive",
@@ -489,6 +498,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 2000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -518,6 +528,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -591,6 +602,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -662,6 +674,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -701,6 +714,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -768,6 +782,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -839,6 +854,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -921,6 +937,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
