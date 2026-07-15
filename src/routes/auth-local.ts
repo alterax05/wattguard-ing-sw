@@ -59,7 +59,7 @@ const app = new Hono()
     }),
     validator("json", SetupRequestSchema),
     async (c) => {
-      const { inviteToken, password } = c.req.valid("json");
+      const { inviteToken, password, name } = c.req.valid("json");
 
       // Validate invite
       const tokenHash = hashTokenSha256(inviteToken);
@@ -90,6 +90,7 @@ const app = new Hono()
       // Create user
       const user = await User.create({
         email: invite.email,
+        name,
         role: invite.role,
         isDisabled: false,
         passwordHash,
@@ -123,6 +124,7 @@ const app = new Hono()
         user: {
           id: user._id.toString(),
           email: user.email,
+          name: user.name,
           role: user.role,
         },
       });
@@ -212,6 +214,7 @@ const app = new Hono()
         user: {
           id: user._id.toString(),
           email: user.email,
+          name: user.name,
           role: user.role,
         },
       });

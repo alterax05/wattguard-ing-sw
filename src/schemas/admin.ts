@@ -1,10 +1,10 @@
 /**
  * Admin route schemas
  * 
- * Routes: /api/admin/invites (GET, POST), /api/admin/invites/:id/revoke (POST)
+ * Routes: /api/admin/users (GET), /api/admin/invites (GET, POST), /api/admin/invites/:id/revoke (POST)
  */
 import { z } from "zod";
-import { EmailSchema, UserRoleSchema, ErrorSchema } from "./common";
+import { EmailSchema, UserRoleSchema, UserSchema, ErrorSchema } from "./common";
 
 /**
  * Invite status enum
@@ -70,6 +70,49 @@ export const RevokeInviteParamsSchema = z.object({
 export const RevokeInviteResponseSchema = z.object({
   success: z.literal(true),
   invite: InviteSchema,
+});
+
+/**
+ * GET /api/admin/users - List all users response
+ */
+export const ListUsersResponseSchema = z.object({
+  users: z.array(UserSchema).describe("List of users"),
+});
+
+/**
+ * PATCH /api/admin/users/:id/role - Update user role path parameter
+ */
+export const UpdateUserRoleParamsSchema = z.object({
+  id: z.string().min(1, "User ID is required").describe("User identifier"),
+});
+
+/**
+ * PATCH /api/admin/users/:id/role - Update user role request body
+ */
+export const UpdateUserRoleRequestSchema = z.object({
+  role: UserRoleSchema,
+});
+
+/**
+ * PATCH /api/admin/users/:id/role - Update user role response
+ */
+export const UpdateUserRoleResponseSchema = z.object({
+  success: z.literal(true),
+  user: UserSchema,
+});
+
+/**
+ * DELETE /api/admin/users/:id - Delete user path parameter
+ */
+export const DeleteUserParamsSchema = z.object({
+  id: z.string().min(1, "User ID is required").describe("User identifier"),
+});
+
+/**
+ * DELETE /api/admin/users/:id - Delete user response
+ */
+export const DeleteUserResponseSchema = z.object({
+  success: z.literal(true),
 });
 
 // Re-export for convenience

@@ -38,6 +38,7 @@ describe("Sensor Model", () => {
       name: "Test Building",
       address: "Via Test 1",
       surface: 1000,
+      location: { type: "Point", coordinates: [11.1167, 46.0667] },
       buildingType: buildingType._id,
       heatingSystemType: "caldaia_gas",
       geographicZone: "Centro",

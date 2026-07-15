@@ -66,10 +66,6 @@ export const openapiConfig = {
     {
       name: 'Sensors',
       description: 'Sensor management',
-    },
-    {
-      name: 'Audit Logs',
-      description: 'Audit log queries - View change history for entities (admin only)',
-    },
+    }
   ],
 };
