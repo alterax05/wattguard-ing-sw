@@ -136,4 +136,3 @@ Rules:
 - Never commit directly to `main` or `develop`; always use a topic branch.
 - Always merge with `--no-ff`, so every feature remains visible as a real side branch in the history graph.
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`, ...) for commit messages.
-- The pre-GitFlow history is preserved under the `archive/master-original` and `archive/feat-frontend-original` tags.
