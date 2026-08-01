@@ -1,0 +1,147 @@
+/**
+ * General auth routes (me, logout, admin test email)
+ * 
+ * Protected routes (/me, /admin/*) have JWT authentication applied globally in src/index.ts
+ */
+import { Hono } from "hono";
+import { setCookie } from "hono/cookie";
+import { describeRoute, resolver, validator } from "hono-openapi";
+import type { AuthVariables } from "../middleware/auth";
+import { sendTestEmail } from "../email/mailer";
+import {
+  MeResponseSchema,
+  LogoutResponseSchema,
+  TestEmailRequestSchema,
+  TestEmailResponseSchema,
+  ErrorSchema,
+} from "../schemas/auth";
+
+/**
+ * GET /api/auth/me - Get current user (protected, middleware applied globally)
+ * POST /api/auth/logout - Logout (public)
+ * POST /api/auth/admin/test-email - Admin: Test SMTP configuration (protected, admin role required)
+ */
+const app = new Hono<{ Variables: AuthVariables }>()
+  .get(
+    "/me",
+    describeRoute({
+      description: "Get current authenticated user information",
+      tags: ["Authentication"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Current user information",
+          content: {
+            "application/json": {
+              schema: resolver(MeResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    async (c) => {
+      const payload = c.get("jwtPayload");
+      const userDoc = c.get("userDoc");
+
+      return c.json({
+        user: {
+          id: userDoc._id?.toString(),
+          email: payload.email,
+          role: payload.role,
+          isDisabled: userDoc.isDisabled ?? false,
+          lastLoginAt: userDoc.lastLoginAt,
+        },
+      });
+    }
+  )
+  .post(
+    "/logout",
+    describeRoute({
+      description: "Logout current user by clearing authentication cookie",
+      tags: ["Authentication"],
+      responses: {
+        200: {
+          description: "Logout successful",
+          content: {
+            "application/json": {
+              schema: resolver(LogoutResponseSchema),
+            },
+          },
+        },
+      },
+    }),
+    async (c) => {
+      setCookie(c, "access_token", "", {
+        maxAge: 0,
+        path: "/",
+      });
+
+      return c.json({ success: true });
+    }
+  )
+  .post(
+    "/admin/test-email",
+    describeRoute({
+      description: "Send test email to verify SMTP configuration (admin only)",
+      tags: ["Authentication"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Test email sent successfully",
+          content: {
+            "application/json": {
+              schema: resolver(TestEmailResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        500: {
+          description: "Failed to send test email",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("json", TestEmailRequestSchema),
+    async (c) => {
+      try {
+        const { to } = c.req.valid("json");
+
+        await sendTestEmail(to);
+
+        return c.json({ success: true, message: "Test email sent" });
+      } catch (err) {
+        console.error("Test email failed:", err);
+        return c.json({ error: "Failed to send test email. Check SMTP configuration." }, 500);
+      }
+    }
+  );
+
+export default app;
+export type AppType = typeof app;
