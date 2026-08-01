@@ -120,11 +120,11 @@ describe("Building Types Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.buildingTypes.length).toBe(3);
-      expect(json.buildingTypes[0].name).toBeTruthy();
-      expect(json.buildingTypes[0].description).toBeTruthy();
-      expect(json.buildingTypes[0].id).toBeTruthy();
-      expect(json.buildingTypes[0].createdAt).toBeTruthy();
-      expect(json.buildingTypes[0].updatedAt).toBeTruthy();
+      expect(json.buildingTypes[0].name).toBeDefined();
+      expect(json.buildingTypes[0].description).toBeDefined();
+      expect(json.buildingTypes[0].id).toBeDefined();
+      expect(json.buildingTypes[0].createdAt).toBeDefined();
+      expect(json.buildingTypes[0].updatedAt).toBeDefined();
     });
 
     test("should list all building types (operator)", async () => {
@@ -191,11 +191,11 @@ describe("Building Types Routes - Integration Tests", () => {
       expect(json.success).toBe(true);
       expect(json.buildingType.name).toBe(buildingTypeData.name);
       expect(json.buildingType.description).toBe(buildingTypeData.description);
-      expect(json.buildingType.id).toBeTruthy();
+      expect(json.buildingType.id).toBeDefined();
 
       // Verify in database
       const dbBuildingType = await BuildingType.findById(json.buildingType.id);
-      expect(dbBuildingType).toBeTruthy();
+      expect(dbBuildingType).toBeDefined();
       expect(dbBuildingType!.name).toBe(buildingTypeData.name);
     });
 
@@ -462,7 +462,7 @@ describe("Building Types Routes - Integration Tests", () => {
 
       // Verify building type still exists
       const stillExists = await BuildingType.findById(buildingType._id);
-      expect(stillExists).toBeTruthy();
+      expect(stillExists).toBeDefined();
     });
 
     test("should return 404 for non-existent building type", async () => {
