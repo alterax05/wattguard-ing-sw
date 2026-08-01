@@ -108,6 +108,7 @@ beforeEach(async () => {
     buildingType: buildingType._id,
     surface: 1000,
     heatingSystemType: "caldaia_gas",
+    location: { type: "Point", coordinates: [11.1167, 46.0667] },
     createdBy: adminUserId,
     updatedBy: adminUserId,
   });
@@ -409,63 +410,131 @@ describe("Sensors Routes - Integration Tests", () => {
   });
 
   // ============================================================================
-  // POST /api/sensors/:id/readings - Create Reading
+  // GET /api/sensors - Automatic inactivity detection
   // ============================================================================
 
-  describe("POST /api/sensors/:id/readings", () => {
-    test("should create a sensor reading", async () => {
+  describe("GET /api/sensors - inactivity detection", () => {
+    test("should mark an active sensor as inactive when it exceeds 2× transmissionInterval", async () => {
+      const transmissionInterval = 60; // 60 s
+      // lastReading is 200 s ago → exceeds 2 × 60 = 120 s
+      const staleTimestamp = new Date(Date.now() - 200_000);
+
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
-        location: "Test",
+        location: "Piano 1",
         installationDate: new Date(),
-        transmissionInterval: 90,
+        transmissionInterval,
+        status: "active",
+        lastReading: { value: 22, unit: "°C", timestamp: staleTimestamp },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
 
-      const readingData = {
-        value: 23.5,
-        unit: "°C",
-        timestamp: new Date().toISOString(),
-      };
-
-      const res = await app.request(`/api/sensors/${sensor._id}/readings`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify(readingData),
+      const res = await app.request("/api/sensors", {
+        headers: { Authorization: `Bearer ${adminToken}` },
       });
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.reading.value).toBe(23.5);
+      const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
+      expect(found).toBeDefined();
+      expect(found.status).toBe("inactive");
 
-      // Verify lastReading updated on sensor
-      const updatedSensor = await Sensor.findById(sensor._id);
-      expect(updatedSensor!.lastReading).toBeDefined();
-      expect(updatedSensor!.lastReading!.value).toBe(23.5);
+      // Verify the DB was updated
+      const dbSensor = await Sensor.findById(sensor._id);
+      expect(dbSensor!.status).toBe("inactive");
     });
 
-    test("should return 404 for non-existent sensor", async () => {
-      const fakeId = "507f1f77bcf86cd799439011";
+    test("should not mark an active sensor as inactive when reading is within 2× transmissionInterval", async () => {
+      const transmissionInterval = 300; // 300 s
+      // lastReading is 100 s ago → within 2 × 300 = 600 s
+      const freshTimestamp = new Date(Date.now() - 100_000);
 
-      const res = await app.request(`/api/sensors/${fakeId}/readings`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify({
-          value: 20,
-          unit: "°C",
-        }),
+      const sensor = await Sensor.create({
+        buildingId,
+        sensorType: "internal_temp",
+        location: "Piano 2",
+        installationDate: new Date(),
+        transmissionInterval,
+        status: "active",
+        lastReading: { value: 20, unit: "°C", timestamp: freshTimestamp },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
       });
 
-      expect(res.status).toBe(404);
+      const res = await app.request("/api/sensors", {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
+      expect(found).toBeDefined();
+      expect(found.status).toBe("active");
+    });
+
+    test("should not change status of sensors in maintenance or error when they have stale readings", async () => {
+      const staleTimestamp = new Date(Date.now() - 600_000); // 10 min ago
+
+      const maintenanceSensor = await Sensor.create({
+        buildingId,
+        sensorType: "internal_temp",
+        location: "Manutenzione",
+        installationDate: new Date(),
+        transmissionInterval: 90,
+        status: "maintenance",
+        lastReading: { value: 18, unit: "°C", timestamp: staleTimestamp },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const errorSensor = await Sensor.create({
+        buildingId,
+        sensorType: "external_temp",
+        location: "Errore",
+        installationDate: new Date(),
+        transmissionInterval: 90,
+        status: "error",
+        lastReading: { value: 5, unit: "°C", timestamp: staleTimestamp },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const res = await app.request("/api/sensors", {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+
+      const m = json.sensors.find((s: { id: string }) => s.id === maintenanceSensor._id.toString());
+      expect(m!.status).toBe("maintenance");
+
+      const e = json.sensors.find((s: { id: string }) => s.id === errorSensor._id.toString());
+      expect(e!.status).toBe("error");
+    });
+
+    test("should not mark active sensor with no lastReading as inactive", async () => {
+      const sensor = await Sensor.create({
+        buildingId,
+        sensorType: "energy_meter",
+        location: "Contatore",
+        installationDate: new Date(),
+        transmissionInterval: 90,
+        status: "active",
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const res = await app.request("/api/sensors", {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
+      expect(found!.status).toBe("active");
     });
   });
 

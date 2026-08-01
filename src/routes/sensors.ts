@@ -2,11 +2,14 @@ import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import type { QueryFilter, Document } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
-import { Sensor } from "../models/Sensor";
+import { Sensor, type ISensor } from "../models/Sensor";
 import { Building, type IBuilding } from "../models/Building";
 import { SensorReading, type ISensorReading } from "../models/SensorReading";
+import { isInactive } from "../lib/inactivity";
 
 import {
+  ListSensorsQuerySchema,
+  ListSensorsResponseSchema,
   CreateSensorRequestSchema,
   CreateSensorResponseSchema,
   GetSensorParamsSchema,
@@ -25,12 +28,110 @@ import {
 
 const app = new Hono<{ Variables: AuthVariables }>()
   /**
+   * GET /api/sensors - List all sensors with filters
+   */
+  .get(
+    "/",
+    describeRoute({
+      description: "List all sensors with optional filters (building, type, status)",
+      tags: ["Sensors"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Sensors retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(ListSensorsResponseSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("query", ListSensorsQuerySchema),
+    async (c) => {
+      const query = c.req.valid("query");
+
+      // Build filter
+      const filter: QueryFilter<ISensor> = {};
+      if (query.buildingId) filter.buildingId = query.buildingId;
+      if (query.sensorType) filter.sensorType = query.sensorType;
+      if (query.status) filter.status = query.status;
+
+      // Count total
+      const total = await Sensor.countDocuments(filter);
+
+      // Sort
+      const sortField = query.sortBy || "createdAt";
+      const sortOrder = query.sortOrder === "asc" ? 1 : -1;
+
+      // Get sensors with building populated
+      const sensors = await Sensor.find(filter)
+        .populate("buildingId", "name address")
+        .sort({ [sortField]: sortOrder })
+        .limit(query.limit)
+        .skip(query.offset);
+
+      // Auto-mark sensors inactive when they exceed 2× their transmission interval
+      // without sending a reading. Only sensors currently "active" are affected;
+      // manually-set statuses (maintenance, error) are left untouched.
+      await Promise.all(
+        sensors
+          .filter((s) => s.status === "active" && isInactive(s))
+          .map((s) => {
+            s.status = "inactive";
+            return s.save();
+          })
+      );
+
+      return c.json({
+        sensors: sensors.map((sensor) => {
+          const building = sensor.buildingId as unknown as IBuilding & Document;
+          return {
+            id: sensor._id.toString(),
+            buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
+            sensorType: sensor.sensorType,
+            location: sensor.location,
+            serialNumber: sensor.serialNumber,
+            installationDate: sensor.installationDate.toISOString(),
+            status: sensor.status,
+            lastReading: sensor.lastReading
+              ? {
+                  value: sensor.lastReading.value,
+                  timestamp: sensor.lastReading.timestamp.toISOString(),
+                  unit: sensor.lastReading.unit,
+                }
+              : undefined,
+            transmissionInterval: sensor.transmissionInterval,
+            minThreshold: sensor.minThreshold,
+            maxThreshold: sensor.maxThreshold,
+            building: building?.name
+              ? {
+                  id: building._id.toString(),
+                  name: building.name,
+                  address: building.address,
+                }
+              : undefined,
+            createdBy: sensor.createdBy?.toString(),
+            updatedBy: sensor.updatedBy?.toString(),
+            createdAt: sensor.createdAt?.toISOString(),
+            updatedAt: sensor.updatedAt?.toISOString(),
+          };
+        }),
+        pagination: {
+          limit: query.limit,
+          offset: query.offset,
+          total,
+        },
+      });
+    }
+  )
+  /**
    * POST /api/sensors - Create a new sensor
    */
   .post(
     "/",
     describeRoute({
-      description: "Create a new sensor for a building (Gestione sensori)",
+      description: "Create a new sensor for a building",
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -88,8 +189,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
         createdBy: userDoc._id,
         updatedBy: userDoc._id,
       });
-
-      
 
       return c.json(
         {
@@ -171,6 +270,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
               }
             : undefined,
           transmissionInterval: sensor.transmissionInterval,
+          minThreshold: sensor.minThreshold,
+          maxThreshold: sensor.maxThreshold,
           building: building
             ? {
                 id: building._id.toString(),
@@ -235,8 +336,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Sensor not found" }, 404);
       }
 
-      
-
       // Check for duplicate serial number if being updated
       if (updates.serialNumber && updates.serialNumber !== sensor.serialNumber) {
         const existing = await Sensor.findOne({ serialNumber: updates.serialNumber });
@@ -246,19 +345,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }
 
       // Apply updates
-      if (updates.sensorType !== undefined) sensor.sensorType = updates.sensorType;
-      if (updates.location !== undefined) sensor.location = updates.location;
-      if (updates.serialNumber !== undefined) sensor.serialNumber = updates.serialNumber;
-      if (updates.status !== undefined) sensor.status = updates.status;
-      if (updates.transmissionInterval !== undefined)
-        sensor.transmissionInterval = updates.transmissionInterval;
+      Object.assign(sensor, Object.fromEntries(
+        Object.entries(updates).filter(([_, v]) => v !== undefined).map(([k, v]) => v === null ? [k, undefined] : [k, v])
+      ));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      sensor.updatedBy = userDoc._id as any;
+      sensor.updatedBy = userDoc._id;
 
       await sensor.save();
-
-      
 
       return c.json({
         success: true,
@@ -278,6 +371,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
               }
             : undefined,
           transmissionInterval: sensor.transmissionInterval,
+          minThreshold: sensor.minThreshold,
+          maxThreshold: sensor.maxThreshold,
           createdBy: sensor.createdBy?.toString(),
           updatedBy: sensor.updatedBy?.toString(),
           createdAt: sensor.createdAt?.toISOString(),
@@ -340,89 +435,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
     }
   )
-
-  /**
-   * POST /api/sensors/:id/readings - Create a sensor reading (for testing/simulation) 
-   TODO: remove in production
-   */
-  .post(
-    "/:id/readings",
-    describeRoute({
-      description: "Submit a sensor reading (for testing/simulation)",
-      tags: ["Sensors"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
-      responses: {
-        201: {
-          description: "Reading created successfully",
-          content: {
-            "application/json": {
-              schema: resolver(CreateReadingResponseSchema),
-            },
-          },
-        },
-        404: {
-          description: "Sensor not found",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-      },
-    }),
-    validator("param", GetSensorParamsSchema),
-    validator("json", CreateReadingRequestSchema),
-    async (c) => {
-      const { id } = c.req.valid("param");
-      const { value, unit, timestamp } = c.req.valid("json");
-
-      const sensor = await Sensor.findById(id);
-      if (!sensor) {
-        return c.json({ error: "Sensor not found" }, 404);
-      }
-
-      const readingTimestamp = timestamp ? new Date(timestamp) : new Date();
-
-      // Create reading in time-series collection
-      const reading = await SensorReading.create({
-        timestamp: readingTimestamp,
-        value,
-        unit,
-        metadata: {
-          sensorId: sensor._id,
-          buildingId: sensor.buildingId,
-          sensorType: sensor.sensorType,
-        },
-      });
-
-      // Update denormalized lastReading in sensor
-      sensor.lastReading = {
-        value,
-        timestamp: readingTimestamp,
-        unit,
-      };
-      await sensor.save();
-
-      return c.json(
-        {
-          success: true,
-          reading: {
-            id: reading._id?.toString(),
-            timestamp: reading.timestamp.toISOString(),
-            value: reading.value,
-            unit: reading.unit,
-            metadata: {
-              sensorId: reading.metadata.sensorId.toString(),
-              buildingId: reading.metadata.buildingId.toString(),
-              sensorType: reading.metadata.sensorType,
-            },
-          },
-        },
-        201
-      );
-    }
-  )
-
   /**
    * GET /api/sensors/:id/readings - Get sensor readings history
    */
