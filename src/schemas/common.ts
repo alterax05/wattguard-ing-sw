@@ -60,3 +60,76 @@ export const UserSchema = z.object({
 export const TokenQuerySchema = z.object({
   token: z.string().min(1, "Token is required").describe("Authentication or validation token"),
 });
+
+/**
+ * MongoDB ObjectId validation schema
+ */
+export const ObjectIdSchema = z
+  .string()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId format")
+  .describe("MongoDB ObjectId");
+
+/**
+ * Building status enum
+ */
+export const BuildingStatusSchema = z
+  .enum(["active", "inactive", "decommissioned"])
+  .describe("Building operational status");
+
+/**
+ * Sensor type enum
+ */
+export const SensorTypeSchema = z
+  .enum(["internal_temp", "external_temp", "energy_meter"])
+  .describe("Type of sensor (internal temperature, external temperature, or energy meter)");
+
+/**
+ * Sensor status enum
+ */
+export const SensorStatusSchema = z
+  .enum(["active", "inactive", "maintenance", "error"])
+  .describe("Sensor operational status");
+
+/**
+ * Heating system type enum (common types in Italy)
+ */
+export const HeatingSystemTypeSchema = z
+  .enum([
+    "caldaia_gas",
+    "caldaia_gasolio",
+    "pompa_calore",
+    "teleriscaldamento",
+    "stufa_pellet",
+    "fotovoltaico",
+    "altro",
+  ])
+  .describe("Type of heating system");
+
+
+
+
+
+/**
+ * Pagination query parameters
+ */
+export const PaginationQuerySchema = z.object({
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 50))
+    .pipe(z.number().min(1).max(100))
+    .describe("Maximum number of results (1-100, default: 50)"),
+  offset: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 0))
+    .pipe(z.number().min(0))
+    .describe("Number of results to skip (default: 0)"),
+});
+
+/**
+ * Sort order enum
+ */
+export const SortOrderSchema = z
+  .enum(["asc", "desc"])
+  .describe("Sort order (ascending or descending)");

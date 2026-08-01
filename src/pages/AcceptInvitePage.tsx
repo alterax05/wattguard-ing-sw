@@ -5,11 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+interface InviteData {
+  role: string;
+  email: string;
+}
+
 export function AcceptInvitePage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
-  const [inviteData, setInviteData] = useState<any>(null);
+  const [inviteData, setInviteData] = useState<InviteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"choice" | "password">("choice");
