@@ -21,8 +21,8 @@ export const LastReadingSchema = z.object({
  * Sensor response schema
  */
 export const SensorSchema = z.object({
-  id: z.string().describe("Unique sensor identifier"),
-  buildingId: z.string().describe("Building identifier this sensor belongs to"),
+  id: ObjectIdSchema.describe("Unique sensor identifier"),
+  buildingId: ObjectIdSchema.describe("Building identifier this sensor belongs to"),
   sensorType: SensorTypeSchema,
   location: z.string().describe("Physical location of the sensor in the building"),
   serialNumber: z.string().optional().describe("Optional sensor serial number"),
@@ -30,8 +30,10 @@ export const SensorSchema = z.object({
   status: SensorStatusSchema,
   lastReading: LastReadingSchema.optional().describe("Most recent reading (denormalized for performance)"),
   transmissionInterval: z.number().describe("Data transmission interval in seconds (default: 90)"),
-  createdBy: z.string().optional().describe("User who created this sensor"),
-  updatedBy: z.string().optional().describe("User who last updated this sensor"),
+  minThreshold: z.number().optional().describe("Minimum threshold for alerts"),
+  maxThreshold: z.number().optional().describe("Maximum threshold for alerts"),
+  createdBy: ObjectIdSchema.optional().describe("User who created this sensor"),
+  updatedBy: ObjectIdSchema.optional().describe("User who last updated this sensor"),
   createdAt: z.iso.datetime().optional().describe("Creation timestamp"),
   updatedAt: z.iso.datetime().optional().describe("Last update timestamp"),
 });
@@ -57,6 +59,8 @@ export const CreateSensorRequestSchema = z.object({
   serialNumber: z.string().trim().optional().describe("Optional sensor serial number"),
   installationDate: z.iso.datetime().optional().describe("Date when sensor was installed (defaults to now)"),
   transmissionInterval: z.number().min(10).max(3600).optional().describe("Transmission interval in seconds (default: 90)"),
+  minThreshold: z.number().optional().describe("Minimum threshold for alerts"),
+  maxThreshold: z.number().optional().describe("Maximum threshold for alerts"),
 });
 
 /**
@@ -97,6 +101,8 @@ export const UpdateSensorRequestSchema = z.object({
   serialNumber: z.string().trim().optional().describe("Sensor serial number"),
   status: SensorStatusSchema.optional(),
   transmissionInterval: z.number().min(10).max(3600).optional().describe("Transmission interval in seconds"),
+  minThreshold: z.number().nullable().optional().describe("Minimum threshold for alerts"),
+  maxThreshold: z.number().nullable().optional().describe("Maximum threshold for alerts"),
 });
 
 /**
@@ -126,14 +132,14 @@ export const DeleteSensorResponseSchema = z.object({
  * SensorReading schema (for historical data)
  */
 export const SensorReadingSchema = z.object({
-  id: z.string().optional().describe("Reading identifier"),
+  id: ObjectIdSchema.optional().describe("Reading identifier"),
   timestamp: z.iso.datetime().describe("Reading timestamp"),
   value: z.number().describe("Reading value"),
   unit: z.string().describe("Unit of measurement"),
   metadata: z.object({
-    sensorId: z.string(),
-    buildingId: z.string(),
-    sensorType: z.string(),
+    sensorId: ObjectIdSchema,
+    buildingId: ObjectIdSchema,
+    sensorType: SensorTypeSchema,
   }).optional(),
 });
 
@@ -168,6 +174,32 @@ export const GetSensorReadingsQuerySchema = PaginationQuerySchema.extend({
  */
 export const GetSensorReadingsResponseSchema = z.object({
   readings: z.array(SensorReadingSchema).describe("List of sensor readings"),
+  pagination: z.object({
+    limit: z.number(),
+    offset: z.number(),
+    total: z.number(),
+  }).describe("Pagination information"),
+});
+
+/**
+ * GET /api/sensors - List sensors query parameters
+ */
+export const ListSensorsQuerySchema = PaginationQuerySchema.extend({
+  buildingId: ObjectIdSchema.optional().describe("Filter by building ID"),
+  sensorType: SensorTypeSchema.optional().describe("Filter by sensor type"),
+  status: SensorStatusSchema.optional().describe("Filter by sensor status"),
+  sortBy: z
+    .enum(["createdAt", "updatedAt", "sensorType", "status"])
+    .optional()
+    .describe("Field to sort by (default: createdAt)"),
+  sortOrder: SortOrderSchema.optional().describe("Sort order (default: desc)"),
+});
+
+/**
+ * GET /api/sensors - List sensors response
+ */
+export const ListSensorsResponseSchema = z.object({
+  sensors: z.array(SensorWithBuildingSchema).describe("List of sensors"),
   pagination: z.object({
     limit: z.number(),
     offset: z.number(),

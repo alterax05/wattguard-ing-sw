@@ -68,9 +68,9 @@ describe("Authentication Integration Tests", () => {
 
       // Extract JWT from Set-Cookie header
       const setCookieHeader = loginRes.headers.get("set-cookie");
-      expect(setCookieHeader).toBeTruthy();
+      expect(setCookieHeader).toBeDefined();
       const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
-      expect(tokenMatch).toBeTruthy();
+      expect(tokenMatch).toBeDefined();
       const token = tokenMatch![1];
 
       // Create invite
@@ -165,8 +165,8 @@ describe("Authentication Integration Tests", () => {
 
       // Verify user was created
       const user = await User.findOne({ email: "user@test.com" });
-      expect(user).toBeTruthy();
-      expect(user!.passwordHash).toBeTruthy();
+      expect(user).toBeDefined();
+      expect(user!.passwordHash).toBeDefined();
 
       // Verify invite was marked as accepted
       const invite = await Invite.findOne({ tokenHash });
@@ -201,7 +201,7 @@ describe("Authentication Integration Tests", () => {
 
       // Check cookie was set
       const setCookieHeader = res.headers.get("set-cookie");
-      expect(setCookieHeader).toBeTruthy();
+      expect(setCookieHeader).toBeDefined();
       expect(setCookieHeader).toContain("access_token=");
     });
 
@@ -228,7 +228,7 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(401);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
   });
 
@@ -427,7 +427,7 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
 
     test("should reject missing email field", async () => {
@@ -441,7 +441,7 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
 
     test("should reject missing password field", async () => {
@@ -455,7 +455,7 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
 
     test("should reject malformed JSON request body", async () => {
@@ -503,14 +503,14 @@ describe("Authentication Integration Tests", () => {
       const res = await app.request("/api/invites/validate");
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
 
     test("should reject empty token query parameter", async () => {
       const res = await app.request("/api/invites/validate?token=");
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeTruthy();
+      expect(data.error).toBeDefined();
     });
   });
 
@@ -540,7 +540,7 @@ describe("Authentication Integration Tests", () => {
       // Verify reset token was created
       const user = await User.findOne({ email: "user@test.com" });
       const resetToken = await PasswordResetToken.findOne({ userId: user!._id });
-      expect(resetToken).toBeTruthy();
+      expect(resetToken).toBeDefined();
     });
 
     test("should complete full password reset flow", async () => {

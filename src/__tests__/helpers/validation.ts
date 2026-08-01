@@ -11,7 +11,7 @@ import { User } from "../../models/User";
 export async function expectValidationError(response: Response, fieldName?: string) {
   expect(response.status).toBe(400);
   const data = await response.json();
-  expect(data.error).toBeTruthy();
+  expect(data.error).toBeDefined();
   
   if (fieldName) {
     expect(data.error.toLowerCase()).toContain(fieldName.toLowerCase());

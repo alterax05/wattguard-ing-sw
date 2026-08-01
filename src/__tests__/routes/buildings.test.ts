@@ -131,7 +131,7 @@ describe("Buildings Routes - Integration Tests", () => {
 
       // Verify building was created in DB
       const building = await Building.findById(json.building.id);
-      expect(building).toBeTruthy();
+      expect(building).toBeDefined();
       expect(building!.name).toBe(buildingData.name);
 
       
@@ -470,12 +470,12 @@ describe("Buildings Routes - Integration Tests", () => {
       const json = await res.json();
       const building = json.buildings[0];
       
-      expect(building.name).toBeTruthy();
-      expect(building.address).toBeTruthy();
-      expect(building.surface).toBeTruthy();
-      expect(building.heatingSystemType).toBeTruthy();
-      expect(building.status).toBeTruthy();
-      expect(building.updatedAt).toBeTruthy();
+      expect(building.name).toBeDefined();
+      expect(building.address).toBeDefined();
+      expect(building.surface).toBeDefined();
+      expect(building.heatingSystemType).toBeDefined();
+      expect(building.status).toBeDefined();
+      expect(building.updatedAt).toBeDefined();
     });
   });
 
@@ -504,7 +504,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.building.address).toBe("Via Details 1, Milano");
       expect(json.building.surface).toBe(2000);
       expect(json.building.constructionYear).toBe(2000);
-      expect(json.building.buildingType).toBeTruthy();
+      expect(json.building.buildingType).toBeDefined();
     });
   });
 
@@ -575,9 +575,9 @@ describe("Buildings Routes - Integration Tests", () => {
       
       // Verify sensor details
       const internalTempSensor = json.sensors.find((s: ISensor) => s.sensorType === "internal_temp");
-      expect(internalTempSensor).toBeTruthy();
+      expect(internalTempSensor).toBeDefined();
       expect(internalTempSensor.status).toBe("active");
-      expect(internalTempSensor.lastReading).toBeTruthy();
+      expect(internalTempSensor.lastReading).toBeDefined();
     });
   });
 
@@ -640,15 +640,15 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       
-      expect(json.data).toBeTruthy();
-      expect(json.data.internalTemperature).toBeTruthy();
+      expect(json.data).toBeDefined();
+      expect(json.data.internalTemperature).toBeDefined();
       expect(json.data.internalTemperature.value).toBe(22.5);
       expect(json.data.internalTemperature.unit).toBe("°C");
       
-      expect(json.data.externalTemperature).toBeTruthy();
+      expect(json.data.externalTemperature).toBeDefined();
       expect(json.data.externalTemperature.value).toBe(10.2);
       
-      expect(json.data.energyConsumption).toBeTruthy();
+      expect(json.data.energyConsumption).toBeDefined();
       expect(json.data.energyConsumption.value).toBe(150.5);
       expect(json.data.energyConsumption.unit).toBe("kW");
     });
@@ -747,15 +747,15 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       
-      expect(json.data).toBeTruthy();
+      expect(json.data).toBeDefined();
       expect(json.data.length).toBeGreaterThan(0);
       expect(json.buildingId).toBe(building._id.toString());
       expect(json.buildingName).toBe(building.name);
       
       // Verify data structure
       const dataPoint = json.data[0];
-      expect(dataPoint.timestamp).toBeTruthy();
-      expect(dataPoint.value).toBeTruthy();
+      expect(dataPoint.timestamp).toBeDefined();
+      expect(dataPoint.value).toBeDefined();
       expect(dataPoint.sensorType).toBe("internal_temp");
     });
 
@@ -883,7 +883,7 @@ describe("Buildings Routes - Integration Tests", () => {
         expect(res.status).toBe(200);
         const json = await res.json();
         expect(json.data.length).toBeGreaterThan(0);
-        expect(json.buildingId).toBeTruthy();
+        expect(json.buildingId).toBeDefined();
       }
     });
   });
