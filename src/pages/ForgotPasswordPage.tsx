@@ -1,102 +1,108 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTheme } from "next-themes";
+import { useForgotPassword } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ModeToggle } from "@/components/ui/mode-toggle";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const forgotPassword = useForgotPassword();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/auth/local/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setSuccess(true);
-      }
-    } catch (err) {
-      setError("Errore durante la richiesta");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    forgotPassword.mutate({ email });
   };
 
-  if (success) {
+  if (forgotPassword.isSuccess) {
     return (
-      <div className="container mx-auto p-8 max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle>Email inviata</CardTitle>
-            <CardDescription>
-              Se l&apos;email esiste nel nostro sistema, riceverai un link per reimpostare la password.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Controlla la tua casella di posta (e la cartella spam).
-            </p>
-            <Link to="/login">
-              <Button variant="outline" className="w-full">
-                Torna al Login
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="absolute top-4 right-4">
+          <ModeToggle />
+        </div>
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex flex-col items-center space-y-6">
+            <img
+              src={theme === "dark" ? "/images/full-logo-black.png" : "/images/full-logo.png"}
+              alt="WattGuard"
+              className="h-24 w-auto object-contain"
+            />
+          </div>
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-center">Email Sent</CardTitle>
+              <CardDescription className="text-center">
+                If the email exists in our system, you will receive a password reset link.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Please check your inbox (and spam folder).
+              </p>
+              <Link to="/login" className="block">
+                <Button variant="outline" className="w-full">
+                  Back to Sign In
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-8 max-w-md">
-      <Card>
-        <CardHeader>
-          <CardTitle>Password Dimenticata</CardTitle>
-          <CardDescription>
-            Inserisci la tua email per ricevere un link di reset
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="tua-email@esempio.com"
-              />
-            </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Invio in corso..." : "Invia Link di Reset"}
-            </Button>
-            <Link to="/login">
-              <Button variant="ghost" className="w-full">
-                Torna al Login
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="absolute top-4 right-4">
+        <ModeToggle />
+      </div>
+      <div className="w-full max-w-md space-y-8">
+        <div className="flex flex-col items-center space-y-6">
+          <img
+            src={theme === "dark" ? "/images/full-logo-black.png" : "/images/full-logo.png"}
+            alt="WattGuard"
+            className="h-24 w-auto object-contain"
+          />
+        </div>
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">Forgot Password</CardTitle>
+            <CardDescription className="text-center">
+              Enter your email below to reset the password of your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="name@example.com"
+                />
+              </div>
+              {forgotPassword.error && (
+                <p className="text-sm text-destructive">{forgotPassword.error.message}</p>
+              )}
+              <Button type="submit" disabled={forgotPassword.isPending} className="w-full">
+                {forgotPassword.isPending ? "Sending..." : "Send Reset Link"}
               </Button>
-            </Link>
-          </form>
-        </CardContent>
-      </Card>
+              <Link to="/login" className="block">
+                <Button variant="ghost" className="w-full">
+                  Back to Sign In
+                </Button>
+              </Link>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
