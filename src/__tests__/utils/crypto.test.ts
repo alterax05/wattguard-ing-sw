@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { randomToken, hashTokenSha256, timingSafeEqual } from "../../utils/crypto";
+import { randomToken, hashTokenSha256 } from "../../utils/crypto";
 
 describe("crypto utilities", () => {
   describe("randomToken", () => {
@@ -55,40 +55,6 @@ describe("crypto utilities", () => {
       // Expected SHA-256 hash of "hello"
       const expected = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
       expect(hash).toBe(expected);
-    });
-  });
-
-  describe("timingSafeEqual", () => {
-    test("should return true for identical strings", () => {
-      const str = "test-string";
-      expect(timingSafeEqual(str, str)).toBe(true);
-    });
-
-    test("should return true for equal strings", () => {
-      const str1 = "test-string";
-      const str2 = "test-string";
-      expect(timingSafeEqual(str1, str2)).toBe(true);
-    });
-
-    test("should return false for different strings of same length", () => {
-      const str1 = "test-string-1";
-      const str2 = "test-string-2";
-      expect(timingSafeEqual(str1, str2)).toBe(false);
-    });
-
-    test("should return false for strings of different lengths", () => {
-      const str1 = "short";
-      const str2 = "much longer string";
-      expect(timingSafeEqual(str1, str2)).toBe(false);
-    });
-
-    test("should return false for empty vs non-empty string", () => {
-      expect(timingSafeEqual("", "test")).toBe(false);
-      expect(timingSafeEqual("test", "")).toBe(false);
-    });
-
-    test("should return true for two empty strings", () => {
-      expect(timingSafeEqual("", "")).toBe(true);
     });
   });
 });

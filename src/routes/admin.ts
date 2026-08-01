@@ -13,6 +13,12 @@ import { randomToken, hashTokenSha256 } from "../utils/crypto";
 import { sendInviteEmail } from "../email/mailer";
 import { inviteRateLimiter } from "../middleware/rate-limit";
 import {
+  ListUsersResponseSchema,
+  UpdateUserRoleParamsSchema,
+  UpdateUserRoleRequestSchema,
+  UpdateUserRoleResponseSchema,
+  DeleteUserParamsSchema,
+  DeleteUserResponseSchema,
   ListInvitesResponseSchema,
   CreateInviteRequestSchema,
   CreateInviteResponseSchema,
@@ -22,6 +28,9 @@ import {
 } from "../schemas/admin";
 
 /**
+ * GET /api/admin/users - List all users
+ * PATCH /api/admin/users/:id/role - Update a user's role
+ * DELETE /api/admin/users/:id - Delete a user
  * GET /api/admin/invites - List all invites
  * POST /api/admin/invites - Create a new invite
  * POST /api/admin/invites/:id/revoke - Revoke an invite
@@ -29,6 +38,207 @@ import {
  * Note: JWT authentication and admin role middleware are applied globally in index.ts
  */
 const app = new Hono<{ Variables: AuthVariables }>()
+  .get(
+    "/users",
+    describeRoute({
+      description: "List all registered users (admin only)",
+      tags: ["Admin"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "List of users retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(ListUsersResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    async (c) => {
+      const users = await User.find()
+        .select("-passwordHash -googleSub -__v")
+        .sort({ createdAt: -1 });
+        
+      return c.json({
+        users: users.map((u) => ({
+          id: u._id.toString(),
+          email: u.email,
+          name: u.name,
+          role: u.role,
+          isDisabled: u.isDisabled,
+          lastLoginAt: u.lastLoginAt?.toISOString(),
+          createdAt: u.createdAt.toISOString(),
+        })),
+      });
+    }
+  )
+  .patch(
+    "/users/:id/role",
+    describeRoute({
+      description: "Update a user's role (admin only)",
+      tags: ["Admin"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "User role updated successfully",
+          content: {
+            "application/json": {
+              schema: resolver(UpdateUserRoleResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Cannot change your own role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "User not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", UpdateUserRoleParamsSchema),
+    validator("json", UpdateUserRoleRequestSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { role } = c.req.valid("json");
+      const payload = c.get("jwtPayload");
+
+      // Prevent admin from changing their own role
+      if (payload.sub === id) {
+        return c.json({ error: "Cannot change your own role" }, 400);
+      }
+
+      const user = await User.findById(id);
+      if (!user) {
+        return c.json({ error: "User not found" }, 404);
+      }
+
+      user.role = role;
+      await user.save();
+
+      return c.json({
+        success: true as const,
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isDisabled: user.isDisabled,
+          lastLoginAt: user.lastLoginAt?.toISOString(),
+          createdAt: user.createdAt.toISOString(),
+        },
+      });
+    }
+  )
+  .delete(
+    "/users/:id",
+    describeRoute({
+      description: "Delete a user (admin only)",
+      tags: ["Admin"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "User deleted successfully",
+          content: {
+            "application/json": {
+              schema: resolver(DeleteUserResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Cannot delete your own account",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "User not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", DeleteUserParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const payload = c.get("jwtPayload");
+
+      // Prevent admin from deleting themselves
+      if (payload.sub === id) {
+        return c.json({ error: "Cannot delete your own account" }, 400);
+      }
+
+      const user = await User.findByIdAndDelete(id);
+      if (!user) {
+        return c.json({ error: "User not found" }, 404);
+      }
+
+      return c.json({ success: true as const });
+    }
+  )
   .get(
     "/invites",
     describeRoute({

@@ -9,6 +9,7 @@ import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
+import { Alert } from "../../models/Alert";
 
 const TEST_MONGO_URI = process.env.MONGO_URI_TEST!;
 
@@ -34,5 +35,6 @@ export async function clearTestDB() {
     Sensor.deleteMany({}),
     Building.deleteMany({}),
     BuildingType.deleteMany({}),
+    Alert.deleteMany({}),
   ]);
 }

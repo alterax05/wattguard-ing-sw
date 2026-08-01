@@ -444,6 +444,7 @@ describe("Building Types Routes - Integration Tests", () => {
         buildingType: buildingType._id,
         surface: 1000,
         heatingSystemType: "caldaia_gas",
+        location: { type: "Point", coordinates: [11.1167, 46.0667] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
