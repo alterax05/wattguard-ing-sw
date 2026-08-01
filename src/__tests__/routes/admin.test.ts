@@ -36,7 +36,7 @@ beforeEach(async () => {
 
 // Helper function to create admin user and get token
 async function getAdminToken() {
-  const admin = await User.create({
+  await User.create({
     email: "admin@test.com",
     role: "admin",
     isDisabled: false,

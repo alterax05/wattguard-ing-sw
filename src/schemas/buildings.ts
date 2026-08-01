@@ -7,7 +7,7 @@ import {
   PaginationQuerySchema,
   SortOrderSchema,
 } from "./common";
-import { SensorSchema, LastReadingSchema } from "./sensors";
+import { SensorSchema } from "./sensors";
 
 /**
  * Building response schema

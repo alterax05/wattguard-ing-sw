@@ -4,7 +4,7 @@
  * Routes: /api/admin/invites (GET, POST), /api/admin/invites/:id/revoke (POST)
  */
 import { z } from "zod";
-import { EmailSchema, UserRoleSchema, SuccessSchema, ErrorSchema } from "./common";
+import { EmailSchema, UserRoleSchema, ErrorSchema } from "./common";
 
 /**
  * Invite status enum

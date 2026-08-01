@@ -45,7 +45,7 @@ describe("Authentication Integration Tests", () => {
         cost: 10,
       });
 
-      const admin = await User.create({
+      await User.create({
         email: "admin@test.com",
         role: "admin",
         isDisabled: false,

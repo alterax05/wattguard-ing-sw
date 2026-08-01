@@ -99,7 +99,7 @@ describe("OpenAPI Documentation", () => {
       expect(Array.isArray(spec.tags)).toBe(true);
       
       // Check for expected tags
-      const tagNames = spec.tags.map((tag: any) => tag.name);
+      const tagNames = spec.tags.map((tag: { name: string }) => tag.name);
       expect(tagNames).toContain("Authentication");
       expect(tagNames).toContain("Admin");
     });
@@ -182,8 +182,9 @@ describe("OpenAPI Documentation", () => {
 
       const validMethods = ["get", "post", "put", "patch", "delete", "options", "head"];
       
-      for (const [path, methods] of Object.entries(spec.paths)) {
-        const definedMethods = Object.keys(methods as object);
+      const paths = spec.paths as Record<string, Record<string, unknown>>;
+      for (const methods of Object.values(paths)) {
+        const definedMethods = Object.keys(methods);
         for (const method of definedMethods) {
           expect(validMethods).toContain(method.toLowerCase());
         }
@@ -196,8 +197,9 @@ describe("OpenAPI Documentation", () => {
 
       const operationIds = new Set();
       
-      for (const [path, methods] of Object.entries(spec.paths)) {
-        for (const [method, operation] of Object.entries(methods as Record<string, any>)) {
+      const paths = spec.paths as Record<string, Record<string, { operationId?: string }>>;
+      for (const methods of Object.values(paths)) {
+        for (const operation of Object.values(methods)) {
           if (operation.operationId) {
             expect(operationIds.has(operation.operationId)).toBe(false);
             operationIds.add(operation.operationId);
@@ -210,8 +212,10 @@ describe("OpenAPI Documentation", () => {
       const res = await app.request("/api/openapi.json");
       const spec = await res.json();
 
-      for (const [path, methods] of Object.entries(spec.paths)) {
-        for (const [method, operation] of Object.entries(methods as Record<string, any>)) {
+      // define error responses for all endpoints
+      const paths = spec.paths as Record<string, Record<string, { responses: Record<string, unknown> }>>;
+      for (const methods of Object.values(paths)) {
+        for (const operation of Object.values(methods)) {
           expect(operation.responses).toBeTruthy();
           
           // Most endpoints should have at least a success and error response

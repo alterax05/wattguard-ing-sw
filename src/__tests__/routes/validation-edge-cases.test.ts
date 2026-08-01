@@ -111,10 +111,7 @@ describe("Email Validation and Normalization", () => {
 });
 
 describe("Password Validation", () => {
-  test("should accept passwords of 8+ characters", async () => {
-    const token = randomToken(32);
-    const tokenHash = hashTokenSha256(token);
-
+    test("should accept passwords of 8+ characters", async () => {
     const admin = await User.create({
       email: "admin@test.com",
       role: "admin",
