@@ -6,7 +6,7 @@
  *         /api/auth/local/validate-reset-token
  */
 import { z } from "zod";
-import { EmailSchema, PasswordSchema, UserSchema, SuccessSchema, ErrorSchema, TokenQuerySchema } from "./common";
+import { EmailSchema, PasswordSchema, UserSchema, ErrorSchema, TokenQuerySchema } from "./common";
 
 /**
  * POST /api/auth/local/setup - Setup password for invited user

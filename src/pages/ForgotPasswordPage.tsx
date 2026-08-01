@@ -45,7 +45,7 @@ export function ForgotPasswordPage() {
           <CardHeader>
             <CardTitle>Email inviata</CardTitle>
             <CardDescription>
-              Se l'email esiste nel nostro sistema, riceverai un link per reimpostare la password.
+              Se l&apos;email esiste nel nostro sistema, riceverai un link per reimpostare la password.
             </CardDescription>
           </CardHeader>
           <CardContent>

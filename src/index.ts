@@ -13,6 +13,9 @@ import auth from "./routes/auth";
 import authLocal from "./routes/auth-local";
 import authGoogle from "./routes/auth-google";
 import admin from "./routes/admin";
+import buildingTypes from "./routes/building-types";
+import buildings from "./routes/buildings";
+import sensors from "./routes/sensors";
 
 // Import JWT utilities and middleware
 import { getJWTSecret } from "./auth/jwt";
@@ -27,7 +30,9 @@ if (process.env.NODE_ENV !== "test") {
 
   mongoose
     .connect(MONGO_URI)
-    .then(() => console.log("✅ Connected to MongoDB"))
+    .then(() => {
+      console.log("✅ Connected to MongoDB");
+    })
     .catch((err) => console.error("❌ MongoDB connection error:", err));
 }
 
@@ -49,6 +54,25 @@ const app = new Hono()
     loadUserDoc(),
     requireRole("admin"),
   )
+  .use(
+    "/api/building-types/*",
+    jwt({ secret: getJWTSecret(), cookie: "access_token" }),
+    loadUserDoc(),
+    requireRole("admin", "operator"),
+  )
+  .use(
+    "/api/buildings/*",
+    jwt({ secret: getJWTSecret(), cookie: "access_token" }),
+    loadUserDoc(),
+    requireRole("admin", "operator"),
+  )
+  .use(
+    "/api/sensors/*",
+    jwt({ secret: getJWTSecret(), cookie: "access_token" }),
+    loadUserDoc(),
+    requireRole("admin", "operator"),
+  )
+
   .get(
     "/api/health",
     describeRoute({
@@ -76,7 +100,10 @@ const app = new Hono()
   .route("/api/auth", auth)
   .route("/api/auth/local", authLocal)
   .route("/api/auth/google", authGoogle)
-  .route("/api/admin", admin);
+  .route("/api/admin", admin)
+  .route("/api/building-types", buildingTypes)
+  .route("/api/buildings", buildings)
+  .route("/api/sensors", sensors);
 
 app
   .get(
@@ -122,5 +149,4 @@ if (process.env.NODE_ENV !== "test") {
 
   console.log(`🚀 Server running at ${server.url}`);
   console.log(`📚 API Documentation: ${server.url}api/docs`);
-  console.log(`📄 OpenAPI Spec: ${server.url}api/openapi.json`);
 }

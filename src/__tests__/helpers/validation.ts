@@ -104,7 +104,7 @@ export async function authenticatedRequest(
 /**
  * Makes a POST request with JSON body
  */
-export async function postJSON(url: string, body: any, token?: string): Promise<Response> {
+export async function postJSON(url: string, body: unknown, token?: string): Promise<Response> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };

@@ -4,7 +4,7 @@ This document provides essential information for AI agents operating within the 
 
 ## 1. Environment & Build Commands
 
-This project is a Bun + React application using TailwindCSS and Hono. We use **Vite** for the frontend development and build process, and **MongoDB** as our database.
+This project is a **Bun** + **React** application using **TailwindCSS** and **Hono**. We use **Vite** for the frontend and **MongoDB** as our database.
 
 - **Package Manager:** `bun` (do not use `npm`, `yarn`, or `pnpm`)
 - **Runtime:** `bun`
@@ -19,27 +19,29 @@ This project is a Bun + React application using TailwindCSS and Hono. We use **V
 | **Start Frontend Only** | `bun run dev:frontend` | Starts only the Vite server |
 | **Start Backend Only** | `bun run dev:backend` | Starts only the Hono server |
 | **Build for Production** | `bun run build` | Builds frontend with Vite and backend with Bun |
-| **Start Production** | `bun run start` | |
-| **Run Tests** | `bun test` | Runs all tests |
-| **Run Single Test** | `bun test <path/to/test.ts>` | e.g. `bun test src/utils/math.test.ts` |
-| **Watch Tests** | `bun test --watch` | |
-
-> **Note:** There are no explicit linting scripts in `package.json`. Follow the code style guidelines below closely.
+| **Start Production** | `bun run start` | Runs the built backend |
+| **Lint Code** | `bun run lint` | Runs `eslint` on the codebase |
+| **Type Check** | `bun run check` | Runs `tsc --noEmit` to verify types |
+| **Run Tests** | `bun test` | Runs all tests using Bun's test runner |
+| **Run Single Test** | `bun test <path/to/test.ts>` | e.g., `bun test src/utils/math.test.ts` |
+| **Watch Tests** | `bun run test:watch` | Runs tests in watch mode |
 
 ## 2. Code Style & Conventions
 
 ### General
 - **Language:** TypeScript (`.ts`, `.tsx`) exclusively.
+- **Strictness:** `strict: true` is enabled in `tsconfig.json`. Ensure all code passes `bun run check`.
 - **Module System:** ES Modules (`import`/`export`).
 - **Path Aliases:** Use `@/*` to refer to `src/*` (e.g., `import { cn } from "@/lib/utils"`).
+- **Formatting:** Code should be formatted consistent with standard Prettier/ESLint rules.
 
 ### Frontend (React)
-- **Framework:** React 19 (via Vite)
+- **Framework:** React 19 (via Vite).
 - **Components:** Functional components with named exports.
   ```tsx
   export function MyComponent({ prop }: MyComponentProps) { ... }
   ```
-- **Styling:** TailwindCSS with `clsx` and `tailwind-merge` utility.
+- **Styling:** TailwindCSS with `clsx` and `tailwind-merge`.
   - Use the `cn()` utility for conditional class names:
     ```tsx
     import { cn } from "@/lib/utils";
@@ -47,114 +49,76 @@ This project is a Bun + React application using TailwindCSS and Hono. We use **V
     ```
 - **UI Library:** **Shadcn UI** (Radix UI primitives).
   - Components live in `src/components/ui`.
-  - To add new components, use the shadcn CLI or manually copy them to `src/components/ui` following the project structure.
+  - To add new components, use the shadcn CLI or manually copy them to `src/components/ui`.
 - **State Management:** **React Query** (`@tanstack/react-query`).
   - Use `useQuery` for data fetching and `useMutation` for server updates.
-  - Wrap your app with `QueryClientProvider` (already configured in `src/frontend.tsx`).
 
 ### Backend (Hono)
 
-**CRITICAL: Always follow Hono best practices. Consult the official Hono documentation (https://hono.dev/docs) when implementing or refactoring backend code.**
+**CRITICAL: Always follow Hono best practices (https://hono.dev/docs).**
 
-- **Framework:** Hono (running on Bun).
-- **Route Definition:** **MUST use method chaining** as recommended by Hono docs.
+- **Framework:** Hono (on Bun).
+- **Route Definition:** **MUST use method chaining**.
   ```ts
-  // ✅ CORRECT: Method chaining
+  // ✅ CORRECT
   const app = new Hono()
     .get("/users", (c) => c.json({ users: [] }))
-    .post("/users", (c) => c.json({ success: true }))
-    .get("/users/:id", (c) => c.json({ id: c.req.param("id") }))
-  
-  export default app
-  export type AppType = typeof app  // For RPC type-safety
-  
-  // ❌ WRONG: Separate method calls
-  const app = new Hono()
-  app.get("/users", handler)
-  app.post("/users", handler)
-  ```
-  
-- **Type-Safe RPC:** Always export the `AppType` for RPC client generation:
-  ```ts
-  export default app
-  export type AppType = typeof app
-  ```
-  
-- **Authentication & JWT:**
-  - **MUST use Hono's built-in JWT middleware** (`hono/jwt`) instead of custom implementations
-  - JWT middleware automatically supports **both** `Authorization` header and cookie fallback:
-    ```ts
-    import { jwt } from "hono/jwt"
-    
-    app.use("/api/protected/*", 
-      jwt({ 
-        secret: getJWTSecret(), 
-        cookie: "access_token"  // Automatically checks header first, then cookie
-      })
-    )
-    ```
-  - JWT payloads **MUST use standard claims**:
-    - `sub` for user ID (not `userId`)
-    - `iat` for issued at
-    - `exp` for expiration
-    - Custom claims (like `email`, `role`) are allowed
-  - Access JWT payload in routes via `c.get("jwtPayload")`
-  
-- **API Response:** Use `c.json({ ... })` for API endpoints.
+    .post("/users", (c) => c.json({ success: true }));
 
+  export default app;
+  export type AppType = typeof app; // For RPC type-safety
+  ```
+- **Authentication:**
+  - Use `hono/jwt` middleware.
+  - Configure for both header and cookie access (e.g., `cookie: "access_token"`).
+  - Use standard claims (`sub`, `iat`, `exp`).
+- **OpenAPI:** Use `hono-openapi` `describeRoute` for documentation where applicable.
 - **Database:** **MongoDB** via `mongoose`.
-  - Define schemas and models in `src/models`.
-  - Ensure connection logic is maintained in `src/index.ts` (or dedicated db module).
-
-- **Documentation Reference:** When in doubt, always refer to:
-  - Official Hono docs: https://hono.dev/docs
-  - Hono best practices: https://hono.dev/docs/guides/best-practices
-  - Hono RPC guide: https://hono.dev/docs/guides/rpc
-
-### TypeScript & Typing
-- **Strictness:** `strict: true` is enabled in `tsconfig.json`.
-- **No `any`:** Avoid `any`. Use `unknown` if the type is truly uncertain, or define specific interfaces/types.
-- **Interfaces vs Types:** Prefer `interface` for object definitions that might be extended, `type` for unions/primitives.
+  - Define schemas in `src/models`.
+  - Connection logic is centralized (likely `src/index.ts`).
 
 ### Naming Conventions
-- **Files/Folders:** `kebab-case` for utility files/folders, `PascalCase` for React components/files.
+- **Files/Folders:** `kebab-case` for utilities/folders, `PascalCase` for React components.
 - **Variables/Functions:** `camelCase`.
 - **Components:** `PascalCase`.
-- **Constants:** `UPPER_SNAKE_CASE` for global constants.
+- **Constants:** `UPPER_SNAKE_CASE`.
 
 ### Project Structure
-- `src/components/ui`: Reusable UI components (buttons, inputs, etc.).
-- `src/lib`: Core utilities (e.g., `utils.ts` for styling).
-- `src/modules`: Feature-specific modules (e.g., `building`).
-- `src/models`: Mongoose models and schemas.
-- `src/index.ts`: Application entry point and server setup.
+- `src/components/ui`: Reusable UI components.
+- `src/lib`: Core utilities (e.g., `utils.ts`).
+- `src/routes`: Backend route modules.
+- `src/models`: Mongoose schemas.
+- `src/index.ts`: Backend entry point.
 - `src/frontend.tsx`: Frontend entry point.
 
 ## 3. Testing
-- **Framework:** `bun:test` (built-in Bun test runner).
+- **Framework:** `bun:test`.
 - **File Naming:** `*.test.ts` or `*.test.tsx`.
-- **Location:** Co-locate tests with the source file or place in `__tests__` directory if preferred.
+- **Location:** Co-locate tests with source files.
 - **Example:**
   ```ts
   import { describe, test, expect } from "bun:test";
-  import { myFunc } from "./myFunc";
+  import { add } from "./math";
 
-  describe("myFunc", () => {
-    test("returns correct value", () => {
-      expect(myFunc()).toBe(true);
+  describe("add", () => {
+    test("adds two numbers", () => {
+      expect(add(1, 2)).toBe(3);
     });
   });
   ```
 
 ## 4. Error Handling
-- **Async/Await:** Use `async`/`await` for asynchronous operations.
-- **API Errors:** Return appropriate HTTP status codes (4xx, 5xx) with a JSON error message.
+- **Async/Await:** Use `async`/`await` consistently.
+- **API Errors:** Return JSON responses with appropriate status codes.
   ```ts
-  return Response.json({ error: "Not Found" }, { status: 404 });
+  return c.json({ error: "Not Found" }, 404);
   ```
 
 ## 5. Agent Workflow Tips
-- **Reading Files:** Always read `package.json` and `tsconfig.json` first to confirm dependencies and settings.
-- **Modifying UI:** Check `src/components/ui` for existing components before creating new ones.
-- **Styling:** Do not create new CSS files. Use Tailwind utility classes.
-- **Verification:** After changes, run `bun run build` to ensure no build errors.
+- **Pre-check:** Read `package.json` and `tsconfig.json` to confirm current project state.
+- **Reuse:** Check `src/components/ui` for existing UI components before creating new ones.
+- **Verification:**
+  1.  Run `bun run check` to verify types.
+  2.  Run `bun run lint` to catch issues.
+  3.  Run `bun test` to ensure no regressions.
+  4.  Run `bun run build` to confirm buildability.

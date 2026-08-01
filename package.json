@@ -1,5 +1,5 @@
 {
-  "name": "bun-react-template",
+  "name": "wattguard",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,11 +9,9 @@
     "dev:backend": "bun --watch src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",
     "build": "vite build && bun run build.ts",
-    "test:unit": "bun test src/__tests__/utils/",
-    "test:integration": "NODE_ENV=test bun test src/__tests__/routes/",
     "test:watch": "bun test --watch",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit",
+    "check": "tsc --noEmit",
     "lint": "eslint ."
   },
   "dependencies": {

@@ -392,7 +392,7 @@ const app = new Hono()
       user.passwordUpdatedAt = new Date();
       await user.save();
 
-      // Mark token as used (before deletion for audit trail)
+      // Mark token as used
       resetToken.usedAt = new Date();
       await resetToken.save();
 

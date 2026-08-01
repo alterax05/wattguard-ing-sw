@@ -1,6 +1,4 @@
 #!/usr/bin/env bun
-import { existsSync } from "fs";
-import { rm } from "fs/promises";
 import path from "path";
 
 // This script only builds the backend using Bun

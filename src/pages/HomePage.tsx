@@ -19,7 +19,7 @@ export function HomePage() {
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle>WattGuard</CardTitle>
-          <CardDescription>Benvenuto nell'applicazione WattGuard</CardDescription>
+          <CardDescription>Benvenuto nell&apos;applicazione WattGuard</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="mb-4">Autenticazione configurata con successo.</p>
