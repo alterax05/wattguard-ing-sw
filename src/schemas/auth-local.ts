@@ -14,11 +14,12 @@ import { EmailSchema, PasswordSchema, UserSchema, ErrorSchema, TokenQuerySchema 
 export const SetupRequestSchema = z.object({
   inviteToken: z.string().min(1, "Invite token is required").describe("Invitation token received via email"),
   password: PasswordSchema,
+  name: z.string().min(1, "Name is required").max(100, "Name is too long").describe("User display name"),
 });
 
 export const SetupResponseSchema = z.object({
   success: z.literal(true),
-  user: UserSchema.pick({ id: true, email: true, role: true }),
+  user: UserSchema.pick({ id: true, email: true, name: true, role: true }),
 });
 
 /**
@@ -31,7 +32,7 @@ export const LoginRequestSchema = z.object({
 
 export const LoginResponseSchema = z.object({
   success: z.literal(true),
-  user: UserSchema.pick({ id: true, email: true, role: true }),
+  user: UserSchema.pick({ id: true, email: true, name: true, role: true }),
 });
 
 /**

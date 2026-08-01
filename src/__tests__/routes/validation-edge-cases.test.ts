@@ -152,7 +152,7 @@ describe("Password Validation", () => {
       const res = await app.request("/api/auth/local/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteToken: newToken, password }),
+        body: JSON.stringify({ inviteToken: newToken, password, name: "Test User" }),
       });
 
       expect(res.status).toBe(200);
@@ -184,7 +184,7 @@ describe("Password Validation", () => {
       const res = await app.request("/api/auth/local/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteToken: token, password }),
+        body: JSON.stringify({ inviteToken: token, password, name: "Test User" }),
       });
 
       expect(res.status).toBe(400);

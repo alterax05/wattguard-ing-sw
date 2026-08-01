@@ -155,6 +155,7 @@ describe("Authentication Integration Tests", () => {
         body: JSON.stringify({
           inviteToken: token,
           password: "password123",
+          name: "Test User",
         }),
       });
 
@@ -405,6 +406,7 @@ describe("Authentication Integration Tests", () => {
         body: JSON.stringify({
           inviteToken: token,
           password: "short",
+          name: "Test User",
         }),
       });
 

@@ -39,6 +39,7 @@ async function createFirstAdmin() {
 
   await User.create({
     email: email.toLowerCase().trim(),
+    name: "Admin User",
     role: "admin",
     isDisabled: false,
     passwordHash,

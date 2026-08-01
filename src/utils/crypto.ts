@@ -23,23 +23,3 @@ export function randomToken(bytes = 32): string {
 export function hashTokenSha256(token: string): string {
   return new Bun.CryptoHasher("sha256").update(token).digest("hex");
 }
-
-/**
- * Timing-safe comparison of two strings
- * Simple constant-time comparison to prevent timing attacks
- * @param a - First string
- * @param b - Second string
- * @returns true if equal
- */
-export function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  
-  return result === 0;
-}

@@ -55,6 +55,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         user: {
           id: userDoc._id?.toString(),
           email: payload.email,
+          name: userDoc.name,
           role: payload.role,
           isDisabled: userDoc.isDisabled ?? false,
           lastLoginAt: userDoc.lastLoginAt,

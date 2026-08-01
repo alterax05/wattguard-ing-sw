@@ -121,4 +121,3 @@ This project is a **Bun** + **React** application using **TailwindCSS** and **Ho
   1.  Run `bun run check` to verify types.
   2.  Run `bun run lint` to catch issues.
   3.  Run `bun test` to ensure no regressions.
-  4.  Run `bun run build` to confirm buildability.
