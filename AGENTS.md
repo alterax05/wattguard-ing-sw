@@ -121,3 +121,19 @@ This project is a **Bun** + **React** application using **TailwindCSS** and **Ho
   1.  Run `bun run check` to verify types.
   2.  Run `bun run lint` to catch issues.
   3.  Run `bun test` to ensure no regressions.
+
+## 6. Branching Strategy (GitFlow)
+
+This repository follows **GitFlow**:
+
+- **`main`** — production-ready code. Only accepts merges from `release/*` and `hotfix/*` branches. Releases are tagged here.
+- **`develop`** — integration branch (GitHub default). All feature work merges here.
+- **`feature/<name>`** — new features. Branch off `develop`, merge back into `develop`.
+- **`release/<version>`** — release preparation. Branch off `develop`, merge into `main` (tag `v<version>`) and back into `develop`.
+- **`hotfix/<name>`** — urgent production fixes. Branch off `main`, merge into both `main` (tag patch version) and `develop`.
+
+Rules:
+- Never commit directly to `main` or `develop`; always use a topic branch.
+- Always merge with `--no-ff`, so every feature remains visible as a real side branch in the history graph.
+- Use Conventional Commits (`feat:`, `fix:`, `chore:`, ...) for commit messages.
+- The pre-GitFlow history is preserved under the `archive/master-original` and `archive/feat-frontend-original` tags.
