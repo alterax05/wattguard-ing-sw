@@ -1,0 +1,810 @@
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  useBuilding,
+  useBuildingRealTime,
+  useBuildingSensors,
+  useBuildingHistory,
+  useBuildingEfficiency,
+  type BuildingDetail as BuildingDetailType,
+  type Sensor,
+  type HistoryParams,
+} from "@/hooks/use-buildings";
+import { useDeleteSensor } from "@/hooks/use-sensors";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  ArrowLeft,
+  Building2,
+  MapPin,
+  Zap,
+  Thermometer,
+  Activity,
+  Wind,
+  Gauge,
+  TrendingDown,
+  Calendar,
+  AlertCircle,
+  Flame,
+  Plus,
+  MoreVertical,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { AddSensorDialog } from "./add-sensor-dialog";
+import { EditSensorDialog } from "./edit-sensor-dialog";
+import { EditBuildingDialog } from "./edit-building-dialog";
+import { toast } from "sonner";
+
+interface BuildingDetailProps {
+  buildingId: string;
+}
+
+function getStatusBadge(status: BuildingDetailType["status"]) {
+  switch (status) {
+    case "active":
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-chart-3/15 text-chart-3 text-sm"
+        >
+          Attivo
+        </Badge>
+      );
+    case "inactive":
+      return (
+        <Badge variant="secondary" className="text-sm">
+          Inattivo
+        </Badge>
+      );
+    case "decommissioned":
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-destructive/15 text-destructive text-sm"
+        >
+          Dismesso
+        </Badge>
+      );
+  }
+}
+
+function getBuildingTypeName(bt: BuildingDetailType["buildingType"]): string {
+  if (typeof bt === "string") return bt;
+  return bt.name;
+}
+
+function getSensorIcon(sensorType: Sensor["sensorType"]) {
+  switch (sensorType) {
+    case "internal_temp":
+      return <Thermometer className="h-4 w-4" />;
+    case "external_temp":
+      return <Wind className="h-4 w-4" />;
+    case "energy_meter":
+      return <Zap className="h-4 w-4" />;
+    case "gas_meter":
+      return <Flame className="h-4 w-4" />;
+  }
+}
+
+function getSensorTypeLabel(sensorType: Sensor["sensorType"]) {
+  switch (sensorType) {
+    case "internal_temp":
+      return "Temp. Interna";
+    case "external_temp":
+      return "Temp. Esterna";
+    case "energy_meter":
+      return "Contatore Energia";
+    case "gas_meter":
+      return "Contatore Gas";
+  }
+}
+
+function getSensorStatusLabel(status: Sensor["status"]) {
+  switch (status) {
+    case "active":
+      return "Attivo";
+    case "inactive":
+      return "Inattivo";
+    case "maintenance":
+      return "Manutenzione";
+    case "error":
+      return "Errore";
+  }
+}
+
+/** Default date range: last 30 days */
+function getDefaultDateRange() {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 30);
+  return {
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    startInput: start.toISOString().split("T")[0]!,
+    endInput: end.toISOString().split("T")[0]!,
+  };
+}
+
+type SensorTypeKey = HistoryParams["sensorType"] & string;
+
+const SENSOR_TYPE_CONFIG: Record<
+  SensorTypeKey,
+  {
+    label: string;
+    unit: string;
+    color: string;
+    icon: typeof Zap;
+  }
+> = {
+  energy_meter: {
+    label: "Energia",
+    unit: "kWh",
+    color: "var(--chart-1)",
+    icon: Zap,
+  },
+  internal_temp: {
+    label: "Temp. Interna",
+    unit: "°C",
+    color: "var(--chart-2)",
+    icon: Thermometer,
+  },
+  external_temp: {
+    label: "Temp. Esterna",
+    unit: "°C",
+    color: "var(--chart-3)",
+    icon: Thermometer,
+  },
+  gas_meter: {
+    label: "Gas",
+    unit: "m³",
+    color: "var(--chart-4)",
+    icon: Flame,
+  },
+};
+
+export function BuildingDetail({ buildingId }: BuildingDetailProps) {
+  const navigate = useNavigate();
+
+  const defaults = useMemo(() => getDefaultDateRange(), []);
+  const [startInput, setStartInput] = useState(defaults.startInput);
+  const [endInput, setEndInput] = useState(defaults.endInput);
+  const [selectedSensorType, setSelectedSensorType] =
+    useState<SensorTypeKey>("energy_meter");
+
+  const historyParams = useMemo(
+    () => ({
+      startDate: new Date(startInput).toISOString(),
+      endDate: new Date(endInput + "T23:59:59").toISOString(),
+      sensorType: selectedSensorType,
+      interval: "hour" as const,
+    }),
+    [startInput, endInput, selectedSensorType],
+  );
+
+  const efficiencyParams = useMemo(
+    () => ({
+      startDate: new Date(startInput).toISOString(),
+      endDate: new Date(endInput + "T23:59:59").toISOString(),
+    }),
+    [startInput, endInput],
+  );
+
+  // API hooks
+  const {
+    data: buildingData,
+    isLoading: buildingLoading,
+    isError: buildingError,
+  } = useBuilding(buildingId);
+  const { data: realTimeData } = useBuildingRealTime(buildingId);
+  const { data: sensorsData, isLoading: sensorsLoading } =
+    useBuildingSensors(buildingId);
+  const { data: historyData, isLoading: historyLoading } = useBuildingHistory(
+    buildingId,
+    historyParams,
+  );
+  const { data: efficiencyData, isLoading: efficiencyLoading } =
+    useBuildingEfficiency(buildingId, efficiencyParams);
+
+  const building = buildingData?.building;
+  const sensors = sensorsData?.sensors ?? [];
+  const activeSensors = sensors.filter((s: Sensor) => s.status === "active").length;
+
+  // Sensor CRUD state
+  const [addSensorOpen, setAddSensorOpen] = useState(false);
+  const [isEditingBuilding, setIsEditingBuilding] = useState(false);
+  const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
+  const [deletingSensor, setDeletingSensor] = useState<Sensor | null>(null);
+  const deleteSensor = useDeleteSensor();
+
+  const handleDeleteSensor = () => {
+    if (!deletingSensor) return;
+    deleteSensor.mutate(deletingSensor.id, {
+      onSuccess: () => {
+        toast.success(
+          `Sensore "${deletingSensor.location}" eliminato con successo`,
+        );
+        setDeletingSensor(null);
+      },
+      onError: (error) => {
+        toast.error(error.message || "Errore nell'eliminazione del sensore");
+      },
+    });
+  };
+
+  // Prepare history chart data
+  const chartData = useMemo(() => {
+    if (!historyData?.data) return [];
+    return historyData.data.map((point) => ({
+      timestamp: new Date(point.timestamp).toLocaleString("it-IT", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      value: point.value,
+      sensorType: point.sensorType,
+      unit: point.unit,
+    }));
+  }, [historyData]);
+
+  // Loading state
+  if (buildingLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10" />
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center gap-2">
+                  <Skeleton className="h-5 w-5" />
+                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Error / not found
+  if (buildingError || !building) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <Building2 className="mb-3 h-10 w-10 text-muted-foreground" />
+        <p className="font-medium">Edificio non trovato</p>
+        <Button
+          variant="outline"
+          className="mt-4 bg-transparent"
+          onClick={() => navigate("/dashboard/buildings")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Torna alla ricerca
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Back + Title */}
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/dashboard/buildings")}
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="sr-only">Indietro</span>
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold tracking-tight text-balance flex items-center gap-2">
+            {building.name}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setIsEditingBuilding(true)}
+            >
+              <Pencil className="h-4 w-4" />
+              <span className="sr-only">Modifica edificio</span>
+            </Button>
+          </h1>
+          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            {building.address}
+            <Separator orientation="vertical" className="h-3.5" />
+            <span>{getBuildingTypeName(building.buildingType)}</span>
+          </div>
+        </div>
+        {getStatusBadge(building.status)}
+      </div>
+
+      {/* Info Cards Row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
+            <Zap className="mb-2 h-5 w-5 text-chart-1" />
+            <p className="text-2xl font-bold">
+              {realTimeData?.data.energyConsumption.value != null
+                ? `${realTimeData.data.energyConsumption.value}`
+                : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {realTimeData?.data.energyConsumption.unit ?? "W"} corrente
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
+            <Thermometer className="mb-2 h-5 w-5 text-chart-5" />
+            <p className="text-2xl font-bold">
+              {realTimeData?.data.internalTemperature.value != null
+                ? `${realTimeData.data.internalTemperature.value}°`
+                : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">Temp. interna</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
+            <Activity className="mb-2 h-5 w-5 text-chart-3" />
+            <p className="text-2xl font-bold">{activeSensors}</p>
+            <p className="text-xs text-muted-foreground">
+              Sensori attivi / {sensors.length}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
+            <Building2 className="mb-2 h-5 w-5 text-chart-2" />
+            <p className="text-2xl font-bold">{building.surface}</p>
+            <p className="text-xs text-muted-foreground">m&sup2; superficie</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Date range picker */}
+      <Card>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-3">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Periodo di analisi:</span>
+            <Input
+              type="date"
+              value={startInput}
+              onChange={(e) => setStartInput(e.target.value)}
+              className="h-8 w-40 text-xs"
+            />
+            <span className="text-xs text-muted-foreground">-</span>
+            <Input
+              type="date"
+              value={endInput}
+              onChange={(e) => setEndInput(e.target.value)}
+              className="h-8 w-40 text-xs"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Main Grid: History Chart + Weather */}
+      {/* Historical Data Chart with Tabs */}
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base">Dati Storici</CardTitle>
+            <Tabs
+              value={selectedSensorType}
+              onValueChange={(v) => setSelectedSensorType(v as SensorTypeKey)}
+            >
+              <TabsList className="h-8">
+                {(
+                  Object.entries(SENSOR_TYPE_CONFIG) as [
+                    SensorTypeKey,
+                    (typeof SENSOR_TYPE_CONFIG)[SensorTypeKey],
+                  ][]
+                ).map(([key, cfg]) => {
+                  const Icon = cfg.icon;
+                  return (
+                    <TabsTrigger
+                      key={key}
+                      value={key}
+                      className="gap-1 text-xs px-2.5"
+                    >
+                      <Icon className="h-3 w-3" />
+                      {cfg.label}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {historyLoading ? (
+            <div className="flex h-64 items-center justify-center">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="flex h-64 flex-col items-center justify-center text-sm text-muted-foreground">
+              <AlertCircle className="mb-2 h-8 w-8" />
+              Nessun dato disponibile per "
+              {SENSOR_TYPE_CONFIG[selectedSensorType].label}" nel periodo
+              selezionato
+            </div>
+          ) : (
+            <ChartContainer
+              config={{
+                value: {
+                  label: `${SENSOR_TYPE_CONFIG[selectedSensorType].label} (${SENSOR_TYPE_CONFIG[selectedSensorType].unit})`,
+                  color: SENSOR_TYPE_CONFIG[selectedSensorType].color,
+                },
+              }}
+              className="h-72 w-full"
+            >
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="timestamp"
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-xs"
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-xs"
+                  tickFormatter={(v) =>
+                    `${v} ${SENSOR_TYPE_CONFIG[selectedSensorType].unit}`
+                  }
+                />
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value) =>
+                        `${value} ${SENSOR_TYPE_CONFIG[selectedSensorType].unit}`
+                      }
+                    />
+                  }
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke={SENSOR_TYPE_CONFIG[selectedSensorType].color}
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Efficiency Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Gauge className="h-4 w-4" />
+            Efficienza Energetica
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {efficiencyLoading ? (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-lg border p-3">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="mt-2 h-6 w-16" />
+                </div>
+              ))}
+            </div>
+          ) : efficiencyData ? (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">
+                  Efficienza Impianto (COP)
+                </p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">
+                  {efficiencyData.metrics.averageCop != null
+                    ? efficiencyData.metrics.averageCop.toFixed(2)
+                    : "N/D"}
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <TrendingDown className="h-3 w-3" />
+                    Qualità Isolamento
+                  </span>
+                </p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">
+                  {efficiencyData.metrics.insulationQuality != null
+                    ? `${efficiencyData.metrics.insulationQuality.toFixed(2)}`
+                    : "N/D"}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  W/(m²·K) -{" "}
+                  {efficiencyData.metrics.estimatedHeatLossCoefficient != null
+                    ? `Tot: ${efficiencyData.metrics.estimatedHeatLossCoefficient.toFixed(0)} W/K`
+                    : ""}
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Consumo Totale</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">
+                  {efficiencyData.metrics.totalEnergyConsumed.toFixed(1)} kWh
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {efficiencyData.metrics.averageExternalTemperature != null
+                    ? `Temp. esterna media: ${efficiencyData.metrics.averageExternalTemperature.toFixed(1)}°C`
+                    : ""}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
+              <AlertCircle className="mr-2 h-4 w-4" />
+              Dati di efficienza non disponibili per il periodo selezionato
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sensors & Building Details */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Sensors */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="h-4 w-4" />
+              Sensori Installati ({sensors.length})
+            </CardTitle>
+            <Button size="sm" onClick={() => setAddSensorOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" />
+              Aggiungi
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {sensorsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 rounded-md" />
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : sensors.length === 0 ? (
+              <div className="flex h-32 flex-col items-center justify-center text-sm text-muted-foreground">
+                <Activity className="mb-2 h-8 w-8" />
+                <p>Nessun sensore installato</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => setAddSensorOpen(true)}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Aggiungi il primo sensore
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sensors.map((sensor: Sensor) => (
+                  <div
+                    key={sensor.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-md bg-primary/10 p-2 text-primary">
+                        {getSensorIcon(sensor.sensorType)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{sensor.location}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getSensorTypeLabel(sensor.sensorType)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {sensor.lastReading && (
+                        <div className="text-right">
+                          <p className="text-sm font-semibold tabular-nums">
+                            {sensor.lastReading.value}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {sensor.lastReading.unit}
+                          </p>
+                        </div>
+                      )}
+                      <Badge
+                        variant="secondary"
+                        className={
+                          sensor.status === "active"
+                            ? "bg-chart-3 text-white"
+                            : sensor.status === "error"
+                              ? "bg-destructive text-destructive-foreground"
+                              : sensor.status === "maintenance"
+                                ? "bg-chart-4 text-foreground"
+                                : ""
+                        }
+                      >
+                        {getSensorStatusLabel(sensor.status)}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">Azioni sensore</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => setEditingSensor(sensor)}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Modifica
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDeletingSensor(sensor)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Elimina
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Building Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4" />
+              Dettagli Edificio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">
+                  Anno Costruzione
+                </p>
+                <p className="mt-1 text-lg font-semibold">
+                  {building.constructionYear ?? "N/D"}
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">
+                  Impianto Riscaldamento
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {building.heatingSystemType}
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Zona Geografica</p>
+                <p className="mt-1 text-sm font-semibold">
+                  {building.geographicZone}
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Stato</p>
+                <p className="mt-1">{getStatusBadge(building.status)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sensor Dialogs */}
+      {isEditingBuilding && (
+        <EditBuildingDialog
+          building={building}
+          onClose={() => setIsEditingBuilding(false)}
+        />
+      )}
+      <AddSensorDialog
+        buildingId={buildingId}
+        buildingName={building.name}
+        open={addSensorOpen}
+        onOpenChange={setAddSensorOpen}
+      />
+
+      {editingSensor && (
+        <EditSensorDialog
+          key={editingSensor.id}
+          sensor={editingSensor}
+          open={!!editingSensor}
+          onOpenChange={(open: boolean) => {
+            if (!open) setEditingSensor(null);
+          }}
+        />
+      )}
+
+      <AlertDialog
+        open={!!deletingSensor}
+        onOpenChange={(open) => {
+          if (!open) setDeletingSensor(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Sensore</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare il sensore{" "}
+              <span className="font-medium">"{deletingSensor?.location}"</span>?
+              Questa azione eliminerà anche tutte le letture associate e non può
+              essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSensor}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteSensor.isPending ? "Eliminazione..." : "Elimina"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
