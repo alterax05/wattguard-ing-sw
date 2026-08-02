@@ -15,6 +15,7 @@ function extractError(data: unknown, fallback: string): string {
 // ── Query Keys ──────────────────────────────────────────────────────────────
 
 export const SENSORS_QUERY_KEY = ["sensors"] as const;
+const SENSOR_PAGE_SIZE = 100;
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ export interface SensorWithBuilding {
   serialNumber?: string;
   installationDate: string;
   status: SensorStatus;
+  isOffline?: boolean;
   lastReading?: {
     value: number;
     timestamp: string;
@@ -70,6 +72,19 @@ export interface ListSensorsParams {
   offset?: string;
 }
 
+export interface UseSensorsOptions {
+  refetchInterval?: number | false;
+}
+
+interface SensorListData {
+  sensors: SensorWithBuilding[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
+}
+
 export interface SensorReadingsParams {
   startDate?: string;
   endDate?: string;
@@ -80,35 +95,73 @@ export interface SensorReadingsParams {
 
 // ── Queries ─────────────────────────────────────────────────────────────────
 
+async function fetchSensorPage(params?: ListSensorsParams): Promise<SensorListData> {
+  const res = await client.api.sensors.$get({
+    query: {
+      ...(params?.buildingId ? { buildingId: params.buildingId } : {}),
+      ...(params?.sensorType ? { sensorType: params.sensorType } : {}),
+      ...(params?.status ? { status: params.status } : {}),
+      ...(params?.sortBy ? { sortBy: params.sortBy } : {}),
+      ...(params?.sortOrder ? { sortOrder: params.sortOrder } : {}),
+      ...(params?.limit ? { limit: params.limit } : {}),
+      ...(params?.offset ? { offset: params.offset } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(extractError(data, "Errore nel caricamento dei sensori"));
+  }
+
+  return (await res.json()) as SensorListData;
+}
+
 /**
  * Fetch all sensors with optional filters.
  * GET /api/sensors
  */
-export function useSensors(params?: ListSensorsParams) {
+export function useSensors(params?: ListSensorsParams, options?: UseSensorsOptions) {
   return useQuery({
     queryKey: [...SENSORS_QUERY_KEY, "list", params ?? {}],
+    queryFn: () => fetchSensorPage(params),
+    staleTime: 60 * 1000,
+    refetchInterval: options?.refetchInterval ?? false,
+  });
+}
+
+/**
+ * Fetch the complete sensor catalog, following the API pagination limit.
+ * GET /api/sensors
+ */
+export function useAllSensors(options?: UseSensorsOptions) {
+  return useQuery({
+    queryKey: [...SENSORS_QUERY_KEY, "all"],
     queryFn: async () => {
-      const res = await client.api.sensors.$get({
-        query: {
-          ...(params?.buildingId ? { buildingId: params.buildingId } : {}),
-          ...(params?.sensorType ? { sensorType: params.sensorType } : {}),
-          ...(params?.status ? { status: params.status } : {}),
-          ...(params?.sortBy ? { sortBy: params.sortBy } : {}),
-          ...(params?.sortOrder ? { sortOrder: params.sortOrder } : {}),
-          ...(params?.limit ? { limit: params.limit } : {}),
-          ...(params?.offset ? { offset: params.offset } : {}),
+      const firstPage = await fetchSensorPage({ limit: String(SENSOR_PAGE_SIZE) });
+      const pageCount = Math.ceil(firstPage.pagination.total / SENSOR_PAGE_SIZE);
+
+      if (pageCount <= 1) return firstPage;
+
+      const remainingPages = await Promise.all(
+        Array.from({ length: pageCount - 1 }, (_, pageIndex) =>
+          fetchSensorPage({
+            limit: String(SENSOR_PAGE_SIZE),
+            offset: String((pageIndex + 1) * SENSOR_PAGE_SIZE),
+          }),
+        ),
+      );
+
+      return {
+        sensors: [firstPage, ...remainingPages].flatMap((page) => page.sensors),
+        pagination: {
+          limit: firstPage.pagination.total,
+          offset: 0,
+          total: firstPage.pagination.total,
         },
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(extractError(data, "Errore nel caricamento dei sensori"));
-      }
-
-      const data = await res.json();
-      return data;
+      };
     },
     staleTime: 60 * 1000,
+    refetchInterval: options?.refetchInterval ?? false,
   });
 }
 

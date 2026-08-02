@@ -34,12 +34,14 @@ function getSensorUnit(sensorType: SensorType) {
   }
 }
 
-function getSensorStatusLabel(status: string) {
+function getSensorStatusLabel(status: string, isOffline?: boolean) {
+  if (status === "inactive" || (status === "active" && isOffline)) {
+    return "Offline"
+  }
+
   switch (status) {
     case "active":
       return "Attivo"
-    case "inactive":
-      return "Inattivo"
     case "maintenance":
       return "Manutenzione"
     case "error":
@@ -47,6 +49,26 @@ function getSensorStatusLabel(status: string) {
     default:
       return status
   }
+}
+
+function getSensorStatusClass(status: string, isOffline?: boolean) {
+  if (status === "inactive" || (status === "active" && isOffline)) {
+    return ""
+  }
+
+  if (status === "active") {
+    return "bg-chart-3 text-white"
+  }
+
+  if (status === "error") {
+    return "bg-destructive text-destructive-foreground"
+  }
+
+  if (status === "maintenance") {
+    return "bg-chart-4 text-foreground"
+  }
+
+  return ""
 }
 
 function getSensorIcon(sensorType: SensorType) {
@@ -146,17 +168,9 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                   <p className="text-sm font-medium text-muted-foreground">Stato</p>
                   <Badge
                     variant="secondary"
-                    className={
-                      sensor.status === "active"
-                        ? "bg-chart-3 text-white"
-                        : sensor.status === "error"
-                          ? "bg-destructive text-destructive-foreground"
-                          : sensor.status === "maintenance"
-                            ? "bg-chart-4 text-foreground"
-                            : ""
-                    }
+                    className={getSensorStatusClass(sensor.status, sensor.isOffline)}
                   >
-                    {getSensorStatusLabel(sensor.status)}
+                    {getSensorStatusLabel(sensor.status, sensor.isOffline)}
                   </Badge>
                 </div>
                 <div className="space-y-1">
