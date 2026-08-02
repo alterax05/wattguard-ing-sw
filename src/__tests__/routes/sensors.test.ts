@@ -272,6 +272,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(json.sensor.location).toBe("Piano 2");
       expect(json.sensor.lastReading).toBeDefined();
       expect(json.sensor.lastReading.value).toBe(22.5);
+      expect(json.sensor.isOffline).toBe(false);
     });
 
     test("should return 404 for non-existent sensor", async () => {
@@ -440,6 +441,7 @@ describe("Sensors Routes - Integration Tests", () => {
       const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
       expect(found).toBeDefined();
       expect(found.status).toBe("inactive");
+      expect(found.isOffline).toBe(true);
 
       // Verify the DB was updated
       const dbSensor = await Sensor.findById(sensor._id);
@@ -472,6 +474,7 @@ describe("Sensors Routes - Integration Tests", () => {
       const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
       expect(found).toBeDefined();
       expect(found.status).toBe("active");
+      expect(found.isOffline).toBe(false);
     });
 
     test("should not change status of sensors in maintenance or error when they have stale readings", async () => {
@@ -510,9 +513,11 @@ describe("Sensors Routes - Integration Tests", () => {
 
       const m = json.sensors.find((s: { id: string }) => s.id === maintenanceSensor._id.toString());
       expect(m!.status).toBe("maintenance");
+      expect(m!.isOffline).toBe(false);
 
       const e = json.sensors.find((s: { id: string }) => s.id === errorSensor._id.toString());
       expect(e!.status).toBe("error");
+      expect(e!.isOffline).toBe(false);
     });
 
     test("should not mark active sensor with no lastReading as inactive", async () => {
@@ -535,6 +540,7 @@ describe("Sensors Routes - Integration Tests", () => {
       const json = await res.json();
       const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
       expect(found!.status).toBe("active");
+      expect(found!.isOffline).toBe(false);
     });
   });
 
