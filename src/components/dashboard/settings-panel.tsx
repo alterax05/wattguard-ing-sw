@@ -19,9 +19,6 @@ type SettingsFormValues = {
     intervalSeconds: number
     autoPollingEnabled: boolean
   }
-  alertThresholds: {
-    sensorOfflineMinutes: number
-  }
   notifications: {
     emailEnabled: boolean
   }
@@ -35,9 +32,6 @@ function toFormValues(config: SystemConfig): SettingsFormValues {
     polling: {
       intervalSeconds: config.polling.intervalSeconds,
       autoPollingEnabled: config.polling.autoPollingEnabled,
-    },
-    alertThresholds: {
-      sensorOfflineMinutes: config.alertThresholds.sensorOfflineMinutes,
     },
     notifications: {
       emailEnabled: config.notifications.emailEnabled,
@@ -105,9 +99,6 @@ export function SettingsPanel() {
   } = useForm<SettingsFormValues>({
     defaultValues: {
       polling: { intervalSeconds: 90, autoPollingEnabled: true },
-      alertThresholds: {
-        sensorOfflineMinutes: 10,
-      },
       notifications: { emailEnabled: true },
       database: { dataRetentionDays: 365 },
     },
@@ -223,7 +214,6 @@ export function SettingsPanel() {
           </div>
 
           <Separator />
-
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <Label>Polling automatico</Label>
@@ -237,24 +227,6 @@ export function SettingsPanel() {
                 setValue("polling.autoPollingEnabled", val, { shouldDirty: true })
               }
             />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label>Sensore offline dopo</Label>
-              <p className="text-sm text-muted-foreground">
-                Tempo prima di considerare un sensore offline
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                className="w-20"
-                min={1}
-                {...register("alertThresholds.sensorOfflineMinutes", { valueAsNumber: true })}
-              />
-              <span className="text-sm text-muted-foreground">minuti</span>
-            </div>
           </div>
         </CardContent>
       </Card>

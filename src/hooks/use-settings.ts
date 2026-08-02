@@ -12,16 +12,8 @@ export interface SystemConfig {
     intervalSeconds: number;
     autoPollingEnabled: boolean;
   };
-  alertThresholds: {
-    electricityKwh: number;
-    gasM3: number;
-    waterM3: number;
-    temperatureC: number;
-    sensorOfflineMinutes: number;
-  };
   notifications: {
     emailEnabled: boolean;
-    inAppEnabled: boolean;
   };
   database: {
     dataRetentionDays: number;
@@ -30,7 +22,6 @@ export interface SystemConfig {
 
 export type UpdateSettingsInput = {
   polling?: Partial<SystemConfig["polling"]>;
-  alertThresholds?: Partial<SystemConfig["alertThresholds"]>;
   notifications?: Partial<SystemConfig["notifications"]>;
   database?: Partial<SystemConfig["database"]>;
 };
