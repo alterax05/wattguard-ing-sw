@@ -7,6 +7,7 @@ import { BuildingsPage } from "./pages/BuildingsPage";
 import { BuildingsComparePage } from "./pages/BuildingsComparePage";
 import { BuildingDetailPage } from "./pages/BuildingDetailPage";
 import { AlertsPage } from "./pages/AlertsPage";
+import { SensorsPage } from "./pages/SensorsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -35,6 +36,7 @@ export function App() {
             <Route path="/dashboard/buildings" element={<BuildingsPage />} />
             <Route path="/dashboard/buildings/compare" element={<BuildingsComparePage />} />
             <Route path="/dashboard/buildings/:id" element={<BuildingDetailPage />} />
+            <Route path="/dashboard/sensors" element={<SensorsPage />} />
             <Route path="/dashboard/alerts" element={<AlertsPage />} />
             <Route path="/dashboard/users" element={<UsersPage />} />
             <Route path="/dashboard/settings" element={<SettingsPage />} />
