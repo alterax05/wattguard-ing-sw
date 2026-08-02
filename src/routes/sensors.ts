@@ -71,12 +71,18 @@ const app = new Hono<{ Variables: AuthVariables }>()
         .limit(query.limit)
         .skip(query.offset);
 
+      const offlineSensorIds = new Set(
+        sensors
+          .filter((sensor) => sensor.status === "active" && isInactive(sensor))
+          .map((sensor) => sensor._id.toString())
+      );
+
       // Auto-mark sensors inactive when they exceed 2× their transmission interval
       // without sending a reading. Only sensors currently "active" are affected;
       // manually-set statuses (maintenance, error) are left untouched.
       await Promise.all(
         sensors
-          .filter((s) => s.status === "active" && isInactive(s))
+          .filter((s) => offlineSensorIds.has(s._id.toString()))
           .map((s) => {
             s.status = "inactive";
             return s.save();
@@ -94,6 +100,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
             serialNumber: sensor.serialNumber,
             installationDate: sensor.installationDate.toISOString(),
             status: sensor.status,
+            isOffline: sensor.status === "inactive" || offlineSensorIds.has(sensor._id.toString()),
             lastReading: sensor.lastReading
               ? {
                   value: sensor.lastReading.value,
@@ -262,6 +269,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           serialNumber: sensor.serialNumber,
           installationDate: sensor.installationDate.toISOString(),
           status: sensor.status,
+          isOffline: sensor.status === "inactive" || (sensor.status === "active" && isInactive(sensor)),
           lastReading: sensor.lastReading
             ? {
                 value: sensor.lastReading.value,
