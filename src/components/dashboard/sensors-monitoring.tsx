@@ -338,7 +338,7 @@ export function SensorsMonitoring() {
     isLoading: sensorsLoading,
     isFetching: sensorsFetching,
     error: sensorsError,
-  } = useAllSensors({ refetchInterval: 60 * 1000 })
+  } = useAllSensors(undefined, { refetchInterval: 60 * 1000 })
   const { data: buildingsData } = useBuildings({ limit: "100" })
 
   const sensors = sensorsData?.sensors ?? []

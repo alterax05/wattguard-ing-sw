@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type PlaceholderDataFunction,
+} from "@tanstack/react-query";
 import { client } from "@/lib/api";
 import { BUILDINGS_QUERY_KEY } from "./use-buildings";
 
@@ -74,6 +79,7 @@ export interface ListSensorsParams {
 
 export interface UseSensorsOptions {
   refetchInterval?: number | false;
+  placeholderData?: PlaceholderDataFunction<SensorListData> | SensorListData;
 }
 
 interface SensorListData {
@@ -126,18 +132,20 @@ export function useSensors(params?: ListSensorsParams, options?: UseSensorsOptio
     queryFn: () => fetchSensorPage(params),
     staleTime: 60 * 1000,
     refetchInterval: options?.refetchInterval ?? false,
+    placeholderData: options?.placeholderData,
   });
 }
 
 /**
- * Fetch the complete sensor catalog, following the API pagination limit.
+ * Fetch the complete sensor catalog (following the API pagination limit),
+ * optionally filtered by the provided params (e.g. buildingId).
  * GET /api/sensors
  */
-export function useAllSensors(options?: UseSensorsOptions) {
+export function useAllSensors(params?: ListSensorsParams, options?: UseSensorsOptions) {
   return useQuery({
-    queryKey: [...SENSORS_QUERY_KEY, "all"],
+    queryKey: [...SENSORS_QUERY_KEY, "all", params ?? {}],
     queryFn: async () => {
-      const firstPage = await fetchSensorPage({ limit: String(SENSOR_PAGE_SIZE) });
+      const firstPage = await fetchSensorPage({ ...params, limit: String(SENSOR_PAGE_SIZE) });
       const pageCount = Math.ceil(firstPage.pagination.total / SENSOR_PAGE_SIZE);
 
       if (pageCount <= 1) return firstPage;
@@ -145,6 +153,7 @@ export function useAllSensors(options?: UseSensorsOptions) {
       const remainingPages = await Promise.all(
         Array.from({ length: pageCount - 1 }, (_, pageIndex) =>
           fetchSensorPage({
+            ...params,
             limit: String(SENSOR_PAGE_SIZE),
             offset: String((pageIndex + 1) * SENSOR_PAGE_SIZE),
           }),

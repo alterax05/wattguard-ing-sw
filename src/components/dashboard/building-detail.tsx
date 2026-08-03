@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   useBuilding,
   useBuildingRealTime,
@@ -9,10 +9,12 @@ import {
   type HistoryParams,
 } from "@/hooks/use-buildings";
 import {
+  useAllSensors,
   useDeleteSensor,
   useSensors,
   type SensorWithBuilding,
 } from "@/hooks/use-sensors";
+import { keepPreviousData } from "@tanstack/react-query";
 import {
   getMonitoringStatus,
   getMonitoringStatusPresentation,
@@ -30,6 +32,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -183,8 +194,29 @@ const SENSOR_TYPE_CONFIG: Record<
   },
 };
 
+const SENSORS_PAGE_SIZE = 4;
+
+function getPaginationItems(
+  current: number,
+  total: number,
+): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const items: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) items.push("ellipsis");
+  for (let p = start; p <= end; p++) items.push(p);
+  if (end < total - 1) items.push("ellipsis");
+  items.push(total);
+  return items;
+}
+
 export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [currentPage, setCurrentPage] = useState(1);
 
   const defaults = useMemo(() => getDefaultDateRange(), []);
   const [startInput, setStartInput] = useState(defaults.startInput);
@@ -218,7 +250,15 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   } = useBuilding(buildingId);
   const { data: realTimeData } = useBuildingRealTime(buildingId);
   const { data: sensorsData, isLoading: sensorsLoading } = useSensors(
-    { buildingId, limit: "100" },
+    {
+      buildingId,
+      limit: String(SENSORS_PAGE_SIZE),
+      offset: String((currentPage - 1) * SENSORS_PAGE_SIZE),
+    },
+    { refetchInterval: 60 * 1000, placeholderData: keepPreviousData },
+  );
+  const { data: allSensorsData } = useAllSensors(
+    { buildingId },
     { refetchInterval: 60 * 1000 },
   );
   const { data: historyData, isLoading: historyLoading } = useBuildingHistory(
@@ -230,16 +270,54 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
 
   const building = buildingData?.building;
   const sensors = sensorsData?.sensors ?? [];
-  const activeSensors = sensors.filter(
+  const totalSensors = sensorsData?.pagination.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalSensors / SENSORS_PAGE_SIZE));
+  const allSensors = allSensorsData?.sensors ?? [];
+  const activeSensors = allSensors.filter(
     (s) => getMonitoringStatus(s) === "active",
   ).length;
 
   // Sensor CRUD state
   const [addSensorOpen, setAddSensorOpen] = useState(false);
   const [isEditingBuilding, setIsEditingBuilding] = useState(false);
-  const [editingSensor, setEditingSensor] = useState<SensorWithBuilding | null>(null);
+  const [manuallyEditingSensorId, setManuallyEditingSensorId] = useState<string | null>(null);
   const [deletingSensor, setDeletingSensor] = useState<SensorWithBuilding | null>(null);
   const deleteSensor = useDeleteSensor();
+
+  // The edit dialog can be opened manually (from the sensor actions menu) or
+  // through a deep link (?sensorId=<id>). The target sensor is first looked up
+  // in the current page, then in the background index (used to resolve deep
+  // links pointing to sensors on other pages). Deriving (instead of effecting)
+  // keeps URL and state in sync without effects.
+  const sensorIdToEdit = searchParams.get("sensorId");
+  const editingSensorId = manuallyEditingSensorId ?? sensorIdToEdit;
+  const editingSensor =
+    sensors.find((s) => s.id === editingSensorId) ??
+    allSensors.find((s) => s.id === editingSensorId) ??
+    null;
+
+  // When a deep link points to a sensor on another page, jump to its page.
+  // Uses the "adjust state during render" pattern (guarded) — no effect needed,
+  // lint-safe (the rule forbids setState in effects, not in render).
+  const sensorIndex = editingSensor
+    ? allSensors.findIndex((s) => s.id === editingSensor.id)
+    : -1;
+  const sensorPage =
+    sensorIndex >= 0
+      ? Math.floor(sensorIndex / SENSORS_PAGE_SIZE) + 1
+      : null;
+  if (sensorPage && sensorPage !== currentPage) setCurrentPage(sensorPage);
+  // Clamp currentPage when the page count shrinks (e.g. after a deletion).
+  if (currentPage > totalPages) setCurrentPage(totalPages);
+
+  const handleCloseEditDialog = () => {
+    setManuallyEditingSensorId(null);
+    if (sensorIdToEdit) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("sensorId");
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   const handleDeleteSensor = () => {
     if (!deletingSensor) return;
@@ -384,7 +462,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
             <Activity className="mb-2 h-5 w-5 text-chart-3" />
             <p className="text-2xl font-bold">{activeSensors}</p>
             <p className="text-xs text-muted-foreground">
-              Sensori attivi / {sensors.length}
+              Sensori attivi / {totalSensors}
             </p>
           </CardContent>
         </Card>
@@ -591,7 +669,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Activity className="h-4 w-4" />
-              Sensori Installati ({sensors.length})
+              Sensori Installati ({totalSensors})
             </CardTitle>
             <Button size="sm" onClick={() => setAddSensorOpen(true)}>
               <Plus className="mr-1 h-4 w-4" />
@@ -685,7 +763,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => setEditingSensor(sensor)}
+                              onClick={() => setManuallyEditingSensorId(sensor.id)}
                             >
                               <Pencil className="mr-2 h-4 w-4" />
                               Modifica
@@ -704,6 +782,66 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                   );
                 })}
               </div>
+            )}
+            {totalPages > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      aria-disabled={currentPage <= 1}
+                      tabIndex={currentPage <= 1 ? -1 : undefined}
+                      className={
+                        currentPage <= 1
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) setCurrentPage(currentPage - 1);
+                      }}
+                    />
+                  </PaginationItem>
+                  {getPaginationItems(currentPage, totalPages).map(
+                    (item, i) =>
+                      item === "ellipsis" ? (
+                        <PaginationItem key={`ellipsis-${i}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={item}>
+                          <PaginationLink
+                            href="#"
+                            isActive={item === currentPage}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(item);
+                            }}
+                          >
+                            {item}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      aria-disabled={currentPage >= totalPages}
+                      tabIndex={currentPage >= totalPages ? -1 : undefined}
+                      className={
+                        currentPage >= totalPages
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages)
+                          setCurrentPage(currentPage + 1);
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
           </CardContent>
         </Card>
@@ -769,7 +907,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           sensor={editingSensor}
           open={!!editingSensor}
           onOpenChange={(open: boolean) => {
-            if (!open) setEditingSensor(null);
+            if (!open) handleCloseEditDialog();
           }}
         />
       )}
