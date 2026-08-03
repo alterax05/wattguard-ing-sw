@@ -1,10 +1,11 @@
-import { useMemo } from "react"
+import { useMemo, type KeyboardEvent } from "react"
+import { useNavigate } from "react-router-dom"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Building2, Calendar, TrendingUp, Thermometer, Wind, Zap, Flame } from "lucide-react"
+import { Building2, Calendar, ChevronRight, Pencil, TrendingUp, Thermometer, Wind, Zap, Flame } from "lucide-react"
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { useSensor, useSensorReadings, type SensorWithBuilding, type SensorType } from "@/hooks/use-sensors"
@@ -58,6 +59,7 @@ interface SensorDetailDialogProps {
 }
 
 export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, onOpenChange }: SensorDetailDialogProps) {
+  const navigate = useNavigate()
   const effectiveId = sensorId ?? preloadedSensor?.id
   const { data: sensorData, isLoading: sensorLoading } = useSensor(
     preloadedSensor ? undefined : effectiveId
@@ -96,6 +98,25 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
   const statusPresentation = sensor
     ? getMonitoringStatusPresentation(getMonitoringStatus(sensor))
     : null
+
+  const goToBuilding = () => {
+    if (!sensor?.building) return
+    onOpenChange(false)
+    navigate(`/dashboard/buildings/${sensor.building.id}`)
+  }
+
+  const goToEditSensor = () => {
+    if (!sensor) return
+    onOpenChange(false)
+    navigate(`/dashboard/buildings/${sensor.buildingId}?sensorId=${sensor.id}`)
+  }
+
+  const handleBuildingKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      goToBuilding()
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -211,16 +232,30 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                     <Building2 className="h-4 w-4" />
                     Edificio
                   </div>
-                  <div className="rounded-lg border p-3">
-                    <p className="font-medium">{sensor.building.name}</p>
-                    <p className="text-sm text-muted-foreground">{sensor.building.address}</p>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Apri dettaglio edificio ${sensor.building.name}`}
+                    onClick={goToBuilding}
+                    onKeyDown={handleBuildingKeyDown}
+                    className="group flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div>
+                      <p className="font-medium">{sensor.building.name}</p>
+                      <p className="text-sm text-muted-foreground">{sensor.building.address}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
                   Chiudi
+                </Button>
+                <Button onClick={goToEditSensor}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Modifica sensore
                 </Button>
               </div>
             </div>
