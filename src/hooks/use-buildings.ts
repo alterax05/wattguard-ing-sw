@@ -49,26 +49,6 @@ export interface BuildingType {
   updatedAt?: string;
 }
 
-export interface Sensor {
-  id: string;
-  buildingId: string;
-  sensorType: "internal_temp" | "external_temp" | "energy_meter" | "gas_meter";
-  location: string;
-  serialNumber?: string;
-  installationDate: string;
-  status: "active" | "inactive" | "maintenance" | "error";
-  lastReading: {
-    value: number;
-    timestamp: string;
-    unit: string;
-  } | null;
-  transmissionInterval: number;
-  minThreshold?: number;
-  maxThreshold?: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 export interface RealTimeData {
   buildingId: string;
   buildingName: string;
@@ -228,31 +208,6 @@ export function useBuilding(id: string | undefined) {
     },
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
-  });
-}
-
-/**
- * Fetch sensors for a building.
- * GET /api/buildings/:id/sensors
- */
-export function useBuildingSensors(id: string | undefined) {
-  return useQuery({
-    queryKey: [...BUILDINGS_QUERY_KEY, "sensors", id],
-    queryFn: async () => {
-      const res = await client.api.buildings[":id"].sensors.$get({
-        param: { id: id! },
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(extractError(data, "Errore nel caricamento dei sensori"));
-      }
-
-      const data = await res.json();
-      return data;
-    },
-    enabled: !!id,
-    staleTime: 60 * 1000,
   });
 }
 
