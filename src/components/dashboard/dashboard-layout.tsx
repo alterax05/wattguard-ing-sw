@@ -1,7 +1,7 @@
 import { useLocation, Link, Outlet } from "react-router-dom"
 import { useLogout } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, MapPin, Building2, Bell, Settings, LogOut, Users } from "lucide-react"
+import { LayoutDashboard, MapPin, Building2, Bell, Radio, Settings, LogOut, Users } from "lucide-react"
 import { ModeToggle } from "@/components/ui/mode-toggle"
 import { useTheme } from "next-themes"
 import { useContext } from "react"
@@ -25,6 +25,7 @@ export function DashboardLayout() {
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
     { id: "map", label: "Mappa Edifici", icon: MapPin, href: "/dashboard/map" },
     { id: "buildings", label: "Edifici", icon: Building2, href: "/dashboard/buildings" },
+    { id: "sensors", label: "Sensori", icon: Radio, href: "/dashboard/sensors" },
     { id: "alerts", label: "Notifiche", icon: Bell, href: "/dashboard/alerts" },
   ]
 

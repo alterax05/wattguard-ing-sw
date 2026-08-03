@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
-import { Building } from "../../models/Building";
+import { Building, type BuildingStatus } from "../../models/Building";
 import { BuildingType, type IBuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { Types, Error as MongooseError } from "mongoose";
@@ -431,7 +431,7 @@ describe("Building Model", () => {
           buildingType: buildingTypeId,
           heatingSystemType: "caldaia_gas",
           geographicZone: "Centro",
-          status: "invalid_status",
+          status: "invalid_status" as any as BuildingStatus, // Force an invalid status
           createdBy: userId,
           updatedBy: userId,
         });
