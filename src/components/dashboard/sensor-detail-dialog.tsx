@@ -203,7 +203,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                     config={{
                       value: {
                         label: unit,
-                        color: "hsl(var(--chart-1))",
+                        color: "var(--chart-1)",
                       },
                     }}
                     className="h-64 w-full"
@@ -213,7 +213,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                       <XAxis dataKey="time" tickLine={false} axisLine={false} className="text-xs" />
                       <YAxis tickLine={false} axisLine={false} className="text-xs" />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="value" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ChartContainer>
                 ) : (
