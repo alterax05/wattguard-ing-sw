@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Bell, Clock, AlertTriangle, Database, Download, HardDrive } from "lucide-react"
+import { Bell, Clock, Database, Download, HardDrive } from "lucide-react"
 import { toast } from "sonner"
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings"
 import type { SystemConfig } from "@/hooks/use-settings"
+import { downloadFromEndpoint } from "@/lib/download"
 
 // ── Form shape ────────────────────────────────────────────────────────────────
 
@@ -61,26 +62,6 @@ function SettingsSkeleton() {
       ))}
     </div>
   )
-}
-
-// ── File download helper ──────────────────────────────────────────────────────
-
-async function downloadFromEndpoint(url: string, filename: string) {
-  const res = await fetch(url, { credentials: "include" })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    const msg = (data as Record<string, unknown>).error
-    throw new Error(typeof msg === "string" ? msg : "Errore durante il download")
-  }
-  const blob = await res.blob()
-  const href = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = href
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(href)
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
