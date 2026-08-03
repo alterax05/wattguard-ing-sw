@@ -1,13 +1,15 @@
-import { useMemo } from "react"
+import { useMemo, type KeyboardEvent } from "react"
+import { useNavigate } from "react-router-dom"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Building2, Calendar, TrendingUp, Thermometer, Wind, Zap, Flame } from "lucide-react"
+import { Building2, Calendar, ChevronRight, Pencil, TrendingUp, Thermometer, Wind, Zap, Flame } from "lucide-react"
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { useSensor, useSensorReadings, type SensorWithBuilding, type SensorType } from "@/hooks/use-sensors"
+import { getMonitoringStatus, getMonitoringStatusPresentation } from "@/lib/sensor-status"
 
 function getSensorTypeLabel(sensorType: SensorType) {
   switch (sensorType) {
@@ -34,21 +36,6 @@ function getSensorUnit(sensorType: SensorType) {
   }
 }
 
-function getSensorStatusLabel(status: string) {
-  switch (status) {
-    case "active":
-      return "Attivo"
-    case "inactive":
-      return "Inattivo"
-    case "maintenance":
-      return "Manutenzione"
-    case "error":
-      return "Errore"
-    default:
-      return status
-  }
-}
-
 function getSensorIcon(sensorType: SensorType) {
   switch (sensorType) {
     case "internal_temp":
@@ -72,6 +59,7 @@ interface SensorDetailDialogProps {
 }
 
 export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, onOpenChange }: SensorDetailDialogProps) {
+  const navigate = useNavigate()
   const effectiveId = sensorId ?? preloadedSensor?.id
   const { data: sensorData, isLoading: sensorLoading } = useSensor(
     preloadedSensor ? undefined : effectiveId
@@ -107,6 +95,28 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
   }, [readingsData])
 
   const unit = sensor ? getSensorUnit(sensor.sensorType) : ""
+  const statusPresentation = sensor
+    ? getMonitoringStatusPresentation(getMonitoringStatus(sensor))
+    : null
+
+  const goToBuilding = () => {
+    if (!sensor?.building) return
+    onOpenChange(false)
+    navigate(`/dashboard/buildings/${sensor.building.id}`)
+  }
+
+  const goToEditSensor = () => {
+    if (!sensor) return
+    onOpenChange(false)
+    navigate(`/dashboard/buildings/${sensor.buildingId}?sensorId=${sensor.id}`)
+  }
+
+  const handleBuildingKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      goToBuilding()
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,17 +156,9 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                   <p className="text-sm font-medium text-muted-foreground">Stato</p>
                   <Badge
                     variant="secondary"
-                    className={
-                      sensor.status === "active"
-                        ? "bg-chart-3 text-white"
-                        : sensor.status === "error"
-                          ? "bg-destructive text-destructive-foreground"
-                          : sensor.status === "maintenance"
-                            ? "bg-chart-4 text-foreground"
-                            : ""
-                    }
+                    className={statusPresentation?.className}
                   >
-                    {getSensorStatusLabel(sensor.status)}
+                    {statusPresentation?.label}
                   </Badge>
                 </div>
                 <div className="space-y-1">
@@ -201,7 +203,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                     config={{
                       value: {
                         label: unit,
-                        color: "hsl(var(--chart-1))",
+                        color: "var(--chart-1)",
                       },
                     }}
                     className="h-64 w-full"
@@ -211,7 +213,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                       <XAxis dataKey="time" tickLine={false} axisLine={false} className="text-xs" />
                       <YAxis tickLine={false} axisLine={false} className="text-xs" />
                       <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="value" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ChartContainer>
                 ) : (
@@ -230,16 +232,30 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                     <Building2 className="h-4 w-4" />
                     Edificio
                   </div>
-                  <div className="rounded-lg border p-3">
-                    <p className="font-medium">{sensor.building.name}</p>
-                    <p className="text-sm text-muted-foreground">{sensor.building.address}</p>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Apri dettaglio edificio ${sensor.building.name}`}
+                    onClick={goToBuilding}
+                    onKeyDown={handleBuildingKeyDown}
+                    className="group flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div>
+                      <p className="font-medium">{sensor.building.name}</p>
+                      <p className="text-sm text-muted-foreground">{sensor.building.address}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
                   Chiudi
+                </Button>
+                <Button onClick={goToEditSensor}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Modifica sensore
                 </Button>
               </div>
             </div>

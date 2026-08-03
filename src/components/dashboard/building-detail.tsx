@@ -1,16 +1,24 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   useBuilding,
   useBuildingRealTime,
-  useBuildingSensors,
   useBuildingHistory,
   useBuildingEfficiency,
   type BuildingDetail as BuildingDetailType,
-  type Sensor,
   type HistoryParams,
 } from "@/hooks/use-buildings";
-import { useDeleteSensor } from "@/hooks/use-sensors";
+import {
+  useAllSensors,
+  useDeleteSensor,
+  useSensors,
+  type SensorWithBuilding,
+} from "@/hooks/use-sensors";
+import { keepPreviousData } from "@tanstack/react-query";
+import {
+  getMonitoringStatus,
+  getMonitoringStatusPresentation,
+} from "@/lib/sensor-status";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +32,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,7 +118,7 @@ function getBuildingTypeName(bt: BuildingDetailType["buildingType"]): string {
   return bt.name;
 }
 
-function getSensorIcon(sensorType: Sensor["sensorType"]) {
+function getSensorIcon(sensorType: SensorWithBuilding["sensorType"]) {
   switch (sensorType) {
     case "internal_temp":
       return <Thermometer className="h-4 w-4" />;
@@ -114,7 +131,7 @@ function getSensorIcon(sensorType: Sensor["sensorType"]) {
   }
 }
 
-function getSensorTypeLabel(sensorType: Sensor["sensorType"]) {
+function getSensorTypeLabel(sensorType: SensorWithBuilding["sensorType"]) {
   switch (sensorType) {
     case "internal_temp":
       return "Temp. Interna";
@@ -124,19 +141,6 @@ function getSensorTypeLabel(sensorType: Sensor["sensorType"]) {
       return "Contatore Energia";
     case "gas_meter":
       return "Contatore Gas";
-  }
-}
-
-function getSensorStatusLabel(status: Sensor["status"]) {
-  switch (status) {
-    case "active":
-      return "Attivo";
-    case "inactive":
-      return "Inattivo";
-    case "maintenance":
-      return "Manutenzione";
-    case "error":
-      return "Errore";
   }
 }
 
@@ -190,8 +194,29 @@ const SENSOR_TYPE_CONFIG: Record<
   },
 };
 
+const SENSORS_PAGE_SIZE = 4;
+
+function getPaginationItems(
+  current: number,
+  total: number,
+): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const items: (number | "ellipsis")[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) items.push("ellipsis");
+  for (let p = start; p <= end; p++) items.push(p);
+  if (end < total - 1) items.push("ellipsis");
+  items.push(total);
+  return items;
+}
+
 export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [currentPage, setCurrentPage] = useState(1);
 
   const defaults = useMemo(() => getDefaultDateRange(), []);
   const [startInput, setStartInput] = useState(defaults.startInput);
@@ -224,8 +249,18 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
     isError: buildingError,
   } = useBuilding(buildingId);
   const { data: realTimeData } = useBuildingRealTime(buildingId);
-  const { data: sensorsData, isLoading: sensorsLoading } =
-    useBuildingSensors(buildingId);
+  const { data: sensorsData, isLoading: sensorsLoading } = useSensors(
+    {
+      buildingId,
+      limit: String(SENSORS_PAGE_SIZE),
+      offset: String((currentPage - 1) * SENSORS_PAGE_SIZE),
+    },
+    { refetchInterval: 60 * 1000, placeholderData: keepPreviousData },
+  );
+  const { data: allSensorsData } = useAllSensors(
+    { buildingId },
+    { refetchInterval: 60 * 1000 },
+  );
   const { data: historyData, isLoading: historyLoading } = useBuildingHistory(
     buildingId,
     historyParams,
@@ -235,14 +270,54 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
 
   const building = buildingData?.building;
   const sensors = sensorsData?.sensors ?? [];
-  const activeSensors = sensors.filter((s: Sensor) => s.status === "active").length;
+  const totalSensors = sensorsData?.pagination.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalSensors / SENSORS_PAGE_SIZE));
+  const allSensors = allSensorsData?.sensors ?? [];
+  const activeSensors = allSensors.filter(
+    (s) => getMonitoringStatus(s) === "active",
+  ).length;
 
   // Sensor CRUD state
   const [addSensorOpen, setAddSensorOpen] = useState(false);
   const [isEditingBuilding, setIsEditingBuilding] = useState(false);
-  const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
-  const [deletingSensor, setDeletingSensor] = useState<Sensor | null>(null);
+  const [manuallyEditingSensorId, setManuallyEditingSensorId] = useState<string | null>(null);
+  const [deletingSensor, setDeletingSensor] = useState<SensorWithBuilding | null>(null);
   const deleteSensor = useDeleteSensor();
+
+  // The edit dialog can be opened manually (from the sensor actions menu) or
+  // through a deep link (?sensorId=<id>). The target sensor is first looked up
+  // in the current page, then in the background index (used to resolve deep
+  // links pointing to sensors on other pages). Deriving (instead of effecting)
+  // keeps URL and state in sync without effects.
+  const sensorIdToEdit = searchParams.get("sensorId");
+  const editingSensorId = manuallyEditingSensorId ?? sensorIdToEdit;
+  const editingSensor =
+    sensors.find((s) => s.id === editingSensorId) ??
+    allSensors.find((s) => s.id === editingSensorId) ??
+    null;
+
+  // When a deep link points to a sensor on another page, jump to its page.
+  // Uses the "adjust state during render" pattern (guarded) — no effect needed,
+  // lint-safe (the rule forbids setState in effects, not in render).
+  const sensorIndex = editingSensor
+    ? allSensors.findIndex((s) => s.id === editingSensor.id)
+    : -1;
+  const sensorPage =
+    sensorIndex >= 0
+      ? Math.floor(sensorIndex / SENSORS_PAGE_SIZE) + 1
+      : null;
+  if (sensorPage && sensorPage !== currentPage) setCurrentPage(sensorPage);
+  // Clamp currentPage when the page count shrinks (e.g. after a deletion).
+  if (currentPage > totalPages) setCurrentPage(totalPages);
+
+  const handleCloseEditDialog = () => {
+    setManuallyEditingSensorId(null);
+    if (sensorIdToEdit) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("sensorId");
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   const handleDeleteSensor = () => {
     if (!deletingSensor) return;
@@ -387,7 +462,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
             <Activity className="mb-2 h-5 w-5 text-chart-3" />
             <p className="text-2xl font-bold">{activeSensors}</p>
             <p className="text-xs text-muted-foreground">
-              Sensori attivi / {sensors.length}
+              Sensori attivi / {totalSensors}
             </p>
           </CardContent>
         </Card>
@@ -594,7 +669,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Activity className="h-4 w-4" />
-              Sensori Installati ({sensors.length})
+              Sensori Installati ({totalSensors})
             </CardTitle>
             <Button size="sm" onClick={() => setAddSensorOpen(true)}>
               <Plus className="mr-1 h-4 w-4" />
@@ -636,78 +711,137 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               </div>
             ) : (
               <div className="space-y-3">
-                {sensors.map((sensor: Sensor) => (
-                  <div
-                    key={sensor.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-md bg-primary/10 p-2 text-primary">
-                        {getSensorIcon(sensor.sensorType)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{sensor.location}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {getSensorTypeLabel(sensor.sensorType)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {sensor.lastReading && (
-                        <div className="text-right">
-                          <p className="text-sm font-semibold tabular-nums">
-                            {sensor.lastReading.value}
-                          </p>
+                {sensors.map((sensor) => {
+                  const statusPresentation = getMonitoringStatusPresentation(
+                    getMonitoringStatus(sensor),
+                  );
+                  const StatusIcon = statusPresentation.icon;
+                  return (
+                    <div
+                      key={sensor.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-md bg-primary/10 p-2 text-primary">
+                          {getSensorIcon(sensor.sensorType)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{sensor.location}</p>
                           <p className="text-xs text-muted-foreground">
-                            {sensor.lastReading.unit}
+                            {getSensorTypeLabel(sensor.sensorType)}
                           </p>
                         </div>
-                      )}
-                      <Badge
-                        variant="secondary"
-                        className={
-                          sensor.status === "active"
-                            ? "bg-chart-3 text-white"
-                            : sensor.status === "error"
-                              ? "bg-destructive text-destructive-foreground"
-                              : sensor.status === "maintenance"
-                                ? "bg-chart-4 text-foreground"
-                                : ""
-                        }
-                      >
-                        {getSensorStatusLabel(sensor.status)}
-                      </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Azioni sensore</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => setEditingSensor(sensor)}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Modifica
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeletingSensor(sensor)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Elimina
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {sensor.lastReading && (
+                          <div className="text-right">
+                            <p className="text-sm font-semibold tabular-nums">
+                              {sensor.lastReading.value}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {sensor.lastReading.unit}
+                            </p>
+                          </div>
+                        )}
+                        <Badge
+                          variant="secondary"
+                          className={`gap-1 ${statusPresentation.className}`}
+                        >
+                          <StatusIcon className="h-3 w-3" />
+                          {statusPresentation.label}
+                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Azioni sensore</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setManuallyEditingSensorId(sensor.id)}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Modifica
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setDeletingSensor(sensor)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Elimina
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+            )}
+            {totalPages > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      aria-disabled={currentPage <= 1}
+                      tabIndex={currentPage <= 1 ? -1 : undefined}
+                      className={
+                        currentPage <= 1
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) setCurrentPage(currentPage - 1);
+                      }}
+                    />
+                  </PaginationItem>
+                  {getPaginationItems(currentPage, totalPages).map(
+                    (item, i) =>
+                      item === "ellipsis" ? (
+                        <PaginationItem key={`ellipsis-${i}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={item}>
+                          <PaginationLink
+                            href="#"
+                            isActive={item === currentPage}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(item);
+                            }}
+                          >
+                            {item}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      aria-disabled={currentPage >= totalPages}
+                      tabIndex={currentPage >= totalPages ? -1 : undefined}
+                      className={
+                        currentPage >= totalPages
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages)
+                          setCurrentPage(currentPage + 1);
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
           </CardContent>
         </Card>
@@ -773,7 +907,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           sensor={editingSensor}
           open={!!editingSensor}
           onOpenChange={(open: boolean) => {
-            if (!open) setEditingSensor(null);
+            if (!open) handleCloseEditDialog();
           }}
         />
       )}

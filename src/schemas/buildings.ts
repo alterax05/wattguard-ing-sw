@@ -8,7 +8,6 @@ import {
   SortOrderSchema,
   SensorTypeSchema,
 } from "./common";
-import { SensorSchema } from "./sensors";
 
 /**
  * GeoJSON Point schema — { type: "Point", coordinates: [longitude, latitude] }
@@ -164,13 +163,6 @@ export const DeleteBuildingParamsSchema = z.object({
 export const DeleteBuildingResponseSchema = z.object({
   success: z.literal(true),
   message: z.string().describe("Confirmation message"),
-});
-
-/**
- * GET /api/buildings/:id/sensors - Get building sensors response
- */
-export const GetBuildingSensorsResponseSchema = z.object({
-  sensors: z.array(SensorSchema).describe("List of sensors installed in the building"),
 });
 
 /**

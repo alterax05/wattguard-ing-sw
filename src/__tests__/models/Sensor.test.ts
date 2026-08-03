@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
-import { Sensor } from "../../models/Sensor";
+import { Sensor, type SensorStatus, type SensorType } from "../../models/Sensor";
 import { Building, type IBuilding } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
@@ -234,7 +234,7 @@ describe("Sensor Model", () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
-          sensorType: "invalid_type",
+          sensorType: "invalid_type" as any as SensorType, // Force an invalid type
           location: "Test",
           installationDate: new Date(),
           createdBy: userId,
@@ -313,7 +313,7 @@ describe("Sensor Model", () => {
           sensorType: "internal_temp",
           location: "Test",
           installationDate: new Date(),
-          status: "invalid",
+          status: "invalid" as any as SensorStatus, // Force an invalid status
           createdBy: userId,
           updatedBy: userId,
         });

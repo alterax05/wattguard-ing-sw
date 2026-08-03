@@ -42,6 +42,7 @@ export const SensorSchema = z.object({
  * Sensor with building details (populated)
  */
 export const SensorWithBuildingSchema = SensorSchema.extend({
+  isOffline: z.boolean().describe("Whether the sensor is currently offline"),
   building: z.object({
     id: z.string(),
     name: z.string(),

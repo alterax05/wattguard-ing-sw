@@ -43,11 +43,11 @@ export function EnergyChart() {
       config={{
         electricity: {
           label: "Elettricità (kWh)",
-          color: "hsl(var(--chart-1))",
+          color: "var(--chart-1)",
         },
         gas: {
           label: "Gas (m³)",
-          color: "hsl(var(--chart-5))",
+          color: "var(--chart-5)",
         },
       }}
       className="h-80 w-full"

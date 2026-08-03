@@ -19,7 +19,6 @@ import {
   UpdateBuildingResponseSchema,
   DeleteBuildingParamsSchema,
   DeleteBuildingResponseSchema,
-  GetBuildingSensorsResponseSchema,
   GetBuildingRealTimeResponseSchema,
   GetBuildingHistoryQuerySchema,
   GetBuildingHistoryResponseSchema,
@@ -581,85 +580,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
     }
   )
-  /**
-   * GET /api/buildings/:id/sensors - Get building sensors
-   */
-  .get(
-    "/:id/sensors",
-    describeRoute({
-      description: "Get all sensors for a building with their current status",
-      tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
-      responses: {
-        200: {
-          description: "Sensors retrieved successfully",
-          content: {
-            "application/json": {
-              schema: resolver(GetBuildingSensorsResponseSchema),
-            },
-          },
-        },
-        401: {
-          description: "Unauthorized",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-        403: {
-          description: "Forbidden",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-        404: {
-          description: "Building not found",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-      },
-    }),
-    validator("param", GetBuildingParamsSchema),
-    async (c) => {
-      const { id } = c.req.valid("param");
-
-      const building = await Building.findById(id);
-      if (!building) {
-        return c.json({ error: "Building not found" }, 404);
-      }
-
-      const sensors = await Sensor.find({ buildingId: id });
-
-      return c.json({
-        sensors: sensors.map((s) => ({
-          id: s._id.toString(),
-          serialNumber: s.serialNumber,
-          sensorType: s.sensorType,
-          location: s.location,
-          status: s.status,
-          installationDate: s.installationDate?.toISOString(),
-          transmissionInterval: s.transmissionInterval,
-          minThreshold: s.minThreshold,
-          maxThreshold: s.maxThreshold,
-          lastReading: s.lastReading ? {
-            value: s.lastReading.value,
-            unit: s.lastReading.unit,
-            timestamp: s.lastReading.timestamp?.toISOString(),
-          } : null,
-          buildingId: s.buildingId.toString(),
-          createdAt: s.createdAt?.toISOString(),
-          updatedAt: s.updatedAt?.toISOString(),
-        })),
-      });
-    }
-  )
-
   /**
    * GET /api/buildings/:id/real-time - Get real-time sensor data
    */

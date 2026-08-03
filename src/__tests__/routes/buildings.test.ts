@@ -5,7 +5,7 @@ import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
-import { Sensor, type ISensor } from "../../models/Sensor";
+import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 
 // Suppress console logs during tests
@@ -515,80 +515,6 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.building.surface).toBe(2000);
       expect(json.building.constructionYear).toBe(2000);
       expect(json.building.buildingType).toBeDefined();
-    });
-  });
-
-  describe("Get Building Sensors (GET /api/buildings/:id/sensors)", () => {
-    test("should return list of sensors with status", async () => {
-      const building = await Building.create({
-        name: "Building with Sensors",
-        address: "Via Sensors 1",
-        geographicZone: "Centro",
-        buildingType: buildingTypeId,
-        surface: 1000,
-        constructionYear: 2000,
-        heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      await Sensor.create([
-        {
-          buildingId: building._id,
-          sensorType: "internal_temp",
-          location: "Piano 1",
-          status: "active",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-          lastReading: {
-            value: 22.5,
-            unit: "°C",
-            timestamp: new Date(),
-          },
-        },
-        {
-          buildingId: building._id,
-          sensorType: "external_temp",
-          location: "Facciata",
-          status: "active",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-          lastReading: {
-            value: 10.2,
-            unit: "°C",
-            timestamp: new Date(),
-          },
-        },
-        {
-          buildingId: building._id,
-          sensorType: "energy_meter",
-          location: "Locale tecnico",
-          status: "inactive",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-        },
-      ]);
-
-      const res = await app.request(`/api/buildings/${building._id}/sensors`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.sensors.length).toBe(3);
-      
-      // Verify sensor details
-      const internalTempSensor = json.sensors.find((s: ISensor) => s.sensorType === "internal_temp");
-      expect(internalTempSensor).toBeDefined();
-      expect(internalTempSensor.status).toBe("active");
-      expect(internalTempSensor.lastReading).toBeDefined();
     });
   });
 
