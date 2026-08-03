@@ -3,14 +3,20 @@ import { useNavigate } from "react-router-dom";
 import {
   useBuilding,
   useBuildingRealTime,
-  useBuildingSensors,
   useBuildingHistory,
   useBuildingEfficiency,
   type BuildingDetail as BuildingDetailType,
-  type Sensor,
   type HistoryParams,
 } from "@/hooks/use-buildings";
-import { useDeleteSensor } from "@/hooks/use-sensors";
+import {
+  useDeleteSensor,
+  useSensors,
+  type SensorWithBuilding,
+} from "@/hooks/use-sensors";
+import {
+  getMonitoringStatus,
+  getMonitoringStatusPresentation,
+} from "@/lib/sensor-status";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,7 +107,7 @@ function getBuildingTypeName(bt: BuildingDetailType["buildingType"]): string {
   return bt.name;
 }
 
-function getSensorIcon(sensorType: Sensor["sensorType"]) {
+function getSensorIcon(sensorType: SensorWithBuilding["sensorType"]) {
   switch (sensorType) {
     case "internal_temp":
       return <Thermometer className="h-4 w-4" />;
@@ -114,7 +120,7 @@ function getSensorIcon(sensorType: Sensor["sensorType"]) {
   }
 }
 
-function getSensorTypeLabel(sensorType: Sensor["sensorType"]) {
+function getSensorTypeLabel(sensorType: SensorWithBuilding["sensorType"]) {
   switch (sensorType) {
     case "internal_temp":
       return "Temp. Interna";
@@ -124,19 +130,6 @@ function getSensorTypeLabel(sensorType: Sensor["sensorType"]) {
       return "Contatore Energia";
     case "gas_meter":
       return "Contatore Gas";
-  }
-}
-
-function getSensorStatusLabel(status: Sensor["status"]) {
-  switch (status) {
-    case "active":
-      return "Attivo";
-    case "inactive":
-      return "Inattivo";
-    case "maintenance":
-      return "Manutenzione";
-    case "error":
-      return "Errore";
   }
 }
 
@@ -224,8 +217,10 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
     isError: buildingError,
   } = useBuilding(buildingId);
   const { data: realTimeData } = useBuildingRealTime(buildingId);
-  const { data: sensorsData, isLoading: sensorsLoading } =
-    useBuildingSensors(buildingId);
+  const { data: sensorsData, isLoading: sensorsLoading } = useSensors(
+    { buildingId, limit: "100" },
+    { refetchInterval: 60 * 1000 },
+  );
   const { data: historyData, isLoading: historyLoading } = useBuildingHistory(
     buildingId,
     historyParams,
@@ -235,13 +230,15 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
 
   const building = buildingData?.building;
   const sensors = sensorsData?.sensors ?? [];
-  const activeSensors = sensors.filter((s: Sensor) => s.status === "active").length;
+  const activeSensors = sensors.filter(
+    (s) => getMonitoringStatus(s) === "active",
+  ).length;
 
   // Sensor CRUD state
   const [addSensorOpen, setAddSensorOpen] = useState(false);
   const [isEditingBuilding, setIsEditingBuilding] = useState(false);
-  const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
-  const [deletingSensor, setDeletingSensor] = useState<Sensor | null>(null);
+  const [editingSensor, setEditingSensor] = useState<SensorWithBuilding | null>(null);
+  const [deletingSensor, setDeletingSensor] = useState<SensorWithBuilding | null>(null);
   const deleteSensor = useDeleteSensor();
 
   const handleDeleteSensor = () => {
@@ -636,77 +633,76 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               </div>
             ) : (
               <div className="space-y-3">
-                {sensors.map((sensor: Sensor) => (
-                  <div
-                    key={sensor.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-md bg-primary/10 p-2 text-primary">
-                        {getSensorIcon(sensor.sensorType)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{sensor.location}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {getSensorTypeLabel(sensor.sensorType)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {sensor.lastReading && (
-                        <div className="text-right">
-                          <p className="text-sm font-semibold tabular-nums">
-                            {sensor.lastReading.value}
-                          </p>
+                {sensors.map((sensor) => {
+                  const statusPresentation = getMonitoringStatusPresentation(
+                    getMonitoringStatus(sensor),
+                  );
+                  const StatusIcon = statusPresentation.icon;
+                  return (
+                    <div
+                      key={sensor.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-md bg-primary/10 p-2 text-primary">
+                          {getSensorIcon(sensor.sensorType)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{sensor.location}</p>
                           <p className="text-xs text-muted-foreground">
-                            {sensor.lastReading.unit}
+                            {getSensorTypeLabel(sensor.sensorType)}
                           </p>
                         </div>
-                      )}
-                      <Badge
-                        variant="secondary"
-                        className={
-                          sensor.status === "active"
-                            ? "bg-chart-3 text-white"
-                            : sensor.status === "error"
-                              ? "bg-destructive text-destructive-foreground"
-                              : sensor.status === "maintenance"
-                                ? "bg-chart-4 text-foreground"
-                                : ""
-                        }
-                      >
-                        {getSensorStatusLabel(sensor.status)}
-                      </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Azioni sensore</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => setEditingSensor(sensor)}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Modifica
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeletingSensor(sensor)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Elimina
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {sensor.lastReading && (
+                          <div className="text-right">
+                            <p className="text-sm font-semibold tabular-nums">
+                              {sensor.lastReading.value}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {sensor.lastReading.unit}
+                            </p>
+                          </div>
+                        )}
+                        <Badge
+                          variant="secondary"
+                          className={`gap-1 ${statusPresentation.className}`}
+                        >
+                          <StatusIcon className="h-3 w-3" />
+                          {statusPresentation.label}
+                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Azioni sensore</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setEditingSensor(sensor)}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Modifica
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setDeletingSensor(sensor)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Elimina
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

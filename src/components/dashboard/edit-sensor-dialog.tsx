@@ -19,8 +19,12 @@ import {
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useUpdateSensor, type SensorType, type SensorStatus } from "@/hooks/use-sensors"
-import type { Sensor } from "@/hooks/use-buildings"
+import {
+  useUpdateSensor,
+  type SensorType,
+  type SensorStatus,
+  type SensorWithBuilding,
+} from "@/hooks/use-sensors"
 
 const SENSOR_TYPE_OPTIONS: { value: SensorType; label: string }[] = [
   { value: "internal_temp", label: "Temperatura Interna" },
@@ -37,7 +41,7 @@ const SENSOR_STATUS_OPTIONS: { value: SensorStatus; label: string }[] = [
 ]
 
 interface EditSensorDialogProps {
-  sensor: Sensor
+  sensor: SensorWithBuilding
   open: boolean
   onOpenChange: (open: boolean) => void
 }

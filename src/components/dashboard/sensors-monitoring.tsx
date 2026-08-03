@@ -17,10 +17,8 @@ import {
   Thermometer,
   WifiOff,
   Wind,
-  Wrench,
   Zap,
 } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
 import { useBuildings } from "@/hooks/use-buildings"
 import {
   SENSORS_QUERY_KEY,
@@ -28,6 +26,11 @@ import {
   type SensorType,
   type SensorWithBuilding,
 } from "@/hooks/use-sensors"
+import {
+  getMonitoringStatus,
+  getMonitoringStatusPresentation,
+  type MonitoringStatus,
+} from "@/lib/sensor-status"
 import { cn } from "@/lib/utils"
 import { SensorDetailDialog } from "./sensor-detail-dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -50,7 +53,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
 
 type SensorGroup = "all" | "thermometers" | "meters"
-type MonitoringStatus = "active" | "offline" | "maintenance" | "error"
 type StatusFilter = "all" | MonitoringStatus
 
 const SENSOR_GROUPS: SensorGroup[] = ["all", "thermometers", "meters"]
@@ -90,47 +92,6 @@ function getSensorUnit(sensorType: SensorType) {
       return "kWh"
     case "gas_meter":
       return "m³"
-  }
-}
-
-function getMonitoringStatus(sensor: SensorWithBuilding): MonitoringStatus {
-  if (sensor.status === "inactive" || (sensor.status === "active" && sensor.isOffline)) {
-    return "offline"
-  }
-
-  return sensor.status
-}
-
-function getStatusPresentation(status: MonitoringStatus): {
-  label: string
-  icon: LucideIcon
-  className: string
-} {
-  switch (status) {
-    case "active":
-      return {
-        label: "Attivo",
-        icon: CheckCircle2,
-        className: "bg-chart-3 text-white",
-      }
-    case "offline":
-      return {
-        label: "Offline",
-        icon: WifiOff,
-        className: "bg-muted text-muted-foreground",
-      }
-    case "maintenance":
-      return {
-        label: "Manutenzione",
-        icon: Wrench,
-        className: "bg-chart-4 text-foreground",
-      }
-    case "error":
-      return {
-        label: "Errore",
-        icon: AlertCircle,
-        className: "bg-destructive text-destructive-foreground",
-      }
   }
 }
 
@@ -189,7 +150,7 @@ function SensorTableRow({
   onSelect: (sensor: SensorWithBuilding) => void
 }) {
   const status = getMonitoringStatus(sensor)
-  const statusPresentation = getStatusPresentation(status)
+  const statusPresentation = getMonitoringStatusPresentation(status)
   const lastUpdate = getLastUpdate(sensor.lastReading?.timestamp)
   const StatusIcon = statusPresentation.icon
 
@@ -291,7 +252,7 @@ function SensorTable({
           Posizione fisica, stato operativo e ultimo aggiornamento dei dispositivi installati.
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent>
         {isLoading ? (
           <Table>
             <TableHeader>
