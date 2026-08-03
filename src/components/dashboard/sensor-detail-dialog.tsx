@@ -8,6 +8,7 @@ import { Building2, Calendar, TrendingUp, Thermometer, Wind, Zap, Flame } from "
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { useSensor, useSensorReadings, type SensorWithBuilding, type SensorType } from "@/hooks/use-sensors"
+import { getMonitoringStatus, getMonitoringStatusPresentation } from "@/lib/sensor-status"
 
 function getSensorTypeLabel(sensorType: SensorType) {
   switch (sensorType) {
@@ -32,43 +33,6 @@ function getSensorUnit(sensorType: SensorType) {
     case "gas_meter":
       return "m³"
   }
-}
-
-function getSensorStatusLabel(status: string, isOffline?: boolean) {
-  if (status === "inactive" || (status === "active" && isOffline)) {
-    return "Offline"
-  }
-
-  switch (status) {
-    case "active":
-      return "Attivo"
-    case "maintenance":
-      return "Manutenzione"
-    case "error":
-      return "Errore"
-    default:
-      return status
-  }
-}
-
-function getSensorStatusClass(status: string, isOffline?: boolean) {
-  if (status === "inactive" || (status === "active" && isOffline)) {
-    return ""
-  }
-
-  if (status === "active") {
-    return "bg-chart-3 text-white"
-  }
-
-  if (status === "error") {
-    return "bg-destructive text-destructive-foreground"
-  }
-
-  if (status === "maintenance") {
-    return "bg-chart-4 text-foreground"
-  }
-
-  return ""
 }
 
 function getSensorIcon(sensorType: SensorType) {
@@ -129,6 +93,9 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
   }, [readingsData])
 
   const unit = sensor ? getSensorUnit(sensor.sensorType) : ""
+  const statusPresentation = sensor
+    ? getMonitoringStatusPresentation(getMonitoringStatus(sensor))
+    : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -168,9 +135,9 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                   <p className="text-sm font-medium text-muted-foreground">Stato</p>
                   <Badge
                     variant="secondary"
-                    className={getSensorStatusClass(sensor.status, sensor.isOffline)}
+                    className={statusPresentation?.className}
                   >
-                    {getSensorStatusLabel(sensor.status, sensor.isOffline)}
+                    {statusPresentation?.label}
                   </Badge>
                 </div>
                 <div className="space-y-1">
