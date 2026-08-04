@@ -2,6 +2,7 @@ import mqtt from "mqtt";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
+import { THRESHOLD_ALERT_TYPE } from "./alerts";
 
 export function connectAndSubscribe() {
   const brokerUrl = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
@@ -55,16 +56,16 @@ export function connectAndSubscribe() {
         (sensor.minThreshold !== undefined && value < sensor.minThreshold) ||
         (sensor.maxThreshold !== undefined && value > sensor.maxThreshold)
       ) {
-        const type = "threshold_exceeded";
+        const isMin = sensor.minThreshold !== undefined && value < sensor.minThreshold;
+        const thresholdType = isMin ? "min" : "max";
         // Check if an active alert already exists for this sensor and type
         const existingAlert = await Alert.findOne({
           sensorId: sensor._id,
-          type,
+          type: THRESHOLD_ALERT_TYPE,
           status: "active",
         });
 
         if (!existingAlert) {
-          const isMin = sensor.minThreshold !== undefined && value < sensor.minThreshold;
           const limit = isMin ? sensor.minThreshold : sensor.maxThreshold;
           const severity = "high";
           const message = `Valore fuori soglia rilevato per il sensore ${sensor.sensorType} (${sensor.location}): ${value}${unit} (Limite: ${limit}${unit})`;
@@ -73,7 +74,8 @@ export function connectAndSubscribe() {
             buildingId: sensor.buildingId._id,
             buildingName: (sensor.buildingId as unknown as { name: string }).name || "Edificio Sconosciuto",
             sensorId: sensor._id,
-            type,
+            type: THRESHOLD_ALERT_TYPE,
+            thresholdType,
             severity,
             message,
             status: "active",

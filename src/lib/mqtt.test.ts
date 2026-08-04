@@ -3,10 +3,12 @@ import { connectAndSubscribe } from "./mqtt";
 import mqtt from "mqtt";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
+import { Alert } from "../models/Alert";
 
 // Mock Mongoose models
 let sensorFindByIdSpy: ReturnType<typeof spyOn>;
 let readingCreateSpy: ReturnType<typeof spyOn>;
+let alertDeleteManySpy: ReturnType<typeof spyOn>;
 
 const mockSensorSave = mock();
 
@@ -25,6 +27,7 @@ describe("MQTT Service", () => {
   beforeEach(() => {
     sensorFindByIdSpy = spyOn(Sensor, "findById");
     readingCreateSpy = spyOn(SensorReading, "create");
+    alertDeleteManySpy = spyOn(Alert, "deleteMany");
 
     mockSensorSave.mockReset();
     mockOn.mockReset();
@@ -45,6 +48,7 @@ describe("MQTT Service", () => {
   afterEach(() => {
     sensorFindByIdSpy.mockRestore();
     readingCreateSpy.mockRestore();
+    alertDeleteManySpy.mockRestore();
   });
 
   test("should connect and subscribe on initialization", () => {
@@ -96,6 +100,35 @@ describe("MQTT Service", () => {
     expect(Sensor.findById).toHaveBeenCalledWith("sensor123");
     expect(SensorReading.create).toHaveBeenCalled();
     expect(mockSensorSave).toHaveBeenCalled();
+  });
+
+  test("should keep existing alerts when a reading returns within thresholds", async () => {
+    connectAndSubscribe();
+
+    const mockSensorDoc = {
+      _id: "sensor123",
+      buildingId: "building123",
+      sensorType: "internal_temp",
+      minThreshold: 10,
+      maxThreshold: 30,
+      save: mockSensorSave,
+    };
+
+    sensorFindByIdSpy.mockReturnValue({
+      populate: () => Promise.resolve(mockSensorDoc),
+    });
+    readingCreateSpy.mockResolvedValue({});
+
+    const messageHandler = mockOn.mock.calls.find((call) => call[0] === "message")?.[1];
+    expect(messageHandler).toBeDefined();
+
+    await messageHandler(
+      "sensors/sensor123/readings",
+      Buffer.from(JSON.stringify({ value: 22.5, unit: "°C" })),
+    );
+
+    expect(alertDeleteManySpy).not.toHaveBeenCalled();
+    expect(readingCreateSpy).toHaveBeenCalled();
   });
 
   test("should ignore invalid topics", async () => {
