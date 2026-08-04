@@ -7,6 +7,7 @@ import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
+import { Alert } from "../../models/Alert";
 
 // Suppress console logs during tests
 const originalConsoleLog = console.log;
@@ -304,6 +305,17 @@ describe("Buildings Routes - Integration Tests", () => {
         },
       });
 
+      await Alert.create({
+        buildingId: building._id,
+        buildingName: building.name,
+        sensorId: sensor._id,
+        type: "threshold_exceeded",
+        thresholdType: "max",
+        severity: "high",
+        message: "Temperature too high",
+        status: "active",
+      });
+
       const res = await app.request(`/api/buildings/${building._id}`, {
         method: "DELETE",
         headers: {
@@ -326,6 +338,9 @@ describe("Buildings Routes - Integration Tests", () => {
       // Verify readings deleted
       const readings = await SensorReading.find({ "metadata.buildingId": building._id });
       expect(readings.length).toBe(0);
+
+      const alerts = await Alert.countDocuments({ buildingId: building._id });
+      expect(alerts).toBe(0);
 
       
     });

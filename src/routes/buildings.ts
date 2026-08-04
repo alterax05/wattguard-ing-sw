@@ -6,6 +6,7 @@ import { Building, type IBuilding } from "../models/Building";
 import { BuildingType, type IBuildingType } from "../models/BuildingType";
 import { Sensor, type ISensor } from "../models/Sensor";
 import { SensorReading, type ISensorReading } from "../models/SensorReading";
+import { Alert } from "../models/Alert";
 
 import {
   SearchBuildingsQuerySchema,
@@ -569,6 +570,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Cascade delete: first delete sensor readings, then sensors, then building
       await SensorReading.deleteMany({ "metadata.buildingId": new Types.ObjectId(id) });
+      await Alert.deleteMany({ buildingId: id });
       await Sensor.deleteMany({ buildingId: id });
       await Building.findByIdAndDelete(id);
 

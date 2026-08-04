@@ -2,12 +2,14 @@ import mongoose, { Schema, Types } from "mongoose";
 
 export type AlertSeverity = "low" | "medium" | "high" | "critical";
 export type AlertStatus = "active" | "acknowledged" | "resolved";
+export type AlertThresholdType = "min" | "max";
 
 export interface IAlert {
   buildingId: Types.ObjectId;
   buildingName: string;
   sensorId?: Types.ObjectId;
   type: string;
+  thresholdType?: AlertThresholdType;
   severity: AlertSeverity;
   message: string;
   status: AlertStatus;
@@ -40,6 +42,11 @@ const alertSchema = new Schema<IAlert>(
     type: {
       type: String,
       required: true,
+    },
+    thresholdType: {
+      type: String,
+      enum: ["min", "max"],
+      required: false,
     },
     severity: {
       type: String,
