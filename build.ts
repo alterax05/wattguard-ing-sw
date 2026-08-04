@@ -1,14 +1,12 @@
 #!/usr/bin/env bun
 import path from "path";
 
-// This script only builds the backend using Bun
-// The frontend is built by Vite in the 'dist' folder
+// This script builds the backend using Bun.
+// The frontend is built by Vite in the 'dist' folder.
 
 console.log("\n🚀 Starting Backend build process...\n");
 
-const outdir = path.join(process.cwd(), "dist");
-
-// Note: We don't clean 'dist' here because Vite already populated it with the frontend build.
+const outdir = path.join(process.cwd(), "server-dist");
 
 const start = performance.now();
 

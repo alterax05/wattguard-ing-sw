@@ -8,10 +8,10 @@
     "dev:frontend": "bunx --bun vite",
     "dev:backend": "bun --watch src/index.ts",
     "simulate": "bun --watch scripts/simulator.ts",
-    "start": "NODE_ENV=production bun src/index.ts",
+    "start": "NODE_ENV=production bun server-dist/index.js",
     "build": "vite build && bun run build.ts",
     "test:watch": "bun test --watch",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist server-dist",
     "check": "tsc --noEmit",
     "lint": "eslint ."
   },
