@@ -35,60 +35,60 @@ import { openapiConfig } from "./config/openapi";
 const app = new Hono()
   .use(
     "/api/admin/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin"),
   )
   .use(
     "/api/auth/me",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
   )
   .use(
     "/api/auth/admin/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin"),
   )
   .use(
     "/api/building-types/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin", "operator"),
   )
   .use(
     "/api/buildings/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin", "operator"),
   )
   .use(
     "/api/sensors/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256'}),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin", "operator"),
   )
   .use(
     "/api/alerts/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256'}),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin", "operator"),
   )
   .use(
     "/api/dashboard/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin", "operator"),
   )
   .use(
     "/api/settings/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin"),
   )
   .use(
     "/api/export/*",
-    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
     requireRole("admin"),
   )
@@ -145,26 +145,27 @@ app
   )
   .use(logger());
 
-// Serve static files from the 'dist' directory
-const staticRoot = path.resolve(process.cwd(), "dist");
+if (process.env.NODE_ENV === "production") {
+  const staticRoot = path.resolve(process.cwd(), "dist");
 
-app.use("*", serveStatic({ root: staticRoot }));
+  app.use("*", serveStatic({ root: staticRoot }));
 
-app.get("*", (c, next) => {
-  if (c.req.path === "/api" || c.req.path.startsWith("/api/")) {
-    return next();
-  }
+  app.get("*", (c, next) => {
+    if (c.req.path === "/api" || c.req.path.startsWith("/api/")) {
+      return next();
+    }
 
-  const accept = c.req.header("Accept");
-  if (accept && !accept.includes("text/html")) {
-    return next();
-  }
+    const accept = c.req.header("Accept");
+    if (accept && !accept.includes("text/html")) {
+      return next();
+    }
 
-  return serveStatic({
-    root: staticRoot,
-    path: "index.html",
-  })(c, next);
-});
+    return serveStatic({
+      root: staticRoot,
+      path: "index.html",
+    })(c, next);
+  });
+}
 
 // Export app and type for RPC client
 export { app };
