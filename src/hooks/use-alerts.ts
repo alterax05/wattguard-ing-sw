@@ -8,6 +8,7 @@ export interface Alert {
   buildingName: string;
   sensorId?: string;
   type: string;
+  thresholdType?: "min" | "max";
   severity: "low" | "medium" | "high" | "critical";
   message: string;
   status: "active" | "acknowledged" | "resolved";
