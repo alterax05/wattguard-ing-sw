@@ -1,10 +1,11 @@
 import { serve } from "bun";
 import { Hono } from "hono";
 import { jwt } from "hono/jwt";
+import { logger } from "hono/logger";
+import { serveStatic } from "hono/bun";
 import { describeRoute, openAPIRouteHandler } from "hono-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import mongoose from "mongoose";
-import { serveStatic } from "hono/bun";
 import path from "path";
 
 // Import routes
@@ -127,6 +128,7 @@ const app = new Hono()
   .route("/api/settings", settings)
   .route("/api/export", exportRoute);
 
+// OpenAPI documentation routes and logger middleware
 app
   .get(
     "/api/openapi.json",
@@ -140,10 +142,30 @@ app
       theme: "default",
       url: "/api/openapi.json",
     }),
-  );
+  )
+  .use(logger());
 
 if(process.env.NODE_ENV === "production") {
-  app.use("*", serveStatic({ root: path.resolve(process.cwd(), "dist")}));
+  // Serve static files from the 'dist' directory in production
+  const staticRoot = path.resolve(process.cwd(), "dist");
+
+  app.use("*", serveStatic({ root: staticRoot }));
+
+  app.get("*", (c, next) => {
+    if (c.req.path === "/api" || c.req.path.startsWith("/api/")) {
+      return next();
+    }
+
+    const accept = c.req.header("Accept");
+    if (accept && !accept.includes("text/html")) {
+      return next();
+    }
+
+    return serveStatic({
+      root: staticRoot,
+      path: "index.html",
+    })(c, next);
+  });
 }
 
 // Export app and type for RPC client

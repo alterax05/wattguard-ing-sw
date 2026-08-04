@@ -16,6 +16,7 @@ const result = await Bun.build({
   target: "bun",
   minify: true,
   sourcemap: "linked",
+  env: "disable",
   external: ["mongoose"], // Externalize node modules that might cause issues if bundled for backend
 });
 
