@@ -1,7 +1,6 @@
 import { serve } from "bun";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { jwt } from "hono/jwt";
 import { describeRoute, openAPIRouteHandler } from "hono-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
@@ -19,6 +18,7 @@ import sensors from "./routes/sensors";
 import alerts from "./routes/alerts";
 import dashboard from "./routes/dashboard";
 import settings from "./routes/settings";
+import exportRoute from "./routes/export";
 
 // Import JWT utilities and middleware
 import { getJWTSecret } from "./auth/jwt";
@@ -104,6 +104,12 @@ const app = new Hono()
     loadUserDoc(),
     requireRole("admin"),
   )
+  .use(
+    "/api/export/*",
+    jwt({ secret: getJWTSecret(), cookie: "access_token", alg: 'HS256' }),
+    loadUserDoc(),
+    requireRole("admin"),
+  )
   .get(
     "/api/health",
     describeRoute({
@@ -137,7 +143,8 @@ const app = new Hono()
   .route("/api/sensors", sensors)
   .route("/api/alerts", alerts)
   .route("/api/dashboard", dashboard)
-  .route("/api/settings", settings);
+  .route("/api/settings", settings)
+  .route("/api/export", exportRoute);
 
 app
   .get(
