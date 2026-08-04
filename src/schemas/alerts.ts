@@ -3,6 +3,7 @@ import { ObjectIdSchema, PaginationQuerySchema, SortOrderSchema } from "./common
 
 export const AlertSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
 export const AlertStatusSchema = z.enum(["active", "acknowledged", "resolved"]);
+export const AlertThresholdTypeSchema = z.enum(["min", "max"]);
 
 export const AlertSchema = z.object({
   id: ObjectIdSchema.describe("Unique alert identifier"),
@@ -10,6 +11,7 @@ export const AlertSchema = z.object({
   buildingName: z.string().describe("Name of the building"),
   sensorId: ObjectIdSchema.optional().describe("Optional sensor identifier this alert relates to"),
   type: z.string().describe("Type of the alert (e.g., temperature_anomaly)"),
+  thresholdType: AlertThresholdTypeSchema.optional().describe("Threshold direction for threshold alerts"),
   severity: AlertSeveritySchema.describe("Severity level"),
   message: z.string().describe("Description of the alert"),
   status: AlertStatusSchema.describe("Current status"),

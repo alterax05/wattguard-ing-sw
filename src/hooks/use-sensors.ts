@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { client } from "@/lib/api";
 import { BUILDINGS_QUERY_KEY } from "./use-buildings";
+import { DASHBOARD_QUERY_KEY } from "./use-dashboard";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -305,6 +306,8 @@ export function useUpdateSensor() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }
@@ -333,6 +336,8 @@ export function useDeleteSensor() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }

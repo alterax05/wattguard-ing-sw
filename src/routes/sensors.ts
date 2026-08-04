@@ -5,7 +5,9 @@ import type { AuthVariables } from "../middleware/auth";
 import { Sensor, type ISensor } from "../models/Sensor";
 import { Building, type IBuilding } from "../models/Building";
 import { SensorReading, type ISensorReading } from "../models/SensorReading";
+import { Alert, type AlertThresholdType } from "../models/Alert";
 import { isInactive } from "../lib/inactivity";
+import { deleteAlertsForRemovedThresholds } from "../lib/alerts";
 
 import {
   ListSensorsQuerySchema,
@@ -71,6 +73,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         .limit(query.limit)
         .skip(query.offset);
 
+      //TODO: move this to virtual field in the model
       const offlineSensorIds = new Set(
         sensors
           .filter((sensor) => sensor.status === "active" && isInactive(sensor))
@@ -344,6 +347,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Sensor not found" }, 404);
       }
 
+      //TODO: this should have a setter in the model
+      const removedThresholdTypes: AlertThresholdType[] = [];
+      if (updates.minThreshold === null) removedThresholdTypes.push("min");
+      if (updates.maxThreshold === null) removedThresholdTypes.push("max");
+
       // Check for duplicate serial number if being updated
       if (updates.serialNumber && updates.serialNumber !== sensor.serialNumber) {
         const existing = await Sensor.findOne({ serialNumber: updates.serialNumber });
@@ -352,7 +360,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
         }
       }
 
+      //TODO: this mabye could be done with a updateOne method
+
       // Apply updates
+      //TODO: this is tecnically wrong, the sensor is not a POJO
       Object.assign(sensor, Object.fromEntries(
         Object.entries(updates).filter(([_, v]) => v !== undefined).map(([k, v]) => v === null ? [k, undefined] : [k, v])
       ));
@@ -360,6 +371,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       sensor.updatedBy = userDoc._id;
 
       await sensor.save();
+      await deleteAlertsForRemovedThresholds(sensor._id, removedThresholdTypes);
 
       return c.json({
         success: true,
@@ -427,15 +439,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Sensor not found" }, 404);
       }
 
-      
-
       // Delete associated readings
       await SensorReading.deleteMany({ "metadata.sensorId": id });
 
+      // Delete alerts associated with the sensor
+      await Alert.deleteMany({ sensorId: id });
+
       // Delete sensor
       await Sensor.findByIdAndDelete(id);
-
-      
 
       return c.json({
         success: true,

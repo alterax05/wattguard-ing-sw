@@ -18,6 +18,7 @@ import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
+import { Alert } from "../../models/Alert";
 import { Types } from "mongoose";
 
 // Suppress console logs during tests
@@ -342,6 +343,76 @@ describe("Sensors Routes - Integration Tests", () => {
 
       expect(res.status).toBe(404);
     });
+
+    test("should delete alerts for a removed threshold without deleting alerts for the other threshold", async () => {
+      const sensor = await Sensor.create({
+        buildingId,
+        sensorType: "internal_temp",
+        location: "Threshold Sensor",
+        installationDate: new Date(),
+        transmissionInterval: 90,
+        minThreshold: 10,
+        maxThreshold: 30,
+        status: "active",
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const minAlert = await Alert.create({
+        buildingId,
+        buildingName: "Test Building",
+        sensorId: sensor._id,
+        type: "threshold_exceeded",
+        thresholdType: "min",
+        severity: "high",
+        message: "Temperature too low",
+        status: "active",
+      });
+      const maxAlert = await Alert.create({
+        buildingId,
+        buildingName: "Test Building",
+        sensorId: sensor._id,
+        type: "threshold_exceeded",
+        thresholdType: "max",
+        severity: "high",
+        message: "Temperature too high",
+        status: "acknowledged",
+      });
+      const legacyAlert = await Alert.create({
+        buildingId,
+        buildingName: "Test Building",
+        sensorId: sensor._id,
+        type: "threshold_exceeded",
+        severity: "high",
+        message: "Legacy threshold alert",
+        status: "active",
+      });
+      const unrelatedAlert = await Alert.create({
+        buildingId,
+        buildingName: "Test Building",
+        sensorId: sensor._id,
+        type: "sensor_offline",
+        severity: "medium",
+        message: "Sensor unreachable",
+        status: "active",
+      });
+
+      const res = await app.request(`/api/sensors/${sensor._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ maxThreshold: null }),
+      });
+
+      expect(res.status).toBe(200);
+      expect((await Sensor.findById(sensor._id))!.maxThreshold).toBeUndefined();
+      expect(await Alert.findById(minAlert._id)).toBeDefined();
+      expect(await Alert.findById(maxAlert._id)).toBeNull();
+      expect(await Alert.findById(legacyAlert._id)).toBeNull();
+      expect(await Alert.findById(unrelatedAlert._id)).toBeDefined();
+    });
   });
 
   // ============================================================================
@@ -372,6 +443,17 @@ describe("Sensors Routes - Integration Tests", () => {
         },
       });
 
+      await Alert.create({
+        buildingId,
+        buildingName: "Test Building",
+        sensorId: sensor._id,
+        type: "threshold_exceeded",
+        thresholdType: "max",
+        severity: "high",
+        message: "Temperature too high",
+        status: "active",
+      });
+
       const res = await app.request(`/api/sensors/${sensor._id}`, {
         method: "DELETE",
         headers: {
@@ -392,6 +474,9 @@ describe("Sensors Routes - Integration Tests", () => {
         "metadata.sensorId": sensor._id,
       });
       expect(readings).toBe(0);
+
+      const alerts = await Alert.countDocuments({ sensorId: sensor._id });
+      expect(alerts).toBe(0);
 
       
     });
