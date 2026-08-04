@@ -14,12 +14,16 @@ import { User } from "../models/User";
 import { Invite } from "../models/Invite";
 import { hashTokenSha256, randomToken } from "../utils/crypto";
 import { signAccessToken } from "../auth/jwt";
+import { PUBLIC_APP_URL } from "../config/app-url";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 const GOOGLE_REDIRECT_URI =
-  process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/auth/google/callback";
-const FRONTEND_URL = process.env.VITE_FRONTEND_URL || "http://localhost:5173";
+  process.env.GOOGLE_REDIRECT_URI ||
+  (process.env.NODE_ENV === "production"
+    ? `${PUBLIC_APP_URL}/api/auth/google/callback`
+    : "http://localhost:3000/api/auth/google/callback");
+const APP_URL = PUBLIC_APP_URL;
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 
@@ -164,13 +168,13 @@ const app = new Hono()
     const state = c.req.query("state");
 
     if (!code || !state) {
-      return c.redirect(`${FRONTEND_URL}/login?error=missing_params`);
+      return c.redirect(`${APP_URL}/login?error=missing_params`);
     }
 
     // Verify state
     const savedState = getCookie(c, "oauth_state");
     if (!savedState || savedState !== state) {
-      return c.redirect(`${FRONTEND_URL}/login?error=invalid_state`);
+      return c.redirect(`${APP_URL}/login?error=invalid_state`);
     }
 
     const mode = getCookie(c, "oauth_mode") || "invite";
@@ -179,11 +183,11 @@ const app = new Hono()
       // Exchange code for Google user info
       const userInfo = await exchangeCodeForUser(code);
       if (!userInfo) {
-        return c.redirect(`${FRONTEND_URL}/login?error=token_exchange_failed`);
+        return c.redirect(`${APP_URL}/login?error=token_exchange_failed`);
       }
 
       if (!userInfo.verified_email) {
-        return c.redirect(`${FRONTEND_URL}/login?error=email_not_verified`);
+        return c.redirect(`${APP_URL}/login?error=email_not_verified`);
       }
 
       const googleEmail = userInfo.email.toLowerCase().trim();
@@ -196,11 +200,11 @@ const app = new Hono()
         const user = await User.findOne({ email: googleEmail });
 
         if (!user) {
-          return c.redirect(`${FRONTEND_URL}/login?error=no_account`);
+          return c.redirect(`${APP_URL}/login?error=no_account`);
         }
 
         if (user.isDisabled) {
-          return c.redirect(`${FRONTEND_URL}/login?error=account_disabled`);
+          return c.redirect(`${APP_URL}/login?error=account_disabled`);
         }
 
         // Auto-link Google sub if first Google login for this user
@@ -210,31 +214,31 @@ const app = new Hono()
             user.name = googleName;
           }
         } else if (user.googleSub !== googleSub) {
-          return c.redirect(`${FRONTEND_URL}/login?error=account_mismatch`);
+          return c.redirect(`${APP_URL}/login?error=account_mismatch`);
         }
 
         user.lastLoginAt = new Date();
         await user.save();
 
         await finaliseLogin(c, user._id.toString(), user.email, user.role);
-        return c.redirect(`${FRONTEND_URL}/dashboard`);
+        return c.redirect(`${APP_URL}/dashboard`);
       }
 
       /* ── INVITE mode: accept invite (original flow) ────────────────── */
       const inviteToken = getCookie(c, "invite_token");
       if (!inviteToken) {
-        return c.redirect(`${FRONTEND_URL}/login?error=missing_invite`);
+        return c.redirect(`${APP_URL}/login?error=missing_invite`);
       }
 
       const tokenHash = hashTokenSha256(inviteToken);
       const invite = await Invite.findOne({ tokenHash, status: "pending" });
 
       if (!invite || invite.expiresAt < new Date()) {
-        return c.redirect(`${FRONTEND_URL}/login?error=invalid_invite`);
+        return c.redirect(`${APP_URL}/login?error=invalid_invite`);
       }
 
       if (invite.email !== googleEmail) {
-        return c.redirect(`${FRONTEND_URL}/login?error=email_mismatch`);
+        return c.redirect(`${APP_URL}/login?error=email_mismatch`);
       }
 
       let user = await User.findOne({ email: googleEmail });
@@ -247,7 +251,7 @@ const app = new Hono()
           }
           await user.save();
         } else if (user.googleSub !== googleSub) {
-          return c.redirect(`${FRONTEND_URL}/login?error=account_mismatch`);
+          return c.redirect(`${APP_URL}/login?error=account_mismatch`);
         }
       } else {
         user = await User.create({
@@ -267,10 +271,10 @@ const app = new Hono()
       await user.save();
 
       await finaliseLogin(c, user._id.toString(), user.email, user.role);
-      return c.redirect(FRONTEND_URL);
+      return c.redirect(APP_URL);
     } catch (err) {
       console.error("OAuth callback error:", err);
-      return c.redirect(`${FRONTEND_URL}/login?error=server_error`);
+      return c.redirect(`${APP_URL}/login?error=server_error`);
     }
   });
 
