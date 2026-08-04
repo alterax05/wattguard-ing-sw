@@ -19,23 +19,16 @@ import {
   Building2,
   MapPin,
   Download,
-  FileSpreadsheet,
-  FileText,
   Calendar,
   Eye,
   AlertCircle,
   Zap,
   Radio,
 } from "lucide-react"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
-import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { AuthContext } from "@/lib/auth"
+import { downloadFromEndpoint } from "@/lib/download"
 
 /** Extract the building type display name from a summary */
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
@@ -63,6 +56,7 @@ export function BuildingSearch() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
+  const [isExporting, setIsExporting] = useState(false)
 
   const isAdmin = user?.role === "admin"
 
@@ -102,22 +96,39 @@ export function BuildingSearch() {
     }
   }
 
-  const handleExport = (format: "csv" | "excel" | "pdf") => {
-    const selectedNames = buildings
-      .filter((b) => selectedIds.includes(b.id))
-      .map((b) => b.name)
-      .join(", ")
+  const handleExport = async () => {
+    if (!dateFrom || !dateTo) {
+      toast.error("Seleziona una data di inizio e una data di fine")
+      return
+    }
 
-    const period =
-      dateFrom && dateTo
-        ? ` dal ${dateFrom} al ${dateTo}`
-        : " (ultimo mese)"
+    if (dateTo < dateFrom) {
+      toast.error("La data di fine deve essere successiva alla data di inizio")
+      return
+    }
 
-    const formatLabels = { csv: "CSV", excel: "Excel", pdf: "PDF" }
+    const toastId = toast.loading("Preparazione esportazione CSV…")
+    setIsExporting(true)
 
-    toast.success(
-      `Report ${formatLabels[format]} generato per: ${selectedNames}${period}`
-    )
+    try {
+      const params = new URLSearchParams({
+        buildingIds: selectedIds.join(","),
+        startDate: dateFrom,
+        endDate: dateTo,
+      })
+      await downloadFromEndpoint(
+        `${import.meta.env.VITE_FRONTEND_URL}/api/export/consumption?${params.toString()}`,
+        `wattguard-consumption-${dateFrom}-${dateTo}.csv`,
+      )
+      toast.success("Esportazione CSV completata", { id: toastId })
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Errore durante l'esportazione",
+        { id: toastId },
+      )
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const handleBuildingClick = (id: string) => {
@@ -212,49 +223,14 @@ export function BuildingSearch() {
 
                     <Separator orientation="vertical" className="h-6" />
 
-                    {/* Export buttons */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button size="sm">
-                          <Download className="mr-2 h-4 w-4" />
-                          Scarica Report
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-56" align="start">
-                        <div className="space-y-1">
-                          <Label className="text-xs font-medium text-muted-foreground">
-                            Formato di esportazione
-                          </Label>
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-start"
-                            size="sm"
-                            onClick={() => handleExport("csv")}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            CSV
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-start"
-                            size="sm"
-                            onClick={() => handleExport("excel")}
-                          >
-                            <FileSpreadsheet className="mr-2 h-4 w-4" />
-                            Excel (.xlsx)
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-start"
-                            size="sm"
-                            onClick={() => handleExport("pdf")}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            PDF
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    <Button
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={!dateFrom || !dateTo || isExporting}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      {isExporting ? "Esportazione..." : "Scarica CSV"}
+                    </Button>
                   </>
                 )}
               </div>
