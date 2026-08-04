@@ -117,7 +117,7 @@ export function BuildingSearch() {
         endDate: dateTo,
       })
       await downloadFromEndpoint(
-        `${import.meta.env.VITE_FRONTEND_URL}/api/export/consumption?${params.toString()}`,
+        `/api/export/consumption?${params.toString()}`,
         `wattguard-consumption-${dateFrom}-${dateTo}.csv`,
       )
       toast.success("Esportazione CSV completata", { id: toastId })

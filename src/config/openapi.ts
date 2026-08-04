@@ -1,3 +1,5 @@
+import { PUBLIC_APP_URL } from "./app-url";
+
 /**
  * OpenAPI Configuration
  * 
@@ -17,10 +19,9 @@ export const openapiConfig = {
   },
   servers: [
     {
-      url: 'http://localhost:3000',
-      description: 'Local Development',
+      url: PUBLIC_APP_URL,
+      description: 'WattGuard application',
     },
-    // TODO: Add production server URL when deploying
   ],
   components: {
     securitySchemes: {
