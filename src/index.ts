@@ -145,28 +145,26 @@ app
   )
   .use(logger());
 
-if(process.env.NODE_ENV === "production") {
-  // Serve static files from the 'dist' directory in production
-  const staticRoot = path.resolve(process.cwd(), "dist");
+// Serve static files from the 'dist' directory
+const staticRoot = path.resolve(process.cwd(), "dist");
 
-  app.use("*", serveStatic({ root: staticRoot }));
+app.use("*", serveStatic({ root: staticRoot }));
 
-  app.get("*", (c, next) => {
-    if (c.req.path === "/api" || c.req.path.startsWith("/api/")) {
-      return next();
-    }
+app.get("*", (c, next) => {
+  if (c.req.path === "/api" || c.req.path.startsWith("/api/")) {
+    return next();
+  }
 
-    const accept = c.req.header("Accept");
-    if (accept && !accept.includes("text/html")) {
-      return next();
-    }
+  const accept = c.req.header("Accept");
+  if (accept && !accept.includes("text/html")) {
+    return next();
+  }
 
-    return serveStatic({
-      root: staticRoot,
-      path: "index.html",
-    })(c, next);
-  });
-}
+  return serveStatic({
+    root: staticRoot,
+    path: "index.html",
+  })(c, next);
+});
 
 // Export app and type for RPC client
 export { app };
