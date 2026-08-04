@@ -18,6 +18,9 @@ const result = await Bun.build({
   sourcemap: "linked",
   env: "disable",
   external: ["mongoose"], // Externalize node modules that might cause issues if bundled for backend
+  define: {
+    "process.env.NODE_ENV": '"production"',
+  }
 });
 
 const end = performance.now();
