@@ -1,4 +1,4 @@
-# WattGuard API
+# WattGuard
 
 Energy monitoring and management API built with Bun, Hono, React, and MongoDB.
 
@@ -30,8 +30,8 @@ MONGO_URI=mongodb://localhost:27017/wattguard
 # JWT
 JWT_SECRET=your-secret-key-here
 
-# Frontend
-FRONTEND_URL=http://localhost:5173
+# Public application URL
+PUBLIC_APP_URL=http://localhost:5173
 
 # Email (Optional)
 SMTP_HOST=smtp.example.com
@@ -71,6 +71,47 @@ Build and start the production server:
 bun run build
 bun start
 ```
+
+The production build writes the Vite frontend to `dist` and the Bun server to
+`server-dist`. The Bun server serves both the API and the frontend.
+
+## Deploying on Render
+
+Create a Render **Web Service** using the native **Bun** runtime. Do not use a
+Render Static Site because the application also serves the Hono API.
+
+Use these service settings:
+
+```text
+Build command: bun install --frozen-lockfile && bun run build
+Start command: bun run start
+Health check path: /api/health
+```
+
+Render provides the `PORT` variable automatically. The server binds to
+`0.0.0.0` and waits for MongoDB before accepting requests.
+
+Required production variables:
+
+```text
+NODE_ENV=production
+MONGO_URI=<MongoDB connection string>
+JWT_SECRET=<production secret>
+PUBLIC_APP_URL=https://<canonical-public-domain>
+```
+
+If Google authentication is enabled, configure `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI`. The redirect URI must be the
+exact public URL followed by `/api/auth/google/callback`, and the same URI must
+be registered in Google Cloud.
+
+If invitations or password resets are enabled, configure the SMTP variables
+(`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and optionally
+`SMTP_FROM`).
+
+Use one canonical HTTPS domain for the Render service and OAuth configuration.
+The repository includes `.bun-version` to keep the Render Bun runtime aligned
+with local builds.
 
 ## API Documentation
 

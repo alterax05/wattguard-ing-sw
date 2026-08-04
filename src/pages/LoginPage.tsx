@@ -46,7 +46,6 @@ export function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    console.log(import.meta.env.BASE_URL)
     const url = client.api.auth.google.login.$url();
     window.location.href = url.toString();
   };

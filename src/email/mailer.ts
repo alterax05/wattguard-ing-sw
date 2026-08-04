@@ -3,6 +3,7 @@
  */
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import { PUBLIC_APP_URL } from "../config/app-url";
 
 // SMTP configuration from env
 const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
@@ -61,8 +62,7 @@ export async function sendInviteEmail(
   token: string,
   role: "admin" | "operator"
 ): Promise<void> {
-  const frontendUrl = process.env.VITE_FRONTEND_URL || "http://localhost:5173";
-  const inviteUrl = `${frontendUrl}/accept-invite?token=${token}`;
+  const inviteUrl = `${PUBLIC_APP_URL}/accept-invite?token=${token}`;
 
   await sendEmail({
     to: email,
@@ -86,8 +86,7 @@ export async function sendPasswordResetEmail(
   email: string,
   token: string
 ): Promise<void> {
-  const frontendUrl = process.env.VITE_FRONTEND_URL || "http://localhost:5173";
-  const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+  const resetUrl = `${PUBLIC_APP_URL}/reset-password?token=${token}`;
 
   await sendEmail({
     to: email,
