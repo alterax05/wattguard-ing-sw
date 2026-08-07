@@ -2,16 +2,17 @@ import mqtt from "mqtt";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
+import type { BuildingDocument } from "../models/Building";
 import { THRESHOLD_ALERT_TYPE } from "./alerts";
 
 export function connectAndSubscribe() {
   const brokerUrl = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
-  
+
   const client = mqtt.connect(brokerUrl);
 
   client.on("connect", () => {
     console.log("✅ Connected to MQTT Broker");
-    
+
     // Subscribe to all sensor readings
     // Topic format: sensors/{sensorId}/readings
     client.subscribe("sensors/+/readings", (err) => {
@@ -28,7 +29,11 @@ export function connectAndSubscribe() {
       // Extract sensorId from topic
       // Topic: sensors/{sensorId}/readings
       const parts = topic.split("/");
-      if (parts.length !== 3 || parts[0] !== "sensors" || parts[2] !== "readings") {
+      if (
+        parts.length !== 3 ||
+        parts[0] !== "sensors" ||
+        parts[2] !== "readings"
+      ) {
         return;
       }
       const sensorId = parts[1];
@@ -45,18 +50,22 @@ export function connectAndSubscribe() {
       const readingTimestamp = timestamp ? new Date(timestamp) : new Date();
 
       // Find the sensor to ensure it exists and get metadata
-      const sensor = await Sensor.findById(sensorId).populate("buildingId");
+      const sensor = await Sensor.findById(sensorId).populate<{
+        buildingId: BuildingDocument;
+      }>("buildingId");
       if (!sensor) {
         console.warn(`⚠️ Received reading for unknown sensor: ${sensorId}`);
         return;
       }
 
+      const building = sensor.buildingId;
       // Check thresholds and generate alerts
       if (
-        (sensor.minThreshold !== undefined && value < sensor.minThreshold) ||
-        (sensor.maxThreshold !== undefined && value > sensor.maxThreshold)
+        (sensor.minThreshold != null && value < sensor.minThreshold) ||
+        (sensor.maxThreshold != null && value > sensor.maxThreshold)
       ) {
-        const isMin = sensor.minThreshold !== undefined && value < sensor.minThreshold;
+        const isMin =
+          sensor.minThreshold != null && value < sensor.minThreshold;
         const thresholdType = isMin ? "min" : "max";
         // Check if an active alert already exists for this sensor and type
         const existingAlert = await Alert.findOne({
@@ -71,8 +80,8 @@ export function connectAndSubscribe() {
           const message = `Valore fuori soglia rilevato per il sensore ${sensor.sensorType} (${sensor.location}): ${value}${unit} (Limite: ${limit}${unit})`;
 
           await Alert.create({
-            buildingId: sensor.buildingId._id,
-            buildingName: (sensor.buildingId as unknown as { name: string }).name || "Edificio Sconosciuto",
+            buildingId: building._id,
+            buildingName: building.name || "Edificio Sconosciuto",
             sensorId: sensor._id,
             type: THRESHOLD_ALERT_TYPE,
             thresholdType,
@@ -90,7 +99,7 @@ export function connectAndSubscribe() {
         unit,
         metadata: {
           sensorId: sensor._id,
-          buildingId: sensor.buildingId,
+          buildingId: building._id,
           sensorType: sensor.sensorType,
         },
       });

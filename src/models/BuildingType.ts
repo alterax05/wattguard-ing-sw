@@ -1,13 +1,6 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
-export interface IBuildingType {
-  name: string;
-  description?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const buildingTypeSchema = new Schema<IBuildingType>(
+const buildingTypeSchema = new Schema(
   {
     name: {
       type: String,
@@ -26,7 +19,9 @@ const buildingTypeSchema = new Schema<IBuildingType>(
   }
 );
 
-export const BuildingType = mongoose.model<IBuildingType>(
+export const BuildingType = mongoose.model(
   "BuildingType",
   buildingTypeSchema
 );
+
+export type BuildingTypeDocument = InferSchemaType<typeof buildingTypeSchema>;

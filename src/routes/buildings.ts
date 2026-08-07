@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import mongoose, { Types, type QueryFilter, type Document } from "mongoose";
+import mongoose, { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
-import { Building, type IBuilding } from "../models/Building";
-import { BuildingType, type IBuildingType } from "../models/BuildingType";
-import { Sensor, type ISensor } from "../models/Sensor";
-import { SensorReading, type ISensorReading } from "../models/SensorReading";
+import { Building, type BuildingDocument } from "../models/Building";
+import { BuildingType } from "../models/BuildingType";
+import { Sensor, type SensorDocument } from "../models/Sensor";
+import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
 
 import {
@@ -67,7 +67,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const query = c.req.valid("query");
 
-      const filter: QueryFilter<IBuilding> = {};
+      const filter: QueryFilter<BuildingDocument> = {};
 
       if (query.name) {
         filter.name = { $regex: query.name, $options: "i" }; // Case-insensitive partial match
@@ -99,10 +99,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Execute query with pagination
       const buildings = await Building.find(filter)
-        .populate("buildingType", "name description")
+        .populate<{ buildingType: { _id: Types.ObjectId; name: string; description: string } }>("buildingType", "name description")
         .sort(sort)
         .limit(query.limit)
-        .skip(query.offset);
+        .skip(query.offset)
+        .lean();
 
       // Enrich with active sensor counts and current consumption
       const buildingIds = buildings.map((b) => b._id);
@@ -115,6 +116,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         { $match: { buildingId: { $in: buildingIds }, status: "active" } },
         { $group: { _id: "$buildingId", count: { $sum: 1 } } },
       ]);
+
       const sensorCountMap = new Map(
         sensorCounts.map((s) => [s._id.toString(), s.count])
       );
@@ -140,6 +142,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
       ]);
+
       const consumptionMap = new Map(
         energySensors.map((s) => [s._id.toString(), s.value])
       );
@@ -158,9 +161,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
             buildingType: (buildingType instanceof mongoose.Types.ObjectId)
               ? buildingType.toString()
               : {
-                  id: (buildingType as IBuildingType & Document)._id.toString(),
-                  name: (buildingType as IBuildingType & Document).name,
-                  description: (buildingType as IBuildingType & Document).description,
+                  id: buildingType._id.toString(),
+                  name: buildingType.name,
+                  description: buildingType.description,
                 },
             heatingSystemType: b.heatingSystemType,
             status: b.status,
@@ -232,7 +235,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const userDoc = c.get("userDoc");
       const buildingData = c.req.valid("json");
 
-      const buildingType = await BuildingType.findById(buildingData.buildingType);
+      const buildingType = await BuildingType.findById(buildingData.buildingType).lean();
+
       if (!buildingType) {
         return c.json({ error: "Building type not found" }, 404);
       }
@@ -244,9 +248,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
 
       await building.save();
-      await building.populate("buildingType", "name description");
-
-      const bt = building.buildingType!;
 
       return c.json({
         success: true,
@@ -257,13 +258,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           surface: building.surface,
           ceilingHeight: building.ceilingHeight,
           location: building.location,
-          buildingType: (bt instanceof mongoose.Types.ObjectId)
-            ? bt.toString()
-            : {
-                id: (bt as IBuildingType & Document)._id.toString(),
-                name: (bt as IBuildingType & Document).name,
-                description: (bt as IBuildingType & Document).description,
-              },
+          buildingType: buildingType,
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
@@ -327,13 +322,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const { id } = c.req.valid("param");
 
-      const building = await Building.findById(id).populate("buildingType", "name description");
+      const building = await Building.findById(id).populate<{ buildingType: { name: string, description: string } }>("buildingType", "name description").lean();
 
       if (!building) {
         return c.json({ error: "Building not found" }, 404);
       }
 
-      const bt = building.buildingType!;
+      const bt = building.buildingType;
 
       // Enrich with active sensor count and current consumption
       const [activeSensorsCount, energySensor] = await Promise.all([
@@ -354,13 +349,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           surface: building.surface,
           ceilingHeight: building.ceilingHeight,
           location: building.location,
-          buildingType: (bt instanceof mongoose.Types.ObjectId)
-            ? bt.toString()
-            : {
-                id: (bt as IBuildingType & Document)._id.toString(),
-                name: (bt as IBuildingType & Document).name,
-                description: (bt as IBuildingType & Document).description,
-              },
+          buildingType: bt,
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
@@ -466,11 +455,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       await building.save();
 
-      
-
       // Populate for response
-      await building.populate("buildingType", "name description");
-      const bt = building.buildingType!;
+      const populatedBuilding = await building.populate<{ buildingType: { name: string, description: string } }>("buildingType", "name description");
+      const bt = populatedBuilding.buildingType;
 
       // Enrich with active sensor count and current consumption
       const [activeSensorsCount, energySensor] = await Promise.all([
@@ -492,13 +479,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           surface: building.surface,
           ceilingHeight: building.ceilingHeight,
           location: building.location,
-          buildingType: (bt instanceof mongoose.Types.ObjectId)
-            ? bt.toString()
-            : {
-                id: (bt as IBuildingType & Document)._id.toString(),
-                name: (bt as IBuildingType & Document).name,
-                description: (bt as IBuildingType & Document).description,
-              },
+          buildingType: bt,
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
@@ -566,15 +547,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Building not found" }, 404);
       }
 
-      
-
       // Cascade delete: first delete sensor readings, then sensors, then building
-      await SensorReading.deleteMany({ "metadata.buildingId": new Types.ObjectId(id) });
-      await Alert.deleteMany({ buildingId: id });
-      await Sensor.deleteMany({ buildingId: id });
-      await Building.findByIdAndDelete(id);
-
-      
+      await Promise.all([
+        SensorReading.deleteMany({ "metadata.buildingId": new Types.ObjectId(id) }),
+        Alert.deleteMany({ buildingId: id }),
+        Sensor.deleteMany({ buildingId: id }),
+        building.deleteOne(),
+      ]);
 
       return c.json({
         success: true,
@@ -639,9 +618,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const sensors = await Sensor.find({ buildingId: id, status: "active" });
 
       // Find sensors by type and get their last readings
-      const internalTempSensor = sensors.find((s: ISensor) => s.sensorType === "internal_temp");
-      const externalTempSensor = sensors.find((s: ISensor) => s.sensorType === "external_temp");
-      const energyMeterSensor = sensors.find((s: ISensor) => s.sensorType === "energy_meter");
+      const internalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "internal_temp");
+      const externalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "external_temp");
+      const energyMeterSensor = sensors.find((s: SensorDocument) => s.sensorType === "energy_meter");
 
       return c.json({
         buildingId: building._id.toString(),
@@ -731,7 +710,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }
 
       // Build query for sensor readings
-      const query: QueryFilter<ISensorReading> = {
+      const query: QueryFilter<SensorReadingDocument> = {
         "metadata.buildingId": id,
         timestamp: {
           $gte: new Date(startDate),
@@ -759,8 +738,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           timestamp: r.timestamp.toISOString(),
           value: r.value,
           unit: r.unit,
-          sensorType: r.metadata.sensorType,
-          sensorId: r.metadata.sensorId?.toString(),
+          sensorType: r.metadata!.sensorType,
+          sensorId: r.metadata!.sensorId?.toString(),
         })),
       });
     }
@@ -1086,8 +1065,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
       let weatherFallbackExtTemp: number | null = null;
       if (!hasSensorExternalTemp) {
         weatherFallbackExtTemp = await getAverageHistoricalTemperature(
-          building.location.coordinates[1],
-          building.location.coordinates[0],
+          building.location.coordinates[1]!,
+          building.location.coordinates[0]!,
           start,
           end
         );
@@ -1159,8 +1138,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
       let averageExternalTemperature: number | null = avgExternalTempFromBasic;
       if (averageExternalTemperature === null) {
         averageExternalTemperature = weatherFallbackExtTemp ?? await getAverageHistoricalTemperature(
-          building.location.coordinates[1],
-          building.location.coordinates[0],
+          building.location.coordinates[1]!,
+          building.location.coordinates[0]!,
           start,
           end
         );

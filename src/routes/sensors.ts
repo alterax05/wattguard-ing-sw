@@ -1,12 +1,11 @@
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import type { QueryFilter, Document } from "mongoose";
+import type { QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
-import { Sensor, type ISensor } from "../models/Sensor";
-import { Building, type IBuilding } from "../models/Building";
-import { SensorReading, type ISensorReading } from "../models/SensorReading";
+import { Sensor, type SensorDocument } from "../models/Sensor";
+import { Building, type BuildingDocument } from "../models/Building";
+import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
 import { Alert, type AlertThresholdType } from "../models/Alert";
-import { isInactive } from "../lib/inactivity";
 import { deleteAlertsForRemovedThresholds } from "../lib/alerts";
 
 import {
@@ -21,8 +20,6 @@ import {
   UpdateSensorResponseSchema,
   DeleteSensorParamsSchema,
   DeleteSensorResponseSchema,
-  CreateReadingRequestSchema,
-  CreateReadingResponseSchema,
   GetSensorReadingsQuerySchema,
   GetSensorReadingsResponseSchema,
   ErrorSchema,
@@ -54,7 +51,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const query = c.req.valid("query");
 
       // Build filter
-      const filter: QueryFilter<ISensor> = {};
+      const filter: QueryFilter<SensorDocument> = {};
       if (query.buildingId) filter.buildingId = query.buildingId;
       if (query.sensorType) filter.sensorType = query.sensorType;
       if (query.status) filter.status = query.status;
@@ -68,33 +65,21 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Get sensors with building populated
       const sensors = await Sensor.find(filter)
-        .populate("buildingId", "name address")
+        .populate< { buildingId : BuildingDocument } >("buildingId", "name address")
         .sort({ [sortField]: sortOrder })
         .limit(query.limit)
         .skip(query.offset);
-
-      //TODO: move this to virtual field in the model
-      const offlineSensorIds = new Set(
-        sensors
-          .filter((sensor) => sensor.status === "active" && isInactive(sensor))
-          .map((sensor) => sensor._id.toString())
-      );
 
       // Auto-mark sensors inactive when they exceed 2× their transmission interval
       // without sending a reading. Only sensors currently "active" are affected;
       // manually-set statuses (maintenance, error) are left untouched.
       await Promise.all(
-        sensors
-          .filter((s) => offlineSensorIds.has(s._id.toString()))
-          .map((s) => {
-            s.status = "inactive";
-            return s.save();
-          })
+        sensors.map(async (sensor) => sensor.updateStatus())
       );
 
       return c.json({
         sensors: sensors.map((sensor) => {
-          const building = sensor.buildingId as unknown as IBuilding & Document;
+          const building = sensor.buildingId;
           return {
             id: sensor._id.toString(),
             buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
@@ -103,7 +88,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
             serialNumber: sensor.serialNumber,
             installationDate: sensor.installationDate.toISOString(),
             status: sensor.status,
-            isOffline: sensor.status === "inactive" || offlineSensorIds.has(sensor._id.toString()),
+            isOffline: sensor.status === "inactive",
             lastReading: sensor.lastReading
               ? {
                   value: sensor.lastReading.value,
@@ -205,7 +190,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           success: true,
           sensor: {
             id: sensor._id.toString(),
-            buildingId: sensor.buildingId.toString(),
+            buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
             sensorType: sensor.sensorType,
             location: sensor.location,
             serialNumber: sensor.serialNumber,
@@ -255,24 +240,26 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const { id } = c.req.valid("param");
 
-      const sensor = await Sensor.findById(id).populate("buildingId", "name address");
+      const sensor = await Sensor.findById(id).populate<{ buildingId: BuildingDocument }>("buildingId", "name address");
 
       if (!sensor) {
         return c.json({ error: "Sensor not found" }, 404);
       }
 
-      const building = sensor.buildingId as unknown as IBuilding & Document;
+      const building = sensor.buildingId;
+
+      await sensor.updateStatus();
 
       return c.json({
         sensor: {
           id: sensor._id.toString(),
-          buildingId: sensor.buildingId.toString(),
+          buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
           sensorType: sensor.sensorType,
           location: sensor.location,
           serialNumber: sensor.serialNumber,
           installationDate: sensor.installationDate.toISOString(),
           status: sensor.status,
-          isOffline: sensor.status === "inactive" || (sensor.status === "active" && isInactive(sensor)),
+          isOffline: sensor.status === "inactive",
           lastReading: sensor.lastReading
             ? {
                 value: sensor.lastReading.value,
@@ -342,12 +329,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const { id } = c.req.valid("param");
       const updates = c.req.valid("json");
 
-      const sensor = await Sensor.findById(id);
+      const sensor = await Sensor.findById(id).lean();
       if (!sensor) {
         return c.json({ error: "Sensor not found" }, 404);
       }
 
-      //TODO: this should have a setter in the model
       const removedThresholdTypes: AlertThresholdType[] = [];
       if (updates.minThreshold === null) removedThresholdTypes.push("min");
       if (updates.maxThreshold === null) removedThresholdTypes.push("max");
@@ -360,43 +346,48 @@ const app = new Hono<{ Variables: AuthVariables }>()
         }
       }
 
-      //TODO: this mabye could be done with a updateOne method
+      const update = {
+        $set: {
+          ...updates,
+          updatedBy: userDoc._id,
+        },
+        $unset: {
+          ...(updates.minThreshold === null ? { minThreshold: 1 } : {}),
+          ...(updates.maxThreshold === null ? { maxThreshold: 1 } : {}),
+        },
+      };
 
-      // Apply updates
-      //TODO: this is tecnically wrong, the sensor is not a POJO
-      Object.assign(sensor, Object.fromEntries(
-        Object.entries(updates).filter(([_, v]) => v !== undefined).map(([k, v]) => v === null ? [k, undefined] : [k, v])
-      ));
+      if (updates.minThreshold === null) delete update.$set.minThreshold;
+      if (updates.maxThreshold === null) delete update.$set.maxThreshold;
 
-      sensor.updatedBy = userDoc._id;
+      const updatedSensor = await Sensor.findByIdAndUpdate(sensor._id, update, { returnDocument: "after" });
 
-      await sensor.save();
       await deleteAlertsForRemovedThresholds(sensor._id, removedThresholdTypes);
 
       return c.json({
         success: true,
         sensor: {
-          id: sensor._id.toString(),
-          buildingId: sensor.buildingId.toString(),
-          sensorType: sensor.sensorType,
-          location: sensor.location,
-          serialNumber: sensor.serialNumber,
-          installationDate: sensor.installationDate.toISOString(),
-          status: sensor.status,
-          lastReading: sensor.lastReading
+          id: updatedSensor!._id.toString(),
+          buildingId: updatedSensor!.buildingId.toString(),
+          sensorType: updatedSensor!.sensorType,
+          location: updatedSensor!.location,
+          serialNumber: updatedSensor!.serialNumber,
+          installationDate: updatedSensor!.installationDate.toISOString(),
+          status: updatedSensor!.status,
+          lastReading: updatedSensor!.lastReading
             ? {
-                value: sensor.lastReading.value,
-                timestamp: sensor.lastReading.timestamp.toISOString(),
-                unit: sensor.lastReading.unit,
+                value: updatedSensor!.lastReading.value,
+                timestamp: updatedSensor!.lastReading.timestamp.toISOString(),
+                unit: updatedSensor!.lastReading.unit,
               }
             : undefined,
-          transmissionInterval: sensor.transmissionInterval,
-          minThreshold: sensor.minThreshold,
-          maxThreshold: sensor.maxThreshold,
-          createdBy: sensor.createdBy?.toString(),
-          updatedBy: sensor.updatedBy?.toString(),
-          createdAt: sensor.createdAt?.toISOString(),
-          updatedAt: sensor.updatedAt?.toISOString(),
+          transmissionInterval: updatedSensor!.transmissionInterval,
+          minThreshold: updatedSensor!.minThreshold,
+          maxThreshold: updatedSensor!.maxThreshold,
+          createdBy: updatedSensor!.createdBy?.toString(),
+          updatedBy: updatedSensor!.updatedBy?.toString(),
+          createdAt: updatedSensor!.createdAt?.toISOString(),
+          updatedAt: updatedSensor!.updatedAt?.toISOString(),
         },
       });
     }
@@ -494,16 +485,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }
 
       // Build query
-      const filter: QueryFilter<ISensorReading> = {
-        "metadata.sensorId": id,
-      };
+      const filter: QueryFilter<SensorReadingDocument> = {"metadata.sensorId": id};
 
       if (query.startDate || query.endDate) {
         filter.timestamp = {};
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (query.startDate) (filter.timestamp as any).$gte = new Date(query.startDate);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (query.endDate) (filter.timestamp as any).$lte = new Date(query.endDate);
+        if (query.startDate) filter.timestamp.$gte = new Date(query.startDate);
+        if (query.endDate) filter.timestamp.$lte = new Date(query.endDate);
       }
 
       // Count total
@@ -522,11 +509,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           timestamp: r.timestamp.toISOString(),
           value: r.value,
           unit: r.unit,
-          metadata: {
-            sensorId: r.metadata.sensorId.toString(),
-            buildingId: r.metadata.buildingId.toString(),
-            sensorType: r.metadata.sensorType,
-          },
+          metadata: r.metadata,
         })),
         pagination: {
           limit: query.limit,

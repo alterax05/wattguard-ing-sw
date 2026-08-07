@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { Types, type QueryFilter } from "mongoose";
-import { Alert as AlertModel, type IAlert } from "../models/Alert";
+import { Alert as AlertModel, type AlertDocument } from "../models/Alert";
 import {
   ListAlertsQuerySchema,
   ListAlertsResponseSchema,
@@ -46,7 +46,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         sortOrder = "desc" 
       } = query;
 
-      const filter: QueryFilter<IAlert> = {};
+      const filter: QueryFilter<AlertDocument> = {};
       if (buildingId) {
         if (!Types.ObjectId.isValid(buildingId)) {
           return c.json({ error: "Invalid building ID format" }, 400);
@@ -84,8 +84,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
             acknowledgedAt: a.acknowledgedAt?.toISOString(),
             resolvedBy: a.resolvedBy,
             resolvedAt: a.resolvedAt?.toISOString(),
-            createdAt: (a as IAlert).createdAt.toISOString(),
-            updatedAt: (a as IAlert).updatedAt.toISOString(),
+            createdAt: (a as AlertDocument).createdAt.toISOString(),
+            updatedAt: (a as AlertDocument).updatedAt.toISOString(),
           })),
           pagination: {
             limit,

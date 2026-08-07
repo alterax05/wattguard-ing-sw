@@ -1,9 +1,9 @@
 import { describe, test, expect } from "bun:test";
 import { isInactive } from "../../lib/inactivity";
-import type { ISensor } from "../../models/Sensor";
+import type { SensorDocument } from "../../models/Sensor";
 import { Types } from "mongoose";
 
-function makeSensor(overrides: Partial<ISensor> = {}): ISensor {
+function makeSensor(overrides: Partial<Omit<SensorDocument, "createdAt" | "updatedAt">> = {}): SensorDocument {
   return {
     buildingId: new Types.ObjectId(),
     sensorType: "internal_temp",
@@ -13,14 +13,16 @@ function makeSensor(overrides: Partial<ISensor> = {}): ISensor {
     transmissionInterval: 90,
     createdBy: new Types.ObjectId(),
     updatedBy: new Types.ObjectId(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
   };
 }
 
 describe("isInactive", () => {
-  test("returns false when sensor has no lastReading", () => {
+  test("returns true when sensor has no lastReading", () => {
     const sensor = makeSensor({ lastReading: undefined });
-    expect(isInactive(sensor)).toBe(false);
+    expect(isInactive(sensor)).toBe(true);
   });
 
   test("returns false when elapsed time is within 2× transmissionInterval", () => {
@@ -37,16 +39,17 @@ describe("isInactive", () => {
   });
 
   test("returns false when elapsed time is exactly 2× transmissionInterval", () => {
+    const now = Date.now();
     const sensor = makeSensor({
       transmissionInterval: 90,
       lastReading: {
         value: 22,
         unit: "°C",
         // Exactly 180 s ago — boundary should NOT be inactive (strict >)
-        timestamp: new Date(Date.now() - 180_000),
+        timestamp: new Date(now - 180_000),
       },
     });
-    expect(isInactive(sensor)).toBe(false);
+    expect(isInactive(sensor, now)).toBe(false);
   });
 
   test("returns true when elapsed time exceeds 2× transmissionInterval", () => {

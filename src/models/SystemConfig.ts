@@ -1,28 +1,11 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
 /**
  * SystemConfig - Singleton document storing system-wide configuration.
  * Only one document ever exists; use getOrCreate() to access it.
  */
 
-export interface ISystemConfig {
-  polling: {
-    /** Frontend refetch interval in seconds for the realtime dashboard widget */
-    intervalSeconds: number;
-    /** Whether automatic polling is enabled */
-    autoPollingEnabled: boolean;
-  };
-  notifications: {
-    /** Whether email notifications are enabled */
-    emailEnabled: boolean;
-  };
-  database: {
-    /** Number of days to retain historical sensor readings */
-    dataRetentionDays: number;
-  };
-}
-
-const systemConfigSchema = new Schema<ISystemConfig>(
+const systemConfigSchema = new Schema(
   {
     polling: {
       intervalSeconds: { type: Number, default: 90, min: 10, max: 3600 },
@@ -38,12 +21,13 @@ const systemConfigSchema = new Schema<ISystemConfig>(
   { timestamps: true },
 );
 
+type SystemConfigDocument = InferSchemaType<typeof systemConfigSchema>;
 /**
  * Returns the single SystemConfig document, creating it with defaults if it
  * does not yet exist.
  */
 systemConfigSchema.statics.getOrCreate =
-  async function (): Promise<mongoose.Document & ISystemConfig> {
+  async function (): Promise<SystemConfigDocument> {
     const doc = await this.findOneAndUpdate(
       {},
       { $setOnInsert: {} },
@@ -52,11 +36,11 @@ systemConfigSchema.statics.getOrCreate =
     return doc;
   };
 
-interface SystemConfigModel extends mongoose.Model<ISystemConfig> {
-  getOrCreate(): Promise<mongoose.Document & ISystemConfig>;
+interface SystemConfigModel extends mongoose.Model<SystemConfigDocument> {
+  getOrCreate(): Promise<SystemConfigDocument>;
 }
 
-export const SystemConfig = mongoose.model<ISystemConfig, SystemConfigModel>(
+export const SystemConfig = mongoose.model<SystemConfigDocument, SystemConfigModel>(
   "SystemConfig",
   systemConfigSchema,
 );

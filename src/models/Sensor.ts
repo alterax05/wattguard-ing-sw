@@ -1,40 +1,11 @@
-import mongoose, { Schema, Types } from "mongoose";
+import mongoose, {
+  Schema,
+  type InferSchemaType,
+} from "mongoose";
+import { Building } from "./Building";
+import { User } from "./User";
 
-export type SensorType = "internal_temp" | "external_temp" | "energy_meter" | "gas_meter";
-export type SensorStatus = "active" | "inactive" | "maintenance" | "error";
-
-export interface ILastReading {
-  value: number;
-  timestamp: Date;
-  unit: string;
-}
-
-export interface ISimulationConfig {
-  baseValue?: number;
-  amplitude?: number; // For sine wave
-  noise?: number; // Random deviation
-  min?: number;
-  max?: number;
-}
-
-export interface ISensor {
-  buildingId: Types.ObjectId;
-  sensorType: SensorType;
-  location: string;
-  serialNumber?: string;
-  installationDate: Date;
-  status: SensorStatus;
-  lastReading?: ILastReading;
-  transmissionInterval: number;
-  minThreshold?: number;
-  maxThreshold?: number;
-  createdBy: Types.ObjectId;
-  updatedBy: Types.ObjectId;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-const lastReadingSchema = new Schema<ILastReading>(
+const lastReadingSchema = new Schema(
   {
     value: {
       type: Number,
@@ -51,14 +22,14 @@ const lastReadingSchema = new Schema<ILastReading>(
       trim: true,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
-const sensorSchema = new Schema<ISensor>(
+const sensorSchema = new Schema(
   {
     buildingId: {
       type: Schema.Types.ObjectId,
-      ref: "Building",
+      ref: Building,
       required: true,
       index: true,
     },
@@ -76,6 +47,8 @@ const sensorSchema = new Schema<ISensor>(
     serialNumber: {
       type: String,
       trim: true,
+      unique: true,
+      sparse: true,
     },
     installationDate: {
       type: Date,
@@ -107,20 +80,55 @@ const sensorSchema = new Schema<ISensor>(
     },
     createdBy: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: User,
       required: true,
     },
     updatedBy: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: User,
       required: true,
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 sensorSchema.index({ buildingId: 1, sensorType: 1 });
 
-export const Sensor = mongoose.model<ISensor>("Sensor", sensorSchema);
+sensorSchema.methods.isActive = function (): boolean {
+  if (!this.lastReading?.timestamp) return false;
+  const elapsedSeconds =
+    (Date.now() - this.lastReading.timestamp.getTime()) / 1000;
+  return elapsedSeconds <= 2 * this.transmissionInterval;
+};
+
+sensorSchema.methods.updateStatus = async function (newStatus?: SensorStatus) {
+  if (newStatus !== undefined) {
+    this.status = newStatus;
+  } else if (this.status === "active" || this.status === "inactive") {
+    this.status = this.isActive() ? "active" : "inactive";
+  }
+  await this.save();
+};
+
+export type SensorDocument = InferSchemaType<typeof sensorSchema>;
+
+export type SensorStatus = SensorDocument["status"];
+
+export type SensorType = SensorDocument["sensorType"];
+
+type SensorModel = mongoose.Model<
+  SensorDocument,
+  object,
+  {
+    isActive(): boolean;
+    updateStatus(newStatus?: SensorStatus): Promise<void>;
+  },
+  object
+>;
+
+export const Sensor = mongoose.model<SensorDocument, SensorModel>(
+  "Sensor",
+  sensorSchema,
+);

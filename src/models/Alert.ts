@@ -1,27 +1,7 @@
-import mongoose, { Schema, Types } from "mongoose";
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
-export type AlertSeverity = "low" | "medium" | "high" | "critical";
-export type AlertStatus = "active" | "acknowledged" | "resolved";
-export type AlertThresholdType = "min" | "max";
 
-export interface IAlert {
-  buildingId: Types.ObjectId;
-  buildingName: string;
-  sensorId?: Types.ObjectId;
-  type: string;
-  thresholdType?: AlertThresholdType;
-  severity: AlertSeverity;
-  message: string;
-  status: AlertStatus;
-  acknowledgedBy?: string;
-  acknowledgedAt?: Date;
-  resolvedBy?: string;
-  resolvedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const alertSchema = new Schema<IAlert>(
+const alertSchema = new Schema(
   {
     buildingId: {
       type: Schema.Types.ObjectId,
@@ -90,4 +70,10 @@ alertSchema.index({ buildingId: 1, status: 1 });
 // Compound index to prevent creating duplicate active alerts for the same sensor/type
 alertSchema.index({ sensorId: 1, type: 1, status: 1 });
 
-export const Alert = mongoose.model<IAlert>("Alert", alertSchema);
+export type AlertDocument = InferSchemaType<typeof alertSchema>;
+
+export type AlertStatus = AlertDocument["status"];
+export type AlertThresholdType = AlertDocument["thresholdType"];
+export type AlertSeverity = AlertDocument["severity"];
+
+export const Alert = mongoose.model("Alert", alertSchema);

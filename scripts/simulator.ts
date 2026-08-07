@@ -1,7 +1,7 @@
-import mongoose from "mongoose";
+import mongoose, { type HydratedDocument } from "mongoose";
 import mqtt from "mqtt";
-import { Sensor, type ISensor } from "../src/models/Sensor";
-import { Building, type IBuilding } from "../src/models/Building";
+import { Sensor, type SensorDocument } from "../src/models/Sensor";
+import { Building, type BuildingDocument } from "../src/models/Building";
 import { BuildingType } from "../src/models/BuildingType";
 import { User } from "../src/models/User";
 
@@ -121,7 +121,7 @@ const buildingStates = new Map<string, BuildingState>();
 
 function getOrInitState(
   buildingId: string,
-  building: IBuilding,
+  building: BuildingDocument,
   profile: HeatingProfile
 ): BuildingState {
   if (!buildingStates.has(buildingId)) {
@@ -331,7 +331,7 @@ async function startSimulation() {
   console.log("🔎 Discovering active sensors...");
 
   // Load all active sensors with their building info
-  const sensors = await Sensor.find({ status: "active" });
+  const sensors = await Sensor.find({ $or: [{ status: "active" }, { status: "inactive" }] });
 
   if (sensors.length === 0) {
     console.log("⚠️  No active sensors found.");
@@ -339,7 +339,7 @@ async function startSimulation() {
   }
 
   // Preload buildings for all sensors
-  const buildingIds: string[] = [...new Set(sensors.map((s: ISensor) => s.buildingId.toString()))];
+  const buildingIds: string[] = [...new Set(sensors.map((s: SensorDocument) => s.buildingId.toString()))];
   const buildings   = await Building.find({ _id: { $in: buildingIds } });
   const buildingMap = new Map(buildings.map((b) => [b._id.toString(), b]));
 
@@ -370,8 +370,8 @@ async function startSimulation() {
 }
 
 function simulateSensor(
-  sensor: ISensor & { _id: mongoose.Types.ObjectId },
-  building: IBuilding & { _id: mongoose.Types.ObjectId }
+  sensor: HydratedDocument<SensorDocument>,
+  building: BuildingDocument & { _id: mongoose.Types.ObjectId }
 ) {
   const sensorId   = sensor._id.toString();
   const buildingId = building._id.toString();

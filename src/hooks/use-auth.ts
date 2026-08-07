@@ -50,7 +50,11 @@ export function useCurrentUser() {
       }
 
       const data = await res.json();
-      return data.user;
+      return {
+        ...data.user,
+        name: data.user.name ?? undefined,
+        lastLoginAt: data.user.lastLoginAt ?? undefined,
+      }
     },
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes

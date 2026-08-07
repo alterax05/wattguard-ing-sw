@@ -1,21 +1,6 @@
-import mongoose, { Schema, Document } from "mongoose";
-import type { UserRole } from "./User";
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
-export type InviteStatus = "pending" | "accepted" | "revoked" | "expired";
-
-export interface IInvite extends Document {
-  email: string;
-  role: UserRole;
-  tokenHash: string; // SHA-256 hash of the raw token
-  status: InviteStatus;
-  expiresAt: Date;
-  createdBy: mongoose.Types.ObjectId; // admin user who created the invite
-  acceptedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const inviteSchema = new Schema<IInvite>(
+const inviteSchema = new Schema(
   {
     email: {
       type: String,
@@ -60,7 +45,19 @@ const inviteSchema = new Schema<IInvite>(
   }
 );
 
+if (!inviteSchema.options.toObject) inviteSchema.options.toObject = {};
+
+inviteSchema.options.toObject.transform = function (doc, ret: Record<string, unknown>) {
+  ret.id = ret._id;
+  delete ret._id;
+  return ret;
+};
+
+export type InviteDocument = InferSchemaType<typeof inviteSchema>;
+
+export type InviteStatus = InviteDocument["status"];
+
 // TTL index to automatically delete expired invites
 inviteSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const Invite = mongoose.model<IInvite>("Invite", inviteSchema);
+export const Invite = mongoose.model("Invite", inviteSchema);
