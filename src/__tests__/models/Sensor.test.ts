@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { Sensor, type SensorStatus, type SensorType } from "../../models/Sensor";
-import { Building, type IBuilding } from "../../models/Building";
+import { Building, type BuildingDocument } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { Types, Error as MongooseError } from "mongoose";
@@ -664,7 +664,7 @@ describe("Sensor Model", () => {
       const populated = await Sensor.findById(sensor._id).populate("buildingId");
 
       expect(populated).not.toBeNull();
-      expect((populated!.buildingId as unknown as IBuilding).name).toBe("Test Building");
+      expect((populated!.buildingId as unknown as BuildingDocument).name).toBe("Test Building");
     });
 
     test("should delete sensor", async () => {

@@ -1,21 +1,30 @@
-import mongoose, { Schema, Types } from "mongoose";
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
 /**
  * SensorReading - Time-Series Collection for MongoDB
  */
 
-export interface ISensorReading {
-  timestamp: Date;
-  value: number;
-  unit: string;
-  metadata: {
-    sensorId: Types.ObjectId;
-    buildingId: Types.ObjectId;
-    sensorType: string;
-  };
-}
+const metadataSchema = new Schema(
+  {
+    sensorId: {
+      type: Schema.Types.ObjectId,
+      ref: "Sensor",
+      required: true,
+    },
+    buildingId: {
+      type: Schema.Types.ObjectId,
+      ref: "Building",
+      required: true,
+    },
+    sensorType: {
+      type: String,
+      required: true,
+    },
+  },
+  { _id: false },
+);
 
-const sensorReadingSchema = new Schema<ISensorReading>(
+const sensorReadingSchema = new Schema(
   {
     timestamp: {
       type: Date,
@@ -31,20 +40,8 @@ const sensorReadingSchema = new Schema<ISensorReading>(
       trim: true,
     },
     metadata: {
-      sensorId: {
-        type: Schema.Types.ObjectId,
-        ref: "Sensor",
-        required: true,
-      },
-      buildingId: {
-        type: Schema.Types.ObjectId,
-        ref: "Building",
-        required: true,
-      },
-      sensorType: {
-        type: String,
-        required: true,
-      },
+      type: metadataSchema,
+      required: true,
     },
   },
   {
@@ -58,7 +55,9 @@ const sensorReadingSchema = new Schema<ISensorReading>(
   }
 );
 
-export const SensorReading = mongoose.model<ISensorReading>(
+export type SensorReadingDocument = InferSchemaType<typeof sensorReadingSchema>;
+
+export const SensorReading = mongoose.model(
   "SensorReading",
   sensorReadingSchema,
   "sensorreadings"

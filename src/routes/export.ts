@@ -3,7 +3,7 @@ import { describeRoute, resolver, validator } from "hono-openapi";
 import { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Building } from "../models/Building";
-import { SensorReading, type ISensorReading } from "../models/SensorReading";
+import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
 import { ErrorSchema, ExportConsumptionQuerySchema } from "../schemas/export";
 import { serializeCsv } from "../lib/csv";
 
@@ -86,7 +86,7 @@ const app = new Hono<{ Variables: AuthVariables }>().get(
     const buildingNames = new Map(
       buildings.map((building) => [building._id.toString(), building.name]),
     );
-    const query: QueryFilter<ISensorReading> = {
+    const query: QueryFilter<SensorReadingDocument> = {
       "metadata.buildingId": { $in: objectIds },
       timestamp: {
         $gte: getUtcStartOfDay(startDate),

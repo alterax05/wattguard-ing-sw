@@ -1,29 +1,4 @@
-import mongoose, { Schema, Types, type PopulatedDoc } from "mongoose";
-import type { IBuildingType } from "./BuildingType";
-
-export type BuildingStatus = "active" | "inactive" | "decommissioned";
-
-export interface IGeoJSONPoint {
-  type: "Point";
-  coordinates: [number, number]; // [longitude, latitude]
-}
-
-export interface IBuilding {
-  name: string;
-  address: string;
-  surface: number; // m²
-  ceilingHeight: number; // m
-  location: IGeoJSONPoint;
-  buildingType: PopulatedDoc<IBuildingType>;
-  heatingSystemType: string;
-  constructionYear?: number;
-  geographicZone: string;
-  status: BuildingStatus;
-  createdBy: Types.ObjectId;
-  updatedBy: Types.ObjectId;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import mongoose, { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 
 const pointSchema = new Schema(
   {
@@ -40,7 +15,7 @@ const pointSchema = new Schema(
   { _id: false }
 );
 
-const buildingSchema = new Schema<IBuilding>(
+export const buildingSchema = new Schema(
   {
     name: {
       type: String,
@@ -121,4 +96,8 @@ buildingSchema.index({ name: "text", address: "text" });
 buildingSchema.index({ geographicZone: 1, buildingType: 1 });
 buildingSchema.index({ status: 1, buildingType: 1 });
 
-export const Building = mongoose.model<IBuilding>("Building", buildingSchema);
+export const Building = mongoose.model("Building", buildingSchema);
+
+export type BuildingDocument = HydratedDocument<InferSchemaType<typeof buildingSchema>>;
+
+export type BuildingStatus = BuildingDocument["status"];

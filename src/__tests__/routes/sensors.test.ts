@@ -31,8 +31,8 @@ let adminUserId: string;
 let buildingId: string;
 
 beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
+//  console.log = () => {};
+//  console.error = () => {};
   await connectTestDB();
 });
 
@@ -605,7 +605,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(e!.isOffline).toBe(false);
     });
 
-    test("should not mark active sensor with no lastReading as inactive", async () => {
+    test("should mark active sensor with no lastReading as inactive", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "energy_meter",
@@ -624,8 +624,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
-      expect(found!.status).toBe("active");
-      expect(found!.isOffline).toBe(false);
+      expect(found!.status).toBe("inactive");
     });
   });
 

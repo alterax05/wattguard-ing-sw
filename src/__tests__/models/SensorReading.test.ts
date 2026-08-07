@@ -79,9 +79,9 @@ describe("SensorReading Model", () => {
       expect(reading.timestamp).toBeInstanceOf(Date);
       expect(reading.value).toBe(22.5);
       expect(reading.unit).toBe("°C");
-      expect(reading.metadata.sensorId.toString()).toBe(sensorId.toString());
-      expect(reading.metadata.buildingId.toString()).toBe(buildingId.toString());
-      expect(reading.metadata.sensorType).toBe("internal_temp");
+      expect(reading.metadata!.sensorId.toString()).toBe(sensorId.toString());
+      expect(reading.metadata!.buildingId.toString()).toBe(buildingId.toString());
+      expect(reading.metadata!.sensorType).toBe("internal_temp");
       expect(reading._id).toBeDefined();
     });
 

@@ -74,17 +74,17 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const users = await User.find()
         .select("-passwordHash -googleSub -__v")
-        .sort({ createdAt: -1 });
-        
+        .sort({ createdAt: -1 }).lean();
+
       return c.json({
-        users: users.map((u) => ({
-          id: u._id.toString(),
-          email: u.email,
-          name: u.name,
-          role: u.role,
-          isDisabled: u.isDisabled,
-          lastLoginAt: u.lastLoginAt?.toISOString(),
-          createdAt: u.createdAt.toISOString(),
+        users: users.map((user) => ({
+          id: user._id.toString(),
+          email: user.email,
+          name: user.name ?? undefined,
+          role: user.role,
+          isDisabled: user.isDisabled,
+          lastLoginAt: user.lastLoginAt?.toISOString(),
+          createdAt: user.createdAt.toISOString(),
         })),
       });
     }
@@ -163,7 +163,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         user: {
           id: user._id.toString(),
           email: user.email,
-          name: user.name,
+          name: user.name ?? undefined,
           role: user.role,
           isDisabled: user.isDisabled,
           lastLoginAt: user.lastLoginAt?.toISOString(),
@@ -275,8 +275,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const invites = await Invite.find()
         .sort({ createdAt: -1 })
-        .populate("createdBy", "email")
-        .limit(100);
+        .populate("createdBy", "email").lean();
 
       return c.json({ invites });
     }
@@ -378,14 +377,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }
 
       return c.json({
-        success: true,
-        invite: {
-          id: invite._id.toString(),
-          email: invite.email,
-          role: invite.role,
-          status: invite.status,
-          expiresAt: invite.expiresAt.toISOString(),
-        },
+        success: true as const,
+        invite: invite,
       }, 201);
     }
   )
@@ -454,7 +447,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       invite.status = "revoked";
       await invite.save();
 
-      return c.json({ success: true, invite });
+      return c.json({ success: true as const, invite });
     }
   );
 

@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { Building, type BuildingStatus } from "../../models/Building";
-import { BuildingType, type IBuildingType } from "../../models/BuildingType";
+import { BuildingType, type BuildingTypeDocument } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { Types, Error as MongooseError } from "mongoose";
 
@@ -670,10 +670,10 @@ describe("Building Model", () => {
         updatedBy: userId,
       });
 
-      const populated = await Building.findById(building._id).populate("buildingType");
+      const populated = await Building.findById(building._id).populate<{ buildingType: BuildingTypeDocument }>("buildingType");
 
       expect(populated).not.toBeNull();
-      expect((populated!.buildingType as IBuildingType).name).toBe("Residenziale");
+      expect(populated!.buildingType.name).toBe("Residenziale");
     });
   });
 });

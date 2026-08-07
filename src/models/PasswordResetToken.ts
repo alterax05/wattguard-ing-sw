@@ -1,15 +1,6 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
-export interface IPasswordResetToken extends Document {
-  userId: mongoose.Types.ObjectId;
-  tokenHash: string; // SHA-256 hash of the raw token
-  expiresAt: Date;
-  usedAt?: Date; // Track when token was used to prevent reuse
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const passwordResetTokenSchema = new Schema<IPasswordResetToken>(
+const passwordResetTokenSchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -37,10 +28,12 @@ const passwordResetTokenSchema = new Schema<IPasswordResetToken>(
   }
 );
 
+export type PasswordResetTokenDocument = InferSchemaType<typeof passwordResetTokenSchema>;
+
 // TTL index to automatically delete expired tokens
 passwordResetTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const PasswordResetToken = mongoose.model<IPasswordResetToken>(
+export const PasswordResetToken = mongoose.model(
   "PasswordResetToken",
   passwordResetTokenSchema
 );

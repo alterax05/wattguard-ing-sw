@@ -4,14 +4,15 @@
  */
 import { createMiddleware } from "hono/factory";
 import type { JwtVariables } from "hono/jwt";
-import { User, type IUser } from "../models/User";
+import type { HydratedDocument } from "mongoose";
+import { User, type UserDocument } from "../models/User";
 import type { AccessTokenPayload } from "../auth/jwt";
 
 /**
  * Extend Hono's JwtVariables with our custom userDoc
  */
 export type AuthVariables = JwtVariables<AccessTokenPayload> & {
-  userDoc: IUser;
+  userDoc: HydratedDocument<UserDocument>;
 };
 
 /**

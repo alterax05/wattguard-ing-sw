@@ -25,25 +25,21 @@ import {
   ErrorSchema,
 } from "../schemas/settings";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 /** Serialize a SystemConfig document to a plain object for API responses. */
 function serializeConfig(doc: Awaited<ReturnType<typeof SystemConfig.getOrCreate>>) {
   return {
     polling: {
-      intervalSeconds: doc.polling.intervalSeconds,
-      autoPollingEnabled: doc.polling.autoPollingEnabled,
+      intervalSeconds: doc.polling!.intervalSeconds,
+      autoPollingEnabled: doc.polling!.autoPollingEnabled,
     },
     notifications: {
-      emailEnabled: doc.notifications.emailEnabled,
+      emailEnabled: doc.notifications!.emailEnabled,
     },
     database: {
-      dataRetentionDays: doc.database.dataRetentionDays,
+      dataRetentionDays: doc.database!.dataRetentionDays,
     },
   };
 }
-
-// ── Routes ───────────────────────────────────────────────────────────────────
 
 const app = new Hono<{ Variables: AuthVariables }>()
   // ── GET /api/settings ──────────────────────────────────────────────────────

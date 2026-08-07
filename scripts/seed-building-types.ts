@@ -10,7 +10,7 @@
 
 import mongoose from "mongoose";
 import * as readline from 'readline';
-import { BuildingType, type IBuildingType } from "../src/models/BuildingType";
+import { BuildingType, type BuildingTypeDocument } from "../src/models/BuildingType";
 
 const defaultBuildingTypes = [
   {
@@ -120,7 +120,7 @@ async function seedBuildingTypes() {
           } else {
             const results = await BuildingType.insertMany(missingTypes);
             console.log(`✅ Successfully added ${results.length} missing building types:`);
-            results.forEach((type: IBuildingType) => {
+            results.forEach((type: BuildingTypeDocument) => {
               console.log(`   - ${type.name}: ${type.description}`);
             });
           }
@@ -130,7 +130,7 @@ async function seedBuildingTypes() {
           await BuildingType.deleteMany({});
           const results = await BuildingType.insertMany(defaultBuildingTypes);
           console.log(`✅ Successfully recreated ${results.length} building types:`);
-          results.forEach((type: IBuildingType) => {
+          results.forEach((type: BuildingTypeDocument) => {
             console.log(`   - ${type.name}: ${type.description}`);
           });
           break;
@@ -143,8 +143,8 @@ async function seedBuildingTypes() {
       console.log(`📝 Creating ${defaultBuildingTypes.length} building types...`);
       const results = await BuildingType.insertMany(defaultBuildingTypes);
       console.log(`✅ Successfully created ${results.length} building types:`);
-      results.forEach((type: IBuildingType) => {
-        console.log(`   - ${type.name}: ${type.description}`);
+      results.forEach((type: BuildingTypeDocument) => {
+        console.log(`- ${type.name}: ${type.description}`);
       });
     }
 

@@ -1,21 +1,6 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
-export type UserRole = "admin" | "operator";
-
-export interface IUser extends Document {
-  email: string;
-  name?: string;
-  role: UserRole;
-  isDisabled: boolean;
-  passwordHash?: string;
-  googleSub?: string;
-  lastLoginAt?: Date;
-  passwordUpdatedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const userSchema = new Schema<IUser>(
+const userSchema = new Schema(
   {
     email: {
       type: String,
@@ -35,6 +20,7 @@ const userSchema = new Schema<IUser>(
       enum: ["admin", "operator"],
       required: true,
     },
+    // TODO: quindi si può disabilitare un utente senza cancellarlo?
     isDisabled: {
       type: Boolean,
       default: false,
@@ -63,4 +49,14 @@ const userSchema = new Schema<IUser>(
   }
 );
 
-export const User = mongoose.model<IUser>("User", userSchema);
+userSchema.pre('save', async function() {
+  if (this.isModified('password') && !this.isNew) {
+    this.passwordUpdatedAt = new Date();
+  }
+});
+
+export type UserDocument = InferSchemaType<typeof userSchema>;
+
+export type UserRole = UserDocument["role"];
+
+export const User = mongoose.model("User", userSchema);
