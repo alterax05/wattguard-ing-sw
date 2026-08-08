@@ -5,6 +5,7 @@ node_modules
 out
 dist
 server-dist
+apps/api/static
 *.tgz
 
 # code coverage
