@@ -6,15 +6,15 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "bun run --parallel dev:frontend dev:backend",
-    "dev:frontend": "bunx --bun vite",
+    "dev:frontend": "bun run --cwd apps/web dev",
     "dev:backend": "bun run --cwd apps/api dev",
     "simulate": "bun run --cwd apps/api simulate",
     "start": "bun run --cwd apps/api start",
-    "build": "vite build && bun run --cwd apps/api build",
+    "build": "bun run --cwd apps/web build && bun run --cwd apps/api build",
     "test": "bun run --cwd apps/api test",
     "test:watch": "bun run --cwd apps/api test:watch",
-    "clean": "rm -rf dist server-dist apps/api/dist apps/api/static",
-    "check": "tsc --noEmit",
+    "clean": "rm -rf apps/web/dist apps/api/dist apps/api/static",
+    "check": "bun run --cwd apps/web check && bun run --cwd apps/api check && bun run --cwd packages/shared check",
     "lint": "eslint ."
   },
   "dependencies": {

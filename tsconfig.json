@@ -1,11 +1,4 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"],
-      "@wattguard/shared": ["./packages/shared/src/index.ts"],
-      "@wattguard/api": ["./apps/api/src/index.ts"]
-    }
-  },
-  "exclude": ["dist", "server-dist", "node_modules"]
+  "include": []
 }
