@@ -3,12 +3,13 @@ import { Hono } from "hono";
 import { jwt } from "hono/jwt";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
-import { describeRoute, openAPIRouteHandler, resolver } from "hono-openapi";
+import { openAPIRouteHandler } from "hono-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import mongoose from "mongoose";
 import path from "path";
 
 // Import routes
+import health from "./routes/health";
 import invites from "./routes/invites";
 import auth from "./routes/auth";
 import authLocal from "./routes/auth-local";
@@ -31,7 +32,6 @@ import { connectAndSubscribe } from "./lib/mqtt";
 
 // Import OpenAPI configuration
 import { openapiConfig } from "./config/openapi";
-import { HealthResponseSchema, type HealthResponse } from "./schemas/common";
 
 const app = new Hono()
   .use(
@@ -93,24 +93,8 @@ const app = new Hono()
     loadUserDoc(),
     requireRole("admin"),
   )
-  .get(
-    "/api/health",
-    describeRoute({
-      tags: ["Health"],
-      responses: {
-        200: {
-          description: "Server is running correctly",
-          content: {
-            "application/json": {
-              schema: resolver(HealthResponseSchema),
-            },
-          },
-        },
-      },
-    }),
-    (c) => c.json({ status: "ok" } satisfies HealthResponse),
-  )
   .route("/api/invites", invites)
+  .route("/api/health", health)
   .route("/api/auth", auth)
   .route("/api/auth/local", authLocal)
   .route("/api/auth/google", authGoogle)
