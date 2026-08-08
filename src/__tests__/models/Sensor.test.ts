@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, spyOn } from "bun:test";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { Sensor, type SensorStatus, type SensorType } from "../../models/Sensor";
 import { Building, type BuildingDocument } from "../../models/Building";
@@ -555,6 +555,123 @@ describe("Sensor Model", () => {
       await sensor.save();
 
       expect(sensor.updatedAt!.getTime()).toBeGreaterThan(originalUpdatedAt!.getTime());
+    });
+  });
+
+  describe("isActive()", () => {
+    test("should return false when sensor has no lastReading", async () => {
+      const sensor = await Sensor.create({
+        buildingId: buildingId,
+        sensorType: "internal_temp",
+        location: "Test",
+        installationDate: new Date(),
+        transmissionInterval: 90,
+        createdBy: userId,
+        updatedBy: userId,
+      });
+
+      expect(sensor.isActive()).toBe(false);
+    });
+
+    test("should return true when elapsed time is within 2× transmissionInterval", async () => {
+      const sensor = await Sensor.create({
+        buildingId: buildingId,
+        sensorType: "internal_temp",
+        location: "Test",
+        installationDate: new Date(),
+        transmissionInterval: 90,
+        lastReading: {
+          value: 22,
+          unit: "°C",
+          timestamp: new Date(Date.now() - 100_000),
+        },
+        createdBy: userId,
+        updatedBy: userId,
+      });
+
+      expect(sensor.isActive()).toBe(true);
+    });
+
+    test("should return true when elapsed time is at the 2× transmissionInterval boundary", async () => {
+      const fixedNow = new Date("2026-01-01T00:00:00.000Z").getTime();
+      const nowSpy = spyOn(Date, "now").mockReturnValue(fixedNow);
+      try {
+        const sensor = await Sensor.create({
+          buildingId: buildingId,
+          sensorType: "internal_temp",
+          location: "Test",
+          installationDate: new Date(),
+          transmissionInterval: 90,
+          // Exactly 180 s ago — boundary should be active (strict >)
+          lastReading: {
+            value: 22,
+            unit: "°C",
+            timestamp: new Date(fixedNow - 180_000),
+          },
+          createdBy: userId,
+          updatedBy: userId,
+        });
+
+        expect(sensor.isActive()).toBe(true);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    test("should return false when elapsed time exceeds 2× transmissionInterval", async () => {
+      const sensor = await Sensor.create({
+        buildingId: buildingId,
+        sensorType: "internal_temp",
+        location: "Test",
+        installationDate: new Date(),
+        transmissionInterval: 90,
+        lastReading: {
+          value: 22,
+          unit: "°C",
+          timestamp: new Date(Date.now() - 300_000),
+        },
+        createdBy: userId,
+        updatedBy: userId,
+      });
+
+      expect(sensor.isActive()).toBe(false);
+    });
+
+    test("should respect each sensor's own transmissionInterval", async () => {
+      const fastSensor = await Sensor.create({
+        buildingId: buildingId,
+        sensorType: "internal_temp",
+        location: "Fast",
+        installationDate: new Date(),
+        transmissionInterval: 10,
+        lastReading: {
+          value: 1,
+          unit: "°C",
+          timestamp: new Date(Date.now() - 25_000),
+        },
+        createdBy: userId,
+        updatedBy: userId,
+      });
+
+      const slowSensor = await Sensor.create({
+        buildingId: buildingId,
+        sensorType: "internal_temp",
+        location: "Slow",
+        installationDate: new Date(),
+        transmissionInterval: 3600,
+        lastReading: {
+          value: 1,
+          unit: "°C",
+          timestamp: new Date(Date.now() - 25_000),
+        },
+        createdBy: userId,
+        updatedBy: userId,
+      });
+
+      // 25 s > 2×10 = 20 s → inactive
+      expect(fastSensor.isActive()).toBe(false);
+      // 25 s < 2×3600 = 7200 s → active
+      expect(slowSensor.isActive()).toBe(true);
     });
   });
 
