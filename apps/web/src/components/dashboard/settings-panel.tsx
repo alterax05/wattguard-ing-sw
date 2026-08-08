@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -74,7 +74,7 @@ export function SettingsPanel() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { isDirty },
   } = useForm<SettingsFormValues>({
@@ -93,8 +93,8 @@ export function SettingsPanel() {
   }, [config, reset])
 
   // Watched switch values (react-hook-form doesn't intercept Switch onChange natively)
-  const autoPollingEnabled = watch("polling.autoPollingEnabled")
-  const emailEnabled = watch("notifications.emailEnabled")
+  const autoPollingEnabled = useWatch({ control, name: "polling.autoPollingEnabled" })
+  const emailEnabled = useWatch({ control, name: "notifications.emailEnabled" })
 
   const onSubmit = async (values: SettingsFormValues) => {
     try {
