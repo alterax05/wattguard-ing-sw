@@ -2,20 +2,9 @@
  * JWT utilities
  */
 import { sign } from "hono/jwt";
+import { JWT_SECRET } from "../config/variables";
 
-const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRATION_HOURS = 8; // 8 hours
-
-// Validate JWT_SECRET in production
-if (!JWT_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("JWT_SECRET environment variable must be set in production");
-}
-
-// Use a dev secret only in development/test with warning
-const SECRET: string = JWT_SECRET || (() => {
-  console.warn("⚠️  WARNING: Using default JWT_SECRET. Set JWT_SECRET in production!");
-  return "dev-secret-change-in-production";
-})();
 
 /**
  * JWT Payload structure using standard claims
@@ -38,7 +27,7 @@ export type AccessTokenPayload = {
  * @returns JWT secret string
  */
 export function getJWTSecret(): string {
-  return SECRET;
+  return JWT_SECRET;
 }
 
 /**
@@ -60,6 +49,6 @@ export async function signAccessToken(
       iat: now,
       exp,
     },
-    SECRET
+    JWT_SECRET
   );
 }

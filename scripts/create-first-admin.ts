@@ -4,8 +4,11 @@
  */
 import mongoose from "mongoose";
 import { User } from "../src/models/User";
-
-const MONGO_URI = process.env.MONGO_URI!;
+import {
+  ADMIN_EMAIL,
+  ADMIN_PASSWORD,
+  MONGO_URI,
+} from "../src/config/variables";
 
 async function createFirstAdmin() {
   console.log("🔌 Connecting to MongoDB...");
@@ -21,8 +24,8 @@ async function createFirstAdmin() {
     process.exit(1);
   }
 
-  const email = process.env.ADMIN_EMAIL || "admin@wattguard.local";
-  const password = process.env.ADMIN_PASSWORD || "admin123";
+  const email = ADMIN_EMAIL;
+  const password = ADMIN_PASSWORD;
 
   if (password.length < 8) {
     console.error("❌ Password must be at least 8 characters");

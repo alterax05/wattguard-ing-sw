@@ -1,4 +1,4 @@
-import { PUBLIC_APP_URL } from "./app-url";
+import { PUBLIC_APP_URL } from "./variables";
 
 /**
  * OpenAPI Configuration

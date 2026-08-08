@@ -3,14 +3,14 @@
  */
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
-import { PUBLIC_APP_URL } from "../config/app-url";
-
-// SMTP configuration from env
-const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
-const SMTP_USER = process.env.SMTP_USER || "";
-const SMTP_PASS = process.env.SMTP_PASS || "";
-const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
+import {
+  PUBLIC_APP_URL,
+  SMTP_FROM,
+  SMTP_HOST,
+  SMTP_PASS,
+  SMTP_PORT,
+  SMTP_USER,
+} from "../config/variables";
 
 let transporter: Transporter | null = null;
 

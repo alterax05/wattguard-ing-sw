@@ -11,6 +11,7 @@ import { hashTokenSha256, randomToken } from "../utils/crypto";
 import { signAccessToken } from "../auth/jwt";
 import { sendPasswordResetEmail } from "../email/mailer";
 import { loginRateLimiter, passwordResetRateLimiter } from "../middleware/rate-limit";
+import { IS_PRODUCTION } from "../config/variables";
 import {
   SetupRequestSchema,
   SetupResponseSchema,
@@ -117,10 +118,9 @@ const app = new Hono()
       });
 
       // Set httpOnly cookie
-      const isProduction = process.env.NODE_ENV === "production";
       setCookie(c, "access_token", token, {
         httpOnly: true,
-        secure: isProduction,
+        secure: IS_PRODUCTION,
         sameSite: "Lax",
         maxAge: 8 * 60 * 60, // 8 hours
         path: "/",
@@ -207,10 +207,9 @@ const app = new Hono()
       });
 
       // Set httpOnly cookie
-      const isProduction = process.env.NODE_ENV === "production";
       setCookie(c, "access_token", token, {
         httpOnly: true,
-        secure: isProduction,
+        secure: IS_PRODUCTION,
         sameSite: "Lax",
         maxAge: 8 * 60 * 60, // 8 hours
         path: "/",

@@ -15,15 +15,11 @@ import { BuildingType } from "../src/models/BuildingType";
 import { Building } from "../src/models/Building";
 import { Sensor } from "../src/models/Sensor";
 import { SensorReading } from "../src/models/SensorReading";
+import { MONGO_URI } from "../src/config/variables";
 
 async function seedTestData() {
   try {
     // Connect to MongoDB
-    const MONGO_URI = process.env.MONGO_URI;
-    if (!MONGO_URI) {
-      throw new Error("MONGO_URI environment variable is not set");
-    }
-
     console.log("🔌 Connecting to MongoDB...");
     await mongoose.connect(MONGO_URI);
     console.log("✅ Connected to MongoDB");

@@ -14,15 +14,14 @@ import { User } from "../models/User";
 import { Invite } from "../models/Invite";
 import { hashTokenSha256, randomToken } from "../utils/crypto";
 import { signAccessToken } from "../auth/jwt";
-import { PUBLIC_APP_URL } from "../config/app-url";
+import {
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URI,
+  IS_PRODUCTION,
+  PUBLIC_APP_URL,
+} from "../config/variables";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
-const GOOGLE_REDIRECT_URI =
-  process.env.GOOGLE_REDIRECT_URI ||
-  (process.env.NODE_ENV === "production"
-    ? `${PUBLIC_APP_URL}/api/auth/google/callback`
-    : "http://localhost:3000/api/auth/google/callback");
 const APP_URL = PUBLIC_APP_URL;
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -31,7 +30,7 @@ const APP_URL = PUBLIC_APP_URL;
 const tempCookieOptions = () =>
   ({
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: IS_PRODUCTION,
     sameSite: "Lax" as const,
     maxAge: 5 * 60,
     path: "/",
@@ -100,7 +99,7 @@ async function finaliseLogin(
 
   setCookie(c, "access_token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: IS_PRODUCTION,
     sameSite: "Lax",
     maxAge: 8 * 60 * 60,
     path: "/",
