@@ -303,3 +303,5 @@ export function AcceptInvitePage() {
     </div>
   );
 }
+
+export default AcceptInvitePage;
