@@ -13,3 +13,5 @@ export function BuildingsComparePage() {
     </div>
   )
 }
+
+export default BuildingsComparePage;
