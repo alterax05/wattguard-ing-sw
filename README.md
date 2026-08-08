@@ -21,17 +21,27 @@ bun install
 
 ### Environment Setup
 
-Create a `.env` file with the following variables:
+Create a `.env` file in `apps/api/` with the following variables (see `apps/api/.env.example`):
 
 ```env
 # MongoDB
 MONGO_URI=mongodb://localhost:27017/wattguard
+MONGO_URI_TEST=mongodb://localhost:27017/wattguard_test
+
+# MQTT
+MQTT_BROKER_URL=mqtt://localhost:1883
+MQTT_ENABLED=false
 
 # JWT
 JWT_SECRET=your-secret-key-here
 
-# Public application URL
-PUBLIC_APP_URL=http://localhost:5173
+# Google OAuth
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
+
+# Frontend URL
+VITE_FRONTEND_URL=http://localhost:5173
 
 # Email (Optional)
 SMTP_HOST=smtp.example.com
@@ -72,8 +82,9 @@ bun run build
 bun start
 ```
 
-The production build writes the Vite frontend to `dist` and the Bun server to
-`server-dist`. The Bun server serves both the API and the frontend.
+The production build writes the Vite frontend to `apps/web/dist` and the Bun
+server to `apps/api/dist`, copying the frontend build into `apps/api/static`.
+The Bun server serves both the API and the frontend.
 
 ## Deploying on Render
 
@@ -149,29 +160,31 @@ The API supports two authentication methods:
 ## Project Structure
 
 ```
-src/
-├── config/           # Configuration files
-│   └── openapi.ts   # OpenAPI specification config
-├── schemas/          # Zod validation schemas
-│   ├── auth.ts      # Authentication schemas
-│   ├── auth-local.ts # Local auth schemas
-│   ├── admin.ts     # Admin operation schemas
-│   ├── invites.ts   # Invite schemas
-│   ├── common.ts    # Shared schemas
-│   └── index.ts     # Schema exports
-├── routes/           # API route handlers
-│   ├── auth.ts      # General auth routes
-│   ├── auth-local.ts # Local authentication
-│   ├── auth-google.ts # Google OAuth
-│   ├── admin.ts     # Admin operations
-│   └── invites.ts   # Invite validation
-├── models/           # Mongoose models
-├── middleware/       # Custom middleware
-├── auth/             # Authentication utilities
-├── email/            # Email services
-├── utils/            # Helper functions
-├── components/       # React components
-└── index.ts          # Main entry point
+apps/
+├── web/                # React frontend (@wattguard/web)
+│   └── src/
+│       ├── components/ # React components (ui/, dashboard/)
+│       ├── pages/      # Route pages
+│       ├── hooks/      # React Query hooks
+│       ├── lib/        # Frontend utilities
+│       ├── styles/     # Global CSS
+│       └── main.tsx    # Frontend entry point
+└── api/                # Hono backend (@wattguard/api)
+    └── src/
+        ├── config/     # Configuration files
+        │   └── openapi.ts  # OpenAPI specification config
+        ├── routes/     # API route handlers
+        ├── models/     # Mongoose models
+        ├── middleware/ # Custom middleware
+        ├── auth/       # Authentication utilities
+        ├── email/      # Email services
+        ├── utils/      # Helper functions
+        ├── lib/        # Backend utilities (MQTT, weather, CSV)
+        └── index.ts    # Main entry point
+shared/                  # Zod validation schemas (@wattguard/shared)
+└── src/
+    ├── index.ts    # Schema exports
+    └── schemas/    # Zod schemas (auth, admin, invites, common, ...)
 ```
 
 ## Testing
@@ -179,17 +192,11 @@ src/
 Run the test suite:
 
 ```bash
-# All tests
-bun test
-
-# Unit tests only
-bun test:unit
-
-# Integration tests only
-bun test:integration
+# All tests (requires MongoDB access — uses MONGO_URI_TEST)
+bun run test
 
 # Watch mode
-bun test:watch
+bun run test:watch
 ```
 
 ## Tech Stack
