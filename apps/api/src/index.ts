@@ -138,10 +138,22 @@ if (IS_PRODUCTION) {
   const staticRoot = path.resolve(import.meta.dir, "../../web/dist");
   console.log(`Serving static files from: ${staticRoot}`);
 
+  app.use("*", async (c, next) => {
+    const pathname = c.req.path;
+    if (pathname.startsWith("/assets/")) {
+      c.header("Cache-Control", "public, max-age=31536000, immutable");
+    } else if (!pathname.startsWith("/api/")) {
+      c.header("Cache-Control", "no-cache");
+    }
+    await next();
+  });
+
   app.use("*", serveStatic({ root: staticRoot }));
 
   app.get("*", (c, next) => {
-    if (c.req.path === "/api" || c.req.path.startsWith("/api/")) {
+    const pathname = c.req.path;
+
+    if (pathname === "/api" || pathname.startsWith("/api/")) {
       return next();
     }
 
