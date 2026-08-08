@@ -120,7 +120,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         {sensorLoading || !sensor ? (
           <div className="space-y-4 py-6">
             <Skeleton className="h-6 w-48" />
