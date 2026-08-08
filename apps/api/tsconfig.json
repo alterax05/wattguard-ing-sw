@@ -5,5 +5,5 @@
       "@wattguard/shared": ["../../shared/src/index.ts"]
     }
   },
-  "include": ["src", "scripts"]
+  "include": ["src", "scripts", "build.ts"],
 }
