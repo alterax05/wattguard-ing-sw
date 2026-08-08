@@ -4,8 +4,18 @@ import { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Building } from "../models/Building";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
-import { ErrorSchema, ExportConsumptionQuerySchema } from "@wattguard/shared";
+import {
+  ErrorSchema,
+  ExportConsumptionQuerySchema,
+  ExportReportQuerySchema,
+} from "@wattguard/shared";
 import { serializeCsv } from "../lib/csv";
+import {
+  buildReportData,
+  serializeReportPdf,
+  serializeReportXlsx,
+} from "../lib/report";
+import { getUtcEndOfDay, getUtcStartOfDay } from "../lib/consumption";
 
 const CSV_HEADERS = [
   "timestamp",
@@ -17,12 +27,10 @@ const CSV_HEADERS = [
   "unit",
 ] as const;
 
-function getUtcStartOfDay(date: string): Date {
-  return new Date(`${date}T00:00:00.000Z`);
-}
-
-function getUtcEndOfDay(date: string): Date {
-  return new Date(`${date}T23:59:59.999Z`);
+function setDownloadHeaders(c: { header: (name: string, value: string) => void }, contentType: string, filename: string): void {
+  c.header("Content-Type", contentType);
+  c.header("Content-Disposition", `attachment; filename="${filename}"`);
+  c.header("Cache-Control", "no-store");
 }
 
 const app = new Hono<{ Variables: AuthVariables }>().get(
@@ -116,11 +124,85 @@ const app = new Hono<{ Variables: AuthVariables }>().get(
     );
     const filename = `wattguard-consumption-${startDate}-${endDate}.csv`;
 
-    c.header("Content-Type", "text/csv; charset=utf-8");
-    c.header("Content-Disposition", `attachment; filename="${filename}"`);
-    c.header("Cache-Control", "no-store");
+    setDownloadHeaders(c, "text/csv; charset=utf-8", filename);
 
     return c.body(csv);
+  },
+)
+.get(
+  "/report",
+  describeRoute({
+    description:
+      "Download an aggregated energy report for the selected buildings and period as PDF or Excel (admin only)",
+    tags: ["Export"],
+    security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+    responses: {
+      200: {
+        description: "Report file (PDF or Excel) containing aggregated consumption data",
+        content: {
+          "application/pdf": { schema: { type: "string", format: "binary" } },
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+            schema: { type: "string", format: "binary" },
+          },
+        },
+      },
+      400: {
+        description: "Invalid report parameters",
+        content: {
+          "application/json": { schema: resolver(ErrorSchema) },
+        },
+      },
+      401: {
+        description: "Unauthorized",
+        content: {
+          "application/json": { schema: resolver(ErrorSchema) },
+        },
+      },
+      403: {
+        description: "Forbidden - requires admin role",
+        content: {
+          "application/json": { schema: resolver(ErrorSchema) },
+        },
+      },
+      404: {
+        description: "One or more buildings were not found",
+        content: {
+          "application/json": { schema: resolver(ErrorSchema) },
+        },
+      },
+    },
+  }),
+  validator("query", ExportReportQuerySchema),
+  async (c) => {
+    const { buildingIds, startDate, endDate, format } = c.req.valid("query");
+    const requestedBuildingIds = [
+      ...new Set(buildingIds.split(",").map((id) => id.trim())),
+    ];
+
+    const found = await Building.countDocuments({
+      _id: { $in: requestedBuildingIds.map((id) => new Types.ObjectId(id)) },
+    });
+    if (found !== requestedBuildingIds.length) {
+      return c.json({ error: "One or more buildings were not found" }, 404);
+    }
+
+    const report = await buildReportData(requestedBuildingIds, startDate, endDate);
+
+    if (format === "xlsx") {
+      const buffer = await serializeReportXlsx(report);
+      setDownloadHeaders(
+        c,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        `wattguard-report-${startDate}-${endDate}.xlsx`,
+      );
+
+      return c.body(new Uint8Array(buffer));
+    }
+
+    const buffer = await serializeReportPdf(report);
+    setDownloadHeaders(c, "application/pdf", `wattguard-report-${startDate}-${endDate}.pdf`);
+
+    return c.body(new Uint8Array(buffer));
   },
 );
 
