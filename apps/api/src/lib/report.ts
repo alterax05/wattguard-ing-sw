@@ -239,20 +239,24 @@ function drawLabelValueRow(
   value: string,
   y: number,
 ): number {
-  doc.font("Helvetica").fontSize(9).fillColor(PDF_MUTED).text(label, 48, y);
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(9)
-    .fillColor("#111827")
-    .text(value, 170, y, { width: 330 });
-  return y + 14;
+  const labelWidth = 110;
+  const valueWidth = 330;
+
+  doc.font("Helvetica").fontSize(9).fillColor(PDF_MUTED);
+  doc.text(label, 48, y, { width: labelWidth });
+  const labelHeight = doc.heightOfString(label, { width: labelWidth });
+
+  doc.font("Helvetica-Bold").fontSize(9).fillColor("#111827");
+  doc.text(value, 170, y, { width: valueWidth });
+  const valueHeight = doc.heightOfString(value, { width: valueWidth });
+
+  return y + Math.max(labelHeight, valueHeight) + 5;
 }
 
 function drawSummaryTable(doc: PDFKit.PDFDocument, data: ReportData, startY: number): number {
   const tableLeft = 48;
   const tableWidth = 595 - 96;
   const colWidths = [150, 80, 90, 80, 80, 70]; // name, type, zone, kWh, avg kW, alerts
-  const rowHeight = 18;
   const headerY = drawSectionTitle(doc, "Riepilogo", startY);
 
   // Column headers
@@ -265,22 +269,20 @@ function drawSummaryTable(doc: PDFKit.PDFDocument, data: ReportData, startY: num
     "Allarmi",
   ];
   doc.font("Helvetica-Bold").fontSize(8.5).fillColor(PDF_MUTED);
+  const headerCells = headers.map((header, i) => ({
+    text: header,
+    width: (colWidths[i] ?? 80) - 8,
+  }));
+  const headerHeight =
+    Math.max(...headerCells.map((cell) => doc.heightOfString(cell.text, { width: cell.width }))) + 6;
   let x = tableLeft;
-  headers.forEach((header, i) => {
-    const width = colWidths[i] ?? 80;
-    doc.text(header, x + 4, headerY + 6, { width: width - 8 });
-    x += width;
-  });
+  for (const cell of headerCells) {
+    doc.text(cell.text, x + 4, headerY + 6, { width: cell.width });
+    x += cell.width + 8;
+  }
 
-  let y = headerY + rowHeight;
-  doc.font("Helvetica").fontSize(9).fillColor("#111827");
+  let y = headerY + headerHeight + 4;
   for (const building of data.buildings) {
-    doc
-      .moveTo(tableLeft, y + rowHeight)
-      .lineTo(tableLeft + tableWidth, y + rowHeight)
-      .strokeColor(PDF_LINE)
-      .lineWidth(0.5)
-      .stroke();
     const values = [
       building.name,
       building.buildingType ?? "—",
@@ -291,12 +293,27 @@ function drawSummaryTable(doc: PDFKit.PDFDocument, data: ReportData, startY: num
         : `${building.consumption.avgPowerKW.toFixed(2)} kW`,
       String(building.alertCount),
     ];
+
+    doc.font("Helvetica").fontSize(9).fillColor("#111827");
+    const cells = values.map((value, i) => ({
+      text: value,
+      width: (colWidths[i] ?? 80) - 8,
+    }));
+    const rowHeight =
+      Math.max(...cells.map((cell) => doc.heightOfString(cell.text, { width: cell.width }))) + 6;
+
+    doc
+      .moveTo(tableLeft, y + rowHeight)
+      .lineTo(tableLeft + tableWidth, y + rowHeight)
+      .strokeColor(PDF_LINE)
+      .lineWidth(0.5)
+      .stroke();
+
     x = tableLeft;
-    values.forEach((value, i) => {
-      const width = colWidths[i] ?? 80;
-      doc.text(value, x + 4, y + 4, { width: width - 8 });
-      x += width;
-    });
+    for (const cell of cells) {
+      doc.text(cell.text, x + 4, y + 2, { width: cell.width });
+      x += cell.width + 8;
+    }
     y += rowHeight;
   }
   return y + 10;
@@ -359,17 +376,25 @@ function drawDailyChart(
   // Points + day labels (sparse)
   doc.fillColor(PDF_PRIMARY);
   const labelEvery = Math.max(1, Math.ceil(points.length / 10));
+  let lastLabelX = -Infinity;
   for (let i = 0; i < points.length; i++) {
-    if (i % labelEvery === 0 || i === points.length - 1) {
-      doc.circle(xAt(i), yAt(points[i]!.energyKWh), 1.6).fill();
-      doc
-        .font("Helvetica")
-        .fontSize(6.5)
-        .fillColor(PDF_MUTED)
-        .text(points[i]!.date.toISOString().slice(5, 10), xAt(i) - 12, chartTop + 20 + plotHeight + 6, {
-          width: 24,
-          align: "center",
-        });
+    const isLastPoint = i === points.length - 1;
+    if (i % labelEvery === 0 || isLastPoint) {
+      const labelX = xAt(i) - 12;
+      if (labelX - lastLabelX >= 28) {
+        doc.circle(xAt(i), yAt(points[i]!.energyKWh), 1.6).fill();
+        doc
+          .font("Helvetica")
+          .fontSize(6.5)
+          .fillColor(PDF_MUTED)
+          .text(points[i]!.date.toISOString().slice(5, 10), labelX, chartTop + 20 + plotHeight + 6, {
+            width: 24,
+            align: "center",
+          });
+        lastLabelX = labelX;
+      } else if (isLastPoint) {
+        doc.circle(xAt(i), yAt(points[i]!.energyKWh), 1.6).fill();
+      }
     }
   }
 
@@ -383,31 +408,34 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function drawBuildingSections(doc: PDFKit.PDFDocument, data: ReportData): void {
-  data.buildings.forEach((building, index) => {
-    if (index > 0) doc.addPage();
+  data.buildings.forEach((building) => {
+    doc.addPage();
 
-    // Title
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(14)
-      .fillColor("#111827")
-      .text(building.name, 48, 48);
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor(PDF_MUTED)
-      .text(
-        `${building.address} · ${building.geographicZone} · ${building.buildingType ?? "—"}`,
-        48,
-        66,
-      );
+    // Title (may wrap to multiple lines for long names)
+    const titleWidth = 499;
+    doc.font("Helvetica-Bold").fontSize(14).fillColor("#111827");
+    doc.text(building.name, 48, 48, { width: titleWidth });
+    const titleHeight = doc.heightOfString(building.name, { width: titleWidth });
+
+    let y = 48 + titleHeight + 6;
+    doc.font("Helvetica").fontSize(9).fillColor(PDF_MUTED);
+    doc.text(
+      `${building.address} · ${building.geographicZone} · ${building.buildingType ?? "—"}`,
+      48,
+      y,
+      { width: titleWidth },
+    );
+    y += doc.heightOfString(
+      `${building.address} · ${building.geographicZone} · ${building.buildingType ?? "—"}`,
+      { width: titleWidth },
+    ) + 10;
 
     // Metadata
-    let y = drawLabelValueRow(
+    y = drawLabelValueRow(
       doc,
       "Stato",
       STATUS_LABELS[building.status] ?? building.status,
-      90,
+      y,
     );
     y = drawLabelValueRow(doc, "Tipo riscaldamento", building.heatingSystemType, y);
     y = drawLabelValueRow(doc, "Superficie", `${building.surface} m²`, y);
