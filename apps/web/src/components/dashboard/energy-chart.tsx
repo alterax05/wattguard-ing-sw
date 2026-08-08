@@ -50,7 +50,7 @@ export function EnergyChart() {
           color: "var(--chart-5)",
         },
       }}
-      className="h-80 w-full"
+      className="h-80 w-full aspect-auto"
     >
       <AreaChart data={data.data}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

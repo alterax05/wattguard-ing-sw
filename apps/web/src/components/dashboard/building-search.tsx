@@ -140,8 +140,8 @@ export function BuildingSearch() {
       <Card>
         <CardContent>
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-6 gap-4">
-              <div className="relative col-span-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center">
+              <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Cerca edificio per nome o indirizzo..."
@@ -151,7 +151,7 @@ export function BuildingSearch() {
                 />
               </div>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full md:w-44">
                   <SelectValue placeholder="Tipologia" />
                 </SelectTrigger>
                 <SelectContent>
