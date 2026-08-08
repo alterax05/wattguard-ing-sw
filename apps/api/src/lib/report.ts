@@ -1,3 +1,4 @@
+import path from "path";
 import { Types } from "mongoose";
 import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
@@ -5,6 +6,7 @@ import { Building } from "../models/Building";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
+import fullLogoUrl from "../assets/full-logo.png";
 import {
   aggregateConsumptionForBuildings,
   aggregateDailyConsumptionForBuildings,
@@ -205,6 +207,17 @@ export async function buildReportData(
 const PDF_PRIMARY = "#2563eb";
 const PDF_MUTED = "#6b7280";
 const PDF_LINE = "#d1d5db";
+
+let logoPromise: Promise<Buffer | null> | null = null;
+
+/** Load the WattGuard logo once; returns null when unavailable (PDF still renders). */
+function loadLogo(): Promise<Buffer | null> {
+  logoPromise ??= Bun.file(path.resolve(import.meta.dir, fullLogoUrl))
+    .arrayBuffer()
+    .then((buffer) => Buffer.from(buffer))
+    .catch(() => null);
+  return logoPromise;
+}
 
 function formatKwh(value: number): string {
   return `${value.toFixed(2)} kWh`;
@@ -407,12 +420,21 @@ const STATUS_LABELS: Record<string, string> = {
   decommissioned: "Dismesso",
 };
 
-function drawBuildingSections(doc: PDFKit.PDFDocument, data: ReportData): void {
+function drawBuildingSections(
+  doc: PDFKit.PDFDocument,
+  data: ReportData,
+  logo: Buffer | null,
+): void {
   data.buildings.forEach((building) => {
     doc.addPage();
 
+    // Small logo mark, top-right
+    if (logo) {
+      doc.image(logo, 595 - 48 - 70, 44, { width: 70 });
+    }
+
     // Title (may wrap to multiple lines for long names)
-    const titleWidth = 499;
+    const titleWidth = 595 - 48 - 70 - 24 - 48;
     doc.font("Helvetica-Bold").fontSize(14).fillColor("#111827");
     doc.text(building.name, 48, 48, { width: titleWidth });
     const titleHeight = doc.heightOfString(building.name, { width: titleWidth });
@@ -507,7 +529,9 @@ function drawBuildingSections(doc: PDFKit.PDFDocument, data: ReportData): void {
 }
 
 /** Serialize the report as a PDF document (A4, Italian labels). */
-export function serializeReportPdf(data: ReportData): Promise<Buffer> {
+export async function serializeReportPdf(data: ReportData): Promise<Buffer> {
+  const logo = await loadLogo();
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 48 });
     const chunks: Buffer[] = [];
@@ -516,16 +540,14 @@ export function serializeReportPdf(data: ReportData): Promise<Buffer> {
     doc.on("error", reject);
 
     // Report header (first page)
+    if (logo) {
+      doc.image(logo, 48, 40, { width: 100 });
+    }
     doc
       .font("Helvetica-Bold")
       .fontSize(20)
       .fillColor("#111827")
-      .text("WattGuard", 48, 48);
-    doc
-      .font("Helvetica")
-      .fontSize(11)
-      .fillColor(PDF_PRIMARY)
-      .text("Report consumi energetici", 48, 72);
+      .text("Report consumi energetici", 48, 80);
     doc
       .font("Helvetica")
       .fontSize(9)
@@ -533,17 +555,17 @@ export function serializeReportPdf(data: ReportData): Promise<Buffer> {
       .text(
         `Periodo: ${data.startDate} – ${data.endDate}`,
         48,
-        96,
+        106,
       );
     doc
       .font("Helvetica")
       .fontSize(9)
       .fillColor(PDF_MUTED)
-      .text(`Generato il: ${data.generatedAt.toISOString()}`, 48, 110);
+      .text(`Generato il: ${data.generatedAt.toISOString()}`, 48, 120);
 
-    drawSummaryTable(doc, data, 130);
+    drawSummaryTable(doc, data, 140);
 
-    drawBuildingSections(doc, data);
+    drawBuildingSections(doc, data, logo);
 
     doc.end();
   });
