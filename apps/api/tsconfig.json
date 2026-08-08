@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "@wattguard/shared": ["../../packages/shared/src/index.ts"]
+      "@wattguard/shared": ["../../shared/src/index.ts"]
     }
   },
   "include": ["src", "scripts"]

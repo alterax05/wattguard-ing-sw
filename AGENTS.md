@@ -8,7 +8,7 @@ This is a **Bun workspaces monorepo** with two apps and one shared package:
 
 - **`apps/web`** — React 19 frontend (`@wattguard/web`), bundled with Vite.
 - **`apps/api`** — Hono backend (`@wattguard/api`) on Bun, with MongoDB via Mongoose.
-- **`packages/shared`** — Zod validation schemas (`@wattguard/shared`) used by both.
+- **`shared`** — Zod validation schemas (`@wattguard/shared`) used by both.
 
 - **Package Manager:** `bun` (do not use `npm`, `yarn`, or `pnpm`)
 - **Runtime:** `bun`
@@ -26,7 +26,7 @@ This is a **Bun workspaces monorepo** with two apps and one shared package:
 | **Build for Production** | `bun run build` | Builds frontend with Vite, backend with Bun; copies the SPA into `apps/api/static` |
 | **Start Production** | `bun run start` | Runs the built backend (serves API + SPA) |
 | **Lint Code** | `bun run lint` | Runs `eslint` on the codebase |
-| **Type Check** | `bun run check` | Runs `tsc --noEmit` in `apps/web`, `apps/api`, and `packages/shared` |
+| **Type Check** | `bun run check` | Runs `tsc --noEmit` in `apps/web`, `apps/api`, and `shared` |
 | **Run Tests** | `bun run test` | Runs all tests using Bun's test runner (api package) |
 | **Run Single Test** | `bun test <path/to/test.ts>` | e.g., `bun test apps/api/src/utils/crypto.test.ts` |
 | **Watch Tests** | `bun run test:watch` | Runs tests in watch mode |
@@ -40,7 +40,7 @@ This is a **Bun workspaces monorepo** with two apps and one shared package:
 - **Path Aliases:** Use `@/*` to refer to `src/*` inside each app (e.g., `import { cn } from "@/lib/utils"` in `apps/web`). Cross-package imports use `@wattguard/shared` (schemas) and `@wattguard/api` (type-only `AppType` for the RPC client).
 - **Formatting:** Code should be formatted consistent with standard Prettier/ESLint rules.
 
-### Shared package (`packages/shared`)
+### Shared package (`shared`)
 - **Zod schemas** are the single source of truth for validation and types.
 - Backend routes validate request/response payloads against them (`hono-openapi` resolvers).
 - Frontend imports schemas for form typing / `z.infer` types.
