@@ -4,6 +4,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@wattguard/shared": ["../../shared/src/index.ts"],
+      "@wattguard/shared/assets/*": ["../../shared/assets/*"],
       "@wattguard/api": ["../../apps/api/src/index.ts"]
     }
   },
