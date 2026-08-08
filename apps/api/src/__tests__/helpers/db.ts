@@ -13,6 +13,10 @@ import { Alert } from "../../models/Alert";
 import { MONGO_URI_TEST } from "../../config/variables";
 
 export async function connectTestDB() {
+  if (!MONGO_URI_TEST) {
+    throw new Error("MONGO_URI_TEST environment variable is not set");
+  }
+  
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(MONGO_URI_TEST, {
       serverSelectionTimeoutMS: 10000, // 10 seconds timeout
