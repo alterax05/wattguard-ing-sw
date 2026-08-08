@@ -6,7 +6,7 @@ import { Building } from "../models/Building";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
-import fullLogoUrl from "../assets/full-logo.png";
+import fullLogoUrl from "../../../../shared/assets/full-logo.png";
 import {
   aggregateConsumptionForBuildings,
   aggregateDailyConsumptionForBuildings,

@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import fullLogo from "@wattguard/shared/assets/full-logo.png";
+import fullLogoBlack from "@wattguard/shared/assets/full-logo-black.png";
 
 /** Map OAuth error codes (from Google callback redirects) to user-friendly messages. */
 const OAUTH_ERRORS: Record<string, string> = {
@@ -58,7 +60,7 @@ export function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center space-y-6">
           <img
-            src={theme === "dark" ? "/images/full-logo-black.png" : "/images/full-logo.png"}
+            src={theme === "dark" ? fullLogoBlack : fullLogo}
             alt="WattGuard"
             className="h-24 w-auto object-contain"
           />

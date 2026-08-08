@@ -6,6 +6,8 @@ import { ModeToggle } from "@/components/ui/mode-toggle"
 import { useTheme } from "next-themes"
 import { useContext } from "react"
 import { AuthContext } from "@/lib/auth"
+import logo from "@wattguard/shared/assets/logo.png"
+import logoBlack from "@wattguard/shared/assets/logo-black.png"
 
 export function DashboardLayout() {
   const { user } = useContext(AuthContext);
@@ -49,7 +51,7 @@ export function DashboardLayout() {
       <aside className="flex w-16 lg:w-64 flex-col border-r bg-card">
         <div className="flex h-16 items-center justify-center gap-2 border-b px-3 lg:justify-start lg:px-6">
           <img
-            src={theme === "dark" ? "/images/logo-black.png" : "/images/logo.png"}
+            src={theme === "dark" ? logoBlack : logo}
             alt="WattGuard"
             className="h-10 w-10 object-contain"
           />
