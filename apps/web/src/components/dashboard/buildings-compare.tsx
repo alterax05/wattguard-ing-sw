@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
+import { endOfDay } from "date-fns"
+import type { DateRange } from "react-day-picker"
 import { useNavigate } from "react-router-dom"
+import { toIsoDate } from "@/lib/dates"
 import { useQueries } from "@tanstack/react-query"
 import { client } from "@/lib/api"
+import { DateRangePicker } from "./date-range-picker"
 import {
   BUILDINGS_QUERY_KEY,
   type BuildingDetail,
@@ -11,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   ArrowLeft,
@@ -24,7 +27,6 @@ import {
   CloudRain,
   CloudSnow,
   Gauge,
-  Calendar,
   AlertCircle,
   Radio,
 } from "lucide-react"
@@ -87,14 +89,11 @@ function getBuildingTypeName(bt: BuildingDetail["buildingType"]): string {
   return bt.name
 }
 
-function getDefaultDateRange() {
+function getDefaultDateRange(): DateRange {
   const end = new Date()
   const start = new Date()
   start.setDate(start.getDate() - 30)
-  return {
-    startInput: start.toISOString().split("T")[0]!,
-    endInput: end.toISOString().split("T")[0]!,
-  }
+  return { from: start, to: end }
 }
 
 interface BuildingsCompareProps {
@@ -105,14 +104,14 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
   const navigate = useNavigate()
   const [weather, setWeather] = useState<WeatherData | null>(null)
 
-  const defaults = useMemo(() => getDefaultDateRange(), [])
-  const [startInput, setStartInput] = useState(defaults.startInput)
-  const [endInput, setEndInput] = useState(defaults.endInput)
+  const [range, setRange] = useState<DateRange | undefined>(getDefaultDateRange)
 
-  const efficiencyParams = useMemo(() => ({
-    startDate: new Date(startInput).toISOString(),
-    endDate: new Date(endInput + "T23:59:59").toISOString(),
-  }), [startInput, endInput])
+  const efficiencyParams = useMemo(() => {
+    const startDate = toIsoDate(range?.from)
+    const endDate = toIsoDate(range?.to ? endOfDay(range.to) : undefined)
+    if (!startDate || !endDate) return undefined
+    return { startDate, endDate }
+  }, [range])
 
   // Fetch all buildings in parallel using useQueries
   const buildingQueries = useQueries({
@@ -136,15 +135,15 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
   // Fetch efficiency for each building in parallel
   const efficiencyQueries = useQueries({
     queries: buildingIds.map((id) => ({
-      queryKey: [...BUILDINGS_QUERY_KEY, "efficiency", id, efficiencyParams],
-      queryFn: async () => {
-        const res = await client.api.buildings[":id"].efficiency.$get({
-          param: { id },
-          query: {
-            startDate: efficiencyParams.startDate,
-            endDate: efficiencyParams.endDate,
-          },
-        })
+        queryKey: [...BUILDINGS_QUERY_KEY, "efficiency", id, efficiencyParams],
+        queryFn: async () => {
+          const res = await client.api.buildings[":id"].efficiency.$get({
+            param: { id },
+            query: {
+              startDate: efficiencyParams!.startDate,
+              endDate: efficiencyParams!.endDate,
+            },
+          })
         if (!res.ok) {
           const data = await res.json()
           throw new Error(extractError(data, "Errore efficienza"))
@@ -153,6 +152,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
         return data as EfficiencyMetrics
       },
       staleTime: 5 * 60 * 1000,
+      enabled: !!efficiencyParams,
     })),
   })
 
@@ -273,21 +273,8 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-3">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Periodo di analisi:</span>
-            <Input
-              type="date"
-              value={startInput}
-              onChange={(e) => setStartInput(e.target.value)}
-              className="h-8 w-40 text-xs"
-            />
-            <span className="text-xs text-muted-foreground">-</span>
-            <Input
-              type="date"
-              value={endInput}
-              onChange={(e) => setEndInput(e.target.value)}
-              className="h-8 w-40 text-xs"
-            />
+            <DateRangePicker value={range} onChange={setRange} />
           </div>
         </CardContent>
       </Card>
