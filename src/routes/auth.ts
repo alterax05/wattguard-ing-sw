@@ -14,12 +14,12 @@ import {
   TestEmailRequestSchema,
   TestEmailResponseSchema,
   ErrorSchema,
-} from "../schemas/auth";
+} from "@wattguard/shared";
 import type {
   LogoutResponse,
   MeResponse,
   TestEmailResponse,
-} from "../schemas/auth";
+} from "@wattguard/shared";
 
 /**
  * GET /api/auth/me - Get current user (protected, middleware applied globally)

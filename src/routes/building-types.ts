@@ -22,13 +22,13 @@ import {
   DeleteBuildingTypeParamsSchema,
   DeleteBuildingTypeResponseSchema,
   ErrorSchema,
-} from "../schemas/building-types";
+} from "@wattguard/shared";
 import type {
   CreateBuildingTypeResponse,
   DeleteBuildingTypeResponse,
   ListBuildingTypesResponse,
   UpdateBuildingTypeResponse,
-} from "../schemas/building-types";
+} from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   /**

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { client } from "@/lib/api";
-import { UserSchema } from "@/schemas";
+import { UserSchema } from "@wattguard/shared";
 import { z } from "zod";
 
 /** 

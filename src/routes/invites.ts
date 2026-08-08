@@ -9,8 +9,8 @@ import {
   ValidateInviteQuerySchema,
   ValidateInviteResponseSchema,
   ErrorSchema,
-} from "../schemas/invites";
-import type { ValidateInviteResponse } from "../schemas/invites";
+} from "@wattguard/shared";
+import type { ValidateInviteResponse } from "@wattguard/shared";
 
 /**
  * Public: Validate an invite token

@@ -4,7 +4,7 @@ import { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Building } from "../models/Building";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
-import { ErrorSchema, ExportConsumptionQuerySchema } from "../schemas/export";
+import { ErrorSchema, ExportConsumptionQuerySchema } from "@wattguard/shared";
 import { serializeCsv } from "../lib/csv";
 
 const CSV_HEADERS = [

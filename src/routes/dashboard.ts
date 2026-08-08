@@ -10,11 +10,11 @@ import {
   DashboardStatsResponseSchema,
   DashboardHistoryResponseSchema,
   ErrorSchema,
-} from "../schemas/dashboard";
+} from "@wattguard/shared";
 import type {
   DashboardHistoryResponse,
   DashboardStatsResponse,
-} from "../schemas/dashboard";
+} from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   /**
