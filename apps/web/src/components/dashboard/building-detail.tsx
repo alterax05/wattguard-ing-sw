@@ -536,7 +536,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                   color: SENSOR_TYPE_CONFIG[selectedSensorType].color,
                 },
               }}
-              className="h-72 w-full"
+              className="h-72 w-full aspect-auto"
             >
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

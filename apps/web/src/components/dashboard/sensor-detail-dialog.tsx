@@ -206,7 +206,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                         color: "var(--chart-1)",
                       },
                     }}
-                    className="h-64 w-full"
+                    className="h-64 w-full aspect-auto"
                   >
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
