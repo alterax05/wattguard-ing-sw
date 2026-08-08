@@ -531,7 +531,7 @@ export function serializeReportPdf(data: ReportData): Promise<Buffer> {
       .fontSize(9)
       .fillColor(PDF_MUTED)
       .text(
-        `Periodo: ${data.startDate} → ${data.endDate}`,
+        `Periodo: ${data.startDate} – ${data.endDate}`,
         48,
         96,
       );
