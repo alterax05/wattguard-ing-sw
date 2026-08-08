@@ -2,7 +2,6 @@
  * Centralized environment variable access.
  *
  * All `process.env` reads, parsing, defaults, and validation live here.
- * Import the typed constants from this module everywhere else.
  */
 
 const LOCAL_APP_URL = "http://localhost:5173";
@@ -97,13 +96,15 @@ export const GOOGLE_REDIRECT_URI =
     ? `${PUBLIC_APP_URL}/api/auth/google/callback`
     : "http://localhost:3000/api/auth/google/callback");
 
-// ── SMTP ─────────────────────────────────────────────────────────────────────
+// ── Email (Resend) ───────────────────────────────────────────────────────────
 
-export const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
-export const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
-export const SMTP_USER = process.env.SMTP_USER || "";
-export const SMTP_PASS = process.env.SMTP_PASS || "";
-export const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
+export const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
+export const RESEND_API = (() => {
+  if (!process.env.RESEND_API) {
+    throw new Error("RESEND_API environment variable is not set");
+  }
+  return process.env.RESEND_API;
+})();
 
 // ── Admin bootstrap script ───────────────────────────────────────────────────
 

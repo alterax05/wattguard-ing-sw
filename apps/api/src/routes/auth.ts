@@ -24,7 +24,7 @@ import type {
 /**
  * GET /api/auth/me - Get current user (protected, middleware applied globally)
  * POST /api/auth/logout - Logout (public)
- * POST /api/auth/admin/test-email - Admin: Test SMTP configuration (protected, admin role required)
+ * POST /api/auth/admin/test-email - Admin: Test email configuration (protected, admin role required)
  */
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
@@ -96,7 +96,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/admin/test-email",
     describeRoute({
-      description: "Send test email to verify SMTP configuration (admin only)",
+      description: "Send test email to verify email configuration (admin only)",
       tags: ["Authentication"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -144,7 +144,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ success: true, message: "Test email sent" } satisfies TestEmailResponse);
       } catch (err) {
         console.error("Test email failed:", err);
-        return c.json({ error: "Failed to send test email. Check SMTP configuration." }, 500);
+        return c.json({ error: "Failed to send test email. Check email configuration." }, 500);
       }
     }
   );

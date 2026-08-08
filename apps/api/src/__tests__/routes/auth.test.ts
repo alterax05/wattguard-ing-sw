@@ -9,7 +9,7 @@ import { Invite } from "../../models/Invite";
 import { PasswordResetToken } from "../../models/PasswordResetToken";
 import { randomToken, hashTokenSha256 } from "../../utils/crypto";
 
-// Mock email functions to avoid SMTP requirements in tests
+// Mock email functions to avoid email requirements in tests
 mock.module("../../email/mailer", () => ({
   sendInviteEmail: mock(async () => Promise.resolve()),
   sendPasswordResetEmail: mock(async () => Promise.resolve()),
