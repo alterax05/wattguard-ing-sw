@@ -1,35 +1,19 @@
 /**
- * Email utilities using nodemailer with Gmail SMTP
+ * Email utilities using the Resend HTTP API
  */
-import nodemailer from "nodemailer";
-import type { Transporter } from "nodemailer";
-import {
-  PUBLIC_APP_URL,
-  SMTP_FROM,
-  SMTP_HOST,
-  SMTP_PASS,
-  SMTP_PORT,
-  SMTP_USER,
-} from "../config/variables";
+import { Resend } from "resend";
+import { ADMIN_EMAIL, EMAIL_FROM, PUBLIC_APP_URL, RESEND_API } from "../config/variables";
 
-let transporter: Transporter | null = null;
+let resend: Resend | null = null;
 
 /**
- * Get or create nodemailer transporter
+ * Get or create the Resend client
  */
-function getTransporter(): Transporter {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: false, // use STARTTLS
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-    });
+function getResend(): Resend {
+  if (!resend) {
+    resend = new Resend(RESEND_API);
   }
-  return transporter;
+  return resend;
 }
 
 export interface SendEmailOptions {
@@ -40,18 +24,20 @@ export interface SendEmailOptions {
 }
 
 /**
- * Send an email via SMTP
+ * Send an email via Resend
  */
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
-  const transport = getTransporter();
-
-  await transport.sendMail({
-    from: SMTP_FROM,
+  const { error } = await getResend().emails.send({
+    from: EMAIL_FROM,
     to: options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
   });
+
+  if (error) {
+    throw new Error(`Resend API error: ${error.message}`);
+  }
 }
 
 /**
@@ -105,15 +91,15 @@ export async function sendPasswordResetEmail(
 }
 
 /**
- * Verify SMTP configuration by sending a test email
+ * Verify the Resend configuration by sending a test email
  */
 export async function sendTestEmail(to?: string): Promise<void> {
-  const recipient = to || SMTP_USER;
+  const recipient = to || ADMIN_EMAIL;
 
   await sendEmail({
     to: recipient,
     subject: "Test email da WattGuard",
-    text: "Questa è una email di test per verificare la configurazione SMTP.",
-    html: "<p>Questa è una email di test per verificare la configurazione SMTP.</p>",
+    text: "Questa è una email di test per verificare la configurazione email.",
+    html: "<p>Questa è una email di test per verificare la configurazione email.</p>",
   });
 }
