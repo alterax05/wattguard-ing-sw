@@ -4,36 +4,47 @@ This document provides essential information for AI agents operating within the 
 
 ## 1. Environment & Build Commands
 
-This project is a **Bun** + **React** application using **TailwindCSS** and **Hono**. We use **Vite** for the frontend and **MongoDB** as our database.
+This is a **Bun workspaces monorepo** with two apps and one shared package:
+
+- **`apps/web`** — React 19 frontend (`@wattguard/web`), bundled with Vite.
+- **`apps/api`** — Hono backend (`@wattguard/api`) on Bun, with MongoDB via Mongoose.
+- **`shared`** — Zod validation schemas (`@wattguard/shared`) used by both.
 
 - **Package Manager:** `bun` (do not use `npm`, `yarn`, or `pnpm`)
 - **Runtime:** `bun`
 - **Frontend Bundler:** `vite`
+- **Env vars:** live in `apps/api/.env` (backend-only; Bun loads them from the api package cwd)
 
 ### Core Commands
 
 | Action | Command | Notes |
 | :--- | :--- | :--- |
-| **Install Dependencies** | `bun install` | |
+| **Install Dependencies** | `bun install` | Installs all workspaces, links `@wattguard/*` |
 | **Start Dev Server** | `bun run dev` | Runs both Vite (Frontend) and Bun/Hono (Backend) concurrently |
 | **Start Frontend Only** | `bun run dev:frontend` | Starts only the Vite server |
 | **Start Backend Only** | `bun run dev:backend` | Starts only the Hono server |
-| **Build for Production** | `bun run build` | Builds frontend with Vite and backend with Bun |
-| **Start Production** | `bun run start` | Runs the built backend |
+| **Build for Production** | `bun run build` | Builds frontend with Vite, backend with Bun; copies the SPA into `apps/api/static` |
+| **Start Production** | `bun run start` | Runs the built backend (serves API + SPA) |
 | **Lint Code** | `bun run lint` | Runs `eslint` on the codebase |
-| **Type Check** | `bun run check` | Runs `tsc --noEmit` to verify types |
-| **Run Tests** | `bun test` | Runs all tests using Bun's test runner |
-| **Run Single Test** | `bun test <path/to/test.ts>` | e.g., `bun test src/utils/math.test.ts` |
+| **Type Check** | `bun run check` | Runs `tsc --noEmit` in `apps/web`, `apps/api`, and `shared` |
+| **Run Tests** | `bun run test` | Runs all tests using Bun's test runner (api package) |
+| **Run Single Test** | `bun test <path/to/test.ts>` | e.g., `bun test apps/api/src/utils/crypto.test.ts` |
 | **Watch Tests** | `bun run test:watch` | Runs tests in watch mode |
 
 ## 2. Code Style & Conventions
 
 ### General
 - **Language:** TypeScript (`.ts`, `.tsx`) exclusively.
-- **Strictness:** `strict: true` is enabled in `tsconfig.json`. Ensure all code passes `bun run check`.
+- **Strictness:** `strict: true` is enabled (via `tsconfig.base.json`). Ensure all code passes `bun run check`.
 - **Module System:** ES Modules (`import`/`export`).
-- **Path Aliases:** Use `@/*` to refer to `src/*` (e.g., `import { cn } from "@/lib/utils"`).
+- **Path Aliases:** Use `@/*` to refer to `src/*` inside each app (e.g., `import { cn } from "@/lib/utils"` in `apps/web`). Cross-package imports use `@wattguard/shared` (schemas) and `@wattguard/api` (type-only `AppType` for the RPC client).
 - **Formatting:** Code should be formatted consistent with standard Prettier/ESLint rules.
+
+### Shared package (`shared`)
+- **Zod schemas** are the single source of truth for validation and types.
+- Backend routes validate request/response payloads against them (`hono-openapi` resolvers).
+- Frontend imports schemas for form typing / `z.infer` types.
+- **Never import backend models or frontend components from here** — keep it dependency-free (only `zod`).
 
 ### Frontend (React)
 - **Framework:** React 19 (via Vite).
@@ -48,8 +59,8 @@ This project is a **Bun** + **React** application using **TailwindCSS** and **Ho
     <div className={cn("base-class", condition && "active-class")} />
     ```
 - **UI Library:** **Shadcn UI** (Radix UI primitives).
-  - Components live in `src/components/ui`.
-  - To add new components, use the shadcn CLI or manually copy them to `src/components/ui`.
+  - Components live in `apps/web/src/components/ui`.
+  - To add new components, use the shadcn CLI or manually copy them to `apps/web/src/components/ui`.
 - **State Management:** **React Query** (`@tanstack/react-query`).
   - Use `useQuery` for data fetching and `useMutation` for server updates.
 
@@ -74,8 +85,8 @@ This project is a **Bun** + **React** application using **TailwindCSS** and **Ho
   - Use standard claims (`sub`, `iat`, `exp`).
 - **OpenAPI:** Use `hono-openapi` `describeRoute` for documentation where applicable.
 - **Database:** **MongoDB** via `mongoose`.
-  - Define schemas in `src/models`.
-  - Connection logic is centralized (likely `src/index.ts`).
+  - Define schemas in `apps/api/src/models`.
+  - Connection logic is centralized (likely `apps/api/src/index.ts`).
 
 ### Naming Conventions
 - **Files/Folders:** `kebab-case` for utilities/folders, `PascalCase` for React components.
@@ -84,12 +95,12 @@ This project is a **Bun** + **React** application using **TailwindCSS** and **Ho
 - **Constants:** `UPPER_SNAKE_CASE`.
 
 ### Project Structure
-- `src/components/ui`: Reusable UI components.
-- `src/lib`: Core utilities (e.g., `utils.ts`).
-- `src/routes`: Backend route modules.
-- `src/models`: Mongoose schemas.
-- `src/index.ts`: Backend entry point.
-- `src/frontend.tsx`: Frontend entry point.
+- `apps/web/src/components/ui`: Reusable UI components.
+- `apps/web/src/lib`: Frontend utilities (e.g., `utils.ts`, `api.ts`).
+- `apps/api/src/routes`: Backend route modules.
+- `apps/api/src/models`: Mongoose schemas.
+- `apps/api/src/index.ts`: Backend entry point (exports `AppType` for the RPC client).
+- `apps/web/src/main.tsx`: Frontend entry point.
 
 ## 3. Testing
 - **Framework:** `bun:test`.
