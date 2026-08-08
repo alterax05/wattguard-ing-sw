@@ -26,9 +26,9 @@ export const MONGO_URI = ((): string => {
   return uri;
 })();
 
-export const MONGO_URI_TEST = ((): string => {
+export const MONGO_URI_TEST = ((): string | undefined => {
   const uri = process.env.MONGO_URI_TEST;
-  if (!uri) {
+  if (IS_TEST && !uri) {
     throw new Error("MONGO_URI_TEST environment variable is not set");
   }
   return uri;
