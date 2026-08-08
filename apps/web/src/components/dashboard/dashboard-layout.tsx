@@ -46,20 +46,20 @@ export function DashboardLayout() {
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <aside className="flex w-64 flex-col border-r bg-card">
-        <div className="flex h-16 items-center gap-2 border-b px-6">
+      <aside className="flex w-16 lg:w-64 flex-col border-r bg-card">
+        <div className="flex h-16 items-center justify-center gap-2 border-b px-3 lg:justify-start lg:px-6">
           <img
             src={theme === "dark" ? "/images/logo-black.png" : "/images/logo.png"}
             alt="WattGuard"
             className="h-10 w-10 object-contain"
           />
-          <div className="flex flex-col">
+          <div className="hidden flex-col lg:flex">
             <span className="text-sm font-semibold">Comune di Trento</span>
             <span className="text-xs text-muted-foreground">Gestione Energetica</span>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 p-4">
+        <nav className="flex-1 space-y-1 p-2 lg:p-4">
           {navItems.map((item) => {
             const Icon = item.icon
             const active = isLinkActive(item.href)
@@ -67,14 +67,15 @@ export function DashboardLayout() {
               <Link
                 key={item.id}
                 to={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                title={item.label}
+                className={`flex items-center justify-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors lg:justify-start ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden lg:inline">{item.label}</span>
               </Link>
             )
           })}
@@ -89,14 +90,15 @@ export function DashboardLayout() {
                   <Link
                     key={item.id}
                     to={item.href}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    title={item.label}
+                    className={`flex items-center justify-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors lg:justify-start ${
                       active
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="hidden lg:inline">{item.label}</span>
                   </Link>
                 )
               })}
@@ -104,28 +106,33 @@ export function DashboardLayout() {
           )}
         </nav>
 
-        <div className="border-t p-4 space-y-3">
-          <div className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+        <div className="space-y-3 border-t p-2 lg:p-4">
+          <div className="flex items-center justify-center gap-3 rounded-lg bg-muted px-3 py-2 lg:justify-start">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               {displayName.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="hidden flex-1 overflow-hidden lg:block">
               <p className="truncate text-sm font-medium">{displayName}</p>
               <p className="truncate text-xs text-muted-foreground capitalize">{user?.role}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 lg:flex-row">
             <Button
               variant="outline"
               className="flex-1 bg-transparent"
               size="sm"
               onClick={handleLogout}
               disabled={logout.isPending}
+              title="Esci"
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              {logout.isPending ? "Uscita..." : "Esci"}
+              <LogOut className="h-4 w-4 shrink-0 lg:mr-2" />
+              <span className="hidden lg:inline">
+                {logout.isPending ? "Uscita..." : "Esci"}
+              </span>
             </Button>
-            <ModeToggle />
+            <div className="flex justify-center lg:justify-start">
+              <ModeToggle />
+            </div>
           </div>
         </div>
       </aside>
