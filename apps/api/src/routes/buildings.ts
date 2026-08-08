@@ -38,6 +38,12 @@ import type {
   UpdateBuildingResponse,
 } from "@wattguard/shared";
 import { getAverageHistoricalTemperature } from "../lib/weather";
+import {
+  GAS_LHV_KWH_PER_M3,
+  energySensorTypeFor,
+  isDistrictHeatingBuilding,
+  isGasBoilerBuilding,
+} from "../lib/consumption";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
@@ -854,15 +860,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const end = new Date(endDate);
 
       // ── Heating system classification ──────────────────────────────────────
-      const heatingType = building.heatingSystemType.toLowerCase();
-      const isGasBoiler = heatingType.includes("gas")
-        || heatingType.includes("caldaia")
-        || heatingType.includes("centralizzato");
-      const isDistrictHeating = heatingType.includes("teleriscaldamento")
-        || heatingType.includes("district");
-
-      // Natural gas lower heating value (Italy standard)
-      const GAS_LHV_KWH_PER_M3 = 10.55;
+      const isGasBoiler = isGasBoilerBuilding(building.heatingSystemType);
+      const isDistrictHeating = isDistrictHeatingBuilding(building.heatingSystemType);
 
       // Physics Constants (for COP / heat-loss estimation)
       const CEILING_HEIGHT = building.ceilingHeight || 3.0; // meters (fallback to default)
@@ -872,7 +871,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // ── Sensor match ───────────────────────────────────────────────────────
       // Gas boiler buildings use gas_meter instead of energy_meter.
-      const energySensorType = isGasBoiler ? "gas_meter" : "energy_meter";
+      const energySensorType = energySensorTypeFor(isGasBoiler);
       const sensorMatch = {
         "metadata.buildingId": new Types.ObjectId(id),
         timestamp: { $gte: start, $lte: end },

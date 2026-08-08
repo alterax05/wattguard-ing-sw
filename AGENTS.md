@@ -45,6 +45,7 @@ This is a **Bun workspaces monorepo** with two apps and one shared package:
 - Backend routes validate request/response payloads against them (`hono-openapi` resolvers).
 - Frontend imports schemas for form typing / `z.infer` types.
 - **Never import backend models or frontend components from here** — keep it dependency-free (only `zod`).
+- **Brand assets** (logos) live in `shared/assets` and are imported by both apps (e.g., `@wattguard/shared/assets/full-logo.png`). The API bundles them via the `file` loader in `build.ts`; the web app imports them as Vite assets. Do not duplicate logos under `apps/*/public` or `apps/*/src/assets`.
 
 ### Frontend (React)
 - **Framework:** React 19 (via Vite).

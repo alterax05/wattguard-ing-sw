@@ -11,13 +11,7 @@ const BuildingIdsQuerySchema = z
   )
   .describe("Comma-separated list of building IDs to export");
 
-/**
- * GET /api/export/consumption - Consumption export query parameters
- *
- * Dates are calendar dates. The endpoint includes the complete UTC day for
- * both boundaries, which matches the values submitted by an HTML date input.
- */
-export const ExportConsumptionQuerySchema = z
+const DateRangeQuerySchema = z
   .object({
     buildingIds: BuildingIdsQuerySchema,
     startDate: z.string().date().describe("First date to include (YYYY-MM-DD)"),
@@ -27,5 +21,26 @@ export const ExportConsumptionQuerySchema = z
     message: "endDate must be on or after startDate",
     path: ["endDate"],
   });
+
+/**
+ * GET /api/export/consumption - Consumption export query parameters
+ *
+ * Dates are calendar dates. The endpoint includes the complete UTC day for
+ * both boundaries, which matches the values submitted by an HTML date input.
+ */
+export const ExportConsumptionQuerySchema = DateRangeQuerySchema;
+
+/**
+ * GET /api/export/report - Aggregated admin report query parameters
+ *
+ * Same date semantics as the consumption export. The format selects the
+ * serialization used by the endpoint.
+ */
+export const ExportReportQuerySchema = DateRangeQuerySchema.extend({
+  format: z
+    .enum(["pdf", "xlsx"])
+    .default("pdf")
+    .describe("Report file format (pdf or xlsx)"),
+});
 
 export { ErrorSchema };
