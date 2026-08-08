@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": ["apps/*", "shared"],
   "scripts": {
     "dev": "bun run --parallel dev:frontend dev:backend",
     "dev:frontend": "bun run --cwd apps/web dev",
@@ -14,7 +14,7 @@
     "test": "bun run --cwd apps/api test",
     "test:watch": "bun run --cwd apps/api test:watch",
     "clean": "rm -rf apps/web/dist apps/api/dist apps/api/static",
-    "check": "bun run --cwd apps/web check && bun run --cwd apps/api check && bun run --cwd packages/shared check",
+    "check": "bun run --cwd apps/web check && bun run --cwd apps/api check && bun run --cwd shared check",
     "lint": "eslint ."
   },
   "devDependencies": {

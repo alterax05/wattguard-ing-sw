@@ -82,7 +82,7 @@
         "vite": "^7.3.6",
       },
     },
-    "packages/shared": {
+    "shared": {
       "name": "@wattguard/shared",
       "version": "0.1.0",
       "dependencies": {
@@ -693,7 +693,7 @@
 
     "@wattguard/api": ["@wattguard/api@workspace:apps/api"],
 
-    "@wattguard/shared": ["@wattguard/shared@workspace:packages/shared"],
+    "@wattguard/shared": ["@wattguard/shared@workspace:shared"],
 
     "@wattguard/web": ["@wattguard/web@workspace:apps/web"],
 

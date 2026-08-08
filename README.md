@@ -181,11 +181,10 @@ apps/
         ├── utils/      # Helper functions
         ├── lib/        # Backend utilities (MQTT, weather, CSV)
         └── index.ts    # Main entry point
-packages/
-└── shared/             # Zod validation schemas (@wattguard/shared)
-    └── src/
-        ├── index.ts    # Schema exports
-        └── schemas/    # Zod schemas (auth, admin, invites, common, ...)
+shared/                  # Zod validation schemas (@wattguard/shared)
+└── src/
+    ├── index.ts    # Schema exports
+    └── schemas/    # Zod schemas (auth, admin, invites, common, ...)
 ```
 
 ## Testing
@@ -193,7 +192,7 @@ packages/
 Run the test suite:
 
 ```bash
-# All tests (requires a running MongoDB)
+# All tests (requires MongoDB access — uses MONGO_URI_TEST)
 bun run test
 
 # Watch mode
