@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { endOfDay } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -8,9 +8,11 @@ import {
   useBuildingRealTime,
   useBuildingHistory,
   useBuildingEfficiency,
+  useDeleteBuilding,
   type BuildingDetail as BuildingDetailType,
   type HistoryParams,
 } from "@/hooks/use-buildings";
+import { AuthContext } from "@/lib/auth";
 import {
   useAllSensors,
   useDeleteSensor,
@@ -211,6 +213,8 @@ function getPaginationItems(
 }
 
 export function BuildingDetail({ buildingId }: BuildingDetailProps) {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === "admin";
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
@@ -282,6 +286,10 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   const [deletingSensor, setDeletingSensor] = useState<SensorWithBuilding | null>(null);
   const deleteSensor = useDeleteSensor();
 
+  // Building delete state
+  const [confirmDeleteBuildingOpen, setConfirmDeleteBuildingOpen] = useState(false);
+  const deleteBuilding = useDeleteBuilding();
+
   // The edit dialog can be opened manually (from the sensor actions menu) or
   // through a deep link (?sensorId=<id>). The target sensor is first looked up
   // in the current page, then in the background index (used to resolve deep
@@ -328,6 +336,19 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       },
       onError: (error) => {
         toast.error(error.message || "Errore nell'eliminazione del sensore");
+      },
+    });
+  };
+
+  const handleDeleteBuilding = () => {
+    deleteBuilding.mutate(buildingId, {
+      onSuccess: () => {
+        toast.success("Edificio eliminato con successo");
+        navigate("/dashboard/buildings");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Errore nell'eliminazione dell'edificio");
+        setConfirmDeleteBuildingOpen(false);
       },
     });
   };
@@ -418,6 +439,17 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Modifica edificio</span>
             </Button>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={() => setConfirmDeleteBuildingOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Elimina edificio</span>
+              </Button>
+            )}
           </h1>
           <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" />
@@ -920,6 +952,34 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteSensor.isPending ? "Eliminazione..." : "Elimina"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={confirmDeleteBuildingOpen}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteBuildingOpen(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Edificio</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare l&apos;edificio{" "}
+              <span className="font-medium">"{building.name}"</span>? Questa
+              azione eliminerà anche tutti i sensori, le letture e gli alert
+              associati e non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteBuilding}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteBuilding.isPending ? "Eliminazione..." : "Elimina"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
