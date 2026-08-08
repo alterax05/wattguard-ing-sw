@@ -956,7 +956,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // For gas buildings: totalEnergyConsumed = (lastM3 − firstM3) × GAS_LHV_KWH_PER_M3
       // For others: avgPowerKW × elapsed hours.
       let totalEnergyConsumed = 0;
-      let avgExternalTempFromBasic: number | null = null;
+      let avgExternalTempFromBasic: number | null;
 
       if (isGasBoiler) {
         // Fetch first and last gas_meter readings in the period

@@ -431,7 +431,7 @@ describe("Building Model", () => {
           buildingType: buildingTypeId,
           heatingSystemType: "caldaia_gas",
           geographicZone: "Centro",
-          status: "invalid_status" as any as BuildingStatus, // Force an invalid status
+          status: "invalid_status" as unknown as BuildingStatus, // Force an invalid status
           createdBy: userId,
           updatedBy: userId,
         });

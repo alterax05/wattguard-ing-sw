@@ -201,19 +201,6 @@ function computeExternalTemp(noise = 0.5): number {
   return Number(value.toFixed(2));
 }
 
-// ── Unit helper ───────────────────────────────────────────────────────────────
-function getUnit(type: string): string {
-  switch (type) {
-    case "internal_temp":
-    case "external_temp":
-      return "°C";
-    case "energy_meter":
-      return "kW";
-    default:
-      return "";
-  }
-}
-
 // ── MongoDB + MQTT setup ──────────────────────────────────────────────────────
 console.log("🚀 Starting WattGuard Simulator");
 
