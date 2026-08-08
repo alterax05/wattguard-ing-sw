@@ -12,3 +12,5 @@ export function BuildingDetailPage() {
     </div>
   )
 }
+
+export default BuildingDetailPage;
