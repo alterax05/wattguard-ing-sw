@@ -13,7 +13,7 @@
     "build": "bun run --cwd apps/web build && bun run --cwd apps/api build",
     "test": "bun run --cwd apps/api test",
     "test:watch": "bun run --cwd apps/api test:watch",
-    "clean": "rm -rf apps/web/dist apps/api/dist apps/api/static",
+    "clean": "rm -rf apps/web/dist apps/api/dist",
     "check": "bun run --cwd apps/web check && bun run --cwd apps/api check && bun run --cwd shared check",
     "lint": "eslint ."
   },
