@@ -32,6 +32,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { AuthContext } from "@/lib/auth"
+import { MAX_COMPARE_BUILDINGS } from "@/lib/constants"
 import { downloadFromEndpoint } from "@/lib/download"
 import {
   DropdownMenu,
@@ -127,16 +128,21 @@ export function BuildingSearch() {
   }, [buildings, searchQuery, typeFilter])
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    )
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((i) => i !== id)
+      if (prev.length >= MAX_COMPARE_BUILDINGS) {
+        toast.error(`Puoi confrontare al massimo ${MAX_COMPARE_BUILDINGS} edifici`)
+        return prev
+      }
+      return [...prev, id]
+    })
   }
 
   const selectAll = () => {
     if (selectedIds.length === filteredBuildings.length) {
       setSelectedIds([])
     } else {
-      setSelectedIds(filteredBuildings.map((b) => b.id))
+      setSelectedIds(filteredBuildings.slice(0, MAX_COMPARE_BUILDINGS).map((b) => b.id))
     }
   }
 
@@ -229,7 +235,7 @@ export function BuildingSearch() {
                 {selectedIds.length > 0 && (
                   <>
                     <Badge variant="secondary" className="text-xs">
-                      {selectedIds.length} selezionati
+                      {selectedIds.length}/{MAX_COMPARE_BUILDINGS} selezionati
                     </Badge>
 
                     <Button
@@ -374,10 +380,14 @@ export function BuildingSearch() {
                         <div
                           onClick={(e) => {
                             e.stopPropagation()
+                            if (!isSelected && selectedIds.length >= MAX_COMPARE_BUILDINGS) return
                             toggleSelect(building.id)
                           }}
                         >
-                          <Checkbox checked={isSelected} />
+                          <Checkbox
+                            checked={isSelected}
+                            disabled={!isSelected && selectedIds.length >= MAX_COMPARE_BUILDINGS}
+                          />
                         </div>
                       )}
 
