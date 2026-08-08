@@ -43,11 +43,9 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 # Frontend URL
 VITE_FRONTEND_URL=http://localhost:5173
 
-# Email (Optional)
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your-email@example.com
-SMTP_PASS=your-password
+# Email (Required)
+RESEND_API=re_your_resend_api_key
+EMAIL_FROM=onboarding@resend.dev
 
 # Google OAuth (Optional)
 GOOGLE_CLIENT_ID=your-client-id
@@ -116,9 +114,8 @@ If Google authentication is enabled, configure `GOOGLE_CLIENT_ID`,
 exact public URL followed by `/api/auth/google/callback`, and the same URI must
 be registered in Google Cloud.
 
-If invitations or password resets are enabled, configure the SMTP variables
-(`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and optionally
-`SMTP_FROM`).
+If invitations or password resets are enabled, configure the Resend variables
+(`RESEND_API`, and `EMAIL_FROM` with a domain verified in the Resend dashboard).
 
 Use one canonical HTTPS domain for the Render service and OAuth configuration.
 The repository includes `.bun-version` to keep the Render Bun runtime aligned
