@@ -4,11 +4,10 @@ import { SensorReading } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
 import type { BuildingDocument } from "../models/Building";
 import { THRESHOLD_ALERT_TYPE } from "./alerts";
+import { MQTT_BROKER_URL } from "../config/variables";
 
 export function connectAndSubscribe() {
-  const brokerUrl = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
-
-  const client = mqtt.connect(brokerUrl);
+  const client = mqtt.connect(MQTT_BROKER_URL);
 
   client.on("connect", () => {
     console.log("✅ Connected to MQTT Broker");

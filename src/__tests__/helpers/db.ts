@@ -10,12 +10,11 @@ import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
-
-const TEST_MONGO_URI = process.env.MONGO_URI_TEST!;
+import { MONGO_URI_TEST } from "../../config/variables";
 
 export async function connectTestDB() {
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(TEST_MONGO_URI, {
+    await mongoose.connect(MONGO_URI_TEST, {
       serverSelectionTimeoutMS: 10000, // 10 seconds timeout
       connectTimeoutMS: 10000,
     });

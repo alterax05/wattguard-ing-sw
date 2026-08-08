@@ -11,6 +11,7 @@
 import mongoose from "mongoose";
 import * as readline from 'readline';
 import { BuildingType, type BuildingTypeDocument } from "../src/models/BuildingType";
+import { MONGO_URI } from "../src/config/variables";
 
 const defaultBuildingTypes = [
   {
@@ -73,11 +74,6 @@ const defaultBuildingTypes = [
 async function seedBuildingTypes() {
   try {
     // Connect to MongoDB
-    const MONGO_URI = process.env.MONGO_URI;
-    if (!MONGO_URI) {
-      throw new Error("MONGO_URI environment variable is not set");
-    }
-
     console.log("🔌 Connecting to MongoDB...");
     await mongoose.connect(MONGO_URI);
     console.log("✅ Connected to MongoDB");

@@ -2,6 +2,7 @@
  * Rate limiting middleware
  */
 import { rateLimiter } from "hono-rate-limiter";
+import { IS_TEST } from "../config/variables";
 
 /**
  * Rate limiter for login attempts
@@ -9,7 +10,7 @@ import { rateLimiter } from "hono-rate-limiter";
  */
 export const loginRateLimiter = rateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: process.env.NODE_ENV === "test" ? 1000 : 10, // High limit in test
+  limit: IS_TEST ? 1000 : 10, // High limit in test
   standardHeaders: "draft-6", // Add rate limit headers
   keyGenerator: (c) => {
     // Use IP address as key
@@ -23,7 +24,7 @@ export const loginRateLimiter = rateLimiter({
  */
 export const passwordResetRateLimiter = rateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  limit: process.env.NODE_ENV === "test" ? 1000 : 3, // High limit in test
+  limit: IS_TEST ? 1000 : 3, // High limit in test
   standardHeaders: "draft-6",
   keyGenerator: (c) => {
     return c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown";
@@ -36,7 +37,7 @@ export const passwordResetRateLimiter = rateLimiter({
  */
 export const inviteRateLimiter = rateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
-  limit: process.env.NODE_ENV === "test" ? 1000 : 10,
+  limit: IS_TEST ? 1000 : 10,
   standardHeaders: "draft-6",
   keyGenerator: (c) => {
     return c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown";

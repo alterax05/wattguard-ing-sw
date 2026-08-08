@@ -4,11 +4,14 @@ import { Sensor, type SensorDocument } from "../src/models/Sensor";
 import { Building, type BuildingDocument } from "../src/models/Building";
 import { BuildingType } from "../src/models/BuildingType";
 import { User } from "../src/models/User";
+import {
+  MONGO_URI,
+  MQTT_BROKER_URL,
+  SIM_TIME_SCALE,
+} from "../src/config/variables";
 
 // ── Configuration ─────────────────────────────────────────────────────────────
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/wattguard";
 console.log("DEBUG: Using MONGO_URI:", MONGO_URI);
-const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 
 // How many simulated seconds pass per real second.
 // Default 2 → each 30 s real tick = 60 simulated seconds.
@@ -19,7 +22,6 @@ const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
 //   cooling rate = 3400×18/C ≈ 0.00974 °C/sim-sec → ×2 = 0.01948 °C/real-sec
 //   3°C band (18.5→21.5) cooling time ≈ 154 real-sec ≈ 2.6 min → ~5 OFF readings ✅
 //   → multiple consecutive 1-minute buckets with avgPower=0, enabling H_est computation
-const SIM_TIME_SCALE = Number(process.env.SIM_TIME_SCALE ?? 2);
 console.log(`⏩ Time scale: ×${SIM_TIME_SCALE} (1 real second = ${SIM_TIME_SCALE} simulated seconds)`);
 
 // ── Physics constants ─────────────────────────────────────────────────────────

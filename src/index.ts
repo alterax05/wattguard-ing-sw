@@ -33,6 +33,16 @@ import { connectAndSubscribe } from "./lib/mqtt";
 // Import OpenAPI configuration
 import { openapiConfig } from "./config/openapi";
 
+// Import environment variables
+import {
+  IS_DEVELOPMENT,
+  IS_PRODUCTION,
+  IS_TEST,
+  MONGO_URI,
+  MQTT_ENABLED,
+  PORT,
+} from "./config/variables";
+
 const app = new Hono()
   .use(
     "/api/admin/*",
@@ -124,7 +134,7 @@ app
   )
   .use(logger());
 
-if (process.env.NODE_ENV === "production") {
+if (IS_PRODUCTION) {
   const staticRoot = path.resolve(process.cwd(), "dist");
 
   app.use("*", serveStatic({ root: staticRoot }));
@@ -151,29 +161,17 @@ export { app };
 export type AppType = typeof app;
 
 async function startServer() {
-  const MONGO_URI = process.env.MONGO_URI;
-  const MQTT_ENABLED = process.env.MQTT_ENABLED === "true";
-
-  if (!MONGO_URI) {
-    throw new Error("MONGO_URI environment variable is not set");
-  }
-
   await mongoose.connect(MONGO_URI);
   console.log("✅ Connected to MongoDB");
 
   // Start MQTT client after DB connection.
   if (MQTT_ENABLED) connectAndSubscribe();
 
-  const port = Number(process.env.PORT ?? 3000);
-  if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(`Invalid PORT value: ${process.env.PORT}`);
-  }
-
   const server = serve({
     fetch: app.fetch,
     hostname: "0.0.0.0",
-    port,
-    development: process.env.NODE_ENV !== "production" && {
+    port: PORT,
+    development: IS_DEVELOPMENT && {
       hmr: true,
       console: true,
     },
@@ -184,7 +182,7 @@ async function startServer() {
 }
 
 // Tests import the Hono app without opening a network server or database connection.
-if (process.env.NODE_ENV !== "test") {
+if (!IS_TEST) {
   startServer().catch((error) => {
     console.error("❌ Server startup failed:", error);
     process.exit(1);
