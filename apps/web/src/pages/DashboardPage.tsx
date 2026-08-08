@@ -5,3 +5,5 @@ export function DashboardPage() {
     <DashboardOverview />
   )
 }
+
+export default DashboardPage;
