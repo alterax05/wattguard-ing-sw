@@ -23,8 +23,8 @@ import {
   UpdateSettingsRequestSchema,
   UpdateSettingsResponseSchema,
   ErrorSchema,
-} from "../schemas/settings";
-import type { GetSettingsResponse, UpdateSettingsResponse } from "../schemas/settings";
+} from "@wattguard/shared";
+import type { GetSettingsResponse, UpdateSettingsResponse } from "@wattguard/shared";
 
 /** Serialize a SystemConfig document to a plain object for API responses. */
 function serializeConfig(doc: Awaited<ReturnType<typeof SystemConfig.getOrCreate>>) {

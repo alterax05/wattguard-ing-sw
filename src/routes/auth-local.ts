@@ -24,14 +24,14 @@ import {
   ResetPasswordRequestSchema,
   ResetPasswordResponseSchema,
   ErrorSchema,
-} from "../schemas/auth-local";
+} from "@wattguard/shared";
 import type {
   ForgotPasswordResponse,
   LoginResponse,
   ResetPasswordResponse,
   SetupResponse,
   ValidateResetTokenResponse,
-} from "../schemas/auth-local";
+} from "@wattguard/shared";
 
 /**
  * POST /api/auth/local/setup - Setup password for invited user

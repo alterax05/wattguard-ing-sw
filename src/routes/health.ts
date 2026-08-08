@@ -3,7 +3,7 @@
  */
 import { Hono } from "hono";
 import { describeRoute, resolver } from "hono-openapi";
-import { HealthResponseSchema, type HealthResponse } from "../schemas/common";
+import { HealthResponseSchema, type HealthResponse } from "@wattguard/shared";
 
 /**
  * GET /api/health - Server health check

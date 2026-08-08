@@ -26,7 +26,7 @@ import {
   GetBuildingEfficiencyQuerySchema,
   GetBuildingEfficiencyResponseSchema,
   ErrorSchema,
-} from "../schemas/buildings";
+} from "@wattguard/shared";
 import type {
   CreateBuildingResponse,
   DeleteBuildingResponse,
@@ -36,7 +36,7 @@ import type {
   GetBuildingResponse,
   SearchBuildingsResponse,
   UpdateBuildingResponse,
-} from "../schemas/buildings";
+} from "@wattguard/shared";
 import { getAverageHistoricalTemperature } from "../lib/weather";
 
 const app = new Hono<{ Variables: AuthVariables }>()

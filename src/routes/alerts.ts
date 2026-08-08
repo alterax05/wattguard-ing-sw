@@ -7,12 +7,12 @@ import {
   ListAlertsResponseSchema,
   AlertIdParamSchema,
   UpdateAlertStatusResponseSchema,
-} from "../schemas/alerts";
+} from "@wattguard/shared";
 import type {
   ListAlertsResponse,
   UpdateAlertStatusResponse,
-} from "../schemas/alerts";
-import { ErrorSchema } from "../schemas/common";
+} from "@wattguard/shared";
+import { ErrorSchema } from "@wattguard/shared";
 import type { AuthVariables } from "../middleware/auth";
 
 const app = new Hono<{ Variables: AuthVariables }>()

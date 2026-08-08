@@ -23,7 +23,7 @@ import {
   GetSensorReadingsQuerySchema,
   GetSensorReadingsResponseSchema,
   ErrorSchema,
-} from "../schemas/sensors";
+} from "@wattguard/shared";
 import type {
   CreateSensorResponse,
   DeleteSensorResponse,
@@ -31,7 +31,7 @@ import type {
   GetSensorResponse,
   ListSensorsResponse,
   UpdateSensorResponse,
-} from "../schemas/sensors";
+} from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   /**

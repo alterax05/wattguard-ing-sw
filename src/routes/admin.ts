@@ -25,7 +25,7 @@ import {
   RevokeInviteParamsSchema,
   RevokeInviteResponseSchema,
   ErrorSchema,
-} from "../schemas/admin";
+} from "@wattguard/shared";
 
 import type {
   CreateInviteResponse,
@@ -34,7 +34,7 @@ import type {
   ListUsersResponse,
   RevokeInviteResponse,
   UpdateUserRoleResponse,
-} from "../schemas/admin";
+} from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
