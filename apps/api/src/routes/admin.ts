@@ -386,7 +386,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         console.error("Failed to send invite email:", err);
         // Delete the invite if email fails
         await Invite.findByIdAndDelete(invite._id);
-        return c.json({ error: "Failed to send invite email. Check SMTP configuration." }, 500);
+        return c.json({ error: "Failed to send invite email. Check email configuration." }, 500);
       }
 
       return c.json({
