@@ -13,6 +13,6 @@ export default defineConfig([
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
   },
   tseslint.configs.recommended,
-  reactHooks.configs.flat.recommended,
+  reactHooks.configs.flat["recommended-latest"],
 ]);
 
