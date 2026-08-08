@@ -72,6 +72,8 @@ export const CreateSensorResponseSchema = z.object({
   sensor: SensorSchema,
 });
 
+export type CreateSensorResponse = z.infer<typeof CreateSensorResponseSchema>;
+
 /**
  * GET /api/sensors/:id - Get sensor path parameter
  */
@@ -85,6 +87,8 @@ export const GetSensorParamsSchema = z.object({
 export const GetSensorResponseSchema = z.object({
   sensor: SensorWithBuildingSchema,
 });
+
+export type GetSensorResponse = z.infer<typeof GetSensorResponseSchema>;
 
 /**
  * PATCH /api/sensors/:id - Update sensor path parameter
@@ -114,6 +118,8 @@ export const UpdateSensorResponseSchema = z.object({
   sensor: SensorSchema,
 });
 
+export type UpdateSensorResponse = z.infer<typeof UpdateSensorResponseSchema>;
+
 /**
  * DELETE /api/sensors/:id - Delete sensor path parameter
  */
@@ -128,6 +134,8 @@ export const DeleteSensorResponseSchema = z.object({
   success: z.literal(true),
   message: z.string().describe("Confirmation message"),
 });
+
+export type DeleteSensorResponse = z.infer<typeof DeleteSensorResponseSchema>;
 
 /**
  * SensorReading schema (for historical data)
@@ -161,6 +169,8 @@ export const CreateReadingResponseSchema = z.object({
   reading: SensorReadingSchema,
 });
 
+export type CreateReadingResponse = z.infer<typeof CreateReadingResponseSchema>;
+
 /**
  * GET /api/sensors/:id/readings - Get sensor readings query parameters
  */
@@ -181,6 +191,8 @@ export const GetSensorReadingsResponseSchema = z.object({
     total: z.number(),
   }).describe("Pagination information"),
 });
+
+export type GetSensorReadingsResponse = z.infer<typeof GetSensorReadingsResponseSchema>;
 
 /**
  * GET /api/sensors - List sensors query parameters
@@ -207,6 +219,8 @@ export const ListSensorsResponseSchema = z.object({
     total: z.number(),
   }).describe("Pagination information"),
 });
+
+export type ListSensorsResponse = z.infer<typeof ListSensorsResponseSchema>;
 
 // Re-export for convenience
 export { ErrorSchema };

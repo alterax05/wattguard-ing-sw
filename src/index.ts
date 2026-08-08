@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { jwt } from "hono/jwt";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
-import { describeRoute, openAPIRouteHandler } from "hono-openapi";
+import { describeRoute, openAPIRouteHandler, resolver } from "hono-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import mongoose from "mongoose";
 import path from "path";
@@ -31,6 +31,7 @@ import { connectAndSubscribe } from "./lib/mqtt";
 
 // Import OpenAPI configuration
 import { openapiConfig } from "./config/openapi";
+import { HealthResponseSchema, type HealthResponse } from "./schemas/common";
 
 const app = new Hono()
   .use(
@@ -101,19 +102,13 @@ const app = new Hono()
           description: "Server is running correctly",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  status: { type: "string" },
-                },
-                required: ["status"],
-              },
+              schema: resolver(HealthResponseSchema),
             },
           },
         },
       },
     }),
-    (c) => c.json({ status: "ok" }),
+    (c) => c.json({ status: "ok" } satisfies HealthResponse),
   )
   .route("/api/invites", invites)
   .route("/api/auth", auth)

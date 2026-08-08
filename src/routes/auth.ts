@@ -15,6 +15,11 @@ import {
   TestEmailResponseSchema,
   ErrorSchema,
 } from "../schemas/auth";
+import type {
+  LogoutResponse,
+  MeResponse,
+  TestEmailResponse,
+} from "../schemas/auth";
 
 /**
  * GET /api/auth/me - Get current user (protected, middleware applied globally)
@@ -53,14 +58,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       return c.json({
         user: {
-          id: userDoc._id?.toString(),
+          id: userDoc._id?.toString() ?? undefined,
           email: payload.email,
-          name: userDoc.name,
+          name: userDoc.name ?? undefined,
           role: payload.role,
           isDisabled: userDoc.isDisabled ?? false,
-          lastLoginAt: userDoc.lastLoginAt,
+          lastLoginAt: userDoc.lastLoginAt?.toISOString() ?? undefined,
         },
-      });
+      } satisfies MeResponse);
     }
   )
   .post(
@@ -85,7 +90,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         path: "/",
       });
 
-      return c.json({ success: true });
+      return c.json({ success: true } satisfies LogoutResponse);
     }
   )
   .post(
@@ -136,7 +141,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
         await sendTestEmail(to);
 
-        return c.json({ success: true, message: "Test email sent" });
+        return c.json({ success: true, message: "Test email sent" } satisfies TestEmailResponse);
       } catch (err) {
         console.error("Test email failed:", err);
         return c.json({ error: "Failed to send test email. Check SMTP configuration." }, 500);

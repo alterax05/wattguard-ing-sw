@@ -21,5 +21,7 @@ export const ValidateInviteResponseSchema = z.object({
   expiresAt: z.iso.datetime().describe("Expiration timestamp of the invite"),
 });
 
+export type ValidateInviteResponse = z.infer<typeof ValidateInviteResponseSchema>;
+
 // Re-export for convenience
 export { ErrorSchema };

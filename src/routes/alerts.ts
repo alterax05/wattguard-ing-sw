@@ -8,6 +8,10 @@ import {
   AlertIdParamSchema,
   UpdateAlertStatusResponseSchema,
 } from "../schemas/alerts";
+import type {
+  ListAlertsResponse,
+  UpdateAlertStatusResponse,
+} from "../schemas/alerts";
 import { ErrorSchema } from "../schemas/common";
 import type { AuthVariables } from "../middleware/auth";
 
@@ -76,14 +80,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
             buildingName: a.buildingName,
             sensorId: a.sensorId?.toString(),
             type: a.type,
-            thresholdType: a.thresholdType,
+            thresholdType: a.thresholdType ?? undefined,
             severity: a.severity,
             message: a.message,
             status: a.status,
-            acknowledgedBy: a.acknowledgedBy,
-            acknowledgedAt: a.acknowledgedAt?.toISOString(),
-            resolvedBy: a.resolvedBy,
-            resolvedAt: a.resolvedAt?.toISOString(),
+            acknowledgedBy: a.acknowledgedBy ?? undefined,
+            acknowledgedAt: a.acknowledgedAt?.toISOString() ?? undefined,
+            resolvedBy: a.resolvedBy ?? undefined,
+            resolvedAt: a.resolvedAt?.toISOString() ?? undefined,
             createdAt: (a as AlertDocument).createdAt.toISOString(),
             updatedAt: (a as AlertDocument).updatedAt.toISOString(),
           })),
@@ -92,7 +96,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
             offset,
             total,
           },
-        });
+        } satisfies ListAlertsResponse);
       } catch (error) {
         console.error("Error fetching alerts:", error);
         return c.json({ error: "Internal server error" }, 500);
@@ -152,18 +156,18 @@ const app = new Hono<{ Variables: AuthVariables }>()
             buildingName: alert.buildingName,
             sensorId: alert.sensorId?.toString(),
             type: alert.type,
-            thresholdType: alert.thresholdType,
+            thresholdType: alert.thresholdType ?? undefined,
             severity: alert.severity,
             message: alert.message,
             status: alert.status,
-            acknowledgedBy: alert.acknowledgedBy,
-            acknowledgedAt: alert.acknowledgedAt?.toISOString(),
-            resolvedBy: alert.resolvedBy,
-            resolvedAt: alert.resolvedAt?.toISOString(),
+            acknowledgedBy: alert.acknowledgedBy ?? undefined,
+            acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? undefined,
+            resolvedBy: alert.resolvedBy ?? undefined,
+            resolvedAt: alert.resolvedAt?.toISOString() ?? undefined,
             createdAt: alert.createdAt.toISOString(),
             updatedAt: alert.updatedAt.toISOString(),
           }
-        });
+        } satisfies UpdateAlertStatusResponse);
       } catch (error) {
         console.error("Error acknowledging alert:", error);
         return c.json({ error: "Internal server error" }, 500);
@@ -223,18 +227,18 @@ const app = new Hono<{ Variables: AuthVariables }>()
             buildingName: alert.buildingName,
             sensorId: alert.sensorId?.toString(),
             type: alert.type,
-            thresholdType: alert.thresholdType,
+            thresholdType: alert.thresholdType ?? undefined,
             severity: alert.severity,
             message: alert.message,
             status: alert.status,
-            acknowledgedBy: alert.acknowledgedBy,
-            acknowledgedAt: alert.acknowledgedAt?.toISOString(),
-            resolvedBy: alert.resolvedBy,
-            resolvedAt: alert.resolvedAt?.toISOString(),
+            acknowledgedBy: alert.acknowledgedBy ?? undefined,
+            acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? undefined,
+            resolvedBy: alert.resolvedBy ?? undefined,
+            resolvedAt: alert.resolvedAt?.toISOString() ?? undefined,
             createdAt: alert.createdAt.toISOString(),
             updatedAt: alert.updatedAt.toISOString(),
           }
-        });
+        } satisfies UpdateAlertStatusResponse);
       } catch (error) {
         console.error("Error resolving alert:", error);
         return c.json({ error: "Internal server error" }, 500);

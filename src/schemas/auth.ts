@@ -13,10 +13,14 @@ export const MeResponseSchema = z.object({
   user: UserSchema,
 });
 
+export type MeResponse = z.infer<typeof MeResponseSchema>;
+
 /**
  * POST /api/auth/logout - Logout success response
  */
 export const LogoutResponseSchema = SuccessSchema;
+
+export type LogoutResponse = z.infer<typeof LogoutResponseSchema>;
 
 /**
  * POST /api/auth/admin/test-email - Test email request
@@ -32,6 +36,8 @@ export const TestEmailResponseSchema = z.object({
   success: z.literal(true),
   message: z.string().describe("Success message"),
 });
+
+export type TestEmailResponse = z.infer<typeof TestEmailResponseSchema>;
 
 // Re-export for convenience
 export { ErrorSchema };

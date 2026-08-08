@@ -24,6 +24,13 @@ import {
   ResetPasswordResponseSchema,
   ErrorSchema,
 } from "../schemas/auth-local";
+import type {
+  ForgotPasswordResponse,
+  LoginResponse,
+  ResetPasswordResponse,
+  SetupResponse,
+  ValidateResetTokenResponse,
+} from "../schemas/auth-local";
 
 /**
  * POST /api/auth/local/setup - Setup password for invited user
@@ -124,10 +131,10 @@ const app = new Hono()
         user: {
           id: user._id.toString(),
           email: user.email,
-          name: user.name,
+          name: user.name ?? undefined,
           role: user.role,
         },
-      });
+      } satisfies SetupResponse);
     }
   )
   .post(
@@ -214,10 +221,10 @@ const app = new Hono()
         user: {
           id: user._id.toString(),
           email: user.email,
-          name: user.name,
+          name: user.name ?? undefined,
           role: user.role,
         },
-      });
+      } satisfies LoginResponse);
     }
   )
   .post(
@@ -245,7 +252,7 @@ const app = new Hono()
       const successResponse = {
         success: true,
         message: "Se l'email esiste, riceverai un link per reimpostare la password",
-      };
+      } satisfies ForgotPasswordResponse;
 
       try {
         // Find user
@@ -326,7 +333,7 @@ const app = new Hono()
         return c.json({ error: "Reset token has expired" }, 400);
       }
 
-      return c.json({ valid: true });
+      return c.json({ valid: true } satisfies ValidateResetTokenResponse);
     }
   )
   .post(
@@ -405,7 +412,7 @@ const app = new Hono()
       return c.json({
         success: true,
         message: "Password reset successfully",
-      });
+      } satisfies ResetPasswordResponse);
     }
   );
 

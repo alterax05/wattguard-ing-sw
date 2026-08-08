@@ -49,6 +49,8 @@ export const ListAlertsResponseSchema = z.object({
   }).describe("Pagination information"),
 });
 
+export type ListAlertsResponse = z.infer<typeof ListAlertsResponseSchema>;
+
 /**
  * PATCH /api/alerts/:id/acknowledge
  * PATCH /api/alerts/:id/resolve
@@ -61,3 +63,5 @@ export const UpdateAlertStatusResponseSchema = z.object({
   success: z.literal(true),
   alert: AlertSchema,
 });
+
+export type UpdateAlertStatusResponse = z.infer<typeof UpdateAlertStatusResponseSchema>;

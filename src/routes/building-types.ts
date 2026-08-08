@@ -23,6 +23,12 @@ import {
   DeleteBuildingTypeResponseSchema,
   ErrorSchema,
 } from "../schemas/building-types";
+import type {
+  CreateBuildingTypeResponse,
+  DeleteBuildingTypeResponse,
+  ListBuildingTypesResponse,
+  UpdateBuildingTypeResponse,
+} from "../schemas/building-types";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   /**
@@ -69,11 +75,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         buildingTypes: buildingTypes.map((bt) => ({
           id: bt._id.toString(),
           name: bt.name,
-          description: bt.description,
+          description: bt.description ?? undefined,
           createdAt: bt.createdAt.toISOString(),
           updatedAt: bt.updatedAt.toISOString(),
         })),
-      });
+      } satisfies ListBuildingTypesResponse);
     }
   )
 
@@ -150,11 +156,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
           buildingType: {
             id: buildingType._id.toString(),
             name: buildingType.name,
-            description: buildingType.description,
+            description: buildingType.description ?? undefined,
             createdAt: buildingType.createdAt.toISOString(),
             updatedAt: buildingType.updatedAt.toISOString(),
           },
-        },
+        } satisfies CreateBuildingTypeResponse,
         201
       );
     }
@@ -250,11 +256,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         buildingType: {
           id: buildingType._id.toString(),
           name: buildingType.name,
-          description: buildingType.description,
+          description: buildingType.description ?? undefined,
           createdAt: buildingType.createdAt.toISOString(),
           updatedAt: buildingType.updatedAt.toISOString(),
         },
-      });
+      } satisfies UpdateBuildingTypeResponse);
     }
   )
 
@@ -344,7 +350,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json({
         success: true,
         message: `Building type "${buildingType.name}" deleted successfully`,
-      });
+      } satisfies DeleteBuildingTypeResponse);
     }
   );
 

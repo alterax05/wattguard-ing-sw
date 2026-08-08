@@ -13,6 +13,12 @@ export const ErrorSchema = z.object({
   error: z.string().describe("Error message describing what went wrong"),
 });
 
+export const HealthResponseSchema = z.object({
+  status: z.string(),
+});
+
+export type HealthResponse = z.infer<typeof HealthResponseSchema>;
+
 /**
  * Standard success response schema
  */

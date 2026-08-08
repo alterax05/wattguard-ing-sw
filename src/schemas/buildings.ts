@@ -81,6 +81,8 @@ export const SearchBuildingsResponseSchema = z.object({
   }).describe("Pagination information"),
 });
 
+export type SearchBuildingsResponse = z.infer<typeof SearchBuildingsResponseSchema>;
+
 /**
  * POST /api/buildings - Create building request
  * 
@@ -105,6 +107,8 @@ export const CreateBuildingResponseSchema = z.object({
   building: BuildingDetailSchema,
 });
 
+export type CreateBuildingResponse = z.infer<typeof CreateBuildingResponseSchema>;
+
 /**
  * GET /api/buildings/:id - Get building path parameter
  */
@@ -118,6 +122,8 @@ export const GetBuildingParamsSchema = z.object({
 export const GetBuildingResponseSchema = z.object({
   building: BuildingDetailSchema,
 });
+
+export type GetBuildingResponse = z.infer<typeof GetBuildingResponseSchema>;
 
 /**
  * PATCH /api/buildings/:id - Update building path parameter
@@ -150,6 +156,8 @@ export const UpdateBuildingResponseSchema = z.object({
   building: BuildingDetailSchema,
 });
 
+export type UpdateBuildingResponse = z.infer<typeof UpdateBuildingResponseSchema>;
+
 /**
  * DELETE /api/buildings/:id - Delete building path parameter
  */
@@ -164,6 +172,8 @@ export const DeleteBuildingResponseSchema = z.object({
   success: z.literal(true),
   message: z.string().describe("Confirmation message"),
 });
+
+export type DeleteBuildingResponse = z.infer<typeof DeleteBuildingResponseSchema>;
 
 /**
  * Real-time data schema 
@@ -199,6 +209,8 @@ export const GetBuildingRealTimeResponseSchema = z.object({
   data: RealTimeDataSchema,
 });
 
+export type GetBuildingRealTimeResponse = z.infer<typeof GetBuildingRealTimeResponseSchema>;
+
 /**
  * GET /api/buildings/:id/history - Get building historical data query parameters
  */
@@ -233,6 +245,8 @@ export const GetBuildingHistoryResponseSchema = z.object({
   data: z.array(HistoricalDataPointSchema).describe("Historical data points for graphing"),
 });
 
+export type GetBuildingHistoryResponse = z.infer<typeof GetBuildingHistoryResponseSchema>;
+
 /**
  * GET /api/buildings/:id/efficiency - Efficiency query parameters
  */
@@ -259,6 +273,8 @@ export const GetBuildingEfficiencyResponseSchema = z.object({
     averageCop: z.number().nullable().describe("Average Coefficient of Performance (COP)"),
   }),
 });
+
+export type GetBuildingEfficiencyResponse = z.infer<typeof GetBuildingEfficiencyResponseSchema>;
 
 // Re-export for convenience
 export { ErrorSchema };
