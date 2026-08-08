@@ -21,7 +21,6 @@ const mockMqttClient = {
 };
 
 describe("MQTT Service", () => {
-  let clientCallback: (topic: string, message: Buffer) => void;
   let connectCallback: () => void;
 
   beforeEach(() => {
@@ -34,14 +33,13 @@ describe("MQTT Service", () => {
     mockSubscribe.mockReset();
 
     // Setup basic mock behavior
-    mockOn.mockImplementation((event: string, cb: any) => {
-      if (event === "message") clientCallback = cb;
+    mockOn.mockImplementation((event: string, cb: (...args: unknown[]) => void) => {
       if (event === "connect") connectCallback = cb;
       return mockMqttClient;
     });
 
     // Mock the connect function
-    // @ts-ignore
+    // @ts-expect-error assigning a mock to the typed connect function
     mqtt.connect = mock(() => mockMqttClient);
   });
 

@@ -234,7 +234,7 @@ describe("Sensor Model", () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
-          sensorType: "invalid_type" as any as SensorType, // Force an invalid type
+          sensorType: "invalid_type" as unknown as SensorType, // Force an invalid type
           location: "Test",
           installationDate: new Date(),
           createdBy: userId,
@@ -313,7 +313,7 @@ describe("Sensor Model", () => {
           sensorType: "internal_temp",
           location: "Test",
           installationDate: new Date(),
-          status: "invalid" as any as SensorStatus, // Force an invalid status
+          status: "invalid" as unknown as SensorStatus, // Force an invalid status
           createdBy: userId,
           updatedBy: userId,
         });
