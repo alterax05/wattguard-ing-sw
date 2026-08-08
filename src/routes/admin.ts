@@ -27,16 +27,15 @@ import {
   ErrorSchema,
 } from "../schemas/admin";
 
-/**
- * GET /api/admin/users - List all users
- * PATCH /api/admin/users/:id/role - Update a user's role
- * DELETE /api/admin/users/:id - Delete a user
- * GET /api/admin/invites - List all invites
- * POST /api/admin/invites - Create a new invite
- * POST /api/admin/invites/:id/revoke - Revoke an invite
- * 
- * Note: JWT authentication and admin role middleware are applied globally in index.ts
- */
+import type {
+  CreateInviteResponse,
+  DeleteUserResponse,
+  ListInvitesResponse,
+  ListUsersResponse,
+  RevokeInviteResponse,
+  UpdateUserRoleResponse,
+} from "../schemas/admin";
+
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/users",
@@ -86,7 +85,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           lastLoginAt: user.lastLoginAt?.toISOString(),
           createdAt: user.createdAt.toISOString(),
         })),
-      });
+      } satisfies ListUsersResponse);
     }
   )
   .patch(
@@ -169,7 +168,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           lastLoginAt: user.lastLoginAt?.toISOString(),
           createdAt: user.createdAt.toISOString(),
         },
-      });
+      } satisfies UpdateUserRoleResponse);
     }
   )
   .delete(
@@ -236,7 +235,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "User not found" }, 404);
       }
 
-      return c.json({ success: true as const });
+      return c.json({ success: true as const } satisfies DeleteUserResponse);
     }
   )
   .get(
@@ -275,9 +274,23 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const invites = await Invite.find()
         .sort({ createdAt: -1 })
-        .populate("createdBy", "email").lean();
+        .populate<{ createdBy: { email: string } }>("createdBy", "email")
+        .lean();
 
-      return c.json({ invites });
+      return c.json({
+        invites: invites.map((invite) => ({
+          id: invite._id.toString(),
+          email: invite.email,
+          role: invite.role,
+          status: invite.status,
+          expiresAt: invite.expiresAt.toISOString(),
+          createdAt: invite.createdAt?.toISOString() ?? undefined,
+          acceptedAt: invite.acceptedAt?.toISOString() ?? undefined,
+          createdBy: invite.createdBy
+            ? { email: invite.createdBy.email }
+            : undefined,
+        })),
+      } satisfies ListInvitesResponse);
     }
   )
   .post(
@@ -378,8 +391,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       return c.json({
         success: true as const,
-        invite: invite,
-      }, 201);
+        invite: {
+          id: invite._id.toString(),
+          email: invite.email,
+          role: invite.role,
+          status: invite.status,
+          expiresAt: invite.expiresAt.toISOString(),
+        },
+      } satisfies CreateInviteResponse, 201);
     }
   )
   .post(
@@ -447,7 +466,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
       invite.status = "revoked";
       await invite.save();
 
-      return c.json({ success: true as const, invite });
+      return c.json({
+        success: true as const,
+        invite: {
+          id: invite._id.toString(),
+          email: invite.email,
+          role: invite.role,
+          status: invite.status,
+          expiresAt: invite.expiresAt.toISOString(),
+          createdAt: invite.createdAt?.toISOString() ?? undefined,
+          acceptedAt: invite.acceptedAt?.toISOString() ?? undefined,
+          createdBy: invite.createdBy?.toString() ?? undefined,
+        },
+      } satisfies RevokeInviteResponse);
     }
   );
 

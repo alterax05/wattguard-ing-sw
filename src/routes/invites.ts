@@ -10,6 +10,7 @@ import {
   ValidateInviteResponseSchema,
   ErrorSchema,
 } from "../schemas/invites";
+import type { ValidateInviteResponse } from "../schemas/invites";
 
 /**
  * Public: Validate an invite token
@@ -75,7 +76,7 @@ const app = new Hono()
         email: invite.email,
         role: invite.role,
         expiresAt: invite.expiresAt.toISOString(),
-      });
+      } satisfies ValidateInviteResponse);
     }
   );
 

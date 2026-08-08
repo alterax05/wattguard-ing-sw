@@ -11,6 +11,10 @@ import {
   DashboardHistoryResponseSchema,
   ErrorSchema,
 } from "../schemas/dashboard";
+import type {
+  DashboardHistoryResponse,
+  DashboardStatsResponse,
+} from "../schemas/dashboard";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   /**
@@ -91,7 +95,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           electricity: electricityAgg[0]?.total ?? null,
           gas: gasAgg[0]?.total ?? null,
         },
-      });
+      } satisfies DashboardStatsResponse);
     }
   )
 
@@ -249,7 +253,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           interval,
         },
         data,
-      });
+      } satisfies DashboardHistoryResponse);
     }
   );
 

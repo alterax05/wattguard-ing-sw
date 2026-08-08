@@ -41,6 +41,8 @@ export const DashboardStatsResponseSchema = z.object({
   }),
 });
 
+export type DashboardStatsResponse = z.infer<typeof DashboardStatsResponseSchema>;
+
 /**
  * A single data point in the history response
  */
@@ -61,6 +63,8 @@ export const DashboardHistoryResponseSchema = z.object({
   }),
   data: z.array(DashboardHistoryDataPointSchema),
 });
+
+export type DashboardHistoryResponse = z.infer<typeof DashboardHistoryResponseSchema>;
 
 // Re-export error schema for convenience
 export { ErrorSchema };

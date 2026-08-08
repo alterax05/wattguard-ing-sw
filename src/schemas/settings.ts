@@ -46,6 +46,8 @@ export const GetSettingsResponseSchema = z.object({
   config: SystemConfigSchema,
 });
 
+export type GetSettingsResponse = z.infer<typeof GetSettingsResponseSchema>;
+
 // ── Update schema (used for PATCH request — all fields optional) ─────────────
 
 export const UpdateSettingsRequestSchema = z
@@ -66,6 +68,8 @@ export const UpdateSettingsResponseSchema = z.object({
   success: z.literal(true),
   config: SystemConfigSchema,
 });
+
+export type UpdateSettingsResponse = z.infer<typeof UpdateSettingsResponseSchema>;
 
 // Re-export for convenience
 export { ErrorSchema };

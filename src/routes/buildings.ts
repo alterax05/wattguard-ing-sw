@@ -4,7 +4,7 @@ import mongoose, { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Building, type BuildingDocument } from "../models/Building";
 import { BuildingType } from "../models/BuildingType";
-import { Sensor, type SensorDocument } from "../models/Sensor";
+import { Sensor, type SensorDocument, type SensorType } from "../models/Sensor";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
 
@@ -26,6 +26,16 @@ import {
   GetBuildingEfficiencyQuerySchema,
   GetBuildingEfficiencyResponseSchema,
   ErrorSchema,
+} from "../schemas/buildings";
+import type {
+  CreateBuildingResponse,
+  DeleteBuildingResponse,
+  GetBuildingEfficiencyResponse,
+  GetBuildingHistoryResponse,
+  GetBuildingRealTimeResponse,
+  GetBuildingResponse,
+  SearchBuildingsResponse,
+  UpdateBuildingResponse,
 } from "../schemas/buildings";
 import { getAverageHistoricalTemperature } from "../lib/weather";
 
@@ -157,13 +167,16 @@ const app = new Hono<{ Variables: AuthVariables }>()
             address: b.address,
             surface: b.surface,
             ceilingHeight: b.ceilingHeight,
-            location: b.location,
+            location: {
+              type: b.location.type,
+              coordinates: b.location.coordinates as [number, number],
+            },
             buildingType: (buildingType instanceof mongoose.Types.ObjectId)
               ? buildingType.toString()
               : {
                   id: buildingType._id.toString(),
                   name: buildingType.name,
-                  description: buildingType.description,
+                  description: buildingType.description ?? undefined,
                 },
             heatingSystemType: b.heatingSystemType,
             status: b.status,
@@ -178,7 +191,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           offset: query.offset,
           total,
         },
-      });
+      } satisfies SearchBuildingsResponse);
     }
   )
   .post(
@@ -257,20 +270,27 @@ const app = new Hono<{ Variables: AuthVariables }>()
           address: building.address,
           surface: building.surface,
           ceilingHeight: building.ceilingHeight,
-          location: building.location,
-          buildingType: buildingType,
+          location: {
+            type: building.location.type,
+            coordinates: building.location.coordinates as [number, number],
+          },
+          buildingType: {
+            id: buildingType._id.toString(),
+            name: buildingType.name,
+            description: buildingType.description ?? undefined,
+          },
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
           activeSensors: 0,
           currentConsumption: null,
-          constructionYear: building.constructionYear,
+          constructionYear: building.constructionYear ?? undefined,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
           createdAt: building.createdAt?.toISOString(),
           updatedAt: building.updatedAt?.toISOString(),
         },
-      }, 201);
+      } satisfies CreateBuildingResponse, 201);
     }
   )
 
@@ -322,7 +342,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const { id } = c.req.valid("param");
 
-      const building = await Building.findById(id).populate<{ buildingType: { name: string, description: string } }>("buildingType", "name description").lean();
+      const building = await Building.findById(id).populate<{
+        buildingType: {
+          _id: Types.ObjectId;
+          name: string;
+          description?: string | null;
+        };
+      }>("buildingType", "name description").lean();
 
       if (!building) {
         return c.json({ error: "Building not found" }, 404);
@@ -348,20 +374,27 @@ const app = new Hono<{ Variables: AuthVariables }>()
           address: building.address,
           surface: building.surface,
           ceilingHeight: building.ceilingHeight,
-          location: building.location,
-          buildingType: bt,
+          location: {
+            type: building.location.type,
+            coordinates: building.location.coordinates as [number, number],
+          },
+          buildingType: {
+            id: bt._id.toString(),
+            name: bt.name,
+            description: bt.description ?? undefined,
+          },
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
           activeSensors: activeSensorsCount,
           currentConsumption: energySensor?.lastReading?.value ?? null,
-          constructionYear: building.constructionYear,
+          constructionYear: building.constructionYear ?? undefined,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
           createdAt: building.createdAt?.toISOString(),
           updatedAt: building.updatedAt?.toISOString(),
         },
-      });
+      } satisfies GetBuildingResponse);
     }
   )
 
@@ -456,7 +489,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
       await building.save();
 
       // Populate for response
-      const populatedBuilding = await building.populate<{ buildingType: { name: string, description: string } }>("buildingType", "name description");
+      const populatedBuilding = await building.populate<{
+        buildingType: {
+          _id: Types.ObjectId;
+          name: string;
+          description?: string | null;
+        };
+      }>("buildingType", "name description");
       const bt = populatedBuilding.buildingType;
 
       // Enrich with active sensor count and current consumption
@@ -478,20 +517,27 @@ const app = new Hono<{ Variables: AuthVariables }>()
           address: building.address,
           surface: building.surface,
           ceilingHeight: building.ceilingHeight,
-          location: building.location,
-          buildingType: bt,
+          location: {
+            type: building.location.type,
+            coordinates: building.location.coordinates as [number, number],
+          },
+          buildingType: {
+            id: bt._id.toString(),
+            name: bt.name,
+            description: bt.description ?? undefined,
+          },
           heatingSystemType: building.heatingSystemType,
           status: building.status,
           geographicZone: building.geographicZone,
           activeSensors: activeSensorsCount,
           currentConsumption: energySensor?.lastReading?.value ?? null,
-          constructionYear: building.constructionYear,
+          constructionYear: building.constructionYear ?? undefined,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
           createdAt: building.createdAt?.toISOString(),
           updatedAt: building.updatedAt?.toISOString(),
         },
-      });
+      } satisfies UpdateBuildingResponse);
     }
   )
   /**
@@ -558,7 +604,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json({
         success: true,
         message: "Building and associated data deleted successfully",
-      });
+      } satisfies DeleteBuildingResponse);
     }
   )
   /**
@@ -646,7 +692,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
             sensorId: energyMeterSensor?._id.toString() ?? null,
           },
         },
-      });
+      } satisfies GetBuildingRealTimeResponse);
     }
   )
   .get(
@@ -738,10 +784,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           timestamp: r.timestamp.toISOString(),
           value: r.value,
           unit: r.unit,
-          sensorType: r.metadata!.sensorType,
+          sensorType: r.metadata!.sensorType as SensorType,
           sensorId: r.metadata!.sensorId?.toString(),
         })),
-      });
+      } satisfies GetBuildingHistoryResponse);
     }
   )
   .get(
@@ -1166,7 +1212,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
             ? null
             : averageCop ? Number(averageCop.toFixed(2)) : null
         },
-      });
+      } satisfies GetBuildingEfficiencyResponse);
     }
   );
 

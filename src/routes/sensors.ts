@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import type { QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
-import { Sensor, type SensorDocument } from "../models/Sensor";
+import { Sensor, type SensorDocument, type SensorType } from "../models/Sensor";
 import { Building, type BuildingDocument } from "../models/Building";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
 import { Alert, type AlertThresholdType } from "../models/Alert";
@@ -23,6 +23,14 @@ import {
   GetSensorReadingsQuerySchema,
   GetSensorReadingsResponseSchema,
   ErrorSchema,
+} from "../schemas/sensors";
+import type {
+  CreateSensorResponse,
+  DeleteSensorResponse,
+  GetSensorReadingsResponse,
+  GetSensorResponse,
+  ListSensorsResponse,
+  UpdateSensorResponse,
 } from "../schemas/sensors";
 
 const app = new Hono<{ Variables: AuthVariables }>()
@@ -85,7 +93,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
             buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
             sensorType: sensor.sensorType,
             location: sensor.location,
-            serialNumber: sensor.serialNumber,
+            serialNumber: sensor.serialNumber ?? undefined,
             installationDate: sensor.installationDate.toISOString(),
             status: sensor.status,
             isOffline: sensor.status === "inactive",
@@ -97,8 +105,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
                 }
               : undefined,
             transmissionInterval: sensor.transmissionInterval,
-            minThreshold: sensor.minThreshold,
-            maxThreshold: sensor.maxThreshold,
+            minThreshold: sensor.minThreshold ?? undefined,
+            maxThreshold: sensor.maxThreshold ?? undefined,
             building: building?.name
               ? {
                   id: building._id.toString(),
@@ -117,7 +125,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           offset: query.offset,
           total,
         },
-      });
+      } satisfies ListSensorsResponse);
     }
   )
   /**
@@ -193,7 +201,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
             buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
             sensorType: sensor.sensorType,
             location: sensor.location,
-            serialNumber: sensor.serialNumber,
+            serialNumber: sensor.serialNumber ?? undefined,
             installationDate: sensor.installationDate.toISOString(),
             status: sensor.status,
             transmissionInterval: sensor.transmissionInterval,
@@ -202,7 +210,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
             createdAt: sensor.createdAt?.toISOString(),
             updatedAt: sensor.updatedAt?.toISOString(),
           },
-        },
+        } satisfies CreateSensorResponse,
         201
       );
     }
@@ -256,7 +264,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
           sensorType: sensor.sensorType,
           location: sensor.location,
-          serialNumber: sensor.serialNumber,
+          serialNumber: sensor.serialNumber ?? undefined,
           installationDate: sensor.installationDate.toISOString(),
           status: sensor.status,
           isOffline: sensor.status === "inactive",
@@ -268,8 +276,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
               }
             : undefined,
           transmissionInterval: sensor.transmissionInterval,
-          minThreshold: sensor.minThreshold,
-          maxThreshold: sensor.maxThreshold,
+          minThreshold: sensor.minThreshold ?? undefined,
+          maxThreshold: sensor.maxThreshold ?? undefined,
           building: building
             ? {
                 id: building._id.toString(),
@@ -282,7 +290,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           createdAt: sensor.createdAt?.toISOString(),
           updatedAt: sensor.updatedAt?.toISOString(),
         },
-      });
+      } satisfies GetSensorResponse);
     }
   )
 
@@ -371,7 +379,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           buildingId: updatedSensor!.buildingId.toString(),
           sensorType: updatedSensor!.sensorType,
           location: updatedSensor!.location,
-          serialNumber: updatedSensor!.serialNumber,
+          serialNumber: updatedSensor!.serialNumber ?? undefined,
           installationDate: updatedSensor!.installationDate.toISOString(),
           status: updatedSensor!.status,
           lastReading: updatedSensor!.lastReading
@@ -382,14 +390,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
               }
             : undefined,
           transmissionInterval: updatedSensor!.transmissionInterval,
-          minThreshold: updatedSensor!.minThreshold,
-          maxThreshold: updatedSensor!.maxThreshold,
+          minThreshold: updatedSensor!.minThreshold ?? undefined,
+          maxThreshold: updatedSensor!.maxThreshold ?? undefined,
           createdBy: updatedSensor!.createdBy?.toString(),
           updatedBy: updatedSensor!.updatedBy?.toString(),
           createdAt: updatedSensor!.createdAt?.toISOString(),
           updatedAt: updatedSensor!.updatedAt?.toISOString(),
         },
-      });
+      } satisfies UpdateSensorResponse);
     }
   )
 
@@ -442,7 +450,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json({
         success: true,
         message: `Sensor "${sensor.location}" deleted successfully`,
-      });
+      } satisfies DeleteSensorResponse);
     }
   )
   /**
@@ -509,14 +517,20 @@ const app = new Hono<{ Variables: AuthVariables }>()
           timestamp: r.timestamp.toISOString(),
           value: r.value,
           unit: r.unit,
-          metadata: r.metadata,
+          metadata: r.metadata
+            ? {
+                sensorId: r.metadata.sensorId.toString(),
+                buildingId: r.metadata.buildingId.toString(),
+                sensorType: r.metadata.sensorType as SensorType,
+              }
+            : undefined,
         })),
         pagination: {
           limit: query.limit,
           offset: query.offset,
           total,
         },
-      });
+      } satisfies GetSensorReadingsResponse);
     }
   );
 

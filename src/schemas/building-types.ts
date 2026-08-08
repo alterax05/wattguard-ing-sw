@@ -24,6 +24,8 @@ export const ListBuildingTypesResponseSchema = z.object({
   buildingTypes: z.array(BuildingTypeSchema).describe("List of building types"),
 });
 
+export type ListBuildingTypesResponse = z.infer<typeof ListBuildingTypesResponseSchema>;
+
 /**
  * POST /api/building-types - Create building type request
  */
@@ -39,6 +41,8 @@ export const CreateBuildingTypeResponseSchema = z.object({
   success: z.literal(true),
   buildingType: BuildingTypeSchema,
 });
+
+export type CreateBuildingTypeResponse = z.infer<typeof CreateBuildingTypeResponseSchema>;
 
 /**
  * PATCH /api/building-types/:id - Update building type path parameter
@@ -63,6 +67,8 @@ export const UpdateBuildingTypeResponseSchema = z.object({
   buildingType: BuildingTypeSchema,
 });
 
+export type UpdateBuildingTypeResponse = z.infer<typeof UpdateBuildingTypeResponseSchema>;
+
 /**
  * DELETE /api/building-types/:id - Delete building type path parameter
  */
@@ -77,6 +83,8 @@ export const DeleteBuildingTypeResponseSchema = z.object({
   success: z.literal(true),
   message: z.string().describe("Confirmation message"),
 });
+
+export type DeleteBuildingTypeResponse = z.infer<typeof DeleteBuildingTypeResponseSchema>;
 
 // Re-export for convenience
 export { ErrorSchema };

@@ -35,6 +35,8 @@ export const ListInvitesResponseSchema = z.object({
   invites: z.array(InviteSchema).describe("List of invites"),
 });
 
+export type ListInvitesResponse = z.infer<typeof ListInvitesResponseSchema>;
+
 /**
  * POST /api/admin/invites - Create invite request
  */
@@ -57,6 +59,8 @@ export const CreateInviteResponseSchema = z.object({
   }),
 });
 
+export type CreateInviteResponse = z.infer<typeof CreateInviteResponseSchema>;
+
 /**
  * POST /api/admin/invites/:id/revoke - Revoke invite path parameter
  */
@@ -72,12 +76,16 @@ export const RevokeInviteResponseSchema = z.object({
   invite: InviteSchema,
 });
 
+export type RevokeInviteResponse = z.infer<typeof RevokeInviteResponseSchema>;
+
 /**
  * GET /api/admin/users - List all users response
  */
 export const ListUsersResponseSchema = z.object({
   users: z.array(UserSchema).describe("List of users"),
 });
+
+export type ListUsersResponse = z.infer<typeof ListUsersResponseSchema>;
 
 /**
  * PATCH /api/admin/users/:id/role - Update user role path parameter
@@ -101,6 +109,8 @@ export const UpdateUserRoleResponseSchema = z.object({
   user: UserSchema,
 });
 
+export type UpdateUserRoleResponse = z.infer<typeof UpdateUserRoleResponseSchema>;
+
 /**
  * DELETE /api/admin/users/:id - Delete user path parameter
  */
@@ -114,6 +124,8 @@ export const DeleteUserParamsSchema = z.object({
 export const DeleteUserResponseSchema = z.object({
   success: z.literal(true),
 });
+
+export type DeleteUserResponse = z.infer<typeof DeleteUserResponseSchema>;
 
 // Re-export for convenience
 export { ErrorSchema };

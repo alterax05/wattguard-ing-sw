@@ -24,6 +24,7 @@ import {
   UpdateSettingsResponseSchema,
   ErrorSchema,
 } from "../schemas/settings";
+import type { GetSettingsResponse, UpdateSettingsResponse } from "../schemas/settings";
 
 /** Serialize a SystemConfig document to a plain object for API responses. */
 function serializeConfig(doc: Awaited<ReturnType<typeof SystemConfig.getOrCreate>>) {
@@ -70,7 +71,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
     }),
     async (c) => {
       const config = await SystemConfig.getOrCreate();
-      return c.json({ config: serializeConfig(config) });
+      return c.json({ config: serializeConfig(config) } satisfies GetSettingsResponse);
     },
   )
 
@@ -138,7 +139,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Failed to update configuration" }, 500);
       }
 
-      return c.json({ success: true as const, config: serializeConfig(updated) });
+      return c.json({ success: true as const, config: serializeConfig(updated) } satisfies UpdateSettingsResponse);
     },
   )
 

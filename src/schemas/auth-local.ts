@@ -22,6 +22,8 @@ export const SetupResponseSchema = z.object({
   user: UserSchema.pick({ id: true, email: true, name: true, role: true }),
 });
 
+export type SetupResponse = z.infer<typeof SetupResponseSchema>;
+
 /**
  * POST /api/auth/local/login - Login with email and password
  */
@@ -35,6 +37,8 @@ export const LoginResponseSchema = z.object({
   user: UserSchema.pick({ id: true, email: true, name: true, role: true }),
 });
 
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+
 /**
  * POST /api/auth/local/forgot-password - Request password reset
  */
@@ -47,6 +51,8 @@ export const ForgotPasswordResponseSchema = z.object({
   message: z.string().describe("Success message (always returns success to prevent email enumeration)"),
 });
 
+export type ForgotPasswordResponse = z.infer<typeof ForgotPasswordResponseSchema>;
+
 /**
  * GET /api/auth/local/validate-reset-token - Validate password reset token
  */
@@ -55,6 +61,8 @@ export const ValidateResetTokenQuerySchema = TokenQuerySchema;
 export const ValidateResetTokenResponseSchema = z.object({
   valid: z.literal(true),
 });
+
+export type ValidateResetTokenResponse = z.infer<typeof ValidateResetTokenResponseSchema>;
 
 /**
  * POST /api/auth/local/reset-password - Reset password with token
@@ -68,6 +76,8 @@ export const ResetPasswordResponseSchema = z.object({
   success: z.literal(true),
   message: z.string().describe("Success message"),
 });
+
+export type ResetPasswordResponse = z.infer<typeof ResetPasswordResponseSchema>;
 
 // Re-export for convenience
 export { ErrorSchema };
