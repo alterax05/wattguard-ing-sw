@@ -135,7 +135,7 @@ app
   .use(logger());
 
 if (IS_PRODUCTION) {
-  const staticRoot = path.resolve(process.cwd(), "dist");
+  const staticRoot = path.resolve(import.meta.dir, "../static");
 
   app.use("*", serveStatic({ root: staticRoot }));
 
