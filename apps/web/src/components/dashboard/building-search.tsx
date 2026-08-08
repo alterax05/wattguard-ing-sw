@@ -1,4 +1,6 @@
 import { useContext, useState, useMemo } from "react"
+import { format } from "date-fns"
+import type { DateRange } from "react-day-picker"
 import { useNavigate } from "react-router-dom"
 import { useBuildings, useBuildingTypes, type BuildingSummary } from "@/hooks/use-buildings"
 import { Card, CardContent } from "@/components/ui/card"
@@ -19,7 +21,6 @@ import {
   Building2,
   MapPin,
   Download,
-  Calendar,
   Eye,
   AlertCircle,
   Zap,
@@ -29,6 +30,7 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { AuthContext } from "@/lib/auth"
 import { downloadFromEndpoint } from "@/lib/download"
+import { DateRangePicker } from "./date-range-picker"
 
 /** Extract the building type display name from a summary */
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
@@ -54,8 +56,7 @@ export function BuildingSearch() {
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [dateFrom, setDateFrom] = useState("")
-  const [dateTo, setDateTo] = useState("")
+  const [exportRange, setExportRange] = useState<DateRange | undefined>()
   const [isExporting, setIsExporting] = useState(false)
 
   const isAdmin = user?.role === "admin"
@@ -97,15 +98,13 @@ export function BuildingSearch() {
   }
 
   const handleExport = async () => {
-    if (!dateFrom || !dateTo) {
+    if (!exportRange?.from || !exportRange?.to) {
       toast.error("Seleziona una data di inizio e una data di fine")
       return
     }
 
-    if (dateTo < dateFrom) {
-      toast.error("La data di fine deve essere successiva alla data di inizio")
-      return
-    }
+    const startDate = format(exportRange.from, "yyyy-MM-dd")
+    const endDate = format(exportRange.to, "yyyy-MM-dd")
 
     const toastId = toast.loading("Preparazione esportazione CSV…")
     setIsExporting(true)
@@ -113,12 +112,12 @@ export function BuildingSearch() {
     try {
       const params = new URLSearchParams({
         buildingIds: selectedIds.join(","),
-        startDate: dateFrom,
-        endDate: dateTo,
+        startDate,
+        endDate,
       })
       await downloadFromEndpoint(
         `/api/export/consumption?${params.toString()}`,
-        `wattguard-consumption-${dateFrom}-${dateTo}.csv`,
+        `wattguard-consumption-${startDate}-${endDate}.csv`,
       )
       toast.success("Esportazione CSV completata", { id: toastId })
     } catch (error) {
@@ -202,31 +201,18 @@ export function BuildingSearch() {
                     <Separator orientation="vertical" className="h-6" />
 
                     {/* Date range picker */}
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="date"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        className="h-8 w-36 text-xs"
-                        placeholder="Da"
-                      />
-                      <span className="text-xs text-muted-foreground">-</span>
-                      <Input
-                        type="date"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        className="h-8 w-36 text-xs"
-                        placeholder="A"
-                      />
-                    </div>
+                    <DateRangePicker
+                      value={exportRange}
+                      onChange={setExportRange}
+                      className="h-8"
+                    />
 
                     <Separator orientation="vertical" className="h-6" />
 
                     <Button
                       size="sm"
                       onClick={handleExport}
-                      disabled={!dateFrom || !dateTo || isExporting}
+                      disabled={!exportRange?.from || !exportRange?.to || isExporting}
                     >
                       <Download className="mr-2 h-4 w-4" />
                       {isExporting ? "Esportazione..." : "Scarica CSV"}
