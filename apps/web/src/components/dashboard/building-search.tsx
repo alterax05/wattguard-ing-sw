@@ -25,12 +25,55 @@ import {
   AlertCircle,
   Zap,
   Radio,
+  FileText,
+  FileSpreadsheet,
+  FileType,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { AuthContext } from "@/lib/auth"
 import { downloadFromEndpoint } from "@/lib/download"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { DateRangePicker } from "./date-range-picker"
+
+type ExportFormat = "csv" | "xlsx" | "pdf"
+
+const EXPORT_ACTIONS: Record<
+  ExportFormat,
+  {
+    url: string
+    formatParam?: string
+    filename: (start: string, end: string) => string
+    loading: string
+    success: string
+  }
+> = {
+  csv: {
+    url: "/api/export/consumption",
+    filename: (start, end) => `wattguard-consumption-${start}-${end}.csv`,
+    loading: "Preparazione esportazione CSV…",
+    success: "Esportazione CSV completata",
+  },
+  xlsx: {
+    url: "/api/export/report",
+    formatParam: "xlsx",
+    filename: (start, end) => `wattguard-report-${start}-${end}.xlsx`,
+    loading: "Preparazione report Excel…",
+    success: "Report Excel scaricato",
+  },
+  pdf: {
+    url: "/api/export/report",
+    formatParam: "pdf",
+    filename: (start, end) => `wattguard-report-${start}-${end}.pdf`,
+    loading: "Preparazione report PDF…",
+    success: "Report PDF scaricato",
+  },
+}
 
 /** Extract the building type display name from a summary */
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
@@ -97,7 +140,7 @@ export function BuildingSearch() {
     }
   }
 
-  const handleExport = async () => {
+  const handleExport = async (fileFormat: ExportFormat) => {
     if (!exportRange?.from || !exportRange?.to) {
       toast.error("Seleziona una data di inizio e una data di fine")
       return
@@ -105,8 +148,9 @@ export function BuildingSearch() {
 
     const startDate = format(exportRange.from, "yyyy-MM-dd")
     const endDate = format(exportRange.to, "yyyy-MM-dd")
+    const action = EXPORT_ACTIONS[fileFormat]
 
-    const toastId = toast.loading("Preparazione esportazione CSV…")
+    const toastId = toast.loading(action.loading)
     setIsExporting(true)
 
     try {
@@ -115,11 +159,13 @@ export function BuildingSearch() {
         startDate,
         endDate,
       })
+      if (action.formatParam) params.set("format", action.formatParam)
+
       await downloadFromEndpoint(
-        `/api/export/consumption?${params.toString()}`,
-        `wattguard-consumption-${startDate}-${endDate}.csv`,
+        `${action.url}?${params.toString()}`,
+        action.filename(startDate, endDate),
       )
-      toast.success("Esportazione CSV completata", { id: toastId })
+      toast.success(action.success, { id: toastId })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Errore durante l'esportazione",
@@ -209,14 +255,40 @@ export function BuildingSearch() {
 
                     <Separator orientation="vertical" className="h-6" />
 
-                    <Button
-                      size="sm"
-                      onClick={handleExport}
-                      disabled={!exportRange?.from || !exportRange?.to || isExporting}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      {isExporting ? "Esportazione..." : "Scarica CSV"}
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          disabled={!exportRange?.from || !exportRange?.to || isExporting}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          {isExporting ? "Esportazione..." : "Scarica report"}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleExport("csv")}
+                          disabled={isExporting}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleExport("xlsx")}
+                          disabled={isExporting}
+                        >
+                          <FileSpreadsheet className="mr-2 h-4 w-4" />
+                          Excel (.xlsx)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleExport("pdf")}
+                          disabled={isExporting}
+                        >
+                          <FileType className="mr-2 h-4 w-4" />
+                          PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </>
                 )}
               </div>
