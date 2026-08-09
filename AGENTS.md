@@ -106,7 +106,7 @@ This is a **Bun workspaces monorepo** with two apps and one shared package:
 ## 3. Testing
 - **Framework:** `bun:test`.
 - **File Naming:** `*.test.ts` or `*.test.tsx`.
-- **Location:** Co-locate tests with source files.
+- **Location:** Tests live under `apps/api/src/__tests__/`, mirroring the `src` structure (e.g., `__tests__/routes`, `__tests__/models`, `__tests__/services`, `__tests__/utils`, `__tests__/helpers`). Do not co-locate test files with source files.
 - **Example:**
   ```ts
   import { describe, test, expect } from "bun:test";
