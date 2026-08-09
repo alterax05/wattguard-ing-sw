@@ -7,9 +7,22 @@
  * - PATCH /api/building-types/:id - Update building type (admin only)
  * - DELETE /api/building-types/:id - Delete building type (admin only)
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import { testClient } from "hono/testing";
+import { z } from "zod";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { ErrorSchema } from "@wattguard/shared";
+import type {
+  ListBuildingTypesResponse,
+  CreateBuildingTypeResponse,
+  UpdateBuildingTypeResponse,
+  DeleteBuildingTypeResponse,
+} from "@wattguard/shared";
+
+type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+const client = testClient(app);
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -96,13 +109,16 @@ describe("Building Types Routes - Integration Tests", () => {
 
   describe("GET /api/building-types", () => {
     test("should return empty array when no building types exist", async () => {
-      const res = await app.request("/api/building-types", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
+      const res = await client.api["building-types"].$get(undefined, {
+        headers: { Authorization: `Bearer ${adminToken}` },
       });
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildingTypes).toEqual([]);
+      expectTypeOf(json).toExtend<ListBuildingTypesResponse | ErrorResponse>();
+      if ("buildingTypes" in json) {
+        expect(json.buildingTypes).toEqual([]);
+      }
     });
 
     test("should list all building types (admin)", async () => {
@@ -113,18 +129,21 @@ describe("Building Types Routes - Integration Tests", () => {
         { name: "Ufficio", description: "Edificio per uffici" },
       ]);
 
-      const res = await app.request("/api/building-types", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
+      const res = await client.api["building-types"].$get(undefined, {
+        headers: { Authorization: `Bearer ${adminToken}` },
       });
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildingTypes.length).toBe(3);
-      expect(json.buildingTypes[0].name).toBeDefined();
-      expect(json.buildingTypes[0].description).toBeDefined();
-      expect(json.buildingTypes[0].id).toBeDefined();
-      expect(json.buildingTypes[0].createdAt).toBeDefined();
-      expect(json.buildingTypes[0].updatedAt).toBeDefined();
+      expectTypeOf(json).toExtend<ListBuildingTypesResponse | ErrorResponse>();
+      if ("buildingTypes" in json) {
+        expect(json.buildingTypes.length).toBe(3);
+        expect(json.buildingTypes[0]!.name).toBeDefined();
+        expect(json.buildingTypes[0]!.description).toBeDefined();
+        expect(json.buildingTypes[0]!.id).toBeDefined();
+        expect(json.buildingTypes[0]!.createdAt).toBeDefined();
+        expect(json.buildingTypes[0]!.updatedAt).toBeDefined();
+      }
     });
 
     test("should list all building types (operator)", async () => {
@@ -132,19 +151,21 @@ describe("Building Types Routes - Integration Tests", () => {
         { name: "Scuola", description: "Edificio scolastico" },
       ]);
 
-      const res = await app.request("/api/building-types", {
-        headers: { "Authorization": `Bearer ${operatorToken}` },
+      const res = await client.api["building-types"].$get(undefined, {
+        headers: { Authorization: `Bearer ${operatorToken}` },
       });
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildingTypes.length).toBe(1);
+      if ("buildingTypes" in json) {
+        expect(json.buildingTypes.length).toBe(1);
+      }
     });
 
     test("should reject request without token (401)", async () => {
-      const res = await app.request("/api/building-types");
+      const res = await client.api["building-types"].$get();
 
-      expect(res.status).toBe(401);
+      expect(res.status as number).toBe(401);
     });
 
     test("should return building types sorted by name", async () => {
@@ -154,15 +175,17 @@ describe("Building Types Routes - Integration Tests", () => {
         { name: "Ospedale", description: "A" },
       ]);
 
-      const res = await app.request("/api/building-types", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
+      const res = await client.api["building-types"].$get(undefined, {
+        headers: { Authorization: `Bearer ${adminToken}` },
       });
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildingTypes[0].name).toBe("Ospedale");
-      expect(json.buildingTypes[1].name).toBe("Scuola");
-      expect(json.buildingTypes[2].name).toBe("Ufficio");
+      if ("buildingTypes" in json) {
+        expect(json.buildingTypes[0]!.name).toBe("Ospedale");
+        expect(json.buildingTypes[1]!.name).toBe("Scuola");
+        expect(json.buildingTypes[2]!.name).toBe("Ufficio");
+      }
     });
   });
 
@@ -177,26 +200,31 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Edificio pubblico per consultazione libri",
       };
 
-      const res = await app.request("/api/building-types", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"].$post(
+        {
+          json: buildingTypeData,
         },
-        body: JSON.stringify(buildingTypeData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(201);
       const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.buildingType.name).toBe(buildingTypeData.name);
-      expect(json.buildingType.description).toBe(buildingTypeData.description);
-      expect(json.buildingType.id).toBeDefined();
+      expectTypeOf(json).toExtend<CreateBuildingTypeResponse | ErrorResponse>();
+      if ("buildingType" in json) {
+        expect(json.success).toBe(true);
+        expect(json.buildingType.name).toBe(buildingTypeData.name);
+        expect(json.buildingType.description).toBe(buildingTypeData.description);
+        expect(json.buildingType.id).toBeDefined();
 
-      // Verify in database
-      const dbBuildingType = await BuildingType.findById(json.buildingType.id);
-      expect(dbBuildingType).toBeDefined();
-      expect(dbBuildingType!.name).toBe(buildingTypeData.name);
+        // Verify in database
+        const dbBuildingType = await BuildingType.findById(json.buildingType.id);
+        expect(dbBuildingType).toBeDefined();
+        expect(dbBuildingType!.name).toBe(buildingTypeData.name);
+      }
     });
 
     test("should reject duplicate name", async () => {
@@ -205,53 +233,61 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Existing",
       });
 
-      const res = await app.request("/api/building-types", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"].$post(
+        {
+          json: {
+            name: "Scuola",
+            description: "Duplicate",
+          },
         },
-        body: JSON.stringify({
-          name: "Scuola",
-          description: "Duplicate",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      expect(json.error).toContain("already exists");
+      if ("error" in json) {
+        expect(json.error).toContain("already exists");
+      }
     });
 
     test("should reject invalid data", async () => {
-      const res = await app.request("/api/building-types", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"].$post(
+        {
+          json: {
+            name: "", // Empty name
+            description: "Test",
+          },
         },
-        body: JSON.stringify({
-          name: "", // Empty name
-          description: "Test",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
     });
 
     test("should reject request from operator (403)", async () => {
-      const res = await app.request("/api/building-types", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${operatorToken}`,
+      const res = await client.api["building-types"].$post(
+        {
+          json: {
+            name: "Test",
+            description: "Test",
+          },
         },
-        body: JSON.stringify({
-          name: "Test",
-          description: "Test",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${operatorToken}`,
+          },
+        }
+      );
 
-      expect(res.status).toBe(403);
+      expect(res.status as number).toBe(403);
     });
   });
 
@@ -271,20 +307,26 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Updated Description",
       };
 
-      const res = await app.request(`/api/building-types/${buildingType._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"][":id"].$patch(
+        {
+          param: { id: buildingType._id.toString() },
+          json: updateData,
         },
-        body: JSON.stringify(updateData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.buildingType.name).toBe(updateData.name);
-      expect(json.buildingType.description).toBe(updateData.description);
+      expectTypeOf(json).toExtend<UpdateBuildingTypeResponse | ErrorResponse>();
+      if ("buildingType" in json) {
+        expect(json.success).toBe(true);
+        expect(json.buildingType.name).toBe(updateData.name);
+        expect(json.buildingType.description).toBe(updateData.description);
+      }
 
       // Verify in database
       const updated = await BuildingType.findById(buildingType._id);
@@ -297,21 +339,26 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Original Description",
       });
 
-      const res = await app.request(`/api/building-types/${buildingType._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"][":id"].$patch(
+        {
+          param: { id: buildingType._id.toString() },
+          json: {
+            name: "Updated Name Only",
+          },
         },
-        body: JSON.stringify({
-          name: "Updated Name Only",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildingType.name).toBe("Updated Name Only");
-      expect(json.buildingType.description).toBe("Original Description");
+      if ("buildingType" in json) {
+        expect(json.buildingType.name).toBe("Updated Name Only");
+        expect(json.buildingType.description).toBe("Original Description");
+      }
     });
 
     test("should update only description", async () => {
@@ -320,21 +367,26 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Original",
       });
 
-      const res = await app.request(`/api/building-types/${buildingType._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"][":id"].$patch(
+        {
+          param: { id: buildingType._id.toString() },
+          json: {
+            description: "Updated Description Only",
+          },
         },
-        body: JSON.stringify({
-          description: "Updated Description Only",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildingType.name).toBe("Original Name");
-      expect(json.buildingType.description).toBe("Updated Description Only");
+      if ("buildingType" in json) {
+        expect(json.buildingType.name).toBe("Original Name");
+        expect(json.buildingType.description).toBe("Updated Description Only");
+      }
     });
 
     test("should reject duplicate name", async () => {
@@ -348,35 +400,43 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Test",
       });
 
-      const res = await app.request(`/api/building-types/${buildingType._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"][":id"].$patch(
+        {
+          param: { id: buildingType._id.toString() },
+          json: {
+            name: "Existing",
+          },
         },
-        body: JSON.stringify({
-          name: "Existing",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      expect(json.error).toContain("already exists");
+      if ("error" in json) {
+        expect(json.error).toContain("already exists");
+      }
     });
 
     test("should return 404 for non-existent building type", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await app.request(`/api/building-types/${fakeId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"][":id"].$patch(
+        {
+          param: { id: fakeId },
+          json: {
+            name: "Test",
+          },
         },
-        body: JSON.stringify({
-          name: "Test",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
@@ -387,18 +447,21 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Test",
       });
 
-      const res = await app.request(`/api/building-types/${buildingType._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${operatorToken}`,
+      const res = await client.api["building-types"][":id"].$patch(
+        {
+          param: { id: buildingType._id.toString() },
+          json: {
+            name: "Updated",
+          },
         },
-        body: JSON.stringify({
-          name: "Updated",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${operatorToken}`,
+          },
+        }
+      );
 
-      expect(res.status).toBe(403);
+      expect(res.status as number).toBe(403);
     });
   });
 
@@ -413,17 +476,24 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "This will be deleted",
       });
 
-      const res = await app.request(`/api/building-types/${buildingType._id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"][":id"].$delete(
+        {
+          param: { id: buildingType._id.toString() },
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.message).toContain("deleted successfully");
+      expectTypeOf(json).toExtend<DeleteBuildingTypeResponse | ErrorResponse>();
+      if ("message" in json) {
+        expect(json.success).toBe(true);
+        expect(json.message).toContain("deleted successfully");
+      }
 
       // Verify deletion in database
       const deleted = await BuildingType.findById(buildingType._id);
@@ -449,17 +519,23 @@ describe("Building Types Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await app.request(`/api/building-types/${buildingType._id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"][":id"].$delete(
+        {
+          param: { id: buildingType._id.toString() },
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      expect(json.error).toContain("Cannot delete");
-      expect(json.error).toContain("building(s) are using it");
+      if ("error" in json) {
+        expect(json.error).toContain("Cannot delete");
+        expect(json.error).toContain("building(s) are using it");
+      }
 
       // Verify building type still exists
       const stillExists = await BuildingType.findById(buildingType._id);
@@ -469,12 +545,16 @@ describe("Building Types Routes - Integration Tests", () => {
     test("should return 404 for non-existent building type", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await app.request(`/api/building-types/${fakeId}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api["building-types"][":id"].$delete(
+        {
+          param: { id: fakeId },
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
@@ -485,14 +565,18 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Test",
       });
 
-      const res = await app.request(`/api/building-types/${buildingType._id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${operatorToken}`,
+      const res = await client.api["building-types"][":id"].$delete(
+        {
+          param: { id: buildingType._id.toString() },
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${operatorToken}`,
+          },
+        }
+      );
 
-      expect(res.status).toBe(403);
+      expect(res.status as number).toBe(403);
     });
   });
 });
