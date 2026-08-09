@@ -1,10 +1,22 @@
 import mqtt from "mqtt";
-import { Sensor } from "../models/Sensor";
-import { SensorReading } from "../models/SensorReading";
-import { Alert } from "../models/Alert";
-import type { BuildingDocument } from "../models/Building";
-import { THRESHOLD_ALERT_TYPE } from "./alerts";
+import { LastReadingSchema, ObjectIdSchema } from "@wattguard/shared";
+import {
+  ingestReading,
+  SensorNotFoundError,
+} from "../services/reading-service";
 import { MQTT_BROKER_URL } from "../config/variables";
+
+/**
+ * Payload published by sensors on `sensors/{sensorId}/readings`.
+ * Same shape as the denormalized lastReading, except the timestamp is
+ * optional (defaults to the current date when omitted).
+ */
+const MqttReadingPayloadSchema = LastReadingSchema.extend({
+  timestamp: LastReadingSchema.shape.timestamp.optional(),
+  unit: LastReadingSchema.shape.unit.min(1),
+});
+
+const READING_TOPIC_PATTERN = /^sensors\/([^/]+)\/readings$/;
 
 export function connectAndSubscribe() {
   const client = mqtt.connect(MQTT_BROKER_URL);
@@ -24,97 +36,47 @@ export function connectAndSubscribe() {
   });
 
   client.on("message", async (topic, message) => {
+    // Extract sensorId from topic
+    // Topic: sensors/{sensorId}/readings
+    const sensorId = READING_TOPIC_PATTERN.exec(topic)?.[1];
+    if (!sensorId) {
+      return;
+    }
+
+    const sensorIdResult = ObjectIdSchema.safeParse(sensorId);
+    if (!sensorIdResult.success) {
+      console.warn(`⚠️ Invalid sensor id in topic ${topic}: ${sensorId}`);
+      return;
+    }
+
+    let rawPayload: unknown;
     try {
-      // Extract sensorId from topic
-      // Topic: sensors/{sensorId}/readings
-      const parts = topic.split("/");
-      if (
-        parts.length !== 3 ||
-        parts[0] !== "sensors" ||
-        parts[2] !== "readings"
-      ) {
-        return;
-      }
-      const sensorId = parts[1];
+      rawPayload = JSON.parse(message.toString());
+    } catch (error) {
+      console.warn(`⚠️ Invalid JSON payload from ${topic}:`, error);
+      return;
+    }
 
-      // Parse message payload
-      const payload = JSON.parse(message.toString());
-      const { value, unit, timestamp } = payload;
+    const payloadResult = MqttReadingPayloadSchema.safeParse(rawPayload);
+    if (!payloadResult.success) {
+      console.warn(`⚠️ Invalid payload from ${topic}:`, payloadResult.error);
+      return;
+    }
 
-      if (value === undefined || !unit) {
-        console.warn(`⚠️ Invalid payload from ${topic}:`, payload);
-        return;
-      }
+    const payload = payloadResult.data;
 
-      const readingTimestamp = timestamp ? new Date(timestamp) : new Date();
-
-      // Find the sensor to ensure it exists and get metadata
-      const sensor = await Sensor.findById(sensorId).populate<{
-        buildingId: BuildingDocument;
-      }>("buildingId");
-      if (!sensor) {
+    try {
+      await ingestReading({
+        sensorId,
+        value: payload.value,
+        unit: payload.unit,
+        timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+      });
+    } catch (error) {
+      if (error instanceof SensorNotFoundError) {
         console.warn(`⚠️ Received reading for unknown sensor: ${sensorId}`);
         return;
       }
-
-      const building = sensor.buildingId;
-      // Check thresholds and generate alerts
-      if (
-        (sensor.minThreshold != null && value < sensor.minThreshold) ||
-        (sensor.maxThreshold != null && value > sensor.maxThreshold)
-      ) {
-        const isMin =
-          sensor.minThreshold != null && value < sensor.minThreshold;
-        const thresholdType = isMin ? "min" : "max";
-        // Check if an active alert already exists for this sensor and type
-        const existingAlert = await Alert.findOne({
-          sensorId: sensor._id,
-          type: THRESHOLD_ALERT_TYPE,
-          status: "active",
-        });
-
-        if (!existingAlert) {
-          const limit = isMin ? sensor.minThreshold : sensor.maxThreshold;
-          const severity = "high";
-          const message = `Valore fuori soglia rilevato per il sensore ${sensor.sensorType} (${sensor.location}): ${value}${unit} (Limite: ${limit}${unit})`;
-
-          await Alert.create({
-            buildingId: building._id,
-            buildingName: building.name || "Edificio Sconosciuto",
-            sensorId: sensor._id,
-            type: THRESHOLD_ALERT_TYPE,
-            thresholdType,
-            severity,
-            message,
-            status: "active",
-          });
-        }
-      }
-
-      // Create the reading document
-      await SensorReading.create({
-        timestamp: readingTimestamp,
-        value,
-        unit,
-        metadata: {
-          sensorId: sensor._id,
-          buildingId: building._id,
-          sensorType: sensor.sensorType,
-        },
-      });
-
-      // Update the sensor's last reading (denormalization for UI)
-      sensor.lastReading = {
-        value,
-        timestamp: readingTimestamp,
-        unit,
-      };
-      // If the sensor was auto-marked inactive, a new reading means it's back online.
-      if (sensor.status === "inactive") {
-        sensor.status = "active";
-      }
-      await sensor.save();
-    } catch (error) {
       console.error(`❌ Error processing MQTT message on ${topic}:`, error);
     }
   });
