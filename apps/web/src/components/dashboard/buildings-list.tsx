@@ -1,33 +1,11 @@
 import { useBuildings, type BuildingSummary } from "@/hooks/use-buildings"
 import { Building2, Activity, Zap, Radio } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { BuildingStatusBadge } from "./building-status-badge"
 
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
   if (typeof bt === "string") return bt
   return bt.name
-}
-
-function getStatusColor(status: BuildingSummary["status"]) {
-  switch (status) {
-    case "active":
-      return "bg-chart-3/15 text-chart-3"
-    case "inactive":
-      return ""
-    case "decommissioned":
-      return "bg-destructive/15 text-destructive"
-  }
-}
-
-function getStatusLabel(status: BuildingSummary["status"]) {
-  switch (status) {
-    case "active":
-      return "Attivo"
-    case "inactive":
-      return "Inattivo"
-    case "decommissioned":
-      return "Dismesso"
-  }
 }
 
 export function BuildingsList() {
@@ -84,10 +62,7 @@ export function BuildingsList() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="secondary" className={`gap-1 ${getStatusColor(building.status)}`}>
-              <Activity className="h-3 w-3" />
-              {getStatusLabel(building.status)}
-            </Badge>
+            <BuildingStatusBadge status={building.status} icon={<Activity className="h-3 w-3" />} />
             <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Sensori attivi">
               <Radio className="h-3 w-3" />
               {building.activeSensors}

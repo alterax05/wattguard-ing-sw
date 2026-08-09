@@ -35,6 +35,11 @@ import { AuthContext } from "@/lib/auth"
 import { MAX_COMPARE_BUILDINGS } from "@/lib/constants"
 import { downloadFromEndpoint } from "@/lib/download"
 import {
+  getBuildingStatusLabel,
+  type BuildingStatus,
+} from "@/lib/building-status"
+import { BuildingStatusBadge } from "./building-status-badge"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -82,23 +87,12 @@ function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
   return bt.name
 }
 
-/** Get a color for the status badge */
-function getStatusBadge(status: BuildingSummary["status"]) {
-  switch (status) {
-    case "active":
-      return <Badge variant="secondary" className="bg-chart-3/15 text-chart-3 text-xs">Attivo</Badge>
-    case "inactive":
-      return <Badge variant="secondary" className="text-xs">Inattivo</Badge>
-    case "decommissioned":
-      return <Badge variant="secondary" className="bg-destructive/15 text-destructive text-xs">Dismesso</Badge>
-  }
-}
-
 export function BuildingSearch() {
   const { user } = useContext(AuthContext)
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState<BuildingStatus | "all">("all")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [exportRange, setExportRange] = useState<DateRange | undefined>()
   const [isExporting, setIsExporting] = useState(false)
@@ -106,7 +100,9 @@ export function BuildingSearch() {
   const isAdmin = user?.role === "admin"
 
   // Fetch buildings and building types from the API
-  const { data: buildingsData, isLoading, isError, error } = useBuildings()
+  const { data: buildingsData, isLoading, isError, error } = useBuildings(
+    statusFilter === "all" ? undefined : { status: statusFilter },
+  )
   const { data: typesData } = useBuildingTypes()
 
   const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
@@ -213,6 +209,20 @@ export function BuildingSearch() {
                       {type.name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => setStatusFilter(value as BuildingStatus | "all")}
+              >
+                <SelectTrigger className="w-full md:w-36">
+                  <SelectValue placeholder="Stato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti</SelectItem>
+                  <SelectItem value="active">{getBuildingStatusLabel("active")}</SelectItem>
+                  <SelectItem value="inactive">{getBuildingStatusLabel("inactive")}</SelectItem>
+                  <SelectItem value="decommissioned">{getBuildingStatusLabel("decommissioned")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -411,7 +421,7 @@ export function BuildingSearch() {
                         {/* Stats row */}
                         <div className="flex flex-wrap items-center gap-3 text-sm">
                           <div className="flex items-center gap-1.5">
-                            {getStatusBadge(building.status)}
+                            <BuildingStatusBadge status={building.status} />
                           </div>
                           <Separator orientation="vertical" className="h-4" />
                           <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Sensori attivi">

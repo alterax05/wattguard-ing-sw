@@ -81,40 +81,12 @@ import {
 import { AddSensorDialog } from "./add-sensor-dialog";
 import { EditSensorDialog } from "./edit-sensor-dialog";
 import { EditBuildingDialog } from "./edit-building-dialog";
+import { BuildingStatusBadge } from "./building-status-badge";
 import { DateRangePicker } from "./date-range-picker";
 import { toast } from "sonner";
 
 interface BuildingDetailProps {
   buildingId: string;
-}
-
-function getStatusBadge(status: BuildingDetailType["status"]) {
-  switch (status) {
-    case "active":
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-chart-3/15 text-chart-3 text-sm"
-        >
-          Attivo
-        </Badge>
-      );
-    case "inactive":
-      return (
-        <Badge variant="secondary" className="text-sm">
-          Inattivo
-        </Badge>
-      );
-    case "decommissioned":
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-destructive/15 text-destructive text-sm"
-        >
-          Dismesso
-        </Badge>
-      );
-  }
 }
 
 function getBuildingTypeName(bt: BuildingDetailType["buildingType"]): string {
@@ -458,7 +430,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
             <span>{getBuildingTypeName(building.buildingType)}</span>
           </div>
         </div>
-        {getStatusBadge(building.status)}
+        <BuildingStatusBadge status={building.status} className="text-sm" />
       </div>
 
       {/* Info Cards Row */}
@@ -897,7 +869,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Stato</p>
-                <p className="mt-1">{getStatusBadge(building.status)}</p>
+                <p className="mt-1"><BuildingStatusBadge status={building.status} className="text-sm" /></p>
               </div>
             </div>
           </CardContent>
