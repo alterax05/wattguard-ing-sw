@@ -121,12 +121,13 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(201);
       const data = await res.json();
       expectTypeOf(data).toExtend<CreateInviteResponse | ErrorResponse>();
-      if ("invite" in data) {
-        expect(data.success).toBe(true);
-        expect(data.invite.email).toBe("newuser@test.com");
-        expect(data.invite.role).toBe("operator");
-        expect(data.invite.status).toBe("pending");
+      if (!("invite" in data)) {
+        throw new Error("Expected response to contain 'invite'");
       }
+      expect(data.success).toBe(true);
+      expect(data.invite.email).toBe("newuser@test.com");
+      expect(data.invite.role).toBe("operator");
+      expect(data.invite.status).toBe("pending");
     });
 
     test("should normalize email on invite creation", async () => {
@@ -149,9 +150,10 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(201);
       const data = await res.json();
       expectTypeOf(data).toExtend<CreateInviteResponse | ErrorResponse>();
-      if ("invite" in data) {
-        expect(data.invite.email).toBe("newuser@test.com");
+      if (!("invite" in data)) {
+        throw new Error("Expected response to contain 'invite'");
       }
+      expect(data.invite.email).toBe("newuser@test.com");
     });
 
     test("should reject invalid email format", async () => {
@@ -173,10 +175,11 @@ describe("Admin Routes", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
-        expect(errorText).toContain("email");
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
+      expect(errorText).toContain("email");
     });
 
     test("should reject invalid role", async () => {
@@ -199,9 +202,10 @@ describe("Admin Routes", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
 
     test("should reject missing email field", async () => {
@@ -223,9 +227,10 @@ describe("Admin Routes", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
 
     test("should reject missing role field", async () => {
@@ -247,9 +252,10 @@ describe("Admin Routes", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
 
     test("should reject operator from creating invites", async () => {
@@ -316,12 +322,13 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
-      if ("invites" in data) {
-        expect(data.invites).toBeArrayOfSize(2);
-        expect(data.invites[0]!.email).toBeDefined();
-        expect(data.invites[0]!.role).toBeDefined();
-        expect(data.invites[0]!.status).toBeDefined();
+      if (!("invites" in data)) {
+        throw new Error("Expected response to contain 'invites'");
       }
+      expect(data.invites).toBeArrayOfSize(2);
+      expect(data.invites[0]!.email).toBeDefined();
+      expect(data.invites[0]!.role).toBeDefined();
+      expect(data.invites[0]!.status).toBeDefined();
     });
 
     test("should return empty array when no invites exist", async () => {
@@ -334,9 +341,10 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
-      if ("invites" in data) {
-        expect(data.invites).toBeArrayOfSize(0);
+      if (!("invites" in data)) {
+        throw new Error("Expected response to contain 'invites'");
       }
+      expect(data.invites).toBeArrayOfSize(0);
     });
 
     test("should reject operator from listing invites", async () => {
@@ -381,10 +389,11 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<RevokeInviteResponse | ErrorResponse>();
-      if ("invite" in data) {
-        expect(data.success).toBe(true);
-        expect(data.invite.status).toBe("revoked");
+      if (!("invite" in data)) {
+        throw new Error("Expected response to contain 'invite'");
       }
+      expect(data.success).toBe(true);
+      expect(data.invite.status).toBe("revoked");
 
       // Verify in database
       const revokedInvite = await Invite.findById(invite._id);
@@ -490,11 +499,12 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
-      if ("user" in data) {
-        expect(data.success).toBe(true);
-        expect(data.user.role).toBe("admin");
-        expect(data.user.isDisabled).toBe(false);
+      if (!("user" in data)) {
+        throw new Error("Expected response to contain 'user'");
       }
+      expect(data.success).toBe(true);
+      expect(data.user.role).toBe("admin");
+      expect(data.user.isDisabled).toBe(false);
 
       const updated = await User.findById(operator!._id);
       expect(updated!.role).toBe("admin");
@@ -521,11 +531,12 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
-      if ("user" in data) {
-        expect(data.success).toBe(true);
-        expect(data.user.isDisabled).toBe(true);
-        expect(data.user.role).toBe("operator");
+      if (!("user" in data)) {
+        throw new Error("Expected response to contain 'user'");
       }
+      expect(data.success).toBe(true);
+      expect(data.user.isDisabled).toBe(true);
+      expect(data.user.role).toBe("operator");
 
       const updated = await User.findById(operator!._id);
       expect(updated!.isDisabled).toBe(true);
@@ -553,10 +564,11 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
-      if ("user" in data) {
-        expect(data.success).toBe(true);
-        expect(data.user.isDisabled).toBe(false);
+      if (!("user" in data)) {
+        throw new Error("Expected response to contain 'user'");
       }
+      expect(data.success).toBe(true);
+      expect(data.user.isDisabled).toBe(false);
 
       const updated = await User.findById(operator!._id);
       expect(updated!.isDisabled).toBe(false);
@@ -582,10 +594,11 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
-      if ("user" in data) {
-        expect(data.user.role).toBe("admin");
-        expect(data.user.isDisabled).toBe(true);
+      if (!("user" in data)) {
+        throw new Error("Expected response to contain 'user'");
       }
+      expect(data.user.role).toBe("admin");
+      expect(data.user.isDisabled).toBe(true);
     });
 
     test("should reject empty update body", async () => {

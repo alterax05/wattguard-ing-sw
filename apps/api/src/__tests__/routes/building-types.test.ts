@@ -116,9 +116,10 @@ describe("Building Types Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<ListBuildingTypesResponse | ErrorResponse>();
-      if ("buildingTypes" in json) {
-        expect(json.buildingTypes).toEqual([]);
+      if (!("buildingTypes" in json)) {
+        throw new Error("Expected response to contain 'buildingTypes'");
       }
+      expect(json.buildingTypes).toEqual([]);
     });
 
     test("should list all building types (admin)", async () => {
@@ -136,14 +137,15 @@ describe("Building Types Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<ListBuildingTypesResponse | ErrorResponse>();
-      if ("buildingTypes" in json) {
-        expect(json.buildingTypes.length).toBe(3);
-        expect(json.buildingTypes[0]!.name).toBeDefined();
-        expect(json.buildingTypes[0]!.description).toBeDefined();
-        expect(json.buildingTypes[0]!.id).toBeDefined();
-        expect(json.buildingTypes[0]!.createdAt).toBeDefined();
-        expect(json.buildingTypes[0]!.updatedAt).toBeDefined();
+      if (!("buildingTypes" in json)) {
+        throw new Error("Expected response to contain 'buildingTypes'");
       }
+      expect(json.buildingTypes.length).toBe(3);
+      expect(json.buildingTypes[0]!.name).toBeDefined();
+      expect(json.buildingTypes[0]!.description).toBeDefined();
+      expect(json.buildingTypes[0]!.id).toBeDefined();
+      expect(json.buildingTypes[0]!.createdAt).toBeDefined();
+      expect(json.buildingTypes[0]!.updatedAt).toBeDefined();
     });
 
     test("should list all building types (operator)", async () => {
@@ -157,9 +159,10 @@ describe("Building Types Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildingTypes" in json) {
-        expect(json.buildingTypes.length).toBe(1);
+      if (!("buildingTypes" in json)) {
+        throw new Error("Expected response to contain 'buildingTypes'");
       }
+      expect(json.buildingTypes.length).toBe(1);
     });
 
     test("should reject request without token (401)", async () => {
@@ -181,11 +184,12 @@ describe("Building Types Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildingTypes" in json) {
-        expect(json.buildingTypes[0]!.name).toBe("Ospedale");
-        expect(json.buildingTypes[1]!.name).toBe("Scuola");
-        expect(json.buildingTypes[2]!.name).toBe("Ufficio");
+      if (!("buildingTypes" in json)) {
+        throw new Error("Expected response to contain 'buildingTypes'");
       }
+      expect(json.buildingTypes[0]!.name).toBe("Ospedale");
+      expect(json.buildingTypes[1]!.name).toBe("Scuola");
+      expect(json.buildingTypes[2]!.name).toBe("Ufficio");
     });
   });
 
@@ -214,17 +218,18 @@ describe("Building Types Routes - Integration Tests", () => {
       expect(res.status).toBe(201);
       const json = await res.json();
       expectTypeOf(json).toExtend<CreateBuildingTypeResponse | ErrorResponse>();
-      if ("buildingType" in json) {
-        expect(json.success).toBe(true);
-        expect(json.buildingType.name).toBe(buildingTypeData.name);
-        expect(json.buildingType.description).toBe(buildingTypeData.description);
-        expect(json.buildingType.id).toBeDefined();
-
-        // Verify in database
-        const dbBuildingType = await BuildingType.findById(json.buildingType.id);
-        expect(dbBuildingType).toBeDefined();
-        expect(dbBuildingType!.name).toBe(buildingTypeData.name);
+      if (!("buildingType" in json)) {
+        throw new Error("Expected response to contain 'buildingType'");
       }
+      expect(json.success).toBe(true);
+      expect(json.buildingType.name).toBe(buildingTypeData.name);
+      expect(json.buildingType.description).toBe(buildingTypeData.description);
+      expect(json.buildingType.id).toBeDefined();
+
+      // Verify in database
+      const dbBuildingType = await BuildingType.findById(json.buildingType.id);
+      expect(dbBuildingType).toBeDefined();
+      expect(dbBuildingType!.name).toBe(buildingTypeData.name);
     });
 
     test("should reject duplicate name", async () => {
@@ -249,9 +254,10 @@ describe("Building Types Routes - Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      if ("error" in json) {
-        expect(json.error).toContain("already exists");
+      if (!("error" in json)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(json.error).toContain("already exists");
     });
 
     test("should reject invalid data", async () => {
@@ -322,11 +328,12 @@ describe("Building Types Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<UpdateBuildingTypeResponse | ErrorResponse>();
-      if ("buildingType" in json) {
-        expect(json.success).toBe(true);
-        expect(json.buildingType.name).toBe(updateData.name);
-        expect(json.buildingType.description).toBe(updateData.description);
+      if (!("buildingType" in json)) {
+        throw new Error("Expected response to contain 'buildingType'");
       }
+      expect(json.success).toBe(true);
+      expect(json.buildingType.name).toBe(updateData.name);
+      expect(json.buildingType.description).toBe(updateData.description);
 
       // Verify in database
       const updated = await BuildingType.findById(buildingType._id);
@@ -355,10 +362,11 @@ describe("Building Types Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildingType" in json) {
-        expect(json.buildingType.name).toBe("Updated Name Only");
-        expect(json.buildingType.description).toBe("Original Description");
+      if (!("buildingType" in json)) {
+        throw new Error("Expected response to contain 'buildingType'");
       }
+      expect(json.buildingType.name).toBe("Updated Name Only");
+      expect(json.buildingType.description).toBe("Original Description");
     });
 
     test("should update only description", async () => {
@@ -383,10 +391,11 @@ describe("Building Types Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildingType" in json) {
-        expect(json.buildingType.name).toBe("Original Name");
-        expect(json.buildingType.description).toBe("Updated Description Only");
+      if (!("buildingType" in json)) {
+        throw new Error("Expected response to contain 'buildingType'");
       }
+      expect(json.buildingType.name).toBe("Original Name");
+      expect(json.buildingType.description).toBe("Updated Description Only");
     });
 
     test("should reject duplicate name", async () => {
@@ -416,9 +425,10 @@ describe("Building Types Routes - Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      if ("error" in json) {
-        expect(json.error).toContain("already exists");
+      if (!("error" in json)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(json.error).toContain("already exists");
     });
 
     test("should return 404 for non-existent building type", async () => {
@@ -490,10 +500,11 @@ describe("Building Types Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<DeleteBuildingTypeResponse | ErrorResponse>();
-      if ("message" in json) {
-        expect(json.success).toBe(true);
-        expect(json.message).toContain("deleted successfully");
+      if (!("message" in json)) {
+        throw new Error("Expected response to contain 'message'");
       }
+      expect(json.success).toBe(true);
+      expect(json.message).toContain("deleted successfully");
 
       // Verify deletion in database
       const deleted = await BuildingType.findById(buildingType._id);
@@ -532,10 +543,11 @@ describe("Building Types Routes - Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      if ("error" in json) {
-        expect(json.error).toContain("Cannot delete");
-        expect(json.error).toContain("building(s) are using it");
+      if (!("error" in json)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(json.error).toContain("Cannot delete");
+      expect(json.error).toContain("building(s) are using it");
 
       // Verify building type still exists
       const stillExists = await BuildingType.findById(buildingType._id);

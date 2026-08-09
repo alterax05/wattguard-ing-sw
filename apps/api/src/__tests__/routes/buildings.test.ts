@@ -146,12 +146,13 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(201);
       const json = await res.json();
       expectTypeOf(json).toExtend<CreateBuildingResponse | ErrorResponse>();
-      if ("building" in json) {
-        expect(json.success).toBe(true);
-        expect(json.building.name).toBe(buildingData.name);
-        expect(json.building.address).toBe(buildingData.address);
-        expect(json.building.status).toBe("active"); // Default value
+      if (!("building" in json)) {
+        throw new Error("Expected response to contain 'building'");
       }
+      expect(json.success).toBe(true);
+      expect(json.building.name).toBe(buildingData.name);
+      expect(json.building.address).toBe(buildingData.address);
+      expect(json.building.status).toBe("active"); // Default value
 
       // Verify building was created in DB
       const building = await Building.findById((json as { building: { id: string } }).building.id);
@@ -271,12 +272,13 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
-      if ("building" in json) {
-        expect(json.success).toBe(true);
-        expect(json.building.name).toBe("Updated Name");
-        expect(json.building.surface).toBe(1500);
-        expect(json.building.status).toBe("inactive");
+      if (!("building" in json)) {
+        throw new Error("Expected response to contain 'building'");
       }
+      expect(json.success).toBe(true);
+      expect(json.building.name).toBe("Updated Name");
+      expect(json.building.surface).toBe(1500);
+      expect(json.building.status).toBe("inactive");
     });
 
     test("should return 404 for non-existent building", async () => {
@@ -361,9 +363,10 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<DeleteBuildingResponse | ErrorResponse>();
-      if ("success" in json) {
-        expect(json.success).toBe(true);
+      if (!("success" in json)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(json.success).toBe(true);
 
       // Verify building deleted
       const deletedBuilding = await Building.findById(building._id);
@@ -442,10 +445,11 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<SearchBuildingsResponse | ErrorResponse>();
-      if ("buildings" in json) {
-        expect(json.buildings.length).toBe(2);
-        expect(json.buildings[0]!.name).toContain("Scuola");
+      if (!("buildings" in json)) {
+        throw new Error("Expected response to contain 'buildings'");
       }
+      expect(json.buildings.length).toBe(2);
+      expect(json.buildings[0]!.name).toContain("Scuola");
     });
 
     test("should search by address", async () => {
@@ -460,10 +464,11 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildings" in json) {
-        expect(json.buildings.length).toBe(1);
-        expect(json.buildings[0]!.address).toContain("Garibaldi");
+      if (!("buildings" in json)) {
+        throw new Error("Expected response to contain 'buildings'");
       }
+      expect(json.buildings.length).toBe(1);
+      expect(json.buildings[0]!.address).toContain("Garibaldi");
     });
 
     test("should filter by zone", async () => {
@@ -478,10 +483,11 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildings" in json) {
-        expect(json.buildings.length).toBe(1);
-        expect(json.buildings[0]!.geographicZone).toBe("Centro");
+      if (!("buildings" in json)) {
+        throw new Error("Expected response to contain 'buildings'");
       }
+      expect(json.buildings.length).toBe(1);
+      expect(json.buildings[0]!.geographicZone).toBe("Centro");
     });
 
     test("should filter by building type", async () => {
@@ -496,9 +502,10 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildings" in json) {
-        expect(json.buildings.length).toBe(3); // All test buildings have same type
+      if (!("buildings" in json)) {
+        throw new Error("Expected response to contain 'buildings'");
       }
+      expect(json.buildings.length).toBe(3); // All test buildings have same type
     });
 
     test("should filter by status", async () => {
@@ -513,10 +520,11 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildings" in json) {
-        expect(json.buildings.length).toBe(1);
-        expect(json.buildings[0]!.status).toBe("inactive");
+      if (!("buildings" in json)) {
+        throw new Error("Expected response to contain 'buildings'");
       }
+      expect(json.buildings.length).toBe(1);
+      expect(json.buildings[0]!.status).toBe("inactive");
     });
 
     test("should combine multiple filters", async () => {
@@ -531,10 +539,11 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildings" in json) {
-        expect(json.buildings.length).toBe(1);
-        expect(json.buildings[0]!.name).toBe("Scuola Primaria Centro");
+      if (!("buildings" in json)) {
+        throw new Error("Expected response to contain 'buildings'");
       }
+      expect(json.buildings.length).toBe(1);
+      expect(json.buildings[0]!.name).toBe("Scuola Primaria Centro");
     });
 
     test("should support pagination", async () => {
@@ -549,12 +558,13 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildings" in json && "pagination" in json) {
-        expect(json.buildings.length).toBe(2);
-        expect(json.pagination.total).toBe(3);
-        expect(json.pagination.limit).toBe(2);
-        expect(json.pagination.offset).toBe(0);
+      if (!("buildings" in json) || !("pagination" in json)) {
+        throw new Error("Expected response to contain 'buildings' and 'pagination'");
       }
+      expect(json.buildings.length).toBe(2);
+      expect(json.pagination.total).toBe(3);
+      expect(json.pagination.limit).toBe(2);
+      expect(json.pagination.offset).toBe(0);
     });
 
     test("should support sorting", async () => {
@@ -569,12 +579,13 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildings" in json) {
-        expect(json.buildings.length).toBeGreaterThan(0);
-        // Verify ascending order
-        for (let i = 1; i < json.buildings.length; i++) {
-          expect(json.buildings[i]!.name >= json.buildings[i - 1]!.name).toBe(true);
-        }
+      if (!("buildings" in json)) {
+        throw new Error("Expected response to contain 'buildings'");
+      }
+      expect(json.buildings.length).toBeGreaterThan(0);
+      // Verify ascending order
+      for (let i = 1; i < json.buildings.length; i++) {
+        expect(json.buildings[i]!.name >= json.buildings[i - 1]!.name).toBe(true);
       }
     });
 
@@ -588,16 +599,17 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("buildings" in json) {
-        const building = json.buildings[0]!;
-
-        expect(building.name).toBeDefined();
-        expect(building.address).toBeDefined();
-        expect(building.surface).toBeDefined();
-        expect(building.heatingSystemType).toBeDefined();
-        expect(building.status).toBeDefined();
-        expect(building.updatedAt).toBeDefined();
+      if (!("buildings" in json)) {
+        throw new Error("Expected response to contain 'buildings'");
       }
+      const building = json.buildings[0]!;
+
+      expect(building.name).toBeDefined();
+      expect(building.address).toBeDefined();
+      expect(building.surface).toBeDefined();
+      expect(building.heatingSystemType).toBeDefined();
+      expect(building.status).toBeDefined();
+      expect(building.updatedAt).toBeDefined();
     });
   });
 
@@ -628,13 +640,14 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetBuildingResponse | ErrorResponse>();
-      if ("building" in json) {
-        expect(json.building.name).toBe("Test Building Details");
-        expect(json.building.address).toBe("Via Details 1, Milano");
-        expect(json.building.surface).toBe(2000);
-        expect(json.building.constructionYear).toBe(2000);
-        expect(json.building.buildingType).toBeDefined();
+      if (!("building" in json)) {
+        throw new Error("Expected response to contain 'building'");
       }
+      expect(json.building.name).toBe("Test Building Details");
+      expect(json.building.address).toBe("Via Details 1, Milano");
+      expect(json.building.surface).toBe(2000);
+      expect(json.building.constructionYear).toBe(2000);
+      expect(json.building.buildingType).toBeDefined();
     });
   });
 
@@ -703,19 +716,20 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetBuildingRealTimeResponse | ErrorResponse>();
-      if ("data" in json) {
-        expect(json.data).toBeDefined();
-        expect(json.data.internalTemperature).toBeDefined();
-        expect(json.data.internalTemperature.value).toBe(22.5);
-        expect(json.data.internalTemperature.unit).toBe("°C");
-
-        expect(json.data.externalTemperature).toBeDefined();
-        expect(json.data.externalTemperature.value).toBe(10.2);
-
-        expect(json.data.energyConsumption).toBeDefined();
-        expect(json.data.energyConsumption.value).toBe(150.5);
-        expect(json.data.energyConsumption.unit).toBe("kW");
+      if (!("data" in json)) {
+        throw new Error("Expected response to contain 'data'");
       }
+      expect(json.data).toBeDefined();
+      expect(json.data.internalTemperature).toBeDefined();
+      expect(json.data.internalTemperature.value).toBe(22.5);
+      expect(json.data.internalTemperature.unit).toBe("°C");
+
+      expect(json.data.externalTemperature).toBeDefined();
+      expect(json.data.externalTemperature.value).toBe(10.2);
+
+      expect(json.data.energyConsumption).toBeDefined();
+      expect(json.data.energyConsumption.value).toBe(150.5);
+      expect(json.data.energyConsumption.unit).toBe("kW");
     });
 
     test("should handle missing sensors gracefully", async () => {
@@ -756,11 +770,12 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("data" in json) {
-        expect(json.data.internalTemperature.value).toBe(22.5);
-        expect(json.data.externalTemperature.value).toBeNull();
-        expect(json.data.energyConsumption.value).toBeNull();
+      if (!("data" in json)) {
+        throw new Error("Expected response to contain 'data'");
       }
+      expect(json.data.internalTemperature.value).toBe(22.5);
+      expect(json.data.externalTemperature.value).toBeNull();
+      expect(json.data.energyConsumption.value).toBeNull();
     });
   });
 
@@ -824,18 +839,19 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetBuildingHistoryResponse | ErrorResponse>();
-      if ("data" in json) {
-        expect(json.data).toBeDefined();
-        expect(json.data.length).toBeGreaterThan(0);
-        expect(json.buildingId).toBe(building._id.toString());
-        expect(json.buildingName).toBe(building.name);
-
-        // Verify data structure
-        const dataPoint = json.data[0]!;
-        expect(dataPoint.timestamp).toBeDefined();
-        expect(dataPoint.value).toBeDefined();
-        expect(dataPoint.sensorType).toBe("internal_temp");
+      if (!("data" in json)) {
+        throw new Error("Expected response to contain 'data'");
       }
+      expect(json.data).toBeDefined();
+      expect(json.data.length).toBeGreaterThan(0);
+      expect(json.buildingId).toBe(building._id.toString());
+      expect(json.buildingName).toBe(building.name);
+
+      // Verify data structure
+      const dataPoint = json.data[0]!;
+      expect(dataPoint.timestamp).toBeDefined();
+      expect(dataPoint.value).toBeDefined();
+      expect(dataPoint.sensorType).toBe("internal_temp");
     });
 
     test("should filter by date range", async () => {
@@ -904,14 +920,15 @@ describe("Buildings Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("data" in json) {
-        // Should only include readings from the last 24 hours
-        expect(json.data.length).toBeGreaterThan(0);
-        json.data.forEach((point) => {
-          const timestamp = new Date(point.timestamp);
-          expect(timestamp.getTime()).toBeGreaterThanOrEqual(oneDayAgo.getTime());
-        });
+      if (!("data" in json)) {
+        throw new Error("Expected response to contain 'data'");
       }
+      // Should only include readings from the last 24 hours
+      expect(json.data.length).toBeGreaterThan(0);
+      json.data.forEach((point) => {
+        const timestamp = new Date(point.timestamp);
+        expect(timestamp.getTime()).toBeGreaterThanOrEqual(oneDayAgo.getTime());
+      });
     });
 
     test("should support different interval types", async () => {
@@ -970,10 +987,11 @@ describe("Buildings Routes - Integration Tests", () => {
 
         expect(res.status).toBe(200);
         const json = await res.json();
-        if ("data" in json) {
-          expect(json.data.length).toBeGreaterThan(0);
-          expect(json.buildingId).toBeDefined();
+        if (!("data" in json)) {
+          throw new Error("Expected response to contain 'data'");
         }
+        expect(json.data.length).toBeGreaterThan(0);
+        expect(json.buildingId).toBeDefined();
       }
     });
   });

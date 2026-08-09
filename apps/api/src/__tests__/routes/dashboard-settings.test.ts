@@ -96,13 +96,14 @@ describe("Dashboard", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<DashboardStatsResponse | ErrorResponse>();
-    if ("sensors" in data) {
-      expect(data.sensors.total).toBe(3);
-      expect(data.sensors.active).toBe(2);
-      expect(data.alerts.active).toBe(1);
-      expect(data.consumption.electricity).toBeNull();
-      expect(data.consumption.gas).toBeNull();
+    if (!("sensors" in data)) {
+      throw new Error("Expected response to contain 'sensors'");
     }
+    expect(data.sensors.total).toBe(3);
+    expect(data.sensors.active).toBe(2);
+    expect(data.alerts.active).toBe(1);
+    expect(data.consumption.electricity).toBeNull();
+    expect(data.consumption.gas).toBeNull();
   });
 
   test("GET /api/dashboard/history returns bucketed data", async () => {
@@ -122,10 +123,11 @@ describe("Dashboard", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<DashboardHistoryResponse | ErrorResponse>();
-    if ("period" in data) {
-      expect(data.period.interval).toBe("day");
-      expect(Array.isArray(data.data)).toBe(true);
+    if (!("period" in data)) {
+      throw new Error("Expected response to contain 'period'");
     }
+    expect(data.period.interval).toBe("day");
+    expect(Array.isArray(data.data)).toBe(true);
   });
 
   test("GET /api/dashboard/history rejects invalid date range", async () => {
@@ -151,11 +153,12 @@ describe("Settings", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<GetSettingsResponse | ErrorResponse>();
-    if ("config" in data) {
-      expect(data.config.polling.intervalSeconds).toBeGreaterThan(0);
-      expect(data.config.notifications.emailEnabled).toBeTypeOf("boolean");
-      expect(data.config.database.dataRetentionDays).toBeGreaterThan(0);
+    if (!("config" in data)) {
+      throw new Error("Expected response to contain 'config'");
     }
+    expect(data.config.polling.intervalSeconds).toBeGreaterThan(0);
+    expect(data.config.notifications.emailEnabled).toBeTypeOf("boolean");
+    expect(data.config.database.dataRetentionDays).toBeGreaterThan(0);
   });
 
   test("PATCH /api/settings updates the config", async () => {
@@ -171,10 +174,11 @@ describe("Settings", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<UpdateSettingsResponse | ErrorResponse>();
-    if ("config" in data) {
-      expect(data.success).toBe(true);
-      expect(data.config.polling.intervalSeconds).toBe(60);
+    if (!("config" in data)) {
+      throw new Error("Expected response to contain 'config'");
     }
+    expect(data.success).toBe(true);
+    expect(data.config.polling.intervalSeconds).toBe(60);
   });
 
   test("GET /api/settings rejects non-admin roles", async () => {
