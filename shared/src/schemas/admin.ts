@@ -1,7 +1,7 @@
 /**
  * Admin route schemas
  * 
- * Routes: /api/admin/users (GET), /api/admin/invites (GET, POST), /api/admin/invites/:id/revoke (POST)
+ * Routes: /api/admin/users (GET, PATCH), /api/admin/invites (GET, POST), /api/admin/invites/:id/revoke (POST)
  */
 import { z } from "zod";
 import { EmailSchema, UserRoleSchema, UserSchema, ErrorSchema } from "./common";
@@ -88,28 +88,33 @@ export const ListUsersResponseSchema = z.object({
 export type ListUsersResponse = z.infer<typeof ListUsersResponseSchema>;
 
 /**
- * PATCH /api/admin/users/:id/role - Update user role path parameter
+ * PATCH /api/admin/users/:id - Update user path parameter
  */
-export const UpdateUserRoleParamsSchema = z.object({
+export const UpdateUserParamsSchema = z.object({
   id: z.string().min(1, "User ID is required").describe("User identifier"),
 });
 
 /**
- * PATCH /api/admin/users/:id/role - Update user role request body
+ * PATCH /api/admin/users/:id - Update user request body (partial update)
  */
-export const UpdateUserRoleRequestSchema = z.object({
-  role: UserRoleSchema,
-});
+export const UpdateUserRequestSchema = z
+  .object({
+    role: UserRoleSchema.optional().describe("New role for the user"),
+    isDisabled: z.boolean().optional().describe("Whether to disable or re-enable the user"),
+  })
+  .refine((data) => data.role !== undefined || data.isDisabled !== undefined, {
+    message: "At least one field (role or isDisabled) must be provided",
+  });
 
 /**
- * PATCH /api/admin/users/:id/role - Update user role response
+ * PATCH /api/admin/users/:id - Update user response
  */
-export const UpdateUserRoleResponseSchema = z.object({
+export const UpdateUserResponseSchema = z.object({
   success: z.literal(true),
   user: UserSchema,
 });
 
-export type UpdateUserRoleResponse = z.infer<typeof UpdateUserRoleResponseSchema>;
+export type UpdateUserResponse = z.infer<typeof UpdateUserResponseSchema>;
 
 /**
  * DELETE /api/admin/users/:id - Delete user path parameter
