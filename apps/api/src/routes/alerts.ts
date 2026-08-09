@@ -247,3 +247,4 @@ const app = new Hono<{ Variables: AuthVariables }>()
   );
 
 export default app;
+export type AppType = typeof app;

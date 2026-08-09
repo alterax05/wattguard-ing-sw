@@ -1,6 +1,14 @@
-import { describe, expect, it, beforeAll, afterAll, beforeEach } from "bun:test";
+import { describe, expect, it, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import { testClient } from "hono/testing";
+import { z } from "zod";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { ErrorSchema } from "@wattguard/shared";
+import type { ListAlertsResponse, UpdateAlertStatusResponse } from "@wattguard/shared";
+
+type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+const client = testClient(app);
 import { Alert } from "../../models/Alert";
 import { User } from "../../models/User";
 import { Building } from "../../models/Building";
@@ -93,59 +101,85 @@ beforeEach(async () => {
 
 describe("Alerts API", () => {
   it("should list alerts", async () => {
-    const res = await app.request("/api/alerts", {
-      headers: { Cookie: `access_token=${adminToken}` },
-    });
-    
+    const res = await client.api.alerts.$get(
+      { query: {} },
+      {
+        headers: { Cookie: `access_token=${adminToken}` },
+      }
+    );
+
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.alerts).toBeInstanceOf(Array);
-    expect(body.alerts.length).toBe(2);
+    expectTypeOf(body).toExtend<ListAlertsResponse | ErrorResponse>();
+    if ("alerts" in body) {
+      expect(body.alerts).toBeInstanceOf(Array);
+      expect(body.alerts.length).toBe(2);
+    }
   });
 
   it("should acknowledge an active alert", async () => {
     const alert = await Alert.findOne({ status: "active" });
     expect(alert).toBeDefined();
 
-    const res = await app.request(`/api/alerts/${alert!._id}/acknowledge`, {
-      method: "PATCH",
-      headers: { Cookie: `access_token=${adminToken}` },
-    });
+    const res = await client.api.alerts[":id"].acknowledge.$patch(
+      {
+        param: { id: alert!._id.toString() },
+      },
+      {
+        headers: { Cookie: `access_token=${adminToken}` },
+      }
+    );
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.alert.status).toBe("acknowledged");
-    expect(body.alert.acknowledgedBy).toBe("Admin User");
+    expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
+    if ("alert" in body) {
+      expect(body.success).toBe(true);
+      expect(body.alert.status).toBe("acknowledged");
+      expect(body.alert.acknowledgedBy).toBe("Admin User");
+    }
   });
 
   it("should fail to acknowledge an already acknowledged alert", async () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await app.request(`/api/alerts/${alert!._id}/acknowledge`, {
-      method: "PATCH",
-      headers: { Cookie: `access_token=${adminToken}` },
-    });
+    const res = await client.api.alerts[":id"].acknowledge.$patch(
+      {
+        param: { id: alert!._id.toString() },
+      },
+      {
+        headers: { Cookie: `access_token=${adminToken}` },
+      }
+    );
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Only active alerts can be acknowledged");
+    if ("error" in body) {
+      expect(body.error).toBe("Only active alerts can be acknowledged");
+    }
   });
 
   it("should resolve an alert", async () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await app.request(`/api/alerts/${alert!._id}/resolve`, {
-      method: "PATCH",
-      headers: { Cookie: `access_token=${adminToken}` },
-    });
+    const res = await client.api.alerts[":id"].resolve.$patch(
+      {
+        param: { id: alert!._id.toString() },
+      },
+      {
+        headers: { Cookie: `access_token=${adminToken}` },
+      }
+    );
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.alert.status).toBe("resolved");
-    expect(body.alert.resolvedBy).toBe("Admin User");
+    expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
+    if ("alert" in body) {
+      expect(body.success).toBe(true);
+      expect(body.alert.status).toBe("resolved");
+      expect(body.alert.resolvedBy).toBe("Admin User");
+    }
   });
 });

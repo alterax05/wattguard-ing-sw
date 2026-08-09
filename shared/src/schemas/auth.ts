@@ -4,7 +4,7 @@
  * Routes: /api/auth/me, /api/auth/logout, /api/auth/admin/test-email
  */
 import { z } from "zod";
-import { UserSchema, SuccessSchema, ErrorSchema, EmailSchema } from "./common";
+import { UserSchema, ErrorSchema, EmailSchema } from "./common";
 
 /**
  * GET /api/auth/me - Current user response
@@ -18,7 +18,9 @@ export type MeResponse = z.infer<typeof MeResponseSchema>;
 /**
  * POST /api/auth/logout - Logout success response
  */
-export const LogoutResponseSchema = SuccessSchema;
+export const LogoutResponseSchema = z.object({
+  success: z.literal(true),
+});
 
 export type LogoutResponse = z.infer<typeof LogoutResponseSchema>;
 
