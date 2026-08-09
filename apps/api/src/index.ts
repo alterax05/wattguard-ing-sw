@@ -136,7 +136,6 @@ app
 
 if (IS_PRODUCTION) {
   const staticRoot = path.resolve(import.meta.dir, "../../web/dist");
-  console.log(`Serving static files from: ${staticRoot}`);
 
   app.use("*", async (c, next) => {
     const pathname = c.req.path;
