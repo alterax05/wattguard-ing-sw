@@ -14,9 +14,9 @@ import { sendInviteEmail } from "../email/mailer";
 import { inviteRateLimiter } from "../middleware/rate-limit";
 import {
   ListUsersResponseSchema,
-  UpdateUserRoleParamsSchema,
-  UpdateUserRoleRequestSchema,
-  UpdateUserRoleResponseSchema,
+  UpdateUserParamsSchema,
+  UpdateUserRequestSchema,
+  UpdateUserResponseSchema,
   DeleteUserParamsSchema,
   DeleteUserResponseSchema,
   ListInvitesResponseSchema,
@@ -33,7 +33,7 @@ import type {
   ListInvitesResponse,
   ListUsersResponse,
   RevokeInviteResponse,
-  UpdateUserRoleResponse,
+  UpdateUserResponse,
 } from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
@@ -89,22 +89,22 @@ const app = new Hono<{ Variables: AuthVariables }>()
     }
   )
   .patch(
-    "/users/:id/role",
+    "/users/:id",
     describeRoute({
-      description: "Update a user's role (admin only)",
+      description: "Update a user's role or disabled status (admin only)",
       tags: ["Admin"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
-          description: "User role updated successfully",
+          description: "User updated successfully",
           content: {
             "application/json": {
-              schema: resolver(UpdateUserRoleResponseSchema),
+              schema: resolver(UpdateUserResponseSchema),
             },
           },
         },
         400: {
-          description: "Cannot change your own role",
+          description: "Cannot update your own account or empty update body",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -137,16 +137,16 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    validator("param", UpdateUserRoleParamsSchema),
-    validator("json", UpdateUserRoleRequestSchema),
+    validator("param", UpdateUserParamsSchema),
+    validator("json", UpdateUserRequestSchema),
     async (c) => {
       const { id } = c.req.valid("param");
-      const { role } = c.req.valid("json");
+      const { role, isDisabled } = c.req.valid("json");
       const payload = c.get("jwtPayload");
 
-      // Prevent admin from changing their own role
+      // Prevent admin from updating their own account (role or disabled status)
       if (payload.sub === id) {
-        return c.json({ error: "Cannot change your own role" }, 400);
+        return c.json({ error: "Cannot update your own account" }, 400);
       }
 
       const user = await User.findById(id);
@@ -154,7 +154,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "User not found" }, 404);
       }
 
-      user.role = role;
+      if (role !== undefined) {
+        user.role = role;
+      }
+
+      if (isDisabled !== undefined) {
+        user.isDisabled = isDisabled;
+      }
+
       await user.save();
 
       return c.json({
@@ -168,7 +175,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           lastLoginAt: user.lastLoginAt?.toISOString(),
           createdAt: user.createdAt.toISOString(),
         },
-      } satisfies UpdateUserRoleResponse);
+      } satisfies UpdateUserResponse);
     }
   )
   .delete(
