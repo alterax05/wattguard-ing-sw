@@ -1,19 +1,40 @@
 /**
  * Integration tests for authentication flows
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, mock, expectTypeOf } from "bun:test";
+import { testClient } from "hono/testing";
+import { z } from "zod";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { User } from "../../models/User";
 import { Invite } from "../../models/Invite";
 import { PasswordResetToken } from "../../models/PasswordResetToken";
 import { randomToken, hashTokenSha256 } from "../../utils/crypto";
+import { ErrorSchema } from "@wattguard/shared";
+import type {
+  ValidateInviteResponse,
+  SetupResponse,
+  LoginResponse,
+  ForgotPasswordResponse,
+  ValidateResetTokenResponse,
+  ResetPasswordResponse,
+  MeResponse,
+  LogoutResponse,
+  TestEmailResponse,
+  CreateInviteResponse,
+  ListInvitesResponse,
+} from "@wattguard/shared";
+
+type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+const client = testClient(app);
 
 // Mock email functions to avoid email requirements in tests
 mock.module("../../email/mailer", () => ({
   sendInviteEmail: mock(async () => Promise.resolve()),
   sendPasswordResetEmail: mock(async () => Promise.resolve()),
   sendEmail: mock(async () => Promise.resolve()),
+  sendTestEmail: mock(async () => Promise.resolve()),
 }));
 
 // Suppress console logs during tests
@@ -53,18 +74,19 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login as admin
-      const loginRes = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const loginRes = await client.api.auth.local.login.$post({
+        json: {
           email: "admin@test.com",
           password: "admin123",
-        }),
+        },
       });
 
       expect(loginRes.status).toBe(200);
       const loginData = await loginRes.json();
-      expect(loginData.success).toBe(true);
+      expectTypeOf(loginData).toExtend<LoginResponse | ErrorResponse>();
+      if ("success" in loginData) {
+        expect(loginData.success).toBe(true);
+      }
 
       // Extract JWT from Set-Cookie header
       const setCookieHeader = loginRes.headers.get("set-cookie");
@@ -74,22 +96,27 @@ describe("Authentication Integration Tests", () => {
       const token = tokenMatch![1];
 
       // Create invite
-      const inviteRes = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const inviteRes = await client.api.admin.invites.$post(
+        {
+          json: {
+            email: "user@test.com",
+            role: "operator",
+          },
         },
-        body: JSON.stringify({
-          email: "user@test.com",
-          role: "operator",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(inviteRes.status).toBe(201);
       const inviteData = await inviteRes.json();
-      expect(inviteData.success).toBe(true);
-      expect(inviteData.invite.email).toBe("user@test.com");
+      expectTypeOf(inviteData).toExtend<CreateInviteResponse | ErrorResponse>();
+      if ("success" in inviteData) {
+        expect(inviteData.success).toBe(true);
+        expect(inviteData.invite.email).toBe("user@test.com");
+      }
     });
 
     test("should validate an invite token", async () => {
@@ -116,11 +143,16 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Validate invite
-      const res = await app.request(`/api/invites/validate?token=${token}`);
+      const res = await client.api.invites.validate.$get({
+        query: { token },
+      });
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.valid).toBe(true);
-      expect(data.email).toBe("user@test.com");
+      expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
+      if ("valid" in data) {
+        expect(data.valid).toBe(true);
+        expect(data.email).toBe("user@test.com");
+      }
     });
   });
 
@@ -149,20 +181,21 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Setup password
-      const res = await app.request("/api/auth/local/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.setup.$post({
+        json: {
           inviteToken: token,
           password: "password123",
           name: "Test User",
-        }),
+        },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(data.user.email).toBe("user@test.com");
+      expectTypeOf(data).toExtend<SetupResponse | ErrorResponse>();
+      if ("success" in data) {
+        expect(data.success).toBe(true);
+        expect(data.user.email).toBe("user@test.com");
+      }
 
       // Verify user was created
       const user = await User.findOne({ email: "user@test.com" });
@@ -186,19 +219,20 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.login.$post({
+        json: {
           email: "user@test.com",
           password: "password123",
-        }),
+        },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(data.user.email).toBe("user@test.com");
+      expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
+      if ("success" in data) {
+        expect(data.success).toBe(true);
+        expect(data.user.email).toBe("user@test.com");
+      }
 
       // Check cookie was set
       const setCookieHeader = res.headers.get("set-cookie");
@@ -218,18 +252,18 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login with wrong password
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.login.$post({
+        json: {
           email: "user@test.com",
           password: "wrongpassword",
-        }),
+        },
       });
 
       expect(res.status).toBe(401);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
   });
 
@@ -245,13 +279,11 @@ describe("Authentication Integration Tests", () => {
         }),
       });
 
-      const loginRes = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const loginRes = await client.api.auth.local.login.$post({
+        json: {
           email: "user@test.com",
           password: "password123",
-        }),
+        },
       });
 
       const setCookieHeader = loginRes.headers.get("set-cookie");
@@ -259,17 +291,20 @@ describe("Authentication Integration Tests", () => {
       const token = tokenMatch![1];
 
       // Access protected route
-      const res = await app.request("/api/auth/me", {
+      const res = await client.api.auth.me.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.user.email).toBe("user@test.com");
+      expectTypeOf(data).toExtend<MeResponse | ErrorResponse>();
+      if ("user" in data) {
+        expect(data.user.email).toBe("user@test.com");
+      }
     });
 
     test("should reject access without token", async () => {
-      const res = await app.request("/api/auth/me");
+      const res = await client.api.auth.me.$get();
       expect(res.status).toBe(401);
     });
 
@@ -284,13 +319,11 @@ describe("Authentication Integration Tests", () => {
         }),
       });
 
-      const loginRes = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const loginRes = await client.api.auth.local.login.$post({
+        json: {
           email: "operator@test.com",
           password: "password123",
-        }),
+        },
       });
 
       const setCookieHeader = loginRes.headers.get("set-cookie");
@@ -298,11 +331,82 @@ describe("Authentication Integration Tests", () => {
       const token = tokenMatch![1];
 
       // Try to access admin route
-      const res = await app.request("/api/admin/invites", {
+      const res = await client.api.admin.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       expect(res.status).toBe(403);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
+    });
+  });
+
+  describe("Logout and Test Email", () => {
+    test("should logout and clear the access token cookie", async () => {
+      await User.create({
+        email: "user@test.com",
+        role: "operator",
+        passwordHash: await Bun.password.hash("password123", {
+          algorithm: "bcrypt",
+          cost: 10,
+        }),
+      });
+
+      const res = await client.api.auth.logout.$post();
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<LogoutResponse | ErrorResponse>();
+      if ("success" in data) {
+        expect(data.success).toBe(true);
+      }
+
+      const setCookieHeader = res.headers.get("set-cookie");
+      expect(setCookieHeader).toBeDefined();
+      expect(setCookieHeader).toContain("access_token=");
+    });
+
+    test("should send test email as admin", async () => {
+      await User.create({
+        email: "admin@test.com",
+        role: "admin",
+        isDisabled: false,
+        passwordHash: await Bun.password.hash("admin123", {
+          algorithm: "bcrypt",
+          cost: 10,
+        }),
+      });
+
+      const loginRes = await client.api.auth.local.login.$post({
+        json: {
+          email: "admin@test.com",
+          password: "admin123",
+        },
+      });
+
+      const tokenMatch = loginRes.headers
+        .get("set-cookie")!
+        .match(/access_token=([^;]+)/);
+      const token = tokenMatch![1];
+
+      const res = await client.api.auth.admin["test-email"].$post(
+        {
+          json: { to: "test@test.com" },
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<TestEmailResponse | ErrorResponse>();
+      if ("success" in data) {
+        expect(data.success).toBe(true);
+      }
     });
   });
 
@@ -319,19 +423,20 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login with uppercase email
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.login.$post({
+        json: {
           email: "USER@TEST.COM",
           password: "password123",
-        }),
+        },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(data.user.email).toBe("user@test.com");
+      expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
+      if ("success" in data) {
+        expect(data.success).toBe(true);
+        expect(data.user.email).toBe("user@test.com");
+      }
     });
 
     test("should normalize email with mixed case on login", async () => {
@@ -346,34 +451,35 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login with mixed case email
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.login.$post({
+        json: {
           email: "User@Test.COM",
           password: "password123",
-        }),
+        },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
+      expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
+      if ("success" in data) {
+        expect(data.success).toBe(true);
+      }
     });
 
     test("should reject invalid email format on login", async () => {
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.login.$post({
+        json: {
           email: "not-an-email",
           password: "password123",
-        }),
+        },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
       // Zod validation returns array of errors
-      expect(Array.isArray(data.error) ? JSON.stringify(data.error) : data.error).toContain("email");
+      if ("error" in data) {
+        expect(Array.isArray(data.error) ? JSON.stringify(data.error) : data.error).toContain("email");
+      }
     });
 
     test("should reject password shorter than 8 characters on setup", async () => {
@@ -400,71 +506,71 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Try to setup with short password
-      const res = await app.request("/api/auth/local/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.setup.$post({
+        json: {
           inviteToken: token,
           password: "short",
           name: "Test User",
-        }),
+        },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
       // Zod validation returns array of errors or string
-      const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
-      expect(errorText).toMatch(/8|Password/);
+      if ("error" in data) {
+        const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
+        expect(errorText).toMatch(/8|Password/);
+      }
     });
 
     test("should reject empty password field", async () => {
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.login.$post({
+        json: {
           email: "user@test.com",
           password: "",
-        }),
+        },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
 
     test("should reject missing email field", async () => {
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.login.$post({
+        // @ts-expect-error intentionally missing required email field
+        json: {
           password: "password123",
-        }),
+        },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
 
     test("should reject missing password field", async () => {
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local.login.$post({
+        // @ts-expect-error intentionally missing required password field
+        json: {
           email: "user@test.com",
-        }),
+        },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
 
     test("should reject malformed JSON request body", async () => {
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{ invalid json",
+      const res = await client.api.auth.local.login.$post({
+        json: "{ invalid json" as never,
       });
 
       expect(res.status).toBe(400);
@@ -494,25 +600,39 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Validate invite
-      const res = await app.request(`/api/invites/validate?token=${token}`);
+      const res = await client.api.invites.validate.$get({
+        query: { token },
+      });
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.valid).toBe(true);
-      expect(data.email).toBe("user@test.com");
+      expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
+      if ("valid" in data) {
+        expect(data.valid).toBe(true);
+        expect(data.email).toBe("user@test.com");
+      }
     });
 
     test("should reject missing token query parameter", async () => {
-      const res = await app.request("/api/invites/validate");
+      const res = await client.api.invites.validate.$get({
+        // @ts-expect-error intentionally missing required token query
+        query: {},
+      });
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
 
     test("should reject empty token query parameter", async () => {
-      const res = await app.request("/api/invites/validate?token=");
+      const res = await client.api.invites.validate.$get({
+        query: { token: "" },
+      });
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
   });
 
@@ -529,15 +649,16 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Request reset
-      const res = await app.request("/api/auth/local/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "user@test.com" }),
+      const res = await client.api.auth.local["forgot-password"].$post({
+        json: { email: "user@test.com" },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
+      expectTypeOf(data).toExtend<ForgotPasswordResponse | ErrorResponse>();
+      if ("success" in data) {
+        expect(data.success).toBe(true);
+      }
 
       // Verify reset token was created
       const user = await User.findOne({ email: "user@test.com" });
@@ -567,49 +688,48 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Validate token
-      const validateRes = await app.request(
-        `/api/auth/local/validate-reset-token?token=${token}`
-      );
+      const validateRes = await client.api.auth.local["validate-reset-token"].$get({
+        query: { token },
+      });
       expect(validateRes.status).toBe(200);
+      const validateData = await validateRes.json();
+      expectTypeOf(validateData).toExtend<ValidateResetTokenResponse | ErrorResponse>();
 
       // Reset password
-      const resetRes = await app.request("/api/auth/local/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const resetRes = await client.api.auth.local["reset-password"].$post({
+        json: {
           token,
           password: "newpassword123",
-        }),
+        },
       });
 
       expect(resetRes.status).toBe(200);
       const resetData = await resetRes.json();
-      expect(resetData.success).toBe(true);
+      expectTypeOf(resetData).toExtend<ResetPasswordResponse | ErrorResponse>();
+      if ("success" in resetData) {
+        expect(resetData.success).toBe(true);
+      }
 
       // Verify token was deleted
       const deletedToken = await PasswordResetToken.findOne({ tokenHash });
       expect(deletedToken).toBeNull();
 
       // Login with new password
-      const loginRes = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const loginRes = await client.api.auth.local.login.$post({
+        json: {
           email: "user@test.com",
           password: "newpassword123",
-        }),
+        },
       });
 
       expect(loginRes.status).toBe(200);
 
       // Verify old password doesn't work
-      const oldLoginRes = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const oldLoginRes = await client.api.auth.local.login.$post({
+        json: {
           email: "user@test.com",
           password: "oldpassword",
-        }),
+        },
       });
 
       expect(oldLoginRes.status).toBe(401);
@@ -636,18 +756,18 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Try to use expired token
-      const res = await app.request("/api/auth/local/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await client.api.auth.local["reset-password"].$post({
+        json: {
           token,
           password: "newpassword123",
-        }),
+        },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain("expired");
+      if ("error" in data) {
+        expect(data.error).toContain("expired");
+      }
     });
   });
 });
