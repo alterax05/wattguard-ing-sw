@@ -269,23 +269,30 @@ export function useUsers() {
 }
 
 /**
- * Update a user's role via PATCH /api/admin/users/:id/role (admin only).
+ * Update a user's role or disabled status via PATCH /api/admin/users/:id (admin only).
  * On success, invalidates the users query to refresh the list.
  */
-export function useUpdateUserRole() {
+export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: { id: string; role: "admin" | "operator" }) => {
-      const res = await client.api.admin.users[":id"].role.$patch({
+    mutationFn: async (input: {
+      id: string;
+      role?: "admin" | "operator";
+      isDisabled?: boolean;
+    }) => {
+      const res = await client.api.admin.users[":id"].$patch({
         param: { id: input.id },
-        json: { role: input.role },
+        json: {
+          role: input.role,
+          isDisabled: input.isDisabled,
+        },
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Failed to update user role"));
+        throw new Error(extractError(data, "Failed to update user"));
       }
 
       return data;
