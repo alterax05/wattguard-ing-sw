@@ -2,9 +2,22 @@
  * Comprehensive validation edge case tests for Zod schemas
  * Tests cover email normalization, password validation, and malformed requests
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, mock, expectTypeOf } from "bun:test";
+import { testClient } from "hono/testing";
+import { z } from "zod";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { ErrorSchema } from "@wattguard/shared";
+import type {
+  LoginResponse,
+  SetupResponse,
+  ValidateInviteResponse,
+  CreateInviteResponse,
+} from "@wattguard/shared";
+
+type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+const client = testClient(app);
 import { User } from "../../models/User";
 import { Invite } from "../../models/Invite";
 import { randomToken, hashTokenSha256 } from "../../utils/crypto";
@@ -53,13 +66,13 @@ describe("Email Validation and Normalization", () => {
         passwordHash: await Bun.password.hash("password123", { algorithm: "bcrypt", cost: 10 }),
       });
 
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: "password123" }),
+      const res = await client.api.auth.local.login.$post({
+        json: { email, password: "password123" },
       });
 
       expect(res.status).toBe(200);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
       await clearTestDB();
     }
   });
@@ -99,10 +112,8 @@ describe("Email Validation and Normalization", () => {
     const variations = ["USER@TEST.COM", "User@Test.Com", "UsEr@TeSt.CoM"];
 
     for (const email of variations) {
-      const res = await app.request("/api/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: "password123" }),
+      const res = await client.api.auth.local.login.$post({
+        json: { email, password: "password123" },
       });
 
       expect(res.status).toBe(200);
@@ -149,13 +160,13 @@ describe("Password Validation", () => {
         createdBy: admin._id,
       });
 
-      const res = await app.request("/api/auth/local/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteToken: newToken, password, name: "Test User" }),
+      const res = await client.api.auth.local.setup.$post({
+        json: { inviteToken: newToken, password, name: "Test User" },
       });
 
       expect(res.status).toBe(200);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<SetupResponse | ErrorResponse>();
     }
   });
 
@@ -310,8 +321,12 @@ describe("Query Parameter Validation", () => {
       createdBy: admin._id,
     });
 
-    const res = await app.request(`/api/invites/validate?token=${token}`);
+    const res = await client.api.invites.validate.$get({
+      query: { token },
+    });
     expect(res.status).toBe(200);
+    const data = await res.json();
+    expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
   });
 
   test("should reject missing token query parameter", async () => {
@@ -335,22 +350,26 @@ describe("Query Parameter Validation", () => {
 describe("Role Validation", () => {
   test("should accept valid roles", async () => {
     const token = await getAdminToken();
-    const validRoles = ["admin", "operator"];
+    const validRoles = ["admin", "operator"] as const;
 
     for (const role of validRoles) {
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.invites.$post(
+        {
+          json: {
+            email: `${role}${Math.random()}@test.com`,
+            role,
+          },
         },
-        body: JSON.stringify({
-          email: `${role}${Math.random()}@test.com`,
-          role,
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(201);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<CreateInviteResponse | ErrorResponse>();
     }
   });
 
