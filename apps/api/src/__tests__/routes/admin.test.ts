@@ -398,4 +398,218 @@ describe("Admin Routes", () => {
       expect(res.status).toBe(401);
     });
   });
+
+  describe("PATCH /api/admin/users/:id - Update User", () => {
+    test("should update user role", async () => {
+      const token = await getAdminToken();
+      await getOperatorToken();
+      const operator = await User.findOne({ email: "operator@test.com" });
+
+      const res = await app.request(`/api/admin/users/${operator!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: "admin" }),
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.user.role).toBe("admin");
+      expect(data.user.isDisabled).toBe(false);
+
+      const updated = await User.findById(operator!._id);
+      expect(updated!.role).toBe("admin");
+      expect(updated!.isDisabled).toBe(false);
+    });
+
+    test("should disable a user", async () => {
+      const token = await getAdminToken();
+      await getOperatorToken();
+      const operator = await User.findOne({ email: "operator@test.com" });
+
+      const res = await app.request(`/api/admin/users/${operator!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isDisabled: true }),
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.user.isDisabled).toBe(true);
+      expect(data.user.role).toBe("operator");
+
+      const updated = await User.findById(operator!._id);
+      expect(updated!.isDisabled).toBe(true);
+    });
+
+    test("should re-enable a disabled user", async () => {
+      const token = await getAdminToken();
+      await getOperatorToken();
+      const operator = await User.findOne({ email: "operator@test.com" });
+      operator!.isDisabled = true;
+      await operator!.save();
+
+      const res = await app.request(`/api/admin/users/${operator!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isDisabled: false }),
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      expect(data.user.isDisabled).toBe(false);
+
+      const updated = await User.findById(operator!._id);
+      expect(updated!.isDisabled).toBe(false);
+    });
+
+    test("should update role and status together", async () => {
+      const token = await getAdminToken();
+      await getOperatorToken();
+      const operator = await User.findOne({ email: "operator@test.com" });
+
+      const res = await app.request(`/api/admin/users/${operator!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: "admin", isDisabled: true }),
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.user.role).toBe("admin");
+      expect(data.user.isDisabled).toBe(true);
+    });
+
+    test("should reject empty update body", async () => {
+      const token = await getAdminToken();
+      await getOperatorToken();
+      const operator = await User.findOne({ email: "operator@test.com" });
+
+      const res = await app.request(`/api/admin/users/${operator!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    test("should reject updating your own account", async () => {
+      const token = await getAdminToken();
+      const admin = await User.findOne({ email: "admin@test.com" });
+
+      const res = await app.request(`/api/admin/users/${admin!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isDisabled: true }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    test("should return 404 for non-existent user", async () => {
+      const token = await getAdminToken();
+
+      const res = await app.request("/api/admin/users/507f1f77bcf86cd799439011", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isDisabled: true }),
+      });
+
+      expect(res.status).toBe(404);
+    });
+
+    test("should reject invalid role", async () => {
+      const token = await getAdminToken();
+      await getOperatorToken();
+      const operator = await User.findOne({ email: "operator@test.com" });
+
+      const res = await app.request(`/api/admin/users/${operator!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role: "superadmin" }),
+      });
+
+      expect(res.status).toBe(400);
+    });
+
+    test("should reject operator from updating users", async () => {
+      const operatorToken = await getOperatorToken();
+      await getAdminToken();
+      const admin = await User.findOne({ email: "admin@test.com" });
+
+      const res = await app.request(`/api/admin/users/${admin!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${operatorToken}`,
+        },
+        body: JSON.stringify({ isDisabled: true }),
+      });
+
+      expect(res.status).toBe(403);
+    });
+
+    test("should reject unauthenticated requests", async () => {
+      const res = await app.request("/api/admin/users/507f1f77bcf86cd799439011", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDisabled: true }),
+      });
+
+      expect(res.status).toBe(401);
+    });
+
+    test("should prevent a disabled user from logging in", async () => {
+      const token = await getAdminToken();
+      await getOperatorToken();
+      const operator = await User.findOne({ email: "operator@test.com" });
+
+      await app.request(`/api/admin/users/${operator!._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isDisabled: true }),
+      });
+
+      const loginRes = await app.request("/api/auth/local/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "operator@test.com",
+          password: "operator123",
+        }),
+      });
+
+      expect(loginRes.status).toBe(403);
+    });
+  });
 });
