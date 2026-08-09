@@ -84,9 +84,10 @@ describe("Authentication Integration Tests", () => {
       expect(loginRes.status).toBe(200);
       const loginData = await loginRes.json();
       expectTypeOf(loginData).toExtend<LoginResponse | ErrorResponse>();
-      if ("success" in loginData) {
-        expect(loginData.success).toBe(true);
+      if (!("success" in loginData)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(loginData.success).toBe(true);
 
       // Extract JWT from Set-Cookie header
       const setCookieHeader = loginRes.headers.get("set-cookie");
@@ -113,10 +114,11 @@ describe("Authentication Integration Tests", () => {
       expect(inviteRes.status).toBe(201);
       const inviteData = await inviteRes.json();
       expectTypeOf(inviteData).toExtend<CreateInviteResponse | ErrorResponse>();
-      if ("success" in inviteData) {
-        expect(inviteData.success).toBe(true);
-        expect(inviteData.invite.email).toBe("user@test.com");
+      if (!("success" in inviteData)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(inviteData.success).toBe(true);
+      expect(inviteData.invite.email).toBe("user@test.com");
     });
 
     test("should validate an invite token", async () => {
@@ -149,10 +151,11 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
-      if ("valid" in data) {
-        expect(data.valid).toBe(true);
-        expect(data.email).toBe("user@test.com");
+      if (!("valid" in data)) {
+        throw new Error("Expected response to contain 'valid'");
       }
+      expect(data.valid).toBe(true);
+      expect(data.email).toBe("user@test.com");
     });
   });
 
@@ -192,10 +195,11 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<SetupResponse | ErrorResponse>();
-      if ("success" in data) {
-        expect(data.success).toBe(true);
-        expect(data.user.email).toBe("user@test.com");
+      if (!("success" in data)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(data.success).toBe(true);
+      expect(data.user.email).toBe("user@test.com");
 
       // Verify user was created
       const user = await User.findOne({ email: "user@test.com" });
@@ -229,10 +233,11 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
-      if ("success" in data) {
-        expect(data.success).toBe(true);
-        expect(data.user.email).toBe("user@test.com");
+      if (!("success" in data)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(data.success).toBe(true);
+      expect(data.user.email).toBe("user@test.com");
 
       // Check cookie was set
       const setCookieHeader = res.headers.get("set-cookie");
@@ -261,9 +266,10 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(401);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
   });
 
@@ -298,9 +304,10 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<MeResponse | ErrorResponse>();
-      if ("user" in data) {
-        expect(data.user.email).toBe("user@test.com");
+      if (!("user" in data)) {
+        throw new Error("Expected response to contain 'user'");
       }
+      expect(data.user.email).toBe("user@test.com");
     });
 
     test("should reject access without token", async () => {
@@ -338,9 +345,10 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(403);
       const data = await res.json();
       expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
   });
 
@@ -360,9 +368,10 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<LogoutResponse | ErrorResponse>();
-      if ("success" in data) {
-        expect(data.success).toBe(true);
+      if (!("success" in data)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(data.success).toBe(true);
 
       const setCookieHeader = res.headers.get("set-cookie");
       expect(setCookieHeader).toBeDefined();
@@ -404,9 +413,10 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<TestEmailResponse | ErrorResponse>();
-      if ("success" in data) {
-        expect(data.success).toBe(true);
+      if (!("success" in data)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(data.success).toBe(true);
     });
   });
 
@@ -433,10 +443,11 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
-      if ("success" in data) {
-        expect(data.success).toBe(true);
-        expect(data.user.email).toBe("user@test.com");
+      if (!("success" in data)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(data.success).toBe(true);
+      expect(data.user.email).toBe("user@test.com");
     });
 
     test("should normalize email with mixed case on login", async () => {
@@ -461,9 +472,10 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
-      if ("success" in data) {
-        expect(data.success).toBe(true);
+      if (!("success" in data)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(data.success).toBe(true);
     });
 
     test("should reject invalid email format on login", async () => {
@@ -477,9 +489,10 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       // Zod validation returns array of errors
-      if ("error" in data) {
-        expect(Array.isArray(data.error) ? JSON.stringify(data.error) : data.error).toContain("email");
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(Array.isArray(data.error) ? JSON.stringify(data.error) : data.error).toContain("email");
     });
 
     test("should reject password shorter than 8 characters on setup", async () => {
@@ -517,10 +530,11 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       // Zod validation returns array of errors or string
-      if ("error" in data) {
-        const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
-        expect(errorText).toMatch(/8|Password/);
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
+      expect(errorText).toMatch(/8|Password/);
     });
 
     test("should reject empty password field", async () => {
@@ -533,9 +547,10 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
 
     test("should reject missing email field", async () => {
@@ -548,9 +563,10 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
 
     test("should reject missing password field", async () => {
@@ -563,9 +579,10 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
 
     test("should reject malformed JSON request body", async () => {
@@ -606,10 +623,11 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
-      if ("valid" in data) {
-        expect(data.valid).toBe(true);
-        expect(data.email).toBe("user@test.com");
+      if (!("valid" in data)) {
+        throw new Error("Expected response to contain 'valid'");
       }
+      expect(data.valid).toBe(true);
+      expect(data.email).toBe("user@test.com");
     });
 
     test("should reject missing token query parameter", async () => {
@@ -619,9 +637,10 @@ describe("Authentication Integration Tests", () => {
       });
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
 
     test("should reject empty token query parameter", async () => {
@@ -630,9 +649,10 @@ describe("Authentication Integration Tests", () => {
       });
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toBeDefined();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toBeDefined();
     });
   });
 
@@ -656,9 +676,10 @@ describe("Authentication Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<ForgotPasswordResponse | ErrorResponse>();
-      if ("success" in data) {
-        expect(data.success).toBe(true);
+      if (!("success" in data)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(data.success).toBe(true);
 
       // Verify reset token was created
       const user = await User.findOne({ email: "user@test.com" });
@@ -706,9 +727,10 @@ describe("Authentication Integration Tests", () => {
       expect(resetRes.status).toBe(200);
       const resetData = await resetRes.json();
       expectTypeOf(resetData).toExtend<ResetPasswordResponse | ErrorResponse>();
-      if ("success" in resetData) {
-        expect(resetData.success).toBe(true);
+      if (!("success" in resetData)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(resetData.success).toBe(true);
 
       // Verify token was deleted
       const deletedToken = await PasswordResetToken.findOne({ tokenHash });
@@ -765,9 +787,10 @@ describe("Authentication Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if ("error" in data) {
-        expect(data.error).toContain("expired");
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(data.error).toContain("expired");
     });
   });
 });

@@ -160,16 +160,17 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(201);
       const json = await res.json();
       expectTypeOf(json).toExtend<CreateSensorResponse | ErrorResponse>();
-      if ("sensor" in json) {
-        expect(json.success).toBe(true);
-        expect(json.sensor.sensorType).toBe(sensorData.sensorType);
-        expect(json.sensor.location).toBe(sensorData.location);
-        expect(json.sensor.status).toBe("active");
-
-        // Verify in database
-        const dbSensor = await Sensor.findById(json.sensor.id);
-        expect(dbSensor).toBeDefined();
+      if (!("sensor" in json)) {
+        throw new Error("Expected response to contain 'sensor'");
       }
+      expect(json.success).toBe(true);
+      expect(json.sensor.sensorType).toBe(sensorData.sensorType);
+      expect(json.sensor.location).toBe(sensorData.location);
+      expect(json.sensor.status).toBe("active");
+
+      // Verify in database
+      const dbSensor = await Sensor.findById(json.sensor.id);
+      expect(dbSensor).toBeDefined();
 
       
     });
@@ -225,9 +226,10 @@ describe("Sensors Routes - Integration Tests", () => {
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      if ("error" in json) {
-        expect(json.error).toContain("already exists");
+      if (!("error" in json)) {
+        throw new Error("Expected response to contain 'error'");
       }
+      expect(json.error).toContain("already exists");
     });
 
     test("should reject invalid building ID", async () => {
@@ -305,14 +307,15 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetSensorResponse | ErrorResponse>();
-      if ("sensor" in json) {
-        expect(json.sensor.id).toBeDefined();
-        expect(json.sensor.sensorType).toBe("internal_temp");
-        expect(json.sensor.location).toBe("Piano 2");
-        expect(json.sensor.lastReading).toBeDefined();
-        expect(json.sensor.lastReading!.value).toBe(22.5);
-        expect(json.sensor.isOffline).toBe(false);
+      if (!("sensor" in json)) {
+        throw new Error("Expected response to contain 'sensor'");
       }
+      expect(json.sensor.id).toBeDefined();
+      expect(json.sensor.sensorType).toBe("internal_temp");
+      expect(json.sensor.location).toBe("Piano 2");
+      expect(json.sensor.lastReading).toBeDefined();
+      expect(json.sensor.lastReading!.value).toBe(22.5);
+      expect(json.sensor.isOffline).toBe(false);
     });
 
     test("should return 404 for non-existent sensor", async () => {
@@ -368,11 +371,12 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<UpdateSensorResponse | ErrorResponse>();
-      if ("sensor" in json) {
-        expect(json.success).toBe(true);
-        expect(json.sensor.location).toBe("Updated Location");
-        expect(json.sensor.status).toBe("inactive");
+      if (!("sensor" in json)) {
+        throw new Error("Expected response to contain 'sensor'");
       }
+      expect(json.success).toBe(true);
+      expect(json.sensor.location).toBe("Updated Location");
+      expect(json.sensor.status).toBe("inactive");
 
       
     });
@@ -524,9 +528,10 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<DeleteSensorResponse | ErrorResponse>();
-      if ("success" in json) {
-        expect(json.success).toBe(true);
+      if (!("success" in json)) {
+        throw new Error("Expected response to contain 'success'");
       }
+      expect(json.success).toBe(true);
 
       // Verify deletion
       const deletedSensor = await Sensor.findById(sensor._id);
@@ -776,11 +781,12 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetSensorReadingsResponse | ErrorResponse>();
-      if ("readings" in json) {
-        expect(json.readings.length).toBe(3);
-        expect(json.readings[0]!.value).toBe(23.0); // Most recent first
-        expect(json.readings[2]!.value).toBe(21.0); // Oldest last
+      if (!("readings" in json)) {
+        throw new Error("Expected response to contain 'readings'");
       }
+      expect(json.readings.length).toBe(3);
+      expect(json.readings[0]!.value).toBe(23.0); // Most recent first
+      expect(json.readings[2]!.value).toBe(21.0); // Oldest last
     });
 
     test("should support date range filtering", async () => {
@@ -832,10 +838,11 @@ describe("Sensors Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("readings" in json) {
-        expect(json.readings.length).toBe(1); // Only the reading from 1 day ago
-        expect(json.readings[0]!.value).toBe(22.0);
+      if (!("readings" in json)) {
+        throw new Error("Expected response to contain 'readings'");
       }
+      expect(json.readings.length).toBe(1); // Only the reading from 1 day ago
+      expect(json.readings[0]!.value).toBe(22.0);
     });
 
     test("should support pagination", async () => {
@@ -874,12 +881,13 @@ describe("Sensors Routes - Integration Tests", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if ("readings" in json && "pagination" in json) {
-        expect(json.readings.length).toBe(2);
-        expect(json.pagination.total).toBe(5);
-        expect(json.pagination.limit).toBe(2);
-        expect(json.pagination.offset).toBe(0);
+      if (!("readings" in json) || !("pagination" in json)) {
+        throw new Error("Expected response to contain 'readings' and 'pagination'");
       }
+      expect(json.readings.length).toBe(2);
+      expect(json.pagination.total).toBe(5);
+      expect(json.pagination.limit).toBe(2);
+      expect(json.pagination.offset).toBe(0);
     });
 
     test("should return 404 for non-existent sensor", async () => {
