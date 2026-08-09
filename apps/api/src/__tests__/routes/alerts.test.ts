@@ -111,10 +111,11 @@ describe("Alerts API", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expectTypeOf(body).toExtend<ListAlertsResponse | ErrorResponse>();
-    if ("alerts" in body) {
-      expect(body.alerts).toBeInstanceOf(Array);
-      expect(body.alerts.length).toBe(2);
+    if (!("alerts" in body)) {
+      throw new Error("Expected response to contain 'alerts'");
     }
+    expect(body.alerts).toBeInstanceOf(Array);
+    expect(body.alerts.length).toBe(2);
   });
 
   it("should acknowledge an active alert", async () => {
@@ -133,11 +134,12 @@ describe("Alerts API", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
-    if ("alert" in body) {
-      expect(body.success).toBe(true);
-      expect(body.alert.status).toBe("acknowledged");
-      expect(body.alert.acknowledgedBy).toBe("Admin User");
+    if (!("alert" in body)) {
+      throw new Error("Expected response to contain 'alert'");
     }
+    expect(body.success).toBe(true);
+    expect(body.alert.status).toBe("acknowledged");
+    expect(body.alert.acknowledgedBy).toBe("Admin User");
   });
 
   it("should fail to acknowledge an already acknowledged alert", async () => {
@@ -155,9 +157,10 @@ describe("Alerts API", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    if ("error" in body) {
-      expect(body.error).toBe("Only active alerts can be acknowledged");
+    if (!("error" in body)) {
+      throw new Error("Expected response to contain 'error'");
     }
+    expect(body.error).toBe("Only active alerts can be acknowledged");
   });
 
   it("should resolve an alert", async () => {
@@ -176,10 +179,11 @@ describe("Alerts API", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
-    if ("alert" in body) {
-      expect(body.success).toBe(true);
-      expect(body.alert.status).toBe("resolved");
-      expect(body.alert.resolvedBy).toBe("Admin User");
+    if (!("alert" in body)) {
+      throw new Error("Expected response to contain 'alert'");
     }
+    expect(body.success).toBe(true);
+    expect(body.alert.status).toBe("resolved");
+    expect(body.alert.resolvedBy).toBe("Admin User");
   });
 });
