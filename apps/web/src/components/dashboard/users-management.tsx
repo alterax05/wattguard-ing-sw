@@ -1,5 +1,6 @@
 import { useState, useContext } from "react"
-import { useUsers, useUpdateUserRole, useDeleteUser } from "@/hooks/use-auth"
+import { cn } from "@/lib/utils"
+import { useUsers, useUpdateUser, useDeleteUser } from "@/hooks/use-auth"
 import { AuthContext } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,9 @@ import {
   MoreVertical,
   ArrowRightLeft,
   Trash2,
+  UserX,
+  UserCheck,
+  Ban,
 } from "lucide-react"
 import { AddUserDialog } from "./add-user-dialog"
 import { format } from "date-fns"
@@ -42,8 +46,9 @@ import type { AdminUser } from "@/hooks/use-auth"
 export function UsersManagement() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null)
+  const [userToToggle, setUserToToggle] = useState<AdminUser | null>(null)
   const { data: users, isLoading, error } = useUsers()
-  const updateRole = useUpdateUserRole()
+  const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
   const { user: currentUser } = useContext(AuthContext)
 
@@ -68,7 +73,7 @@ export function UsersManagement() {
     const newRole = user.role === "admin" ? "operator" : "admin"
     const roleLabel = newRole === "admin" ? "Amministratore" : "Operatore"
 
-    updateRole.mutate(
+    updateUser.mutate(
       { id: user.id, role: newRole },
       {
         onSuccess: () => {
@@ -94,6 +99,27 @@ export function UsersManagement() {
         setUserToDelete(null)
       },
     })
+  }
+
+  const handleStatusChange = () => {
+    if (!userToToggle) return
+
+    const nextDisabled = !userToToggle.isDisabled
+    const actionLabel = nextDisabled ? "disabilitato" : "riattivato"
+
+    updateUser.mutate(
+      { id: userToToggle.id, isDisabled: nextDisabled },
+      {
+        onSuccess: () => {
+          toast.success(`Utente ${userToToggle.name ?? userToToggle.email} ${actionLabel}`)
+          setUserToToggle(null)
+        },
+        onError: (err) => {
+          toast.error(err.message)
+          setUserToToggle(null)
+        },
+      }
+    )
   }
 
   const isSelf = (userId: string) => currentUser?.id === userId
@@ -138,12 +164,19 @@ export function UsersManagement() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
+                        <div
+                          className={cn(
+                            "flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground",
+                            user.isDisabled && "bg-muted text-muted-foreground"
+                          )}
+                        >
                           {(user.name ?? user.email).charAt(0).toUpperCase()}
                         </div>
                         <div className="space-y-2">
                           <div>
-                            <h3 className="font-semibold leading-none">{user.name ?? user.email}</h3>
+                            <h3 className={cn("font-semibold leading-none", user.isDisabled && "text-muted-foreground")}>
+                              {user.name ?? user.email}
+                            </h3>
                             <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Mail className="h-3 w-3" />
@@ -161,6 +194,12 @@ export function UsersManagement() {
                       </div>
                       <div className="flex items-center gap-2">
                         {getRoleBadge(user.role)}
+                        {user.isDisabled && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            <Ban className="mr-1 h-3 w-3" />
+                            Disabilitato
+                          </Badge>
+                        )}
                         {!isSelf(user.id) && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -172,10 +211,26 @@ export function UsersManagement() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() => handleRoleChange(user)}
-                                disabled={updateRole.isPending}
+                                disabled={updateUser.isPending}
                               >
                                 <ArrowRightLeft className="mr-2 h-4 w-4" />
                                 {user.role === "admin" ? "Rendi Operatore" : "Rendi Amministratore"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setUserToToggle(user)}
+                                disabled={updateUser.isPending}
+                              >
+                                {user.isDisabled ? (
+                                  <>
+                                    <UserCheck className="mr-2 h-4 w-4" />
+                                    Riattiva Utente
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserX className="mr-2 h-4 w-4" />
+                                    Disabilita Utente
+                                  </>
+                                )}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -225,6 +280,50 @@ export function UsersManagement() {
                 </>
               ) : (
                 "Elimina"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!userToToggle} onOpenChange={(open) => !open && setUserToToggle(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {userToToggle?.isDisabled ? "Conferma Riattivazione" : "Conferma Disabilitazione"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {userToToggle?.isDisabled ? (
+                <>
+                  Sei sicuro di voler riattivare l&apos;utente{" "}
+                  <strong>{userToToggle?.name ?? userToToggle?.email}</strong>? Potrà nuovamente
+                  accedere al sistema.
+                </>
+              ) : (
+                <>
+                  Sei sicuro di voler disabilitare l&apos;utente{" "}
+                  <strong>{userToToggle?.name ?? userToToggle?.email}</strong>? Verrà disconnesso e
+                  non potrà più accedere finché non verrà riattivato.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateUser.isPending}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              variant={userToToggle?.isDisabled ? undefined : "destructive"}
+              onClick={handleStatusChange}
+              disabled={updateUser.isPending}
+            >
+              {updateUser.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvataggio...
+                </>
+              ) : userToToggle?.isDisabled ? (
+                "Riattiva"
+              ) : (
+                "Disabilita"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
