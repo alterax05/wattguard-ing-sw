@@ -8,6 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -115,6 +125,7 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
     heatingSystemType: building.heatingSystemType,
     constructionYear: building.constructionYear ? building.constructionYear.toString() : "",
     geographicZone: building.geographicZone,
+    status: building.status,
     latitude: building.location.coordinates[1].toString(),
     longitude: building.location.coordinates[0].toString(),
   })
@@ -124,11 +135,17 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
     building.location.coordinates[0]
   ])
   const [geocoding, setGeocoding] = useState(false)
+  const [confirmDecommission, setConfirmDecommission] = useState(false)
 
   const markerPosition: [number, number] | null =
     formData.latitude && formData.longitude
       ? [parseFloat(formData.latitude), parseFloat(formData.longitude)]
       : null
+
+  const surface = parseFloat(formData.surface)
+  const ceilingHeight = parseFloat(formData.ceilingHeight)
+  const lat = parseFloat(formData.latitude)
+  const lng = parseFloat(formData.longitude)
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -172,29 +189,7 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
     }))
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const surface = parseFloat(formData.surface)
-    const ceilingHeight = parseFloat(formData.ceilingHeight)
-    const lat = parseFloat(formData.latitude)
-    const lng = parseFloat(formData.longitude)
-
-    if (isNaN(surface) || surface < 0) {
-      toast.error("La superficie deve essere un numero positivo")
-      return
-    }
-
-    if (isNaN(ceilingHeight) || ceilingHeight < 0.5) {
-      toast.error("L'altezza soffitto deve essere almeno 0.5m")
-      return
-    }
-
-    if (isNaN(lat) || isNaN(lng)) {
-      toast.error("Inserisci coordinate valide o cerca l'indirizzo")
-      return
-    }
-
+  const performUpdate = () => {
     updateBuilding.mutate(
       {
         id: building.id,
@@ -212,6 +207,7 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
           ? parseInt(formData.constructionYear)
           : undefined,
         geographicZone: formData.geographicZone,
+        status: formData.status,
       },
       {
         onSuccess: () => {
@@ -225,6 +221,32 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
         },
       }
     )
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (isNaN(surface) || surface < 0) {
+      toast.error("La superficie deve essere un numero positivo")
+      return
+    }
+
+    if (isNaN(ceilingHeight) || ceilingHeight < 0.5) {
+      toast.error("L'altezza soffitto deve essere almeno 0.5m")
+      return
+    }
+
+    if (isNaN(lat) || isNaN(lng)) {
+      toast.error("Inserisci coordinate valide o cerca l'indirizzo")
+      return
+    }
+
+    if (formData.status === "decommissioned" && building.status !== "decommissioned") {
+      setConfirmDecommission(true)
+      return
+    }
+
+    performUpdate()
   }
 
   const isPending = updateBuilding.isPending
@@ -335,31 +357,57 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
             />
           </div>
 
-          {/* Tipo edificio */}
-          <div className="space-y-2">
-            <Label htmlFor="building-type">Tipo edificio *</Label>
-            <Select
-              value={formData.buildingType}
-              onValueChange={(value) => updateField("buildingType", value)}
-              disabled={isPending || typesLoading}
-            >
-              <SelectTrigger>
-              <SelectValue
-                  placeholder={
-                    typesLoading
-                      ? "Caricamento tipologie..."
-                      : "Seleziona tipo edificio"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {buildingTypesData?.buildingTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Tipo edificio + Stato */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="building-type">Tipo edificio *</Label>
+              <Select
+                value={formData.buildingType}
+                onValueChange={(value) => updateField("buildingType", value)}
+                disabled={isPending || typesLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      typesLoading
+                        ? "Caricamento tipologie..."
+                        : "Seleziona tipo edificio"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {buildingTypesData?.buildingTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="building-status">Stato</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => updateField("status", value)}
+                disabled={isPending}
+              >
+                <SelectTrigger id="building-status">
+                  <SelectValue placeholder="Seleziona stato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Attivo</SelectItem>
+                  <SelectItem value="inactive">Inattivo</SelectItem>
+                  <SelectItem value="decommissioned">Dismesso</SelectItem>
+                </SelectContent>
+              </Select>
+              {formData.status === "decommissioned" && (
+                <p className="text-xs text-destructive">
+                  Attenzione: la dismissione è un'azione definitiva e richiede
+                  conferma al salvataggio.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Two columns: Riscaldamento + Zona */}
@@ -489,6 +537,38 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
           </div>
         </form>
       </DialogContent>
+
+      <AlertDialog
+        open={confirmDecommission}
+        onOpenChange={setConfirmDecommission}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conferma dismissione</AlertDialogTitle>
+            <AlertDialogDescription>
+              Stai per marcare "{building.name}" come{" "}
+              <span className="font-semibold">Dismesso</span>. Questa è
+              un'operazione definitiva: l'edificio non sarà più considerato
+              operativo nelle analisi e nei report.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>
+              Annulla
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                setConfirmDecommission(false)
+                performUpdate()
+              }}
+              disabled={isPending}
+            >
+              Conferma dismissione
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }
