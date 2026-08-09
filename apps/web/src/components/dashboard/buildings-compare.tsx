@@ -12,10 +12,10 @@ import {
   type EfficiencyMetrics,
 } from "@/hooks/use-buildings"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { BuildingStatusBadge } from "./building-status-badge"
 import {
   ArrowLeft,
   Building2,
@@ -71,17 +71,6 @@ function getWeatherLabel(code: number) {
   if (code >= 80 && code <= 82) return "Rovesci"
   if (code >= 95 && code <= 99) return "Temporale"
   return "N/D"
-}
-
-function getStatusBadge(status: BuildingDetail["status"]) {
-  switch (status) {
-    case "active":
-      return <Badge variant="secondary" className="bg-chart-3/15 text-chart-3 text-xs">Attivo</Badge>
-    case "inactive":
-      return <Badge variant="secondary" className="text-xs">Inattivo</Badge>
-    case "decommissioned":
-      return <Badge variant="secondary" className="bg-destructive/15 text-destructive text-xs">Dismesso</Badge>
-  }
 }
 
 function getBuildingTypeName(bt: BuildingDetail["buildingType"]): string {
@@ -299,7 +288,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                       {building.address}
                     </div>
                   </div>
-                  {getStatusBadge(building.status)}
+                  <BuildingStatusBadge status={building.status} />
                 </div>
 
                 <Separator />
@@ -419,7 +408,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                   <td className="py-3 pr-4 text-muted-foreground">Stato</td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4">
-                      {getStatusBadge(building.status)}
+                      <BuildingStatusBadge status={building.status} />
                     </td>
                   ))}
                 </tr>

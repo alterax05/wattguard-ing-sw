@@ -9,8 +9,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BuildingStatusBadge } from "./building-status-badge";
 import L from "leaflet";
 import {
   MapContainer,
@@ -25,28 +25,6 @@ const TRENTO_CENTER: [number, number] = [46.0667, 11.1167];
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
   if (typeof bt === "string") return bt;
   return bt.name;
-}
-
-function getStatusLabel(status: BuildingSummary["status"]) {
-  switch (status) {
-    case "active":
-      return "Attivo";
-    case "inactive":
-      return "Inattivo";
-    case "decommissioned":
-      return "Dismesso";
-  }
-}
-
-function getStatusColor(status: BuildingSummary["status"]) {
-  switch (status) {
-    case "active":
-      return "bg-chart-3/15 text-chart-3";
-    case "inactive":
-      return "";
-    case "decommissioned":
-      return "bg-destructive/15 text-destructive";
-  }
 }
 
 function createBuildingIcon(isActive: boolean, isSelected: boolean) {
@@ -226,13 +204,11 @@ export function BuildingsMap() {
             </div>
 
             <div className="mb-3 flex items-center gap-2">
-              <Badge
-                variant="secondary"
-                className={`text-xs ${getStatusColor(selectedBuilding.status)}`}
-              >
-                <Activity className="mr-1 h-3 w-3" />
-                {getStatusLabel(selectedBuilding.status)}
-              </Badge>
+              <BuildingStatusBadge
+                status={selectedBuilding.status}
+                icon={<Activity className="mr-1 h-3 w-3" />}
+                className="text-xs"
+              />
             </div>
 
             <div className="mb-2 text-xs text-muted-foreground">
