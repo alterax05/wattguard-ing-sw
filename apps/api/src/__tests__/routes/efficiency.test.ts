@@ -1,7 +1,15 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import { testClient } from "hono/testing";
+import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { ErrorSchema } from "@wattguard/shared";
+import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
+
+type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+const client = testClient(app);
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -208,23 +216,26 @@ describe("Building Efficiency Route - Integration Tests", () => {
     const startDate = "2024-01-01T10:00:00Z";
     const endDate = new Date(new Date(startDate).getTime() + 4.5 * 60 * 60 * 1000).toISOString();
 
-    const res = await app.request(
-      `/api/buildings/${buildingId}/efficiency?startDate=${startDate}&endDate=${endDate}`,
+    const res = await client.api.buildings[":id"].efficiency.$get(
       {
-        method: "GET",
+        param: { id: buildingId },
+        query: { startDate, endDate },
+      },
+      {
         headers: {
-          "Authorization": `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
       }
     );
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    
-    expect(json.metrics).toBeDefined();
+    expectTypeOf(json).toExtend<GetBuildingEfficiencyResponse | ErrorResponse>();
+
+    if (!("metrics" in json)) throw new Error("missing metrics");
 
     // Verify Physics Metrics
-    
+
     // 1. Estimated Heat Loss Coefficient (H)
     // Should be close to 50
     expect(json.metrics.estimatedHeatLossCoefficient).not.toBeNull();

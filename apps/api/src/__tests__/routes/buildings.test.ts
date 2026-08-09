@@ -1,4 +1,6 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import { testClient } from "hono/testing";
+import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
@@ -8,6 +10,20 @@ import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
+import { ErrorSchema } from "@wattguard/shared";
+import type {
+  CreateBuildingResponse,
+  UpdateBuildingResponse,
+  DeleteBuildingResponse,
+  SearchBuildingsResponse,
+  GetBuildingResponse,
+  GetBuildingRealTimeResponse,
+  GetBuildingHistoryResponse,
+} from "@wattguard/shared";
+
+type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+const client = testClient(app);
 
 // Suppress console logs during tests
 const originalConsoleLog = console.log;
@@ -66,12 +82,12 @@ beforeEach(async () => {
       password: "admin123",
     }),
   });
-  
+
   const adminCookie = adminLoginRes.headers.get("set-cookie");
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
   if (!adminTokenMatch) throw new Error("Admin token not found");
   adminToken = adminTokenMatch[1] as string;
-  
+
   console.log("Admin login status:", adminLoginRes.status);
   console.log("Admin token:", adminToken ? "exists" : "missing");
 
@@ -83,7 +99,7 @@ beforeEach(async () => {
       password: "operator123",
     }),
   });
-  
+
   const operatorCookie = operatorLoginRes.headers.get("set-cookie");
   const operatorTokenMatch = operatorCookie?.match(/access_token=([^;]+)/);
   if (!operatorTokenMatch) throw new Error("Operator token not found");
@@ -104,40 +120,43 @@ describe("Buildings Routes - Integration Tests", () => {
         name: "Scuola Primaria Test",
         address: "Via Test 123, Milano",
         geographicZone: "Centro",
-        buildingType: buildingTypeId,
+        buildingType: buildingTypeId.toString(),
         surface: 2500,
         constructionYear: 1985,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await app.request("/api/buildings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.buildings.$post(
+        {
+          json: buildingData,
         },
-        body: JSON.stringify(buildingData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       if (res.status !== 201) {
         const errorText = await res.text();
         console.error("Create building failed:", res.status, errorText);
       }
-      
+
       expect(res.status).toBe(201);
       const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.building.name).toBe(buildingData.name);
-      expect(json.building.address).toBe(buildingData.address);
-      expect(json.building.status).toBe("active"); // Default value
+      expectTypeOf(json).toExtend<CreateBuildingResponse | ErrorResponse>();
+      if ("building" in json) {
+        expect(json.success).toBe(true);
+        expect(json.building.name).toBe(buildingData.name);
+        expect(json.building.address).toBe(buildingData.address);
+        expect(json.building.status).toBe("active"); // Default value
+      }
 
       // Verify building was created in DB
-      const building = await Building.findById(json.building.id);
+      const building = await Building.findById((json as { building: { id: string } }).building.id);
       expect(building).toBeDefined();
       expect(building!.name).toBe(buildingData.name);
-
-      
     });
 
     test("should create building with operator role", async () => {
@@ -145,21 +164,23 @@ describe("Buildings Routes - Integration Tests", () => {
         name: "Biblioteca Test",
         address: "Via Test 456, Milano",
         geographicZone: "Nord",
-        buildingType: buildingTypeId,
+        buildingType: buildingTypeId.toString(),
         surface: 1500,
         constructionYear: 2010,
         heatingSystemType: "pompa_calore",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await app.request("/api/buildings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${operatorToken}`,
+      const res = await client.api.buildings.$post(
+        {
+          json: buildingData,
         },
-        body: JSON.stringify(buildingData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${operatorToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(201);
     });
@@ -171,16 +192,19 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: -100, // Negative surface
       };
 
-      const res = await app.request("/api/buildings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.buildings.$post(
+        {
+          // @ts-expect-error intentionally incomplete building payload
+          json: invalidData,
         },
-        body: JSON.stringify(invalidData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
-      expect(res.status).toBe(400);
+      expect(res.status as number).toBe(400);
     });
 
     test("should reject invalid building type ID", async () => {
@@ -192,21 +216,21 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await app.request("/api/buildings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.buildings.$post(
+        {
+          json: buildingData,
         },
-        body: JSON.stringify(buildingData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
-      expect(res.status).toBe(400);
+      expect(res.status as number).toBe(400);
     });
   });
 
@@ -221,7 +245,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -229,39 +253,46 @@ describe("Buildings Routes - Integration Tests", () => {
       const updateData = {
         name: "Updated Name",
         surface: 1500,
-        status: "inactive",
+        status: "inactive" as const,
       };
 
-      const res = await app.request(`/api/buildings/${building._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.buildings[":id"].$patch(
+        {
+          param: { id: building._id.toString() },
+          json: updateData,
         },
-        body: JSON.stringify(updateData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.building.name).toBe("Updated Name");
-      expect(json.building.surface).toBe(1500);
-      expect(json.building.status).toBe("inactive");
-
-      
+      expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
+      if ("building" in json) {
+        expect(json.success).toBe(true);
+        expect(json.building.name).toBe("Updated Name");
+        expect(json.building.surface).toBe(1500);
+        expect(json.building.status).toBe("inactive");
+      }
     });
 
     test("should return 404 for non-existent building", async () => {
       const fakeId = "507f1f77bcf86cd799439011"; // Valid ObjectId format
 
-      const res = await app.request(`/api/buildings/${fakeId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.buildings[":id"].$patch(
+        {
+          param: { id: fakeId },
+          json: { name: "New Name" },
         },
-        body: JSON.stringify({ name: "New Name" }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
@@ -278,7 +309,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -316,16 +347,23 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await app.request(`/api/buildings/${building._id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.buildings[":id"].$delete(
+        {
+          param: { id: building._id.toString() },
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.success).toBe(true);
+      expectTypeOf(json).toExtend<DeleteBuildingResponse | ErrorResponse>();
+      if ("success" in json) {
+        expect(json.success).toBe(true);
+      }
 
       // Verify building deleted
       const deletedBuilding = await Building.findById(building._id);
@@ -341,11 +379,9 @@ describe("Buildings Routes - Integration Tests", () => {
 
       const alerts = await Alert.countDocuments({ buildingId: building._id });
       expect(alerts).toBe(0);
-
-      
     });
   });
-  
+
   describe("Search Buildings (GET /api/buildings)", () => {
     beforeEach(async () => {
       // Create multiple buildings for search testing
@@ -358,7 +394,7 @@ describe("Buildings Routes - Integration Tests", () => {
           surface: 2500,
           constructionYear: 1985,
           heatingSystemType: "caldaia_gas",
-          location: { type: "Point", coordinates: [11.1167, 46.0667] },
+          location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "active",
@@ -371,7 +407,7 @@ describe("Buildings Routes - Integration Tests", () => {
           surface: 3000,
           constructionYear: 1995,
           heatingSystemType: "teleriscaldamento",
-          location: { type: "Point", coordinates: [11.1167, 46.0667] },
+          location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "active",
@@ -384,7 +420,7 @@ describe("Buildings Routes - Integration Tests", () => {
           surface: 1500,
           constructionYear: 2010,
           heatingSystemType: "pompa_calore",
-          location: { type: "Point", coordinates: [11.1167, 46.0667] },
+          location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "inactive",
@@ -394,112 +430,174 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should search by name", async () => {
-      const res = await app.request("/api/buildings?name=Scuola", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        {
+          query: { name: "Scuola" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildings.length).toBe(2);
-      expect(json.buildings[0].name).toContain("Scuola");
+      expectTypeOf(json).toExtend<SearchBuildingsResponse | ErrorResponse>();
+      if ("buildings" in json) {
+        expect(json.buildings.length).toBe(2);
+        expect(json.buildings[0]!.name).toContain("Scuola");
+      }
     });
 
     test("should search by address", async () => {
-      const res = await app.request("/api/buildings?address=Garibaldi", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        {
+          query: { address: "Garibaldi" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildings.length).toBe(1);
-      expect(json.buildings[0].address).toContain("Garibaldi");
+      if ("buildings" in json) {
+        expect(json.buildings.length).toBe(1);
+        expect(json.buildings[0]!.address).toContain("Garibaldi");
+      }
     });
 
     test("should filter by zone", async () => {
-      const res = await app.request("/api/buildings?zone=Centro", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        {
+          query: { zone: "Centro" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildings.length).toBe(1);
-      expect(json.buildings[0].geographicZone).toBe("Centro");
+      if ("buildings" in json) {
+        expect(json.buildings.length).toBe(1);
+        expect(json.buildings[0]!.geographicZone).toBe("Centro");
+      }
     });
 
     test("should filter by building type", async () => {
-      const res = await app.request(`/api/buildings?buildingType=${buildingTypeId}`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        {
+          query: { buildingType: buildingTypeId.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildings.length).toBe(3); // All test buildings have same type
+      if ("buildings" in json) {
+        expect(json.buildings.length).toBe(3); // All test buildings have same type
+      }
     });
 
     test("should filter by status", async () => {
-      const res = await app.request("/api/buildings?status=inactive", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        {
+          query: { status: "inactive" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildings.length).toBe(1);
-      expect(json.buildings[0].status).toBe("inactive");
+      if ("buildings" in json) {
+        expect(json.buildings.length).toBe(1);
+        expect(json.buildings[0]!.status).toBe("inactive");
+      }
     });
 
     test("should combine multiple filters", async () => {
-      const res = await app.request("/api/buildings?zone=Centro&status=active&name=Scuola", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        {
+          query: { zone: "Centro", status: "active", name: "Scuola" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildings.length).toBe(1);
-      expect(json.buildings[0].name).toBe("Scuola Primaria Centro");
+      if ("buildings" in json) {
+        expect(json.buildings.length).toBe(1);
+        expect(json.buildings[0]!.name).toBe("Scuola Primaria Centro");
+      }
     });
 
     test("should support pagination", async () => {
-      const res = await app.request("/api/buildings?limit=2&offset=0", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        {
+          query: { limit: "2", offset: "0" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildings.length).toBe(2);
-      expect(json.pagination.total).toBe(3);
-      expect(json.pagination.limit).toBe(2);
-      expect(json.pagination.offset).toBe(0);
+      if ("buildings" in json && "pagination" in json) {
+        expect(json.buildings.length).toBe(2);
+        expect(json.pagination.total).toBe(3);
+        expect(json.pagination.limit).toBe(2);
+        expect(json.pagination.offset).toBe(0);
+      }
     });
 
     test("should support sorting", async () => {
-      const res = await app.request("/api/buildings?sortBy=name&sortOrder=asc", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        {
+          query: { sortBy: "name", sortOrder: "asc" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.buildings.length).toBeGreaterThan(0);
-      // Verify ascending order
-      for (let i = 1; i < json.buildings.length; i++) {
-        expect(json.buildings[i].name >= json.buildings[i-1].name).toBe(true);
+      if ("buildings" in json) {
+        expect(json.buildings.length).toBeGreaterThan(0);
+        // Verify ascending order
+        for (let i = 1; i < json.buildings.length; i++) {
+          expect(json.buildings[i]!.name >= json.buildings[i - 1]!.name).toBe(true);
+        }
       }
     });
 
     test("should return all required details in search results", async () => {
-      const res = await app.request("/api/buildings", {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings.$get(
+        { query: {} },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      const building = json.buildings[0];
-      
-      expect(building.name).toBeDefined();
-      expect(building.address).toBeDefined();
-      expect(building.surface).toBeDefined();
-      expect(building.heatingSystemType).toBeDefined();
-      expect(building.status).toBeDefined();
-      expect(building.updatedAt).toBeDefined();
+      if ("buildings" in json) {
+        const building = json.buildings[0]!;
+
+        expect(building.name).toBeDefined();
+        expect(building.address).toBeDefined();
+        expect(building.surface).toBeDefined();
+        expect(building.heatingSystemType).toBeDefined();
+        expect(building.status).toBeDefined();
+        expect(building.updatedAt).toBeDefined();
+      }
     });
   });
 
@@ -513,23 +611,30 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 2000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
 
-      const res = await app.request(`/api/buildings/${building._id}`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings[":id"].$get(
+        {
+          param: { id: building._id.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      
-      expect(json.building.name).toBe("Test Building Details");
-      expect(json.building.address).toBe("Via Details 1, Milano");
-      expect(json.building.surface).toBe(2000);
-      expect(json.building.constructionYear).toBe(2000);
-      expect(json.building.buildingType).toBeDefined();
+      expectTypeOf(json).toExtend<GetBuildingResponse | ErrorResponse>();
+      if ("building" in json) {
+        expect(json.building.name).toBe("Test Building Details");
+        expect(json.building.address).toBe("Via Details 1, Milano");
+        expect(json.building.surface).toBe(2000);
+        expect(json.building.constructionYear).toBe(2000);
+        expect(json.building.buildingType).toBeDefined();
+      }
     });
   });
 
@@ -543,7 +648,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -556,10 +661,10 @@ describe("Buildings Routes - Integration Tests", () => {
           sensorType: "internal_temp",
           location: "Piano 1",
           status: "active",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
+          installationDate: new Date(),
+          transmissionInterval: 90,
+          createdBy: adminUserId,
+          updatedBy: adminUserId,
           lastReading: { value: 22.5, unit: "°C", timestamp: now },
         },
         {
@@ -567,10 +672,10 @@ describe("Buildings Routes - Integration Tests", () => {
           sensorType: "external_temp",
           location: "Facciata",
           status: "active",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
+          installationDate: new Date(),
+          transmissionInterval: 90,
+          createdBy: adminUserId,
+          updatedBy: adminUserId,
           lastReading: { value: 10.2, unit: "°C", timestamp: now },
         },
         {
@@ -578,32 +683,39 @@ describe("Buildings Routes - Integration Tests", () => {
           sensorType: "energy_meter",
           location: "Locale tecnico",
           status: "active",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
+          installationDate: new Date(),
+          transmissionInterval: 90,
+          createdBy: adminUserId,
+          updatedBy: adminUserId,
           lastReading: { value: 150.5, unit: "kW", timestamp: now },
         },
       ]);
 
-      const res = await app.request(`/api/buildings/${building._id}/real-time`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings[":id"]["real-time"].$get(
+        {
+          param: { id: building._id.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      
-      expect(json.data).toBeDefined();
-      expect(json.data.internalTemperature).toBeDefined();
-      expect(json.data.internalTemperature.value).toBe(22.5);
-      expect(json.data.internalTemperature.unit).toBe("°C");
-      
-      expect(json.data.externalTemperature).toBeDefined();
-      expect(json.data.externalTemperature.value).toBe(10.2);
-      
-      expect(json.data.energyConsumption).toBeDefined();
-      expect(json.data.energyConsumption.value).toBe(150.5);
-      expect(json.data.energyConsumption.unit).toBe("kW");
+      expectTypeOf(json).toExtend<GetBuildingRealTimeResponse | ErrorResponse>();
+      if ("data" in json) {
+        expect(json.data).toBeDefined();
+        expect(json.data.internalTemperature).toBeDefined();
+        expect(json.data.internalTemperature.value).toBe(22.5);
+        expect(json.data.internalTemperature.unit).toBe("°C");
+
+        expect(json.data.externalTemperature).toBeDefined();
+        expect(json.data.externalTemperature.value).toBe(10.2);
+
+        expect(json.data.energyConsumption).toBeDefined();
+        expect(json.data.energyConsumption.value).toBe(150.5);
+        expect(json.data.energyConsumption.unit).toBe("kW");
+      }
     });
 
     test("should handle missing sensors gracefully", async () => {
@@ -615,7 +727,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -633,15 +745,22 @@ describe("Buildings Routes - Integration Tests", () => {
         lastReading: { value: 22.5, unit: "°C", timestamp: new Date() },
       });
 
-      const res = await app.request(`/api/buildings/${building._id}/real-time`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.buildings[":id"]["real-time"].$get(
+        {
+          param: { id: building._id.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.data.internalTemperature.value).toBe(22.5);
-      expect(json.data.externalTemperature.value).toBeNull();
-      expect(json.data.energyConsumption.value).toBeNull();
+      if ("data" in json) {
+        expect(json.data.internalTemperature.value).toBe(22.5);
+        expect(json.data.externalTemperature.value).toBeNull();
+        expect(json.data.energyConsumption.value).toBeNull();
+      }
     });
   });
 
@@ -655,7 +774,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -692,26 +811,31 @@ describe("Buildings Routes - Integration Tests", () => {
       const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const endDate = now.toISOString();
 
-      const res = await app.request(
-        `/api/buildings/${building._id}/history?startDate=${startDate}&endDate=${endDate}&sensorType=internal_temp&interval=hour`,
+      const res = await client.api.buildings[":id"].history.$get(
         {
-          headers: { "Authorization": `Bearer ${adminToken}` },
+          param: { id: building._id.toString() },
+          query: { startDate, endDate, sensorType: "internal_temp", interval: "hour" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
         }
       );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      
-      expect(json.data).toBeDefined();
-      expect(json.data.length).toBeGreaterThan(0);
-      expect(json.buildingId).toBe(building._id.toString());
-      expect(json.buildingName).toBe(building.name);
-      
-      // Verify data structure
-      const dataPoint = json.data[0];
-      expect(dataPoint.timestamp).toBeDefined();
-      expect(dataPoint.value).toBeDefined();
-      expect(dataPoint.sensorType).toBe("internal_temp");
+      expectTypeOf(json).toExtend<GetBuildingHistoryResponse | ErrorResponse>();
+      if ("data" in json) {
+        expect(json.data).toBeDefined();
+        expect(json.data.length).toBeGreaterThan(0);
+        expect(json.buildingId).toBe(building._id.toString());
+        expect(json.buildingName).toBe(building.name);
+
+        // Verify data structure
+        const dataPoint = json.data[0]!;
+        expect(dataPoint.timestamp).toBeDefined();
+        expect(dataPoint.value).toBeDefined();
+        expect(dataPoint.sensorType).toBe("internal_temp");
+      }
     });
 
     test("should filter by date range", async () => {
@@ -723,7 +847,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -768,22 +892,26 @@ describe("Buildings Routes - Integration Tests", () => {
       const startDate = oneDayAgo.toISOString();
       const endDate = now.toISOString();
 
-      const res = await app.request(
-        `/api/buildings/${building._id}/history?startDate=${startDate}&endDate=${endDate}&sensorType=energy_meter`,
+      const res = await client.api.buildings[":id"].history.$get(
         {
-          headers: { "Authorization": `Bearer ${adminToken}` },
+          param: { id: building._id.toString() },
+          query: { startDate, endDate, sensorType: "energy_meter" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
         }
       );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      
-      // Should only include readings from the last 24 hours
-      expect(json.data.length).toBeGreaterThan(0);
-      json.data.forEach((point: { timestamp: string }) => {
-        const timestamp = new Date(point.timestamp);
-        expect(timestamp.getTime()).toBeGreaterThanOrEqual(oneDayAgo.getTime());
-      });
+      if ("data" in json) {
+        // Should only include readings from the last 24 hours
+        expect(json.data.length).toBeGreaterThan(0);
+        json.data.forEach((point) => {
+          const timestamp = new Date(point.timestamp);
+          expect(timestamp.getTime()).toBeGreaterThanOrEqual(oneDayAgo.getTime());
+        });
+      }
     });
 
     test("should support different interval types", async () => {
@@ -795,7 +923,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -827,20 +955,25 @@ describe("Buildings Routes - Integration Tests", () => {
       const endDate = now.toISOString();
 
       // Test different intervals (currently not implemented in aggregation, just verify data is returned)
-      const intervals = ["minute", "hour", "day"];
-      
+      const intervals = ["minute", "hour", "day"] as const;
+
       for (const interval of intervals) {
-        const res = await app.request(
-          `/api/buildings/${building._id}/history?startDate=${startDate}&endDate=${endDate}&sensorType=internal_temp&interval=${interval}`,
+        const res = await client.api.buildings[":id"].history.$get(
           {
-            headers: { "Authorization": `Bearer ${adminToken}` },
+            param: { id: building._id.toString() },
+            query: { startDate, endDate, sensorType: "internal_temp", interval },
+          },
+          {
+            headers: { Authorization: `Bearer ${adminToken}` },
           }
         );
 
         expect(res.status).toBe(200);
         const json = await res.json();
-        expect(json.data.length).toBeGreaterThan(0);
-        expect(json.buildingId).toBeDefined();
+        if ("data" in json) {
+          expect(json.data.length).toBeGreaterThan(0);
+          expect(json.buildingId).toBeDefined();
+        }
       }
     });
   });
@@ -851,22 +984,21 @@ describe("Buildings Routes - Integration Tests", () => {
 
   describe("Authorization", () => {
     test("should deny access without token", async () => {
-      const res = await app.request("/api/buildings", {
-        method: "GET",
-      });
-
-      expect(res.status).toBe(401);
+      const res = await client.api.buildings.$get({ query: {} });
+      expect(res.status as number).toBe(401);
     });
 
     test("should deny access with invalid token", async () => {
-      const res = await app.request("/api/buildings", {
-        method: "GET",
-        headers: {
-          "Authorization": "Bearer invalid-token",
-        },
-      });
+      const res = await client.api.buildings.$get(
+        { query: {} },
+        {
+          headers: {
+            Authorization: "Bearer invalid-token",
+          },
+        }
+      );
 
-      expect(res.status).toBe(401);
+      expect(res.status as number).toBe(401);
     });
 
     test("should allow both admin and operator to read buildings", async () => {
@@ -878,21 +1010,31 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
 
       // Admin should have access
-      const adminRes = await app.request(`/api/buildings/${building._id}`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const adminRes = await client.api.buildings[":id"].$get(
+        {
+          param: { id: building._id.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
       expect(adminRes.status).toBe(200);
 
       // Operator should also have access
-      const operatorRes = await app.request(`/api/buildings/${building._id}`, {
-        headers: { "Authorization": `Bearer ${operatorToken}` },
-      });
+      const operatorRes = await client.api.buildings[":id"].$get(
+        {
+          param: { id: building._id.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${operatorToken}` },
+        }
+      );
       expect(operatorRes.status).toBe(200);
     });
   });
