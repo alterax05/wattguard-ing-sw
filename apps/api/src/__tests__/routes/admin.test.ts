@@ -1,11 +1,24 @@
 /**
  * Integration tests for admin routes
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach, mock } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, mock, expectTypeOf } from "bun:test";
+import { testClient } from "hono/testing";
+import { z } from "zod";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
 import { User } from "../../models/User";
 import { Invite } from "../../models/Invite";
+import { ErrorSchema } from "@wattguard/shared";
+import type {
+  CreateInviteResponse,
+  ListInvitesResponse,
+  RevokeInviteResponse,
+  UpdateUserResponse,
+} from "@wattguard/shared";
+
+type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+const client = testClient(app);
 
 // Mock email functions
 mock.module("../../email/mailer", () => ({
@@ -91,156 +104,183 @@ describe("Admin Routes", () => {
     test("should create invite with valid data", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.invites.$post(
+        {
+          json: {
+            email: "newuser@test.com",
+            role: "operator",
+          },
         },
-        body: JSON.stringify({
-          email: "newuser@test.com",
-          role: "operator",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(201);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(data.invite.email).toBe("newuser@test.com");
-      expect(data.invite.role).toBe("operator");
-      expect(data.invite.status).toBe("pending");
+      expectTypeOf(data).toExtend<CreateInviteResponse | ErrorResponse>();
+      if ("invite" in data) {
+        expect(data.success).toBe(true);
+        expect(data.invite.email).toBe("newuser@test.com");
+        expect(data.invite.role).toBe("operator");
+        expect(data.invite.status).toBe("pending");
+      }
     });
 
     test("should normalize email on invite creation", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.invites.$post(
+        {
+          json: {
+            email: "NEWUSER@TEST.COM",
+            role: "operator",
+          },
         },
-        body: JSON.stringify({
-          email: "NEWUSER@TEST.COM",
-          role: "operator",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(201);
       const data = await res.json();
-      expect(data.invite.email).toBe("newuser@test.com");
+      expectTypeOf(data).toExtend<CreateInviteResponse | ErrorResponse>();
+      if ("invite" in data) {
+        expect(data.invite.email).toBe("newuser@test.com");
+      }
     });
 
     test("should reject invalid email format", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.invites.$post(
+        {
+          json: {
+            email: "not-an-email",
+            role: "operator",
+          },
         },
-        body: JSON.stringify({
-          email: "not-an-email",
-          role: "operator",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
-      expect(errorText).toContain("email");
+      if ("error" in data) {
+        const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
+        expect(errorText).toContain("email");
+      }
     });
 
     test("should reject invalid role", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.invites.$post(
+        {
+          json: {
+            email: "newuser@test.com",
+            // @ts-expect-error intentionally invalid role
+            role: "superadmin",
+          },
         },
-        body: JSON.stringify({
-          email: "newuser@test.com",
-          role: "superadmin",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
 
     test("should reject missing email field", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.invites.$post(
+        {
+          // @ts-expect-error intentionally missing required email field
+          json: {
+            role: "operator",
+          },
         },
-        body: JSON.stringify({
-          role: "operator",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
 
     test("should reject missing role field", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.invites.$post(
+        {
+          // @ts-expect-error intentionally missing required role field
+          json: {
+            email: "newuser@test.com",
+          },
         },
-        body: JSON.stringify({
-          email: "newuser@test.com",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toBeDefined();
+      if ("error" in data) {
+        expect(data.error).toBeDefined();
+      }
     });
 
     test("should reject operator from creating invites", async () => {
       const token = await getOperatorToken();
 
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.invites.$post(
+        {
+          json: {
+            email: "newuser@test.com",
+            role: "operator",
+          },
         },
-        body: JSON.stringify({
-          email: "newuser@test.com",
-          role: "operator",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      expect(res.status).toBe(403);
+      expect(res.status as number).toBe(403);
     });
 
     test("should reject unauthenticated requests", async () => {
-      const res = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const res = await client.api.admin.invites.$post({
+        json: {
           email: "newuser@test.com",
           role: "operator",
-        }),
+        },
       });
 
-      expect(res.status).toBe(401);
+      expect(res.status as number).toBe(401);
     });
   });
 
@@ -269,34 +309,40 @@ describe("Admin Routes", () => {
         },
       ]);
 
-      const res = await app.request("/api/admin/invites", {
+      const res = await client.api.admin.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.invites).toBeArrayOfSize(2);
-      expect(data.invites[0].email).toBeDefined();
-      expect(data.invites[0].role).toBeDefined();
-      expect(data.invites[0].status).toBeDefined();
+      expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
+      if ("invites" in data) {
+        expect(data.invites).toBeArrayOfSize(2);
+        expect(data.invites[0]!.email).toBeDefined();
+        expect(data.invites[0]!.role).toBeDefined();
+        expect(data.invites[0]!.status).toBeDefined();
+      }
     });
 
     test("should return empty array when no invites exist", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites", {
+      const res = await client.api.admin.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.invites).toBeArrayOfSize(0);
+      expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
+      if ("invites" in data) {
+        expect(data.invites).toBeArrayOfSize(0);
+      }
     });
 
     test("should reject operator from listing invites", async () => {
       const token = await getOperatorToken();
 
-      const res = await app.request("/api/admin/invites", {
+      const res = await client.api.admin.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -304,7 +350,7 @@ describe("Admin Routes", () => {
     });
 
     test("should reject unauthenticated requests", async () => {
-      const res = await app.request("/api/admin/invites");
+      const res = await client.api.admin.invites.$get();
       expect(res.status).toBe(401);
     });
   });
@@ -323,15 +369,22 @@ describe("Admin Routes", () => {
         createdBy: admin!._id,
       });
 
-      const res = await app.request(`/api/admin/invites/${invite._id}/revoke`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await client.api.admin.invites[":id"].revoke.$post(
+        {
+          param: { id: invite._id.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(data.invite.status).toBe("revoked");
+      expectTypeOf(data).toExtend<RevokeInviteResponse | ErrorResponse>();
+      if ("invite" in data) {
+        expect(data.success).toBe(true);
+        expect(data.invite.status).toBe("revoked");
+      }
 
       // Verify in database
       const revokedInvite = await Invite.findById(invite._id);
@@ -341,10 +394,14 @@ describe("Admin Routes", () => {
     test("should reject revoking non-existent invite", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites/507f1f77bcf86cd799439011/revoke", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await client.api.admin.invites[":id"].revoke.$post(
+        {
+          param: { id: "507f1f77bcf86cd799439011" },
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
@@ -352,10 +409,14 @@ describe("Admin Routes", () => {
     test("should handle invalid invite ID format gracefully", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/invites/invalid-id/revoke", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await client.api.admin.invites[":id"].revoke.$post(
+        {
+          param: { id: "invalid-id" },
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       // May return 400 (validation) or 500 (mongoose cast error)
       expect([400, 500]).toContain(res.status);
@@ -364,35 +425,44 @@ describe("Admin Routes", () => {
     test("should reject operator from revoking invites", async () => {
       const operatorToken = await getOperatorToken();
       const adminToken = await getAdminToken();
-      
+
       // Create an invite using admin token
-      const createRes = await app.request("/api/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${adminToken}`,
+      const createRes = await client.api.admin.invites.$post(
+        {
+          json: {
+            email: "testrevoke@test.com",
+            role: "operator",
+          },
         },
-        body: JSON.stringify({
-          email: "testrevoke@test.com",
-          role: "operator",
-        }),
-      });
-      
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+
       const createData = await createRes.json();
+      if (!("invite" in createData)) {
+        throw new Error("Expected invite to be created");
+      }
       const inviteId = createData.invite.id;
 
       // Try to revoke with operator token
-      const res = await app.request(`/api/admin/invites/${inviteId}/revoke`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${operatorToken}` },
-      });
+      const res = await client.api.admin.invites[":id"].revoke.$post(
+        {
+          param: { id: inviteId! },
+        },
+        {
+          headers: { Authorization: `Bearer ${operatorToken}` },
+        }
+      );
 
       expect(res.status).toBe(403);
     });
 
     test("should reject unauthenticated requests", async () => {
-      const res = await app.request("/api/admin/invites/507f1f77bcf86cd799439011/revoke", {
-        method: "POST",
+      const res = await client.api.admin.invites[":id"].revoke.$post({
+        param: { id: "507f1f77bcf86cd799439011" },
       });
 
       expect(res.status).toBe(401);
@@ -405,20 +475,26 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await app.request(`/api/admin/users/${operator!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: operator!._id.toString() },
+          json: { role: "admin" },
         },
-        body: JSON.stringify({ role: "admin" }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(data.user.role).toBe("admin");
-      expect(data.user.isDisabled).toBe(false);
+      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      if ("user" in data) {
+        expect(data.success).toBe(true);
+        expect(data.user.role).toBe("admin");
+        expect(data.user.isDisabled).toBe(false);
+      }
 
       const updated = await User.findById(operator!._id);
       expect(updated!.role).toBe("admin");
@@ -430,20 +506,26 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await app.request(`/api/admin/users/${operator!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: operator!._id.toString() },
+          json: { isDisabled: true },
         },
-        body: JSON.stringify({ isDisabled: true }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(data.user.isDisabled).toBe(true);
-      expect(data.user.role).toBe("operator");
+      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      if ("user" in data) {
+        expect(data.success).toBe(true);
+        expect(data.user.isDisabled).toBe(true);
+        expect(data.user.role).toBe("operator");
+      }
 
       const updated = await User.findById(operator!._id);
       expect(updated!.isDisabled).toBe(true);
@@ -456,19 +538,25 @@ describe("Admin Routes", () => {
       operator!.isDisabled = true;
       await operator!.save();
 
-      const res = await app.request(`/api/admin/users/${operator!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: operator!._id.toString() },
+          json: { isDisabled: false },
         },
-        body: JSON.stringify({ isDisabled: false }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.success).toBe(true);
-      expect(data.user.isDisabled).toBe(false);
+      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      if ("user" in data) {
+        expect(data.success).toBe(true);
+        expect(data.user.isDisabled).toBe(false);
+      }
 
       const updated = await User.findById(operator!._id);
       expect(updated!.isDisabled).toBe(false);
@@ -479,19 +567,25 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await app.request(`/api/admin/users/${operator!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: operator!._id.toString() },
+          json: { role: "admin", isDisabled: true },
         },
-        body: JSON.stringify({ role: "admin", isDisabled: true }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.user.role).toBe("admin");
-      expect(data.user.isDisabled).toBe(true);
+      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      if ("user" in data) {
+        expect(data.user.role).toBe("admin");
+        expect(data.user.isDisabled).toBe(true);
+      }
     });
 
     test("should reject empty update body", async () => {
@@ -499,14 +593,17 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await app.request(`/api/admin/users/${operator!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: operator!._id.toString() },
+          json: {},
         },
-        body: JSON.stringify({}),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
     });
@@ -515,14 +612,17 @@ describe("Admin Routes", () => {
       const token = await getAdminToken();
       const admin = await User.findOne({ email: "admin@test.com" });
 
-      const res = await app.request(`/api/admin/users/${admin!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: admin!._id.toString() },
+          json: { isDisabled: true },
         },
-        body: JSON.stringify({ isDisabled: true }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
     });
@@ -530,14 +630,17 @@ describe("Admin Routes", () => {
     test("should return 404 for non-existent user", async () => {
       const token = await getAdminToken();
 
-      const res = await app.request("/api/admin/users/507f1f77bcf86cd799439011", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: "507f1f77bcf86cd799439011" },
+          json: { isDisabled: true },
         },
-        body: JSON.stringify({ isDisabled: true }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
@@ -547,14 +650,20 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await app.request(`/api/admin/users/${operator!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: operator!._id.toString() },
+          json: {
+            // @ts-expect-error intentionally invalid role
+            role: "superadmin",
+          },
         },
-        body: JSON.stringify({ role: "superadmin" }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
     });
@@ -564,23 +673,25 @@ describe("Admin Routes", () => {
       await getAdminToken();
       const admin = await User.findOne({ email: "admin@test.com" });
 
-      const res = await app.request(`/api/admin/users/${admin!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${operatorToken}`,
+      const res = await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: admin!._id.toString() },
+          json: { isDisabled: true },
         },
-        body: JSON.stringify({ isDisabled: true }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${operatorToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(403);
     });
 
     test("should reject unauthenticated requests", async () => {
-      const res = await app.request("/api/admin/users/507f1f77bcf86cd799439011", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isDisabled: true }),
+      const res = await client.api.admin.users[":id"].$patch({
+        param: { id: "507f1f77bcf86cd799439011" },
+        json: { isDisabled: true },
       });
 
       expect(res.status).toBe(401);
@@ -591,14 +702,17 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      await app.request(`/api/admin/users/${operator!._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      await client.api.admin.users[":id"].$patch(
+        {
+          param: { id: operator!._id.toString() },
+          json: { isDisabled: true },
         },
-        body: JSON.stringify({ isDisabled: true }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const loginRes = await app.request("/api/auth/local/login", {
         method: "POST",

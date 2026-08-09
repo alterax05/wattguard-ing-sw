@@ -10,9 +10,24 @@
  * - POST /api/sensors/:id/readings - Create reading
  * - GET /api/sensors/:id/readings - Get readings history
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import { testClient } from "hono/testing";
+import { z } from "zod";
 import { app } from "../../index";
 import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { ErrorSchema } from "@wattguard/shared";
+import type {
+  CreateSensorResponse,
+  GetSensorResponse,
+  UpdateSensorResponse,
+  DeleteSensorResponse,
+  ListSensorsResponse,
+  GetSensorReadingsResponse,
+} from "@wattguard/shared";
+
+type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+const client = testClient(app);
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -125,31 +140,36 @@ describe("Sensors Routes - Integration Tests", () => {
     test("should create a new sensor (admin)", async () => {
       const sensorData = {
         buildingId,
-        sensorType: "internal_temp",
+        sensorType: "internal_temp" as const,
         location: "Piano 1, Aula 101",
         serialNumber: "SN-12345",
         transmissionInterval: 90,
       };
 
-      const res = await app.request("/api/sensors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors.$post(
+        {
+          json: sensorData,
         },
-        body: JSON.stringify(sensorData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(201);
       const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.sensor.sensorType).toBe(sensorData.sensorType);
-      expect(json.sensor.location).toBe(sensorData.location);
-      expect(json.sensor.status).toBe("active");
+      expectTypeOf(json).toExtend<CreateSensorResponse | ErrorResponse>();
+      if ("sensor" in json) {
+        expect(json.success).toBe(true);
+        expect(json.sensor.sensorType).toBe(sensorData.sensorType);
+        expect(json.sensor.location).toBe(sensorData.location);
+        expect(json.sensor.status).toBe("active");
 
-      // Verify in database
-      const dbSensor = await Sensor.findById(json.sensor.id);
-      expect(dbSensor).toBeDefined();
+        // Verify in database
+        const dbSensor = await Sensor.findById(json.sensor.id);
+        expect(dbSensor).toBeDefined();
+      }
 
       
     });
@@ -157,18 +177,20 @@ describe("Sensors Routes - Integration Tests", () => {
     test("should create sensor with operator role", async () => {
       const sensorData = {
         buildingId,
-        sensorType: "external_temp",
+        sensorType: "external_temp" as const,
         location: "Facciata Nord",
       };
 
-      const res = await app.request("/api/sensors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${operatorToken}`,
+      const res = await client.api.sensors.$post(
+        {
+          json: sensorData,
         },
-        body: JSON.stringify(sensorData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${operatorToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(201);
     });
@@ -185,55 +207,64 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await app.request("/api/sensors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors.$post(
+        {
+          json: {
+            buildingId,
+            sensorType: "external_temp",
+            location: "Test 2",
+            serialNumber: "DUPLICATE-001",
+          },
         },
-        body: JSON.stringify({
-          buildingId,
-          sensorType: "external_temp",
-          location: "Test 2",
-          serialNumber: "DUPLICATE-001",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      expect(json.error).toContain("already exists");
+      if ("error" in json) {
+        expect(json.error).toContain("already exists");
+      }
     });
 
     test("should reject invalid building ID", async () => {
-      const res = await app.request("/api/sensors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors.$post(
+        {
+          json: {
+            buildingId: "507f1f77bcf86cd799439011",
+            sensorType: "internal_temp",
+            location: "Test",
+          },
         },
-        body: JSON.stringify({
-          buildingId: "507f1f77bcf86cd799439011",
-          sensorType: "internal_temp",
-          location: "Test",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
 
     test("should reject invalid data", async () => {
-      const res = await app.request("/api/sensors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors.$post(
+        {
+          json: {
+            buildingId,
+            // @ts-expect-error intentionally invalid sensor type
+            sensorType: "invalid_type",
+            location: "",
+          },
         },
-        body: JSON.stringify({
-          buildingId,
-          sensorType: "invalid_type",
-          location: "",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(400);
     });
@@ -262,26 +293,39 @@ describe("Sensors Routes - Integration Tests", () => {
         },
       });
 
-      const res = await app.request(`/api/sensors/${sensor._id}`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.sensors[":id"].$get(
+        {
+          param: { id: sensor._id.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.sensor.id).toBeDefined();
-      expect(json.sensor.sensorType).toBe("internal_temp");
-      expect(json.sensor.location).toBe("Piano 2");
-      expect(json.sensor.lastReading).toBeDefined();
-      expect(json.sensor.lastReading.value).toBe(22.5);
-      expect(json.sensor.isOffline).toBe(false);
+      expectTypeOf(json).toExtend<GetSensorResponse | ErrorResponse>();
+      if ("sensor" in json) {
+        expect(json.sensor.id).toBeDefined();
+        expect(json.sensor.sensorType).toBe("internal_temp");
+        expect(json.sensor.location).toBe("Piano 2");
+        expect(json.sensor.lastReading).toBeDefined();
+        expect(json.sensor.lastReading!.value).toBe(22.5);
+        expect(json.sensor.isOffline).toBe(false);
+      }
     });
 
     test("should return 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await app.request(`/api/sensors/${fakeId}`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.sensors[":id"].$get(
+        {
+          param: { id: fakeId },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
@@ -306,23 +350,29 @@ describe("Sensors Routes - Integration Tests", () => {
 
       const updateData = {
         location: "Updated Location",
-        status: "inactive",
+        status: "inactive" as const,
       };
 
-      const res = await app.request(`/api/sensors/${sensor._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors[":id"].$patch(
+        {
+          param: { id: sensor._id.toString() },
+          json: updateData,
         },
-        body: JSON.stringify(updateData),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.sensor.location).toBe("Updated Location");
-      expect(json.sensor.status).toBe("inactive");
+      expectTypeOf(json).toExtend<UpdateSensorResponse | ErrorResponse>();
+      if ("sensor" in json) {
+        expect(json.success).toBe(true);
+        expect(json.sensor.location).toBe("Updated Location");
+        expect(json.sensor.status).toBe("inactive");
+      }
 
       
     });
@@ -330,16 +380,19 @@ describe("Sensors Routes - Integration Tests", () => {
     test("should return 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await app.request(`/api/sensors/${fakeId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors[":id"].$patch(
+        {
+          param: { id: fakeId },
+          json: {
+            location: "Test",
+          },
         },
-        body: JSON.stringify({
-          location: "Test",
-        }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
@@ -397,14 +450,17 @@ describe("Sensors Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await app.request(`/api/sensors/${sensor._id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors[":id"].$patch(
+        {
+          param: { id: sensor._id.toString() },
+          json: { maxThreshold: null },
         },
-        body: JSON.stringify({ maxThreshold: null }),
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       expect((await Sensor.findById(sensor._id))!.maxThreshold).toBeUndefined();
@@ -454,16 +510,23 @@ describe("Sensors Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await app.request(`/api/sensors/${sensor._id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors[":id"].$delete(
+        {
+          param: { id: sensor._id.toString() },
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.success).toBe(true);
+      expectTypeOf(json).toExtend<DeleteSensorResponse | ErrorResponse>();
+      if ("success" in json) {
+        expect(json.success).toBe(true);
+      }
 
       // Verify deletion
       const deletedSensor = await Sensor.findById(sensor._id);
@@ -484,12 +547,16 @@ describe("Sensors Routes - Integration Tests", () => {
     test("should return 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await app.request(`/api/sensors/${fakeId}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${adminToken}`,
+      const res = await client.api.sensors[":id"].$delete(
+        {
+          param: { id: fakeId },
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
@@ -517,16 +584,21 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await app.request("/api/sensors", {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
+      const res = await client.api.sensors.$get(
+        { query: {} },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
+      expectTypeOf(json).toExtend<ListSensorsResponse | ErrorResponse>();
+      if (!("sensors" in json)) throw new Error("missing sensors");
+      const found = json.sensors.find((s) => s.id === sensor._id.toString());
       expect(found).toBeDefined();
-      expect(found.status).toBe("inactive");
-      expect(found.isOffline).toBe(true);
+      expect(found!.status).toBe("inactive");
+      expect(found!.isOffline).toBe(true);
 
       // Verify the DB was updated
       const dbSensor = await Sensor.findById(sensor._id);
@@ -550,16 +622,20 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await app.request("/api/sensors", {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
+      const res = await client.api.sensors.$get(
+        { query: {} },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
+      if (!("sensors" in json)) throw new Error("missing sensors");
+      const found = json.sensors.find((s) => s.id === sensor._id.toString());
       expect(found).toBeDefined();
-      expect(found.status).toBe("active");
-      expect(found.isOffline).toBe(false);
+      expect(found!.status).toBe("active");
+      expect(found!.isOffline).toBe(false);
     });
 
     test("should not change status of sensors in maintenance or error when they have stale readings", async () => {
@@ -589,18 +665,22 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await app.request("/api/sensors", {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
+      const res = await client.api.sensors.$get(
+        { query: {} },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
+      if (!("sensors" in json)) throw new Error("missing sensors");
 
-      const m = json.sensors.find((s: { id: string }) => s.id === maintenanceSensor._id.toString());
+      const m = json.sensors.find((s) => s.id === maintenanceSensor._id.toString());
       expect(m!.status).toBe("maintenance");
       expect(m!.isOffline).toBe(false);
 
-      const e = json.sensors.find((s: { id: string }) => s.id === errorSensor._id.toString());
+      const e = json.sensors.find((s) => s.id === errorSensor._id.toString());
       expect(e!.status).toBe("error");
       expect(e!.isOffline).toBe(false);
     });
@@ -617,13 +697,17 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await app.request("/api/sensors", {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
+      const res = await client.api.sensors.$get(
+        { query: {} },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      const found = json.sensors.find((s: { id: string }) => s.id === sensor._id.toString());
+      if (!("sensors" in json)) throw new Error("missing sensors");
+      const found = json.sensors.find((s) => s.id === sensor._id.toString());
       expect(found!.status).toBe("inactive");
     });
   });
@@ -679,15 +763,24 @@ describe("Sensors Routes - Integration Tests", () => {
         },
       ]);
 
-      const res = await app.request(`/api/sensors/${sensor._id}/readings`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.sensors[":id"].readings.$get(
+        {
+          param: { id: sensor._id.toString() },
+          query: {},
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.readings.length).toBe(3);
-      expect(json.readings[0].value).toBe(23.0); // Most recent first
-      expect(json.readings[2].value).toBe(21.0); // Oldest last
+      expectTypeOf(json).toExtend<GetSensorReadingsResponse | ErrorResponse>();
+      if ("readings" in json) {
+        expect(json.readings.length).toBe(3);
+        expect(json.readings[0]!.value).toBe(23.0); // Most recent first
+        expect(json.readings[2]!.value).toBe(21.0); // Oldest last
+      }
     });
 
     test("should support date range filtering", async () => {
@@ -727,17 +820,22 @@ describe("Sensors Routes - Integration Tests", () => {
 
       const startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(); // 2 days ago
 
-      const res = await app.request(
-        `/api/sensors/${sensor._id}/readings?startDate=${startDate}`,
+      const res = await client.api.sensors[":id"].readings.$get(
         {
-          headers: { "Authorization": `Bearer ${adminToken}` },
+          param: { id: sensor._id.toString() },
+          query: { startDate },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
         }
       );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.readings.length).toBe(1); // Only the reading from 1 day ago
-      expect(json.readings[0].value).toBe(22.0);
+      if ("readings" in json) {
+        expect(json.readings.length).toBe(1); // Only the reading from 1 day ago
+        expect(json.readings[0]!.value).toBe(22.0);
+      }
     });
 
     test("should support pagination", async () => {
@@ -764,27 +862,38 @@ describe("Sensors Routes - Integration Tests", () => {
       }));
       await SensorReading.create(readings);
 
-      const res = await app.request(
-        `/api/sensors/${sensor._id}/readings?limit=2&offset=0`,
+      const res = await client.api.sensors[":id"].readings.$get(
         {
-          headers: { "Authorization": `Bearer ${adminToken}` },
+          param: { id: sensor._id.toString() },
+          query: { limit: "2", offset: "0" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
         }
       );
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.readings.length).toBe(2);
-      expect(json.pagination.total).toBe(5);
-      expect(json.pagination.limit).toBe(2);
-      expect(json.pagination.offset).toBe(0);
+      if ("readings" in json && "pagination" in json) {
+        expect(json.readings.length).toBe(2);
+        expect(json.pagination.total).toBe(5);
+        expect(json.pagination.limit).toBe(2);
+        expect(json.pagination.offset).toBe(0);
+      }
     });
 
     test("should return 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await app.request(`/api/sensors/${fakeId}/readings`, {
-        headers: { "Authorization": `Bearer ${adminToken}` },
-      });
+      const res = await client.api.sensors[":id"].readings.$get(
+        {
+          param: { id: fakeId },
+          query: {},
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
 
       expect(res.status).toBe(404);
     });
