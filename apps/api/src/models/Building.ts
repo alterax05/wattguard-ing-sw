@@ -75,6 +75,16 @@ export const buildingSchema = new Schema(
       default: "active",
       index: true,
     },
+    efficiencyThresholds: {
+      type: new Schema(
+        {
+          enabled: { type: Boolean, default: false },
+          minCop: { type: Number, min: 0, max: 10, default: null },
+        },
+        { _id: false },
+      ),
+      default: () => ({ enabled: false, minCop: null }),
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",

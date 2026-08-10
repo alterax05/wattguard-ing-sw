@@ -10,6 +10,7 @@ import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
+import { EFFICIENCY_ALERT_TYPE } from "../../lib/alerts";
 import { ErrorSchema } from "@wattguard/shared";
 import type {
   CreateBuildingResponse,
@@ -297,6 +298,139 @@ describe("Buildings Routes - Integration Tests", () => {
       );
 
       expect(res.status).toBe(404);
+    });
+
+    test("PATCH accepts efficiencyThresholds and round-trips them", async () => {
+      // Create a building first (same shape as the "should update building" test:
+      // name, address, geographicZone, buildingType: buildingTypeId, surface,
+      // constructionYear, heatingSystemType: "caldaia_gas",
+      // location GeoJSON Point [11.1167, 46.0667], createdBy/updatedBy: adminUserId)
+      const building = await Building.create({
+        name: "Original Name",
+        address: "Via Original",
+        geographicZone: "Centro",
+        buildingType: buildingTypeId,
+        surface: 1000,
+        constructionYear: 2000,
+        heatingSystemType: "caldaia_gas",
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const res = await client.api.buildings[":id"].$patch(
+        {
+          param: { id: building._id.toString() },
+          json: { efficiencyThresholds: { enabled: true, minCop: 2.5 } },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
+      if (!("building" in json)) {
+        throw new Error("Expected response to contain 'building'");
+      }
+      expect(json.building.efficiencyThresholds).toEqual({ enabled: true, minCop: 2.5 });
+    });
+
+    test("PATCH rejects enabled threshold without minCop", async () => {
+      const building = await Building.create({
+        name: "Original Name",
+        address: "Via Original",
+        geographicZone: "Centro",
+        buildingType: buildingTypeId,
+        surface: 1000,
+        constructionYear: 2000,
+        heatingSystemType: "caldaia_gas",
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const res = await client.api.buildings[":id"].$patch(
+        {
+          param: { id: building._id.toString() },
+          json: { efficiencyThresholds: { enabled: true, minCop: null } },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      expect(res.status).toBe(400);
+    });
+
+    test("PATCH rejects efficiencyThresholds for district heating buildings", async () => {
+      const building = await Building.create({
+        name: "Original Name",
+        address: "Via Original",
+        geographicZone: "Centro",
+        buildingType: buildingTypeId,
+        surface: 1000,
+        constructionYear: 2000,
+        heatingSystemType: "Teleriscaldamento urbano",
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const res = await client.api.buildings[":id"].$patch(
+        {
+          param: { id: building._id.toString() },
+          json: { efficiencyThresholds: { enabled: true, minCop: 2.5 } },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      expect(res.status).toBe(400);
+    });
+
+    test("PATCH switching a building to district heating clears thresholds and resolves alerts", async () => {
+      const building = await Building.create({
+        name: "Original Name",
+        address: "Via Original",
+        geographicZone: "Centro",
+        buildingType: buildingTypeId,
+        surface: 1000,
+        constructionYear: 2000,
+        heatingSystemType: "caldaia_gas",
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+        efficiencyThresholds: { enabled: true, minCop: 2.5 },
+      });
+
+      await Alert.create({
+        buildingId: building._id,
+        buildingName: building.name,
+        type: EFFICIENCY_ALERT_TYPE,
+        thresholdType: "min",
+        severity: "high",
+        message: "Efficienza sotto soglia",
+        status: "active",
+      });
+
+      const res = await client.api.buildings[":id"].$patch(
+        {
+          param: { id: building._id.toString() },
+          json: { heatingSystemType: "Teleriscaldamento" },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      expect(res.status).toBe(200);
+
+      const reloaded = await Building.findById(building._id);
+      expect(reloaded!.efficiencyThresholds.enabled).toBe(false);
+      expect(reloaded!.efficiencyThresholds.minCop).toBeNull();
+
+      const alert = await Alert.findOne({ buildingId: building._id, type: EFFICIENCY_ALERT_TYPE });
+      expect(alert!.status).toBe("resolved");
     });
   });
 

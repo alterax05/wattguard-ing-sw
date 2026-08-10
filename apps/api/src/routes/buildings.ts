@@ -44,6 +44,7 @@ import {
   isDistrictHeatingBuilding,
   isGasBoilerBuilding,
 } from "../lib/consumption";
+import { EFFICIENCY_ALERT_TYPE } from "../lib/alerts";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
@@ -290,6 +291,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           geographicZone: building.geographicZone,
           activeSensors: 0,
           currentConsumption: null,
+          efficiencyThresholds: {
+            enabled: building.efficiencyThresholds.enabled,
+            minCop: building.efficiencyThresholds.minCop ?? null,
+          },
           constructionYear: building.constructionYear ?? undefined,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
@@ -394,6 +399,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           geographicZone: building.geographicZone,
           activeSensors: activeSensorsCount,
           currentConsumption: energySensor?.lastReading?.value ?? null,
+          efficiencyThresholds: {
+            enabled: building.efficiencyThresholds.enabled,
+            minCop: building.efficiencyThresholds.minCop ?? null,
+          },
           constructionYear: building.constructionYear ?? undefined,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
@@ -476,6 +485,23 @@ const app = new Hono<{ Variables: AuthVariables }>()
         }
       }
 
+      const resultingDistrictHeating = isDistrictHeatingBuilding(
+        updates.heatingSystemType ?? building.heatingSystemType,
+      );
+
+      if (resultingDistrictHeating && updates.efficiencyThresholds !== undefined) {
+        return c.json({ error: "Efficiency thresholds are not available for district heating buildings" }, 400);
+      }
+
+      if (resultingDistrictHeating && building.efficiencyThresholds.enabled) {
+        // Passaggio a teleriscaldamento: azzera la config e risolve gli alert efficienza.
+        building.efficiencyThresholds = { enabled: false, minCop: null };
+        await Alert.updateMany(
+          { buildingId: building._id, type: EFFICIENCY_ALERT_TYPE, status: { $ne: "resolved" } },
+          { $set: { status: "resolved", resolvedBy: userDoc.name || userDoc.email, resolvedAt: new Date() } },
+        );
+      }
+
       // Apply updates
       if (updates.name !== undefined) building.name = updates.name;
       if (updates.address !== undefined) building.address = updates.address;
@@ -489,6 +515,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
         building.constructionYear = updates.constructionYear;
       if (updates.geographicZone !== undefined) building.geographicZone = updates.geographicZone;
       if (updates.status !== undefined) building.status = updates.status;
+      if (updates.efficiencyThresholds !== undefined)
+        building.efficiencyThresholds = updates.efficiencyThresholds;
 
       building.updatedBy = userDoc._id as Types.ObjectId;
 
@@ -537,6 +565,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           geographicZone: building.geographicZone,
           activeSensors: activeSensorsCount,
           currentConsumption: energySensor?.lastReading?.value ?? null,
+          efficiencyThresholds: {
+            enabled: building.efficiencyThresholds.enabled,
+            minCop: building.efficiencyThresholds.minCop ?? null,
+          },
           constructionYear: building.constructionYear ?? undefined,
           createdBy: building.createdBy.toString(),
           updatedBy: building.updatedBy.toString(),
