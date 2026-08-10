@@ -15,6 +15,12 @@ export const IS_PRODUCTION = NODE_ENV === "production";
 export const IS_DEVELOPMENT = NODE_ENV !== "production";
 export const IS_TEST = NODE_ENV === "test";
 
+export const debugPrint = (message: string, ...args: unknown[]) => {
+  if (IS_DEVELOPMENT) {
+    console.log(message, ...args);
+  }
+}
+
 // ── MongoDB ──────────────────────────────────────────────────────────────────
 
 export const MONGO_URI = ((): string => {
@@ -112,5 +118,7 @@ export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@wattguard.local";
 export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 // ── Simulator ────────────────────────────────────────────────────────────────
+
+export const SIMULATOR_ENABLED = process.env.SIMULATOR_ENABLED === "true";
 
 export const SIM_TIME_SCALE = Number(process.env.SIM_TIME_SCALE ?? 2);
