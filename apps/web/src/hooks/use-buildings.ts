@@ -39,6 +39,7 @@ export interface BuildingDetail extends BuildingSummary {
   createdBy?: string;
   updatedBy?: string;
   createdAt?: string;
+  efficiencyThresholds?: { enabled: boolean; minCop: number | null };
 }
 
 export interface BuildingType {
@@ -361,6 +362,7 @@ export function useUpdateBuilding() {
       constructionYear?: number;
       geographicZone?: string;
       status?: "active" | "inactive" | "decommissioned";
+      efficiencyThresholds?: { enabled: boolean; minCop: number | null };
     }) => {
       const { id, ...body } = input;
       const res = await client.api.buildings[":id"].$patch({

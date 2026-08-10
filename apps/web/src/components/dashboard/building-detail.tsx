@@ -9,6 +9,7 @@ import {
   useBuildingHistory,
   useBuildingEfficiency,
   useDeleteBuilding,
+  useUpdateBuilding,
   type BuildingDetail as BuildingDetailType,
   type HistoryParams,
 } from "@/hooks/use-buildings";
@@ -27,8 +28,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -64,6 +67,7 @@ import {
   Activity,
   Wind,
   Gauge,
+  Loader2,
   TrendingDown,
   AlertCircle,
   Flame,
@@ -92,6 +96,11 @@ interface BuildingDetailProps {
 function getBuildingTypeName(bt: BuildingDetailType["buildingType"]): string {
   if (typeof bt === "string") return bt;
   return bt.name;
+}
+
+function isDistrictHeating(heatingSystemType: string): boolean {
+  const t = heatingSystemType.toLowerCase();
+  return t.includes("teleriscaldamento") || t.includes("district");
 }
 
 function getSensorIcon(sensorType: SensorWithBuilding["sensorType"]) {
@@ -261,6 +270,65 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   // Building delete state
   const [confirmDeleteBuildingOpen, setConfirmDeleteBuildingOpen] = useState(false);
   const deleteBuilding = useDeleteBuilding();
+
+  // Allarme efficienza — configurazione soglia COP
+  const updateBuilding = useUpdateBuilding();
+  const [effEnabled, setEffEnabled] = useState(false);
+  const [effMinCop, setEffMinCop] = useState("");
+  const [effDirty, setEffDirty] = useState(false);
+
+  // Sync the threshold form with the building data. The lint config forbids
+  // setState in effects (react-hooks/set-state-in-effect), so this uses the
+  // guarded "adjust state during render" pattern (same as the sensor deep-link
+  // sync above): the form only resets when the server-side values change, so
+  // in-progress edits are never clobbered by re-renders.
+  const effServerEnabled = building?.efficiencyThresholds?.enabled ?? false;
+  const effServerMinCop =
+    building?.efficiencyThresholds?.minCop != null
+      ? String(building.efficiencyThresholds.minCop)
+      : "";
+  const [effSyncedKey, setEffSyncedKey] = useState("");
+  const effKey = building
+    ? `${building.id}:${effServerEnabled}:${effServerMinCop}`
+    : "";
+  if (effKey !== effSyncedKey) {
+    setEffSyncedKey(effKey);
+    setEffEnabled(effServerEnabled);
+    setEffMinCop(effServerMinCop);
+    setEffDirty(false);
+  }
+
+  const handleSaveThreshold = () => {
+    const parsed = effMinCop.trim() === "" ? null : Number(effMinCop);
+    if (
+      effEnabled &&
+      (parsed === null || Number.isNaN(parsed) || parsed < 0 || parsed > 10)
+    ) {
+      toast.error(
+        "Inserisci un COP minimo valido (0-10) per abilitare l'allarme",
+      );
+      return;
+    }
+    updateBuilding.mutate(
+      {
+        id: buildingId,
+        efficiencyThresholds: { enabled: effEnabled, minCop: parsed },
+      },
+      {
+        onSuccess: () => {
+          setEffDirty(false);
+          toast.success("Soglia di efficienza salvata");
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Errore nel salvataggio della soglia",
+          );
+        },
+      },
+    );
+  };
 
   // The edit dialog can be opened manually (from the sensor actions menu) or
   // through a deep link (?sensorId=<id>). The target sensor is first looked up
@@ -648,6 +716,67 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               Dati di efficienza non disponibili per il periodo selezionato
             </div>
           )}
+          <div className="mt-4 border-t pt-4">
+            {building && isDistrictHeating(building.heatingSystemType) ? (
+              <p className="text-sm text-muted-foreground">
+                Gli allarmi di efficienza non sono disponibili per impianti a
+                teleriscaldamento.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Allarme efficienza</p>
+                    <p className="text-xs text-muted-foreground">
+                      Avvisa quando il COP medio (24h) scende sotto la soglia
+                    </p>
+                  </div>
+                  <Switch
+                    checked={effEnabled}
+                    onCheckedChange={(checked) => {
+                      setEffEnabled(checked);
+                      setEffDirty(true);
+                    }}
+                  />
+                </div>
+                <div className="flex items-end gap-3">
+                  <div className="flex-1 space-y-1">
+                    <label
+                      className="text-xs text-muted-foreground"
+                      htmlFor="eff-min-cop"
+                    >
+                      COP minimo
+                    </label>
+                    <Input
+                      id="eff-min-cop"
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.1}
+                      value={effMinCop}
+                      disabled={!effEnabled}
+                      placeholder="es. 2.5"
+                      onChange={(e) => {
+                        setEffMinCop(e.target.value);
+                        setEffDirty(true);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveThreshold}
+                    disabled={!effDirty || updateBuilding.isPending}
+                  >
+                    {updateBuilding.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Salva"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

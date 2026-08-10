@@ -569,14 +569,14 @@ export async function startSimulator(opts: SimulatorOptions): Promise<SimulatorH
 
       const buildingMap = await ensureBuildingStates(sensors);
 
-      let started = 0;
+      const started_sensors: Promise<void>[] = [];
       for (const sensor of sensors) {
         if (running.has(sensor._id.toString())) continue;
-        await startSensor(sensor, buildingMap);
-        started += 1;
+        started_sensors.push(startSensor(sensor, buildingMap));
       }
-      if (started > 0) {
-        debugPrint(`✨ Started simulation for ${started} new sensor(s).`);
+      await Promise.all(started_sensors);
+      if (started_sensors.length > 0) {
+        debugPrint(`✨ Started simulation for ${started_sensors.length} new sensor(s).`);
       }
     } finally {
       rediscovering = false;
