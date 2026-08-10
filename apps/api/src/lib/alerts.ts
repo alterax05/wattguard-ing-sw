@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { Alert, type AlertThresholdType } from "../models/Alert";
 
 export const THRESHOLD_ALERT_TYPE = "threshold_exceeded" as const;
+export const EFFICIENCY_ALERT_TYPE = "efficiency_below_threshold" as const;
 
 /**
  * Remove threshold alerts made invalid by removing one or more sensor limits.
