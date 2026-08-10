@@ -513,6 +513,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.efficiencyThresholds !== undefined)
         building.efficiencyThresholds = updates.efficiencyThresholds;
 
+      if (updates.efficiencyThresholds !== undefined && !updates.efficiencyThresholds.enabled) {
+        // Disabilitazione soglie: risolve gli alert efficienza ancora aperti.
+        await Alert.updateMany(
+          { buildingId: building._id, type: EFFICIENCY_ALERT_TYPE, status: { $ne: "resolved" } },
+          { $set: { status: "resolved", resolvedBy: userDoc.name || userDoc.email, resolvedAt: new Date() } },
+        );
+      }
+
       building.updatedBy = userDoc._id as Types.ObjectId;
 
       await building.save();
