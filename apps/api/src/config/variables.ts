@@ -130,5 +130,12 @@ export const EFFICIENCY_ALERTS_ENABLED = process.env.EFFICIENCY_ALERTS_ENABLED !
 
 export const EFFICIENCY_ALERT_INTERVAL_MINUTES = (() => {
   const raw = Number(process.env.EFFICIENCY_ALERT_INTERVAL_MINUTES ?? 30);
-  return Number.isFinite(raw) && raw >= 5 && raw <= 1440 ? raw : 30;
+  // Bun.cron accetta step solo nel campo minuti: range effettivo [5, 59].
+  if (Number.isInteger(raw) && raw >= 5 && raw <= 59) return raw;
+  if (process.env.EFFICIENCY_ALERT_INTERVAL_MINUTES !== undefined) {
+    console.warn(
+      `⚠️ EFFICIENCY_ALERT_INTERVAL_MINUTES non valido ("${process.env.EFFICIENCY_ALERT_INTERVAL_MINUTES}"): uso 30`,
+    );
+  }
+  return 30;
 })();

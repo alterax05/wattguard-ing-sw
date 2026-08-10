@@ -208,7 +208,11 @@ async function startServer() {
       }
     };
     await run(); // valutazione immediata al boot
-    Bun.cron(`*/${EFFICIENCY_ALERT_INTERVAL_MINUTES} * * * *`, run);
+    try {
+      Bun.cron(`*/${EFFICIENCY_ALERT_INTERVAL_MINUTES} * * * *`, run);
+    } catch (error) {
+      console.error("❌ Failed to register efficiency alert cron:", error);
+    }
     console.log(`⏰ Efficiency alert cron started (every ${EFFICIENCY_ALERT_INTERVAL_MINUTES} min)`);
   }
 
