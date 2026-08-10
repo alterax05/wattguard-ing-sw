@@ -30,6 +30,10 @@ import { loadUserDoc, requireRole } from "./middleware/auth";
 // Import MQTT client
 import { connectAndSubscribe } from "./lib/mqtt";
 
+// Import in-process simulator and reading ingestion
+import { startSimulator } from "./services/simulator";
+import { ingestReading } from "./services/reading-service";
+
 // Import OpenAPI configuration
 import { openapiConfig } from "./config/openapi";
 
@@ -41,6 +45,7 @@ import {
   MONGO_URI,
   MQTT_ENABLED,
   PORT,
+  SIMULATOR_ENABLED,
 } from "./config/variables";
 
 const app = new Hono()
@@ -178,6 +183,17 @@ async function startServer() {
 
   // Start MQTT client after DB connection.
   if (MQTT_ENABLED) connectAndSubscribe();
+
+  // Run the simulator in-process, feeding readings straight into the reading
+  // service. Both flags are independent: MQTT and SIMULATOR_ENABLED may be on
+  // at the same time. Auto-seeds demo data only in development.
+  if (SIMULATOR_ENABLED) {
+    await startSimulator({
+      autoSeed: IS_DEVELOPMENT,
+      onReading: (reading) => ingestReading(reading),
+    });
+    console.log("🧪 In-process simulator started");
+  }
 
   const server = serve({
     fetch: app.fetch,
