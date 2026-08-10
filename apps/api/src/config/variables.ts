@@ -122,3 +122,13 @@ export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 export const SIMULATOR_ENABLED = process.env.SIMULATOR_ENABLED === "true";
 
 export const SIM_TIME_SCALE = Number(process.env.SIM_TIME_SCALE ?? 2);
+
+// ── Efficiency alerts ────────────────────────────────────────────────────────
+
+// Default ON: il cron è idempotente e agisce solo su edifici con soglia abilitata.
+export const EFFICIENCY_ALERTS_ENABLED = process.env.EFFICIENCY_ALERTS_ENABLED !== "false";
+
+export const EFFICIENCY_ALERT_INTERVAL_MINUTES = (() => {
+  const raw = Number(process.env.EFFICIENCY_ALERT_INTERVAL_MINUTES ?? 30);
+  return Number.isFinite(raw) && raw >= 5 && raw <= 1440 ? raw : 30;
+})();
