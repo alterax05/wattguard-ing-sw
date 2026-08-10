@@ -432,6 +432,46 @@ describe("Buildings Routes - Integration Tests", () => {
       const alert = await Alert.findOne({ buildingId: building._id, type: EFFICIENCY_ALERT_TYPE });
       expect(alert!.status).toBe("resolved");
     });
+
+    test("PATCH disabling efficiency thresholds resolves active efficiency alerts", async () => {
+      const building = await Building.create({
+        name: "Original Name",
+        address: "Via Original",
+        geographicZone: "Centro",
+        buildingType: buildingTypeId,
+        surface: 1000,
+        constructionYear: 2000,
+        heatingSystemType: "caldaia_gas",
+        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+        efficiencyThresholds: { enabled: true, minCop: 2.5 },
+      });
+
+      await Alert.create({
+        buildingId: building._id,
+        buildingName: building.name,
+        type: EFFICIENCY_ALERT_TYPE,
+        thresholdType: "min",
+        severity: "high",
+        message: "Efficienza sotto soglia",
+        status: "active",
+      });
+
+      const res = await client.api.buildings[":id"].$patch(
+        {
+          param: { id: building._id.toString() },
+          json: { efficiencyThresholds: { enabled: false, minCop: null } },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      expect(res.status).toBe(200);
+
+      const alert = await Alert.findOne({ buildingId: building._id, type: EFFICIENCY_ALERT_TYPE });
+      expect(alert!.status).toBe("resolved");
+    });
   });
 
   describe("Delete Building (DELETE /api/buildings/:id)", () => {
