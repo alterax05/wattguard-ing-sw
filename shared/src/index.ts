@@ -2,6 +2,10 @@
  * Central export for all validation schemas
  */
 
+// Shared i18n + error-code contracts
+export * from "./error-codes";
+export * from "./i18n";
+
 // Common schemas
 export * from "./schemas/common";
 
