@@ -1,4 +1,5 @@
 import { useContext } from "react"
+import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Activity, Zap, Flame, BellRing } from "lucide-react"
@@ -26,19 +27,20 @@ function StatCardSkeleton() {
 export function DashboardOverview() {
   const { user } = useContext(AuthContext)
   const { data: stats, isLoading } = useDashboardStats()
+  const { t } = useTranslation()
 
   const metrics = [
     {
-      title: "Consumo Elettrico",
+      title: t("dashboard.electricityConsumption"),
       value: stats?.consumption.electricity != null
         ? stats.consumption.electricity.toFixed(1)
         : "—",
-      unit: "kWh",
+      unit: t("common.kwh"),
       icon: Zap,
       color: "text-chart-1",
     },
     {
-      title: "Consumo Gas",
+      title: t("dashboard.gasConsumption"),
       value: stats?.consumption.gas != null
         ? stats.consumption.gas.toFixed(1)
         : "—",
@@ -47,14 +49,14 @@ export function DashboardOverview() {
       color: "text-chart-5",
     },
     {
-      title: "Sensori Attivi",
+      title: t("dashboard.activeSensors"),
       value: isLoading ? "…" : String(stats?.sensors.active ?? "—"),
       unit: stats ? `/ ${stats.sensors.total}` : "",
       icon: Activity,
       color: "text-chart-3",
     },
     {
-      title: "Notifiche Attive",
+      title: t("dashboard.activeAlerts"),
       value: isLoading ? "…" : String(stats?.alerts.active ?? "—"),
       unit: "",
       icon: BellRing,
@@ -65,9 +67,9 @@ export function DashboardOverview() {
   return (
     <div className="space-y-6 p-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard Energetica</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t("dashboard.title")}</h1>
         <p className="text-muted-foreground">
-          Benvenuto, {user?.name ?? user?.email ?? ""}. Panoramica dei consumi energetici degli edifici pubblici.
+          {t("dashboard.welcome", { name: user?.name ?? user?.email ?? "" })}
         </p>
       </div>
 
@@ -104,8 +106,8 @@ export function DashboardOverview() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Andamento Consumi Ultimi 30 Giorni</CardTitle>
-            <CardDescription>Consumi energetici aggregati per tipologia (media per giorno)</CardDescription>
+            <CardTitle>{t("dashboard.consumptionTrend30d")}</CardTitle>
+            <CardDescription>{t("dashboard.consumptionTrendDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <EnergyChart />
@@ -117,8 +119,8 @@ export function DashboardOverview() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Edifici Monitorati</CardTitle>
-            <CardDescription>Lista edifici pubblici con consumi recenti</CardDescription>
+            <CardTitle>{t("dashboard.monitoredBuildings")}</CardTitle>
+            <CardDescription>{t("dashboard.monitoredBuildingsDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-80">
@@ -131,8 +133,8 @@ export function DashboardOverview() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Notifiche Attive</CardTitle>
-                <CardDescription>Anomalie e avvisi da gestire</CardDescription>
+                <CardTitle>{t("dashboard.activeAlerts")}</CardTitle>
+                <CardDescription>{t("dashboard.activeAlertsDescription")}</CardDescription>
               </div>
               {stats && stats.alerts.active > 0 && (
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-destructive-foreground">

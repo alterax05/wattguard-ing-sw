@@ -136,7 +136,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       );
 
       if (!updated) {
-        return c.json({ error: "Failed to update configuration" }, 500);
+        return c.json({ error: "Failed to update configuration", code: "settings_update_failed" }, 500);
       }
 
       return c.json({ success: true as const, config: serializeConfig(updated) } satisfies UpdateSettingsResponse);

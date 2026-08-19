@@ -8,9 +8,14 @@ import { z } from "zod";
 
 /**
  * Standard error response schema
+ *
+ * `code` is a machine-readable `ErrorCode` (see `shared/src/error-codes.ts`)
+ * that the web app maps to a localized message; `error` is the English
+ * fallback string.
  */
 export const ErrorSchema = z.object({
   error: z.string().describe("Error message describing what went wrong"),
+  code: z.string().optional().describe("Machine-readable error code"),
 });
 
 export const HealthResponseSchema = z.object({

@@ -172,14 +172,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Verify building exists
       const building = await Building.findById(data.buildingId);
       if (!building) {
-        return c.json({ error: "Building not found" }, 404);
+        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
       }
 
       // Check for duplicate serial number if provided
       if (data.serialNumber) {
         const existing = await Sensor.findOne({ serialNumber: data.serialNumber });
         if (existing) {
-          return c.json({ error: "Sensor with this serial number already exists" }, 400);
+          return c.json({ error: "Sensor with this serial number already exists", code: "sensor_serial_exists" }, 400);
         }
       }
 
@@ -251,7 +251,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const sensor = await Sensor.findById(id).populate<{ buildingId: BuildingDocument }>("buildingId", "name address");
 
       if (!sensor) {
-        return c.json({ error: "Sensor not found" }, 404);
+        return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
       }
 
       const building = sensor.buildingId;
@@ -339,7 +339,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const sensor = await Sensor.findById(id).lean();
       if (!sensor) {
-        return c.json({ error: "Sensor not found" }, 404);
+        return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
       }
 
       const removedThresholdTypes: AlertThresholdType[] = [];
@@ -350,7 +350,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.serialNumber && updates.serialNumber !== sensor.serialNumber) {
         const existing = await Sensor.findOne({ serialNumber: updates.serialNumber });
         if (existing) {
-          return c.json({ error: "Sensor with this serial number already exists" }, 400);
+          return c.json({ error: "Sensor with this serial number already exists", code: "sensor_serial_exists" }, 400);
         }
       }
 
@@ -435,7 +435,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const sensor = await Sensor.findById(id);
       if (!sensor) {
-        return c.json({ error: "Sensor not found" }, 404);
+        return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
       }
 
       // Delete associated readings
@@ -489,7 +489,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const sensor = await Sensor.findById(id);
       if (!sensor) {
-        return c.json({ error: "Sensor not found" }, 404);
+        return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
       }
 
       // Build query

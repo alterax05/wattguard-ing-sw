@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { addDays, format } from "date-fns"
-import { it } from "date-fns/locale"
+import { useTranslation } from "react-i18next"
 import { CalendarIcon } from "lucide-react"
 import type { DateRange } from "react-day-picker"
 import { cn } from "@/lib/utils"
+import { getDateFnsLocale } from "@/lib/dates"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -19,15 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const PRESETS: { label: string; days: number }[] = [
-  { label: "Ultimi 7 giorni", days: 7 },
-  { label: "Ultimi 30 giorni", days: 30 },
-  { label: "Ultimi 90 giorni", days: 90 },
-  { label: "Ultimo anno", days: 365 },
-]
-
 function formatDate(date: Date) {
-  return format(date, "d MMM yyyy", { locale: it })
+  return format(date, "d MMM yyyy", { locale: getDateFnsLocale() })
 }
 
 interface DateRangePickerProps {
@@ -42,6 +36,7 @@ export function DateRangePicker({
   className,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
+  const { t } = useTranslation()
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -64,7 +59,7 @@ export function DateRangePicker({
               formatDate(value.from)
             )
           ) : (
-            <span>Seleziona un periodo</span>
+            <span>{t("dateRange.selectPeriod")}</span>
           )}
         </Button>
       </PopoverTrigger>
@@ -78,14 +73,13 @@ export function DateRangePicker({
           }
         >
           <SelectTrigger>
-            <SelectValue placeholder="Preset" />
+            <SelectValue placeholder={t("dateRange.preset")} />
           </SelectTrigger>
           <SelectContent position="popper">
-            {PRESETS.map((preset) => (
-              <SelectItem key={preset.days} value={String(preset.days)}>
-                {preset.label}
-              </SelectItem>
-            ))}
+            <SelectItem value="7">{t("dateRange.last7Days")}</SelectItem>
+            <SelectItem value="30">{t("dateRange.last30Days")}</SelectItem>
+            <SelectItem value="90">{t("dateRange.last90Days")}</SelectItem>
+            <SelectItem value="365">{t("dateRange.lastYear")}</SelectItem>
           </SelectContent>
         </Select>
         <div className="rounded-md border">
@@ -108,7 +102,7 @@ export function DateRangePicker({
             setOpen(false)
           }}
         >
-          Cancella
+          {t("dateRange.clear")}
         </Button>
       </PopoverContent>
     </Popover>

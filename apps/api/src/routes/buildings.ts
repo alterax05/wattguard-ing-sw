@@ -253,7 +253,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const buildingType = await BuildingType.findById(buildingData.buildingType).lean();
 
       if (!buildingType) {
-        return c.json({ error: "Building type not found" }, 404);
+        return c.json({ error: "Building type not found", code: "building_type_not_found" }, 404);
       }
 
       const building = new Building({
@@ -357,7 +357,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }>("buildingType", "name description").lean();
 
       if (!building) {
-        return c.json({ error: "Building not found" }, 404);
+        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
       }
 
       const bt = building.buildingType;
@@ -469,14 +469,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found" }, 404);
+        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
       }
 
       // Validate building type if being updated
       if (updates.buildingType) {
         const buildingType = await BuildingType.findById(updates.buildingType);
         if (!buildingType) {
-          return c.json({ error: "Building type not found" }, 404);
+          return c.json({ error: "Building type not found", code: "building_type_not_found" }, 404);
         }
       }
 
@@ -631,7 +631,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found" }, 404);
+        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
       }
 
       // Cascade delete: first delete sensor readings, then sensors, then building
@@ -698,7 +698,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found" }, 404);
+        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
       }
 
       // Get all active sensors for this building
@@ -793,7 +793,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found" }, 404);
+        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
       }
 
       // Build query for sensor readings
@@ -888,7 +888,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found" }, 404);
+        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
       }
 
       const start = new Date(startDate);

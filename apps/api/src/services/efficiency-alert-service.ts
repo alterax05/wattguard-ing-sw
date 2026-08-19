@@ -51,7 +51,13 @@ export async function evaluateEfficiencyAlerts(): Promise<void> {
             type: EFFICIENCY_ALERT_TYPE,
             thresholdType: "min",
             severity: "high",
-            message: `Efficienza impianto sotto soglia per ${building.name}: COP medio ${cop.toFixed(2)} (soglia minima: ${minCop})`,
+            // Structured fields: the frontend composes the localized message
+            // from these (see apps/web/src/lib/alerts.ts), so no pre-rendered
+            // message string is stored.
+            value: Number(cop.toFixed(2)),
+            unit: "COP",
+            limit: minCop,
+            location: building.name,
             status: "active",
           });
         }

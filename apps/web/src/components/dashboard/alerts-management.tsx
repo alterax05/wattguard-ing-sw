@@ -1,16 +1,25 @@
 import { useAlerts, useAcknowledgeAlert, useResolveAlert, type Alert } from "@/hooks/use-alerts";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, AlertCircle, Info, CheckCircle, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { it } from "date-fns/locale";
+import { getDateFnsLocale } from "@/lib/dates";
+import { composeAlertMessage, getAlertSeverityLabel, getAlertTypeLabel } from "@/lib/alerts";
+
+const STATUS_LABEL_KEYS: Record<Alert["status"], string> = {
+  active: "alerts.statusActive",
+  acknowledged: "alerts.statusAcknowledged",
+  resolved: "alerts.statusResolved",
+};
 
 export function AlertsManagement() {
   const { data, isLoading, error } = useAlerts();
   const acknowledgeMutation = useAcknowledgeAlert();
   const resolveMutation = useResolveAlert();
+  const { t } = useTranslation();
 
   const alerts = data?.alerts || [];
 
@@ -67,17 +76,19 @@ export function AlertsManagement() {
       <Card className="border-destructive">
         <CardContent className="flex items-center justify-center py-6 text-destructive">
           <AlertCircle className="mr-2 h-5 w-5" />
-          <p>Errore nel caricamento delle notifiche</p>
+          <p>{t("alerts.loadError")}</p>
         </CardContent>
       </Card>
     );
   }
 
+  const dateFnsLocale = getDateFnsLocale();
+
   return (
     <Tabs defaultValue="active" className="w-full">
       <TabsList className="w-full">
         <TabsTrigger value="active">
-          Attive
+          {t("alerts.statusActive")}
           {alertsByStatus.active.length > 0 && (
             <Badge variant={"destructive"} className="ml-2">
               {alertsByStatus.active.length}
@@ -85,7 +96,7 @@ export function AlertsManagement() {
           )}
         </TabsTrigger>
         <TabsTrigger value="acknowledged">
-          Prese in carico
+          {t("alerts.statusAcknowledged")}
           {alertsByStatus.acknowledged.length > 0 && (
             <Badge variant={"default"} className="ml-2">
               {alertsByStatus.acknowledged.length}
@@ -93,7 +104,7 @@ export function AlertsManagement() {
           )}
         </TabsTrigger>
         <TabsTrigger value="resolved">
-          Risolte
+          {t("alerts.statusResolved")}
           {alertsByStatus.resolved.length > 0 && (
             <Badge variant={"secondary"} className="ml-2">
               {alertsByStatus.resolved.length}
@@ -109,10 +120,12 @@ export function AlertsManagement() {
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <CheckCircle className="mb-2 h-12 w-12 text-chart-3" />
                 <p className="text-lg font-medium">
-                  Nessuna notifica {status === "active" ? "attiva" : status === "acknowledged" ? "presa in carico" : "risolta"}
+                  {t("alerts.emptyTitle", {
+                    status: t(STATUS_LABEL_KEYS[status as Alert["status"]]),
+                  })}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Tutto sotto controllo!
+                  {t("alerts.allClear")}
                 </p>
               </CardContent>
             </Card>
@@ -133,17 +146,17 @@ export function AlertsManagement() {
                           <div>
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="capitalize">
-                                {alert.type.replace("_", " ")}
+                                {getAlertTypeLabel(alert.type, t)}
                               </Badge>
                               <Badge
                                 className={getSeverityColor(alert.severity)}
                                 variant="secondary"
                               >
-                                {alert.severity}
+                                {getAlertSeverityLabel(alert.severity, t)}
                               </Badge>
                             </div>
                             <h3 className="mt-2 font-semibold leading-tight">
-                              {alert.message}
+                              {composeAlertMessage(alert, t)}
                             </h3>
                           </div>
                         </div>
@@ -154,34 +167,38 @@ export function AlertsManagement() {
                           <span>
                             {formatDistanceToNow(new Date(alert.createdAt), {
                               addSuffix: true,
-                              locale: it,
+                              locale: dateFnsLocale,
                             })}
                           </span>
                         </div>
 
                         {alert.acknowledgedBy && alert.acknowledgedAt && (
                           <div className="text-sm text-muted-foreground">
-                            Presa in carico da {alert.acknowledgedBy} •{" "}
-                            {formatDistanceToNow(
-                              new Date(alert.acknowledgedAt),
-                              {
-                                addSuffix: true,
-                                locale: it,
-                              },
-                            )}
+                            {t("alerts.acknowledgedBy", {
+                              name: alert.acknowledgedBy,
+                              time: formatDistanceToNow(
+                                new Date(alert.acknowledgedAt),
+                                {
+                                  addSuffix: true,
+                                  locale: dateFnsLocale,
+                                },
+                              ),
+                            })}
                           </div>
                         )}
-                        
+
                         {alert.resolvedBy && alert.resolvedAt && (
                           <div className="text-sm text-muted-foreground">
-                            Risolta da {alert.resolvedBy} •{" "}
-                            {formatDistanceToNow(
-                              new Date(alert.resolvedAt),
-                              {
-                                addSuffix: true,
-                                locale: it,
-                              },
-                            )}
+                            {t("alerts.resolvedBy", {
+                              name: alert.resolvedBy,
+                              time: formatDistanceToNow(
+                                new Date(alert.resolvedAt),
+                                {
+                                  addSuffix: true,
+                                  locale: dateFnsLocale,
+                                },
+                              ),
+                            })}
                           </div>
                         )}
 
@@ -193,14 +210,14 @@ export function AlertsManagement() {
                               onClick={() => handleAcknowledge(alert.id)}
                               disabled={acknowledgeMutation.isPending || resolveMutation.isPending}
                             >
-                              Prendi in carico
+                              {t("alerts.acknowledge")}
                             </Button>
                             <Button
                               size="sm"
                               onClick={() => handleResolve(alert.id)}
                               disabled={acknowledgeMutation.isPending || resolveMutation.isPending}
                             >
-                              Risolvi
+                              {t("alerts.resolve")}
                             </Button>
                           </div>
                         )}
@@ -212,7 +229,7 @@ export function AlertsManagement() {
                               onClick={() => handleResolve(alert.id)}
                               disabled={resolveMutation.isPending}
                             >
-                              Risolvi
+                              {t("alerts.resolve")}
                             </Button>
                           </div>
                         )}

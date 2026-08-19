@@ -57,18 +57,21 @@ const app = new Hono()
       const invite = await Invite.findOne({ tokenHash });
 
       if (!invite) {
-        return c.json({ error: "Invalid invite token" }, 404);
+        return c.json({ error: "Invalid invite token", code: "invite_invalid_token" }, 404);
       }
 
       if (invite.status !== "pending") {
-        return c.json({ error: `Invite is ${invite.status}` }, 400);
+        return c.json(
+          { error: `Invite is ${invite.status}`, code: "invite_invalid_status" },
+          400
+        );
       }
 
       if (invite.expiresAt < new Date()) {
         // Mark as expired
         invite.status = "expired";
         await invite.save();
-        return c.json({ error: "Invite has expired" }, 400);
+        return c.json({ error: "Invite has expired", code: "invite_expired" }, 400);
       }
 
       return c.json({

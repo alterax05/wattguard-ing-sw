@@ -141,7 +141,12 @@ describe("Reading Service", () => {
     expect(alerts[0]!.severity).toBe("high");
     expect(alerts[0]!.status).toBe("active");
     expect(alerts[0]!.buildingName).toBe("Test Building");
-    expect(alerts[0]!.message).toContain("35°C");
+    expect(alerts[0]!.sensorType).toBe("internal_temp");
+    expect(alerts[0]!.location).toBe("Sala Principale");
+    expect(alerts[0]!.value).toBe(35);
+    expect(alerts[0]!.unit).toBe("°C");
+    expect(alerts[0]!.limit).toBe(30);
+    expect(alerts[0]!.toObject()).not.toHaveProperty("message");
   });
 
   test("should create a min-threshold alert", async () => {

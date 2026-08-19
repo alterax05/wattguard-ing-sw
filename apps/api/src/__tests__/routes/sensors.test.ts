@@ -422,7 +422,11 @@ describe("Sensors Routes - Integration Tests", () => {
         type: "threshold_exceeded",
         thresholdType: "min",
         severity: "high",
-        message: "Temperature too low",
+        sensorType: "internal_temp",
+        location: "Sala",
+        value: 5,
+        unit: "°C",
+        limit: 10,
         status: "active",
       });
       const maxAlert = await Alert.create({
@@ -432,7 +436,11 @@ describe("Sensors Routes - Integration Tests", () => {
         type: "threshold_exceeded",
         thresholdType: "max",
         severity: "high",
-        message: "Temperature too high",
+        sensorType: "internal_temp",
+        location: "Sala",
+        value: 35,
+        unit: "°C",
+        limit: 30,
         status: "acknowledged",
       });
       const legacyAlert = await Alert.create({
@@ -441,7 +449,11 @@ describe("Sensors Routes - Integration Tests", () => {
         sensorId: sensor._id,
         type: "threshold_exceeded",
         severity: "high",
-        message: "Legacy threshold alert",
+        sensorType: "internal_temp",
+        location: "Sala",
+        value: 40,
+        unit: "°C",
+        limit: 30,
         status: "active",
       });
       const unrelatedAlert = await Alert.create({
@@ -450,7 +462,8 @@ describe("Sensors Routes - Integration Tests", () => {
         sensorId: sensor._id,
         type: "sensor_offline",
         severity: "medium",
-        message: "Sensor unreachable",
+        sensorType: "energy_meter",
+        location: "Quadro",
         status: "active",
       });
 
@@ -510,7 +523,11 @@ describe("Sensors Routes - Integration Tests", () => {
         type: "threshold_exceeded",
         thresholdType: "max",
         severity: "high",
-        message: "Temperature too high",
+        sensorType: "internal_temp",
+        location: "Sala",
+        value: 35,
+        unit: "°C",
+        limit: 30,
         status: "active",
       });
 

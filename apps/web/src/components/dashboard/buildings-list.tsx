@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { useBuildings, type BuildingSummary } from "@/hooks/use-buildings"
 import { Building2, Activity, Zap, Radio } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -10,6 +11,7 @@ function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
 
 export function BuildingsList() {
   const { data, isLoading, isError } = useBuildings({ limit: "5" })
+  const { t } = useTranslation()
 
   if (isLoading) {
     return (
@@ -34,13 +36,13 @@ export function BuildingsList() {
   }
 
   if (isError || !data) {
-    return <div className="text-sm text-muted-foreground">Errore nel caricamento degli edifici</div>
+    return <div className="text-sm text-muted-foreground">{t("buildings.loadError")}</div>
   }
 
   const buildings = data.buildings
 
   if (buildings.length === 0) {
-    return <div className="text-sm text-muted-foreground">Nessun edificio trovato</div>
+    return <div className="text-sm text-muted-foreground">{t("buildings.notFound")}</div>
   }
 
   return (
@@ -63,14 +65,14 @@ export function BuildingsList() {
           </div>
           <div className="flex items-center gap-3">
             <BuildingStatusBadge status={building.status} icon={<Activity className="h-3 w-3" />} />
-            <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Sensori attivi">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground" title={t("buildings.activeSensors")}>
               <Radio className="h-3 w-3" />
               {building.activeSensors}
             </span>
             {building.currentConsumption !== null && (
-              <span className="flex items-center gap-1 text-sm font-semibold text-chart-1" title="Consumo attuale">
+              <span className="flex items-center gap-1 text-sm font-semibold text-chart-1" title={t("buildings.currentConsumption")}>
                 <Zap className="h-3 w-3" />
-                {building.currentConsumption.toFixed(1)} kWh
+                {building.currentConsumption.toFixed(1)} {t("common.kwh")}
               </span>
             )}
           </div>

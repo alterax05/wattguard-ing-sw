@@ -1,8 +1,14 @@
 /**
- * Email utilities using the Resend HTTP API
+ * Email utilities using the Resend HTTP API.
+ *
+ * All email content is rendered through the shared translation catalogs
+ * (`emails.*` keys) via the server-side i18next instance, so recipients get
+ * the email in the language they requested.
  */
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM, PUBLIC_APP_URL, RESEND_API } from "../config/variables";
+import { ensureI18nReady, getTranslator } from "../lib/i18n";
+import { DEFAULT_LOCALE, type LocaleCode } from "@wattguard/shared";
 
 let resend: Resend | null = null;
 
@@ -41,65 +47,76 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 }
 
 /**
- * Send an invite email
+ * Send an invite email in the given language.
  */
 export async function sendInviteEmail(
   email: string,
   token: string,
-  role: "admin" | "operator"
+  role: "admin" | "operator",
+  lang: LocaleCode = DEFAULT_LOCALE,
 ): Promise<void> {
+  await ensureI18nReady();
+  const t = getTranslator(lang);
   const inviteUrl = `${PUBLIC_APP_URL}/accept-invite?token=${token}`;
 
   await sendEmail({
     to: email,
-    subject: "Invito a WattGuard",
-    text: `Sei stato invitato a WattGuard come ${role}.\n\nClicca il seguente link per accettare l'invito:\n${inviteUrl}\n\nQuesto invito scadrà tra 7 giorni.`,
+    subject: t("emails.invite.subject", { role }),
+    text: t("emails.invite.text", { role, inviteUrl }),
     html: `
-      <h2>Invito a WattGuard</h2>
-      <p>Sei stato invitato a WattGuard come <strong>${role}</strong>.</p>
-      <p><a href="${inviteUrl}">Clicca qui per accettare l'invito</a></p>
-      <p>Oppure copia questo link nel tuo browser:</p>
+      <h2>${t("emails.invite.htmlTitle")}</h2>
+      <p>${t("emails.invite.htmlBody", { role })}</p>
+      <p><a href="${inviteUrl}">${t("emails.invite.htmlCta")}</a></p>
+      <p>${t("emails.invite.htmlFallbackUrl")}</p>
       <p>${inviteUrl}</p>
-      <p><small>Questo invito scadrà tra 7 giorni.</small></p>
+      <p><small>${t("emails.invite.htmlExpiry")}</small></p>
     `,
   });
 }
 
 /**
- * Send a password reset email
+ * Send a password reset email in the given language.
  */
 export async function sendPasswordResetEmail(
   email: string,
-  token: string
+  token: string,
+  lang: LocaleCode = DEFAULT_LOCALE,
 ): Promise<void> {
+  await ensureI18nReady();
+  const t = getTranslator(lang);
   const resetUrl = `${PUBLIC_APP_URL}/reset-password?token=${token}`;
 
   await sendEmail({
     to: email,
-    subject: "Reset Password - WattGuard",
-    text: `Hai richiesto il reset della password per WattGuard.\n\nClicca il seguente link per reimpostare la password:\n${resetUrl}\n\nQuesto link scadrà tra 1 ora.\n\nSe non hai richiesto il reset, ignora questa email.`,
+    subject: t("emails.reset.subject"),
+    text: t("emails.reset.text", { resetUrl }),
     html: `
-      <h2>Reset Password - WattGuard</h2>
-      <p>Hai richiesto il reset della password per WattGuard.</p>
-      <p><a href="${resetUrl}">Clicca qui per reimpostare la password</a></p>
-      <p>Oppure copia questo link nel tuo browser:</p>
+      <h2>${t("emails.reset.htmlTitle")}</h2>
+      <p>${t("emails.reset.htmlBody")}</p>
+      <p><a href="${resetUrl}">${t("emails.reset.htmlCta")}</a></p>
+      <p>${t("emails.reset.htmlFallbackUrl")}</p>
       <p>${resetUrl}</p>
-      <p><small>Questo link scadrà tra 1 ora.</small></p>
-      <p><small>Se non hai richiesto il reset, ignora questa email.</small></p>
+      <p><small>${t("emails.reset.htmlExpiry")}</small></p>
+      <p><small>${t("emails.reset.htmlIgnore")}</small></p>
     `,
   });
 }
 
 /**
- * Verify the Resend configuration by sending a test email
+ * Verify the Resend configuration by sending a test email in the given language.
  */
-export async function sendTestEmail(to?: string): Promise<void> {
+export async function sendTestEmail(
+  to?: string,
+  lang: LocaleCode = DEFAULT_LOCALE,
+): Promise<void> {
+  await ensureI18nReady();
+  const t = getTranslator(lang);
   const recipient = to || ADMIN_EMAIL;
 
   await sendEmail({
     to: recipient,
-    subject: "Test email da WattGuard",
-    text: "Questa è una email di test per verificare la configurazione email.",
-    html: "<p>Questa è una email di test per verificare la configurazione email.</p>",
+    subject: t("emails.test.subject"),
+    text: t("emails.test.text"),
+    html: t("emails.test.html"),
   });
 }

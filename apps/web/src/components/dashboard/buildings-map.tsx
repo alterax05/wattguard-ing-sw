@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useBuildings, type BuildingSummary } from "@/hooks/use-buildings";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -72,6 +73,7 @@ function MapController({ center }: { center: [number, number] | null }) {
 
 export function BuildingsMap() {
   const { data, isLoading, isError } = useBuildings();
+  const { t } = useTranslation();
   const [selectedBuilding, setSelectedBuilding] =
     useState<BuildingSummary | null>(null);
 
@@ -91,9 +93,9 @@ export function BuildingsMap() {
       <div className="flex h-full w-full items-center justify-center">
         <div className="text-center">
           <AlertCircle className="mx-auto mb-3 h-10 w-10 text-destructive" />
-          <p className="font-medium text-destructive">Errore nel caricamento</p>
+          <p className="font-medium text-destructive">{t("map.loadError")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Impossibile caricare la mappa degli edifici
+            {t("map.loadErrorDescription")}
           </p>
         </div>
       </div>
@@ -197,9 +199,9 @@ export function BuildingsMap() {
             </div>
 
             <div className="mb-2">
-              <p className="text-xs text-muted-foreground">Superficie</p>
+              <p className="text-xs text-muted-foreground">{t("map.surface")}</p>
               <p className="text-xs font-medium">
-                {selectedBuilding.surface} m&sup2;
+                {selectedBuilding.surface} {t("common.squareMeters")}
               </p>
             </div>
 
@@ -213,12 +215,12 @@ export function BuildingsMap() {
 
             <div className="mb-2 text-xs text-muted-foreground">
               <span className="font-medium text-foreground">
-                Riscaldamento:
+                {t("map.heatingSystem")}
               </span>{" "}
               {selectedBuilding.heatingSystemType}
             </div>
             <div className="mb-3 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Zona:</span>{" "}
+              <span className="font-medium text-foreground">{t("map.zone")}</span>{" "}
               {selectedBuilding.geographicZone}
             </div>
 
@@ -226,7 +228,7 @@ export function BuildingsMap() {
               to={`/dashboard/buildings/${selectedBuilding.id}`}
               className="block w-full rounded-md bg-primary px-3 py-2 text-center text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Visualizza Dettagli Completi
+              {t("map.viewDetails")}
             </Link>
           </CardContent>
         </Card>

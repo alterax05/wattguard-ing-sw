@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react"
 import { endOfDay } from "date-fns"
+import { useTranslation } from "react-i18next"
+import type { TFunction } from "i18next"
 import type { DateRange } from "react-day-picker"
 import { useNavigate } from "react-router-dom"
 import { toIsoDate } from "@/lib/dates"
 import { useQueries } from "@tanstack/react-query"
 import { client } from "@/lib/api"
+import { errorMessage } from "@/lib/errors"
 import { DateRangePicker } from "./date-range-picker"
 import {
   BUILDINGS_QUERY_KEY,
@@ -38,14 +41,6 @@ interface WeatherData {
   weatherCode: number
 }
 
-function extractError(data: unknown, fallback: string): string {
-  if (data && typeof data === "object" && "error" in data) {
-    const err = (data as Record<string, unknown>).error
-    return typeof err === "string" ? err : fallback
-  }
-  return fallback
-}
-
 function getWeatherIcon(code: number) {
   if (code === 0 || code === 1)
     return <Sun className="h-5 w-5 text-amber-500" />
@@ -60,17 +55,17 @@ function getWeatherIcon(code: number) {
   return <Cloud className="h-5 w-5 text-muted-foreground" />
 }
 
-function getWeatherLabel(code: number) {
-  if (code === 0) return "Sereno"
-  if (code === 1) return "Prevalentemente sereno"
-  if (code === 2) return "Parzialmente nuvoloso"
-  if (code === 3) return "Coperto"
-  if (code >= 51 && code <= 55) return "Pioviggine"
-  if (code >= 61 && code <= 65) return "Pioggia"
-  if (code >= 71 && code <= 75) return "Neve"
-  if (code >= 80 && code <= 82) return "Rovesci"
-  if (code >= 95 && code <= 99) return "Temporale"
-  return "N/D"
+function getWeatherLabel(code: number, t: TFunction) {
+  if (code === 0) return t("map.weather.clear")
+  if (code === 1) return t("map.weather.mostlyClear")
+  if (code === 2) return t("map.weather.partlyCloudy")
+  if (code === 3) return t("map.weather.overcast")
+  if (code >= 51 && code <= 55) return t("map.weather.drizzle")
+  if (code >= 61 && code <= 65) return t("map.weather.rain")
+  if (code >= 71 && code <= 75) return t("map.weather.snow")
+  if (code >= 80 && code <= 82) return t("map.weather.showers")
+  if (code >= 95 && code <= 99) return t("map.weather.thunderstorm")
+  return t("common.na")
 }
 
 function getBuildingTypeName(bt: BuildingDetail["buildingType"]): string {
@@ -91,6 +86,7 @@ interface BuildingsCompareProps {
 
 export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [weather, setWeather] = useState<WeatherData | null>(null)
 
   const [range, setRange] = useState<DateRange | undefined>(getDefaultDateRange)
@@ -112,7 +108,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
         })
         if (!res.ok) {
           const data = await res.json()
-          throw new Error(extractError(data, "Edificio non trovato"))
+          throw new Error(errorMessage(data, "Building not found"))
         }
         const data = await res.json()
         return data as { building: BuildingDetail }
@@ -135,7 +131,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
           })
         if (!res.ok) {
           const data = await res.json()
-          throw new Error(extractError(data, "Errore efficienza"))
+          throw new Error(errorMessage(data, "Efficiency error"))
         }
         const data = await res.json()
         return data as EfficiencyMetrics
@@ -212,14 +208,14 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <Building2 className="mb-3 h-10 w-10 text-muted-foreground" />
-        <p className="font-medium">Nessun edificio trovato</p>
+        <p className="font-medium">{t("buildings.notFound")}</p>
         <Button
           variant="outline"
           className="mt-4 bg-transparent"
           onClick={() => navigate("/dashboard/buildings")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Torna alla ricerca
+          {t("buildings.backToSearch")}
         </Button>
       </div>
     )
@@ -235,11 +231,11 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
           onClick={() => navigate("/dashboard/buildings")}
         >
           <ArrowLeft className="h-5 w-5" />
-          <span className="sr-only">Indietro</span>
+          <span className="sr-only">{t("common.back")}</span>
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-balance">
-            Confronto Edifici ({buildings.length})
+            {t("buildings.compareTitle", { count: buildings.length })}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {buildings.map((b) => b.building.name).join(" / ")}
@@ -251,7 +247,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
             <div className="text-sm">
               <p className="font-medium">{weather.temperature}&deg;C</p>
               <p className="text-xs text-muted-foreground">
-                {getWeatherLabel(weather.weatherCode)}
+                {getWeatherLabel(weather.weatherCode, t)}
               </p>
             </div>
           </div>
@@ -262,7 +258,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium">Periodo di analisi:</span>
+            <span className="text-sm font-medium">{t("buildings.analysisPeriod")}</span>
             <DateRangePicker value={range} onChange={setRange} />
           </div>
         </CardContent>
@@ -297,14 +293,14 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                   <div>
                     <Building2 className="mx-auto mb-1 h-4 w-4 text-chart-2" />
                     <p className="text-lg font-bold">{building.surface}</p>
-                    <p className="text-[10px] text-muted-foreground">m&sup2;</p>
+                    <p className="text-[10px] text-muted-foreground">{t("common.squareMeters")}</p>
                   </div>
                   <div>
                     <Activity className="mx-auto mb-1 h-4 w-4 text-chart-3" />
                     <p className="text-lg font-bold">
                       {getBuildingTypeName(building.buildingType)}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">Tipologia</p>
+                    <p className="text-[10px] text-muted-foreground">{t("buildings.type")}</p>
                   </div>
                 </div>
 
@@ -329,7 +325,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Gauge className="h-4 w-4" />
-            Confronto Efficienza Energetica
+            {t("buildings.efficiencyCompareTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -344,27 +340,27 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                   <p className="text-sm font-semibold">{building.name}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[10px] text-muted-foreground">COP Medio</p>
+                      <p className="text-[10px] text-muted-foreground">{t("buildings.efficiencyCopAvg")}</p>
                       <p className="text-sm font-semibold tabular-nums">
                         {efficiency?.metrics.averageCop != null
                           ? efficiency.metrics.averageCop.toFixed(2)
-                          : "N/D"}
+                          : t("common.na")}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground">Dispersione (W/K)</p>
+                      <p className="text-[10px] text-muted-foreground">{t("buildings.efficiencyHeatLossShort")}</p>
                       <p className="text-sm font-semibold tabular-nums">
                         {efficiency?.metrics.estimatedHeatLossCoefficient != null
                           ? efficiency.metrics.estimatedHeatLossCoefficient.toFixed(1)
-                          : "N/D"}
+                          : t("common.na")}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted-foreground">Consumo Totale</p>
+                      <p className="text-[10px] text-muted-foreground">{t("buildings.totalConsumption")}</p>
                       <p className="text-sm font-semibold tabular-nums">
                         {efficiency?.metrics.totalEnergyConsumed != null
-                          ? `${efficiency.metrics.totalEnergyConsumed.toFixed(1)} kWh`
-                          : "N/D"}
+                          ? `${efficiency.metrics.totalEnergyConsumed.toFixed(1)} ${t("common.kwh")}`
+                          : t("common.na")}
                       </p>
                     </div>
                   </div>
@@ -374,7 +370,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
           ) : (
             <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
               <AlertCircle className="mr-2 h-4 w-4" />
-              Dati di efficienza non disponibili per il periodo selezionato
+              {t("buildings.efficiencyUnavailable")}
             </div>
           )}
         </CardContent>
@@ -383,7 +379,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
       {/* Comparison Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Riepilogo Comparativo</CardTitle>
+          <CardTitle className="text-base">{t("buildings.comparisonSummary")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -391,7 +387,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
               <thead>
                 <tr className="border-b">
                   <th className="pb-3 pr-4 text-left font-medium text-muted-foreground">
-                    Parametro
+                    {t("buildings.parameter")}
                   </th>
                   {buildings.map(({ building }) => (
                     <th
@@ -405,7 +401,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
               </thead>
               <tbody className="divide-y">
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">Stato</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("common.status")}</td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4">
                       <BuildingStatusBadge status={building.status} />
@@ -413,7 +409,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">Superficie (m&sup2;)</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.surface")} ({t("common.squareMeters")})</td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4 tabular-nums">
                       {building.surface}
@@ -422,7 +418,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                 </tr>
                 <tr>
                   <td className="py-3 pr-4 text-muted-foreground">
-                    <span className="flex items-center gap-1"><Radio className="h-3.5 w-3.5" /> Sensori Attivi</span>
+                    <span className="flex items-center gap-1"><Radio className="h-3.5 w-3.5" /> {t("buildings.activeSensors")}</span>
                   </td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4 tabular-nums">
@@ -432,28 +428,28 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                 </tr>
                 <tr>
                   <td className="py-3 pr-4 text-muted-foreground">
-                    <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5" /> Consumo Attuale (kWh)</span>
+                    <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5" /> {t("buildings.currentConsumptionKwh")}</span>
                   </td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4 font-semibold tabular-nums text-chart-1">
                       {building.currentConsumption != null
                         ? building.currentConsumption.toFixed(1)
-                        : "N/D"}
+                        : t("common.na")}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">kWh/m&sup2;</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.kwhPerSqm")}</td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4 tabular-nums">
                       {building.currentConsumption != null && building.surface > 0
                         ? (building.currentConsumption / building.surface).toFixed(2)
-                        : "N/D"}
+                        : t("common.na")}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">Tipologia</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.type")}</td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4">
                       {getBuildingTypeName(building.buildingType)}
@@ -461,15 +457,15 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">Anno Costruzione</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.constructionYear")}</td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4 tabular-nums">
-                      {building.constructionYear ?? "N/D"}
+                      {building.constructionYear ?? t("common.na")}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">Riscaldamento</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.heatingSystem")}</td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4">
                       {building.heatingSystemType}
@@ -477,7 +473,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">Zona Geografica</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.geographicZone")}</td>
                   {buildings.map(({ building }) => (
                     <td key={building.id} className="py-3 pr-4">
                       {building.geographicZone}
@@ -485,32 +481,32 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">COP Medio</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.efficiencyCopAvg")}</td>
                   {buildings.map(({ building, efficiency }) => (
                     <td key={building.id} className="py-3 pr-4 font-semibold tabular-nums">
                       {efficiency?.metrics.averageCop != null
                         ? efficiency.metrics.averageCop.toFixed(2)
-                        : "N/D"}
+                        : t("common.na")}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">Dispersione (W/K)</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.efficiencyHeatLossShort")}</td>
                   {buildings.map(({ building, efficiency }) => (
                     <td key={building.id} className="py-3 pr-4 tabular-nums">
                       {efficiency?.metrics.estimatedHeatLossCoefficient != null
                         ? efficiency.metrics.estimatedHeatLossCoefficient.toFixed(1)
-                        : "N/D"}
+                        : t("common.na")}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 pr-4 text-muted-foreground">Consumo Totale (kWh)</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{t("buildings.totalConsumptionKwh")}</td>
                   {buildings.map(({ building, efficiency }) => (
                     <td key={building.id} className="py-3 pr-4 font-semibold tabular-nums">
                       {efficiency?.metrics.totalEnergyConsumed != null
                         ? efficiency.metrics.totalEnergyConsumed.toFixed(1)
-                        : "N/D"}
+                        : t("common.na")}
                     </td>
                   ))}
                 </tr>

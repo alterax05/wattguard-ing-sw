@@ -143,7 +143,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const end = new Date(endDate);
 
       if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-        return c.json({ error: "Invalid date range: startDate must be before endDate" }, 400);
+        return c.json({ error: "Invalid date range: startDate must be before endDate", code: "invalid_date_range" }, 400);
       }
 
       // Determine the millisecond bucket size for grouping

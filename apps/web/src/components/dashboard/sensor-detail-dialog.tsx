@@ -1,5 +1,6 @@
 import { useMemo, type KeyboardEvent } from "react"
 import { useNavigate } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,19 +11,7 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { useSensor, useSensorReadings, type SensorWithBuilding, type SensorType } from "@/hooks/use-sensors"
 import { getMonitoringStatus, getMonitoringStatusPresentation } from "@/lib/sensor-status"
-
-function getSensorTypeLabel(sensorType: SensorType) {
-  switch (sensorType) {
-    case "internal_temp":
-      return "Temperatura Interna"
-    case "external_temp":
-      return "Temperatura Esterna"
-    case "energy_meter":
-      return "Contatore Energia"
-    case "gas_meter":
-      return "Contatore Gas"
-  }
-}
+import { getIntlLocale } from "@/lib/dates"
 
 function getSensorUnit(sensorType: SensorType) {
   switch (sensorType) {
@@ -60,6 +49,7 @@ interface SensorDetailDialogProps {
 
 export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, onOpenChange }: SensorDetailDialogProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const effectiveId = sensorId ?? preloadedSensor?.id
   const { data: sensorData, isLoading: sensorLoading } = useSensor(
     preloadedSensor ? undefined : effectiveId
@@ -86,17 +76,19 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
     readingsParams
   )
 
+  const intlLocale = getIntlLocale()
+
   const chartData = useMemo(() => {
     if (!readingsData?.readings) return []
     return readingsData.readings.map((r) => ({
-      time: new Date(r.timestamp).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date(r.timestamp).toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" }),
       value: r.value,
     }))
-  }, [readingsData])
+  }, [readingsData, intlLocale])
 
   const unit = sensor ? getSensorUnit(sensor.sensorType) : ""
   const statusPresentation = sensor
-    ? getMonitoringStatusPresentation(getMonitoringStatus(sensor))
+    ? getMonitoringStatusPresentation(getMonitoringStatus(sensor), t)
     : null
 
   const goToBuilding = () => {
@@ -140,8 +132,8 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                 {sensor.location}
               </DialogTitle>
               <DialogDescription>
-                {sensor.building?.name ?? "Edificio"}
-                {sensor.serialNumber ? ` — S/N: ${sensor.serialNumber}` : ""}
+                {sensor.building?.name ?? t("sensors.building")}
+                {sensor.serialNumber ? t("sensors.serial", { serial: sensor.serialNumber }) : ""}
               </DialogDescription>
             </DialogHeader>
 
@@ -149,11 +141,11 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
               {/* Sensor Info */}
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Tipo Sensore</p>
-                  <p className="text-sm font-semibold">{getSensorTypeLabel(sensor.sensorType)}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t("sensors.typeLabel")}</p>
+                  <p className="text-sm font-semibold">{t(`sensors.type.${sensor.sensorType}`, { defaultValue: sensor.sensorType })}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Stato</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t("common.status")}</p>
                   <Badge
                     variant="secondary"
                     className={statusPresentation?.className}
@@ -162,7 +154,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                   </Badge>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Intervallo</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t("sensors.interval")}</p>
                   <p className="text-sm font-semibold">{sensor.transmissionInterval}s</p>
                 </div>
               </div>
@@ -173,7 +165,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
               <div className="rounded-lg border bg-muted/30 p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <TrendingUp className="h-4 w-4" />
-                  Lettura Corrente
+                  {t("sensors.currentReading")}
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold">
@@ -185,7 +177,9 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                 </div>
                 {sensor.lastReading?.timestamp && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Aggiornato: {new Date(sensor.lastReading.timestamp).toLocaleString("it-IT")}
+                    {t("sensors.updatedAt", {
+                      date: new Date(sensor.lastReading.timestamp).toLocaleString(intlLocale),
+                    })}
                   </p>
                 )}
               </div>
@@ -194,7 +188,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
               <div>
                 <div className="mb-4 flex items-center gap-2 text-sm font-medium">
                   <Calendar className="h-4 w-4" />
-                  Andamento Ultime 24 Ore
+                  {t("sensors.trend24h")}
                 </div>
                 {readingsLoading ? (
                   <Skeleton className="h-64 w-full" />
@@ -218,7 +212,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                   </ChartContainer>
                 ) : (
                   <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                    Nessun dato disponibile per le ultime 24 ore
+                    {t("sensors.noData24h")}
                   </div>
                 )}
               </div>
@@ -230,12 +224,12 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                 <div>
                   <div className="mb-3 flex items-center gap-2 text-sm font-medium">
                     <Building2 className="h-4 w-4" />
-                    Edificio
+                    {t("sensors.building")}
                   </div>
                   <div
                     role="button"
                     tabIndex={0}
-                    aria-label={`Apri dettaglio edificio ${sensor.building.name}`}
+                    aria-label={t("buildings.openDetails", { name: sensor.building.name })}
                     onClick={goToBuilding}
                     onKeyDown={handleBuildingKeyDown}
                     className="group flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -251,11 +245,11 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
 
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Chiudi
+                  {t("common.close")}
                 </Button>
                 <Button onClick={goToEditSensor}>
                   <Pencil className="mr-2 h-4 w-4" />
-                  Modifica sensore
+                  {t("sensors.edit")}
                 </Button>
               </div>
             </div>

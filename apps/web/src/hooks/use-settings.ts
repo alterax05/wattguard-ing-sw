@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/api";
+import { errorMessage } from "@/lib/errors";
 
 // ── Query Key ────────────────────────────────────────────────────────────────
 
@@ -26,16 +27,6 @@ export type UpdateSettingsInput = {
   database?: Partial<SystemConfig["database"]>;
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function extractError(data: unknown, fallback: string): string {
-  if (data && typeof data === "object" && "error" in data) {
-    const err = (data as Record<string, unknown>).error;
-    return typeof err === "string" ? err : fallback;
-  }
-  return fallback;
-}
-
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
 /**
@@ -51,7 +42,7 @@ export function useSettings() {
       if (!res.ok) {
         const data = await res.json();
         throw new Error(
-          extractError(data, "Errore nel caricamento delle impostazioni"),
+          errorMessage(data),
         );
       }
 
@@ -79,7 +70,7 @@ export function useUpdateSettings() {
 
       if (!res.ok) {
         throw new Error(
-          extractError(data, "Errore nel salvataggio delle impostazioni"),
+          errorMessage(data),
         );
       }
 

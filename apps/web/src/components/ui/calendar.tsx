@@ -12,6 +12,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { getIntlLocale } from "@/lib/dates"
 
 function Calendar({
   className,
@@ -39,7 +40,7 @@ function Calendar({
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+          date.toLocaleString(getIntlLocale(), { month: "short" }),
         ...formatters,
       }}
       classNames={{

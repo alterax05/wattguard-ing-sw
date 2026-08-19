@@ -33,9 +33,25 @@ const alertSchema = new Schema(
       enum: ["low", "medium", "high", "critical"],
       required: true,
     },
-    message: {
+    sensorType: {
       type: String,
-      required: true,
+      required: false,
+    },
+    location: {
+      type: String,
+      required: false,
+    },
+    value: {
+      type: Number,
+      required: false,
+    },
+    unit: {
+      type: String,
+      required: false,
+    },
+    limit: {
+      type: Number,
+      required: false,
     },
     status: {
       type: String,

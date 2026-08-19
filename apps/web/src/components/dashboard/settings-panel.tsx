@@ -1,4 +1,5 @@
 import { useEffect } from "react"
+import { useTranslation } from "react-i18next"
 import { useForm, useWatch } from "react-hook-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -69,6 +70,7 @@ function SettingsSkeleton() {
 export function SettingsPanel() {
   const { data: config, isLoading } = useSettings()
   const { mutateAsync: updateSettings, isPending: isSaving } = useUpdateSettings()
+  const { t } = useTranslation()
 
   const {
     register,
@@ -99,32 +101,32 @@ export function SettingsPanel() {
   const onSubmit = async (values: SettingsFormValues) => {
     try {
       await updateSettings(values)
-      toast.success("Impostazioni salvate con successo")
+      toast.success(t("settings.saved"))
       reset(values) // clear dirty state
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore nel salvataggio")
+      toast.error(err instanceof Error ? err.message : t("settings.saveError"))
     }
   }
 
   const handleExportData = async () => {
-    const toastId = toast.loading("Preparazione esportazione dati…")
+    const toastId = toast.loading(t("settings.exportingData"))
     try {
       const date = new Date().toISOString().slice(0, 10)
       await downloadFromEndpoint(
         "/api/settings/export",
         `wattguard-readings-${date}.json`,
       )
-      toast.success("Esportazione dati completata", { id: toastId })
+      toast.success(t("settings.dataExported"), { id: toastId })
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Errore durante l'esportazione",
+        err instanceof Error ? err.message : t("settings.exportError"),
         { id: toastId },
       )
     }
   }
 
   const handleBackup = async () => {
-    const toastId = toast.loading("Backup database in corso…")
+    const toastId = toast.loading(t("settings.backingUp"))
     try {
       const date = new Date().toISOString().slice(0, 10)
       const res = await fetch(
@@ -134,7 +136,7 @@ export function SettingsPanel() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         const msg = (data as Record<string, unknown>).error
-        throw new Error(typeof msg === "string" ? msg : "Errore durante il backup")
+        throw new Error(typeof msg === "string" ? msg : t("settings.backupError"))
       }
       const blob = await res.blob()
       const href = URL.createObjectURL(blob)
@@ -145,10 +147,10 @@ export function SettingsPanel() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(href)
-      toast.success("Backup database completato", { id: toastId })
+      toast.success(t("settings.backupComplete"), { id: toastId })
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Errore durante il backup",
+        err instanceof Error ? err.message : t("settings.backupError"),
         { id: toastId },
       )
     }
@@ -163,18 +165,18 @@ export function SettingsPanel() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            <CardTitle>Sensori</CardTitle>
+            <CardTitle>{t("settings.sensorsTitle")}</CardTitle>
           </div>
           <CardDescription>
-            Configura la frequenza di aggiornamento della dashboard in tempo reale
+            {t("settings.sensorsDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <Label htmlFor="polling.intervalSeconds">Intervallo di polling</Label>
+              <Label htmlFor="polling.intervalSeconds">{t("settings.pollingInterval")}</Label>
               <p className="text-sm text-muted-foreground">
-                Frequenza di aggiornamento automatico della dashboard
+                {t("settings.pollingIntervalHint")}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -190,16 +192,16 @@ export function SettingsPanel() {
                   max: 3600,
                 })}
               />
-              <span className="text-sm text-muted-foreground">secondi</span>
+              <span className="text-sm text-muted-foreground">{t("settings.seconds")}</span>
             </div>
           </div>
 
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <Label>Polling automatico</Label>
+              <Label>{t("settings.autoPolling")}</Label>
               <p className="text-sm text-muted-foreground">
-                Abilita l&apos;aggiornamento automatico della dashboard
+                {t("settings.autoPollingHint")}
               </p>
             </div>
             <Switch
@@ -217,16 +219,16 @@ export function SettingsPanel() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            <CardTitle>Notifiche</CardTitle>
+            <CardTitle>{t("settings.notificationsTitle")}</CardTitle>
           </div>
-          <CardDescription>Gestisci le preferenze di notifica</CardDescription>
+          <CardDescription>{t("settings.notificationsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <Label>Notifiche email</Label>
+              <Label>{t("settings.emailNotifications")}</Label>
               <p className="text-sm text-muted-foreground">
-                Invia email per notifiche critiche
+                {t("settings.emailNotificationsHint")}
               </p>
             </div>
             <Switch
@@ -244,16 +246,16 @@ export function SettingsPanel() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Database className="h-5 w-5" />
-            <CardTitle>Database</CardTitle>
+            <CardTitle>{t("settings.databaseTitle")}</CardTitle>
           </div>
-          <CardDescription>Gestisci i dati storici e le performance</CardDescription>
+          <CardDescription>{t("settings.databaseDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <Label>Retention dati storici</Label>
+              <Label>{t("settings.dataRetention")}</Label>
               <p className="text-sm text-muted-foreground">
-                Periodo di conservazione delle letture dei sensori
+                {t("settings.dataRetentionHint")}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -263,7 +265,7 @@ export function SettingsPanel() {
                 min={1}
                 {...register("database.dataRetentionDays", { valueAsNumber: true })}
               />
-              <span className="text-sm text-muted-foreground">giorni</span>
+              <span className="text-sm text-muted-foreground">{t("settings.days")}</span>
             </div>
           </div>
 
@@ -276,7 +278,7 @@ export function SettingsPanel() {
               onClick={handleExportData}
             >
               <Download className="mr-2 h-4 w-4" />
-              Esporta Dati
+              {t("settings.exportData")}
             </Button>
             <Button
               type="button"
@@ -284,7 +286,7 @@ export function SettingsPanel() {
               onClick={handleBackup}
             >
               <HardDrive className="mr-2 h-4 w-4" />
-              Backup Database
+              {t("settings.backupDatabase")}
             </Button>
           </div>
         </CardContent>
@@ -297,7 +299,7 @@ export function SettingsPanel() {
           size="lg"
           disabled={!isDirty || isSaving}
         >
-          {isSaving ? "Salvataggio…" : "Salva Impostazioni"}
+          {isSaving ? t("common.saving") : t("settings.save")}
         </Button>
       </div>
     </form>

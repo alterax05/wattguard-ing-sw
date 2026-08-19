@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent, type ReactNode } from "react"
+import { useTranslation } from "react-i18next"
 import { useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
-import { it } from "date-fns/locale"
 import {
   Activity,
   AlertCircle,
@@ -32,6 +32,7 @@ import {
   type MonitoringStatus,
 } from "@/lib/sensor-status"
 import { cn } from "@/lib/utils"
+import { getDateFnsLocale, getIntlLocale } from "@/lib/dates"
 import { SensorDetailDialog } from "./sensor-detail-dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -70,19 +71,6 @@ function getSensorIcon(sensorType: SensorType) {
   }
 }
 
-function getSensorTypeLabel(sensorType: SensorType) {
-  switch (sensorType) {
-    case "internal_temp":
-      return "Temperatura interna"
-    case "external_temp":
-      return "Temperatura esterna"
-    case "energy_meter":
-      return "Contatore energia"
-    case "gas_meter":
-      return "Contatore gas"
-  }
-}
-
 function getSensorUnit(sensorType: SensorType) {
   switch (sensorType) {
     case "internal_temp":
@@ -110,8 +98,8 @@ function getLastUpdate(timestamp?: string) {
   if (Number.isNaN(date.getTime())) return null
 
   return {
-    relative: formatDistanceToNow(date, { addSuffix: true, locale: it }),
-    absolute: date.toLocaleString("it-IT"),
+    relative: formatDistanceToNow(date, { addSuffix: true, locale: getDateFnsLocale() }),
+    absolute: date.toLocaleString(getIntlLocale()),
   }
 }
 
@@ -149,10 +137,12 @@ function SensorTableRow({
   sensor: SensorWithBuilding
   onSelect: (sensor: SensorWithBuilding) => void
 }) {
+  const { t } = useTranslation()
   const status = getMonitoringStatus(sensor)
-  const statusPresentation = getMonitoringStatusPresentation(status)
+  const statusPresentation = getMonitoringStatusPresentation(status, t)
   const lastUpdate = getLastUpdate(sensor.lastReading?.timestamp)
   const StatusIcon = statusPresentation.icon
+  const intlLocale = getIntlLocale()
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -166,14 +156,14 @@ function SensorTableRow({
       className="cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       tabIndex={0}
       role="button"
-      aria-label={`Apri dettagli ${sensor.location}`}
+      aria-label={t("sensors.openDetails", { location: sensor.location })}
       onClick={() => onSelect(sensor)}
       onKeyDown={handleKeyDown}
     >
       <TableCell>
         <div className="flex min-w-[170px] items-center gap-2">
           <div className="rounded-md bg-primary/10 p-2 text-primary">{getSensorIcon(sensor.sensorType)}</div>
-          <span className="font-medium">{getSensorTypeLabel(sensor.sensorType)}</span>
+          <span className="font-medium">{t(`sensors.type.${sensor.sensorType}`, { defaultValue: sensor.sensorType })}</span>
         </div>
       </TableCell>
       <TableCell className="min-w-[260px] whitespace-normal">
@@ -182,13 +172,13 @@ function SensorTableRow({
           <div>
             <p className="font-medium">{sensor.location}</p>
             <p className="text-xs text-muted-foreground">
-              {sensor.building?.name ?? "Edificio non disponibile"}
+              {sensor.building?.name ?? t("sensors.buildingUnavailable")}
             </p>
             {sensor.building?.address && (
               <p className="text-xs text-muted-foreground">{sensor.building.address}</p>
             )}
             {sensor.serialNumber && (
-              <p className="mt-1 text-xs text-muted-foreground">S/N: {sensor.serialNumber}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("sensors.serial", { serial: sensor.serialNumber })}</p>
             )}
           </div>
         </div>
@@ -203,8 +193,8 @@ function SensorTableRow({
         <div className="min-w-[110px]">
           <p className="font-medium">
             {sensor.lastReading?.value !== undefined
-              ? sensor.lastReading.value.toLocaleString("it-IT", { maximumFractionDigits: 2 })
-              : "N/D"}
+              ? sensor.lastReading.value.toLocaleString(intlLocale, { maximumFractionDigits: 2 })
+              : t("common.na")}
           </p>
           <p className="text-xs text-muted-foreground">
             {sensor.lastReading?.unit ?? getSensorUnit(sensor.sensorType)}
@@ -221,7 +211,7 @@ function SensorTableRow({
             <p className="text-xs text-muted-foreground">{lastUpdate.absolute}</p>
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">Nessun dato ricevuto</span>
+          <span className="text-sm text-muted-foreground">{t("sensors.noDataReceived")}</span>
         )}
       </TableCell>
       <TableCell className="text-right">
@@ -244,12 +234,14 @@ function SensorTable({
   onRetry: () => void
   onSelect: (sensor: SensorWithBuilding) => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Elenco sensori</CardTitle>
+        <CardTitle>{t("sensors.listTitle")}</CardTitle>
         <CardDescription>
-          Posizione fisica, stato operativo e ultimo aggiornamento dei dispositivi installati.
+          {t("sensors.listDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -257,11 +249,11 @@ function SensorTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Posizione</TableHead>
-                <TableHead>Stato</TableHead>
-                <TableHead>Ultima lettura</TableHead>
-                <TableHead>Ultimo aggiornamento</TableHead>
+                <TableHead>{t("sensors.typeLabel")}</TableHead>
+                <TableHead>{t("sensors.location")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
+                <TableHead>{t("sensors.lastReading")}</TableHead>
+                <TableHead>{t("sensors.lastUpdate")}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -282,11 +274,11 @@ function SensorTable({
           <div className="p-6">
             <Alert variant="destructive">
               <AlertCircle />
-              <AlertTitle>Impossibile caricare i sensori</AlertTitle>
+              <AlertTitle>{t("sensors.loadError")}</AlertTitle>
               <AlertDescription className="flex flex-col gap-3">
                 <p>{errorMessage}</p>
                 <Button className="w-fit" variant="outline" onClick={onRetry}>
-                  Riprova
+                  {t("common.retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -295,9 +287,9 @@ function SensorTable({
           <Empty className="rounded-none border-0">
             <EmptyHeader>
               <EmptyMedia variant="icon"><Gauge /></EmptyMedia>
-              <EmptyTitle>Nessun sensore trovato</EmptyTitle>
+              <EmptyTitle>{t("sensors.notFound")}</EmptyTitle>
               <EmptyDescription>
-                Modifica i filtri oppure verifica che siano stati installati sensori negli edifici.
+                {t("sensors.notFoundDescription")}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -305,12 +297,12 @@ function SensorTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Posizione fisica</TableHead>
-                <TableHead>Stato operativo</TableHead>
-                <TableHead>Ultima lettura</TableHead>
-                <TableHead>Ultimo aggiornamento</TableHead>
-                <TableHead className="w-10"><span className="sr-only">Dettagli</span></TableHead>
+                <TableHead>{t("sensors.typeLabel")}</TableHead>
+                <TableHead>{t("sensors.location")}</TableHead>
+                <TableHead>{t("sensors.operationalStatus")}</TableHead>
+                <TableHead>{t("sensors.lastReading")}</TableHead>
+                <TableHead>{t("sensors.lastUpdate")}</TableHead>
+                <TableHead className="w-10"><span className="sr-only">{t("common.details")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -327,6 +319,7 @@ function SensorTable({
 
 export function SensorsMonitoring() {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState("")
   const [buildingFilter, setBuildingFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
@@ -343,7 +336,8 @@ export function SensorsMonitoring() {
 
   const sensors = sensorsData?.sensors ?? []
   const buildings = buildingsData?.buildings ?? []
-  const normalizedSearch = searchQuery.trim().toLocaleLowerCase("it-IT")
+  const intlLocale = getIntlLocale()
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase(intlLocale)
 
   const filteredSensors = sensors.filter((sensor) => {
     const searchableText = [
@@ -351,11 +345,11 @@ export function SensorsMonitoring() {
       sensor.serialNumber,
       sensor.building?.name,
       sensor.building?.address,
-      getSensorTypeLabel(sensor.sensorType),
+      t(`sensors.type.${sensor.sensorType}`, { defaultValue: sensor.sensorType }),
     ]
       .filter(Boolean)
       .join(" ")
-      .toLocaleLowerCase("it-IT")
+      .toLocaleLowerCase(intlLocale)
     const matchesSearch = !normalizedSearch || searchableText.includes(normalizedSearch)
     const matchesBuilding = buildingFilter === "all" || sensor.buildingId === buildingFilter
     const matchesStatus = statusFilter === "all" || getMonitoringStatus(sensor) === statusFilter
@@ -371,12 +365,12 @@ export function SensorsMonitoring() {
   const errorMessage = sensorsError instanceof Error
     ? sensorsError.message
     : sensorsError
-      ? "Si è verificato un errore durante il caricamento."
+      ? t("sensors.genericLoadError")
       : undefined
 
   const handleRefresh = () => {
     void queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY })
-    toast.success("Stato dei sensori aggiornato")
+    toast.success(t("sensors.dataRefreshed"))
   }
 
   const handleRetry = () => {
@@ -388,35 +382,35 @@ export function SensorsMonitoring() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MonitoringStatCard
           icon={<Radio className="h-5 w-5" />}
-          label="Sensori totali"
+          label={t("sensors.total")}
           value={sensorsLoading ? "..." : totalSensors}
-          description="Termometri e contatori installati"
+          description={t("sensors.totalDescription")}
         />
         <MonitoringStatCard
           icon={<CheckCircle2 className="h-5 w-5" />}
-          label="Attivi"
+          label={t("sensors.status.active")}
           value={sensorsLoading ? "..." : activeSensors}
-          description="Con aggiornamenti regolari"
+          description={t("sensors.activeDescription")}
           className="border-chart-3/30"
         />
         <MonitoringStatCard
           icon={<WifiOff className="h-5 w-5" />}
-          label="Offline"
+          label={t("sensors.status.offline")}
           value={sensorsLoading ? "..." : offlineSensors}
-          description="Nessun dato oltre l'intervallo previsto"
+          description={t("sensors.offlineDescription")}
           className="border-muted-foreground/30"
         />
         <MonitoringStatCard
           icon={<Thermometer className="h-5 w-5" />}
-          label="Termometri"
+          label={t("sensors.thermometers")}
           value={sensorsLoading ? "..." : thermometerSensors}
-          description="Temperatura interna ed esterna"
+          description={t("sensors.thermometersDescription")}
         />
         <MonitoringStatCard
           icon={<Zap className="h-5 w-5" />}
-          label="Contatori"
+          label={t("sensors.meters")}
           value={sensorsLoading ? "..." : meterSensors}
-          description="Energia e gas"
+          description={t("sensors.metersDescription")}
         />
       </div>
 
@@ -424,15 +418,15 @@ export function SensorsMonitoring() {
         <CardHeader>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Filtri e ricerca</CardTitle>
+              <CardTitle>{t("sensors.filtersTitle")}</CardTitle>
               <CardDescription>
-                Aggiornamento automatico ogni 60 secondi
-                {sensorsFetching && " · aggiornamento in corso"}
+                {t("sensors.autoRefresh")}
+                {sensorsFetching && t("sensors.refreshing")}
               </CardDescription>
             </div>
             <Button variant="outline" onClick={handleRefresh} disabled={sensorsFetching}>
               <RefreshCw className={cn("mr-2 h-4 w-4", sensorsFetching && "animate-spin")} />
-              Aggiorna
+              {t("common.refresh")}
             </Button>
           </div>
         </CardHeader>
@@ -441,19 +435,19 @@ export function SensorsMonitoring() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Cerca posizione, edificio o seriale..."
+                placeholder={t("sensors.searchPlaceholderMonitoring")}
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 className="pl-9"
-                aria-label="Cerca sensori"
+                aria-label={t("sensors.searchAria")}
               />
             </div>
             <Select value={buildingFilter} onValueChange={setBuildingFilter}>
-              <SelectTrigger aria-label="Filtra per edificio">
-                <SelectValue placeholder="Edificio" />
+              <SelectTrigger aria-label={t("sensors.filterByBuilding")}>
+                <SelectValue placeholder={t("sensors.building")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutti gli edifici</SelectItem>
+                <SelectItem value="all">{t("sensors.allBuildings")}</SelectItem>
                 {buildings.map((building) => (
                   <SelectItem key={building.id} value={building.id}>
                     {building.name}
@@ -465,15 +459,15 @@ export function SensorsMonitoring() {
               value={statusFilter}
               onValueChange={(value) => setStatusFilter(value as StatusFilter)}
             >
-              <SelectTrigger aria-label="Filtra per stato operativo">
-                <SelectValue placeholder="Stato operativo" />
+              <SelectTrigger aria-label={t("sensors.filterByStatus")}>
+                <SelectValue placeholder={t("sensors.operationalStatus")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutti gli stati</SelectItem>
-                <SelectItem value="active">Attivi</SelectItem>
-                <SelectItem value="offline">Offline</SelectItem>
-                <SelectItem value="maintenance">Manutenzione</SelectItem>
-                <SelectItem value="error">Errore</SelectItem>
+                <SelectItem value="all">{t("sensors.allStatuses")}</SelectItem>
+                <SelectItem value="active">{t("sensors.status.active")}</SelectItem>
+                <SelectItem value="offline">{t("sensors.status.offline")}</SelectItem>
+                <SelectItem value="maintenance">{t("sensors.status.maintenance")}</SelectItem>
+                <SelectItem value="error">{t("sensors.status.error")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -487,15 +481,15 @@ export function SensorsMonitoring() {
       >
         <TabsList className="grid h-auto w-full grid-cols-3">
           <TabsTrigger value="all">
-            Tutti <span className="ml-1 text-muted-foreground">({filteredSensors.length})</span>
+            {t("common.all")} <span className="ml-1 text-muted-foreground">({filteredSensors.length})</span>
           </TabsTrigger>
           <TabsTrigger value="thermometers">
             <Thermometer className="mr-2 h-4 w-4" />
-            Termometri <span className="ml-1 text-muted-foreground">({filteredSensors.filter((sensor) => belongsToGroup(sensor, "thermometers")).length})</span>
+            {t("sensors.thermometersWithCount", { count: filteredSensors.filter((sensor) => belongsToGroup(sensor, "thermometers")).length })}
           </TabsTrigger>
           <TabsTrigger value="meters">
             <Activity className="mr-2 h-4 w-4" />
-            Contatori <span className="ml-1 text-muted-foreground">({filteredSensors.filter((sensor) => belongsToGroup(sensor, "meters")).length})</span>
+            {t("sensors.metersWithCount", { count: filteredSensors.filter((sensor) => belongsToGroup(sensor, "meters")).length })}
           </TabsTrigger>
         </TabsList>
 

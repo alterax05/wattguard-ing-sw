@@ -1,8 +1,10 @@
 import { useLocation, Link, Outlet } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { useLogout } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, MapPin, Building2, Bell, Radio, Settings, LogOut, Users } from "lucide-react"
 import { ModeToggle } from "@/components/ui/mode-toggle"
+import { LanguageToggle } from "@/components/ui/language-toggle"
 import { useTheme } from "next-themes"
 import { useContext } from "react"
 import { AuthContext } from "@/lib/auth"
@@ -14,6 +16,7 @@ export function DashboardLayout() {
   const { theme } = useTheme()
   const logout = useLogout()
   const location = useLocation()
+  const { t } = useTranslation()
   const pathname = location.pathname
 
   // Derive a display name: use `name` if available, otherwise extract from email
@@ -24,18 +27,18 @@ export function DashboardLayout() {
   }
 
   const navItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-    { id: "map", label: "Mappa Edifici", icon: MapPin, href: "/dashboard/map" },
-    { id: "buildings", label: "Edifici", icon: Building2, href: "/dashboard/buildings" },
-    { id: "sensors", label: "Sensori", icon: Radio, href: "/dashboard/sensors" },
-    { id: "alerts", label: "Notifiche", icon: Bell, href: "/dashboard/alerts" },
+    { id: "dashboard", label: t("nav.dashboard"), icon: LayoutDashboard, href: "/dashboard" },
+    { id: "map", label: t("nav.map"), icon: MapPin, href: "/dashboard/map" },
+    { id: "buildings", label: t("nav.buildings"), icon: Building2, href: "/dashboard/buildings" },
+    { id: "sensors", label: t("nav.sensors"), icon: Radio, href: "/dashboard/sensors" },
+    { id: "alerts", label: t("nav.alerts"), icon: Bell, href: "/dashboard/alerts" },
   ]
 
   const adminNavItems =
     user?.role === "admin"
       ? [
-          { id: "users", label: "Utenti", icon: Users, href: "/dashboard/users" },
-          { id: "settings", label: "Impostazioni", icon: Settings, href: "/dashboard/settings" },
+          { id: "users", label: t("nav.users"), icon: Users, href: "/dashboard/users" },
+          { id: "settings", label: t("nav.settings"), icon: Settings, href: "/dashboard/settings" },
         ]
       : []
 
@@ -56,8 +59,8 @@ export function DashboardLayout() {
             className="h-10 w-10 object-contain"
           />
           <div className="hidden flex-col lg:flex">
-            <span className="text-sm font-semibold">Comune di Trento</span>
-            <span className="text-xs text-muted-foreground">Gestione Energetica</span>
+            <span className="text-sm font-semibold">{t("nav.systemName")}</span>
+            <span className="text-xs text-muted-foreground">{t("nav.systemSubtitle")}</span>
           </div>
         </div>
 
@@ -115,7 +118,9 @@ export function DashboardLayout() {
             </div>
             <div className="hidden flex-1 overflow-hidden lg:block">
               <p className="truncate text-sm font-medium">{displayName}</p>
-              <p className="truncate text-xs text-muted-foreground capitalize">{user?.role}</p>
+              <p className="truncate text-xs text-muted-foreground capitalize">
+                {user?.role === "admin" ? t("users.role.admin") : t("users.role.operator")}
+              </p>
             </div>
           </div>
           <div className="flex flex-col gap-2 lg:flex-row">
@@ -125,15 +130,16 @@ export function DashboardLayout() {
               size="sm"
               onClick={handleLogout}
               disabled={logout.isPending}
-              title="Esci"
+              title={t("nav.logout")}
             >
               <LogOut className="h-4 w-4 shrink-0 lg:mr-2" />
               <span className="hidden lg:inline">
-                {logout.isPending ? "Uscita..." : "Esci"}
+                {logout.isPending ? t("nav.loggingOut") : t("nav.logout")}
               </span>
             </Button>
-            <div className="flex justify-center lg:justify-start">
+            <div className="flex justify-center gap-2 lg:justify-start">
               <ModeToggle />
+              <LanguageToggle />
             </div>
           </div>
         </div>

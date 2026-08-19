@@ -1,11 +1,14 @@
+import { useTranslation } from "react-i18next"
 import { AlertsManagement } from "@/components/dashboard/alerts-management"
 
 export function AlertsPage() {
+  const { t } = useTranslation()
+
   return (
     <div className="space-y-6 p-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Gestione Notifiche</h1>
-        <p className="text-muted-foreground">Monitora e gestisci le notifiche e gli avvisi del sistema</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("alerts.pageTitle")}</h1>
+        <p className="text-muted-foreground">{t("alerts.pageSubtitle")}</p>
       </div>
       <AlertsManagement />
     </div>

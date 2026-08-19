@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { useSensors, type SensorWithBuilding, type SensorType, type SensorStatus } from "@/hooks/use-sensors"
 import { useBuildings } from "@/hooks/use-buildings"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +13,7 @@ import { Activity, Zap, Flame, Thermometer, Wind, AlertCircle, Search, RefreshCw
 import { SensorDetailDialog } from "./sensor-detail-dialog"
 import { useQueryClient } from "@tanstack/react-query"
 import { SENSORS_QUERY_KEY } from "@/hooks/use-sensors"
+import { getIntlLocale } from "@/lib/dates"
 import { toast } from "sonner"
 
 function getSensorIcon(sensorType: SensorType) {
@@ -26,32 +28,6 @@ function getSensorIcon(sensorType: SensorType) {
       return <Wind className="h-4 w-4" />
     default:
       return <Activity className="h-4 w-4" />
-  }
-}
-
-function getSensorTypeLabel(sensorType: SensorType) {
-  switch (sensorType) {
-    case "internal_temp":
-      return "Temp. Interna"
-    case "external_temp":
-      return "Temp. Esterna"
-    case "energy_meter":
-      return "Contatore Energia"
-    case "gas_meter":
-      return "Contatore Gas"
-  }
-}
-
-function getStatusLabel(status: SensorStatus) {
-  switch (status) {
-    case "active":
-      return "Attivo"
-    case "inactive":
-      return "Inattivo"
-    case "maintenance":
-      return "Manutenzione"
-    case "error":
-      return "Errore"
   }
 }
 
@@ -84,6 +60,7 @@ type TabKey = "all" | "energy_meter" | "gas_meter" | "internal_temp" | "external
 
 export function SensorsManagement() {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState("")
   const [buildingFilter, setBuildingFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -115,21 +92,23 @@ export function SensorsManagement() {
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY })
-    toast.success("Dati sensori aggiornati")
+    toast.success(t("sensors.dataRefreshed"))
   }
+
+  const intlLocale = getIntlLocale()
 
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Filtri e Ricerca</CardTitle>
+          <CardTitle>{t("sensors.filtersTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Cerca sensore o edificio..."
+                placeholder={t("sensors.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -138,10 +117,10 @@ export function SensorsManagement() {
 
             <Select value={buildingFilter} onValueChange={setBuildingFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Edificio" />
+                <SelectValue placeholder={t("sensors.building")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutti gli edifici</SelectItem>
+                <SelectItem value="all">{t("sensors.allBuildings")}</SelectItem>
                 {buildings.map((building) => (
                   <SelectItem key={building.id} value={building.id}>
                     {building.name}
@@ -152,20 +131,20 @@ export function SensorsManagement() {
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Stato" />
+                <SelectValue placeholder={t("common.status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutti gli stati</SelectItem>
-                <SelectItem value="active">Attivi</SelectItem>
-                <SelectItem value="inactive">Inattivi</SelectItem>
-                <SelectItem value="maintenance">Manutenzione</SelectItem>
-                <SelectItem value="error">Errore</SelectItem>
+                <SelectItem value="all">{t("sensors.allStatuses")}</SelectItem>
+                <SelectItem value="active">{t("sensors.status.active")}</SelectItem>
+                <SelectItem value="inactive">{t("sensors.status.inactive")}</SelectItem>
+                <SelectItem value="maintenance">{t("sensors.status.maintenance")}</SelectItem>
+                <SelectItem value="error">{t("sensors.status.error")}</SelectItem>
               </SelectContent>
             </Select>
 
             <Button onClick={handleRefresh} variant="outline">
               <RefreshCw className="mr-2 h-4 w-4" />
-              Aggiorna
+              {t("common.refresh")}
             </Button>
           </div>
         </CardContent>
@@ -173,22 +152,22 @@ export function SensorsManagement() {
 
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all">Tutti ({sensorsByType.all.length})</TabsTrigger>
+          <TabsTrigger value="all">{t("sensors.all", { count: sensorsByType.all.length })}</TabsTrigger>
           <TabsTrigger value="energy_meter">
             <Zap className="mr-2 h-4 w-4" />
-            Energia ({sensorsByType.energy_meter.length})
+            {t("sensors.energy", { count: sensorsByType.energy_meter.length })}
           </TabsTrigger>
           <TabsTrigger value="gas_meter">
             <Flame className="mr-2 h-4 w-4" />
-            Gas ({sensorsByType.gas_meter.length})
+            {t("sensors.gas", { count: sensorsByType.gas_meter.length })}
           </TabsTrigger>
           <TabsTrigger value="internal_temp">
             <Thermometer className="mr-2 h-4 w-4" />
-            Temp. Int. ({sensorsByType.internal_temp.length})
+            {t("sensors.tempInternalShort", { count: sensorsByType.internal_temp.length })}
           </TabsTrigger>
           <TabsTrigger value="external_temp">
             <Wind className="mr-2 h-4 w-4" />
-            Temp. Est. ({sensorsByType.external_temp.length})
+            {t("sensors.tempExternalShort", { count: sensorsByType.external_temp.length })}
           </TabsTrigger>
         </TabsList>
 
@@ -220,7 +199,7 @@ export function SensorsManagement() {
                 {typeSensors.length === 0 ? (
                   <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
                     <AlertCircle className="mb-2 h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Nessun sensore trovato</p>
+                    <p className="text-sm text-muted-foreground">{t("sensors.notFound")}</p>
                   </div>
                 ) : (
                   typeSensors.map((sensor) => (
@@ -242,25 +221,27 @@ export function SensorsManagement() {
                           </div>
                         </div>
                         <Badge className={getStatusColor(sensor.status)} variant="secondary">
-                          {getStatusLabel(sensor.status)}
+                          {t(`sensors.status.${sensor.status}`, { defaultValue: sensor.status })}
                         </Badge>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2">
                           <div className="flex items-baseline justify-between">
                             <span className="text-2xl font-bold">
-                              {sensor.lastReading?.value?.toFixed(2) ?? "N/A"}
+                              {sensor.lastReading?.value?.toFixed(2) ?? t("common.na")}
                             </span>
                             <span className="text-sm text-muted-foreground">
                               {sensor.lastReading?.unit ?? getSensorUnit(sensor.sensorType)}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {getSensorTypeLabel(sensor.sensorType)}
+                            {t(`sensors.type.${sensor.sensorType}`, { defaultValue: sensor.sensorType })}
                           </p>
                           {sensor.lastReading?.timestamp && (
                             <p className="text-xs text-muted-foreground">
-                              Ultimo aggiornamento: {new Date(sensor.lastReading.timestamp).toLocaleString("it-IT")}
+                              {t("sensors.lastUpdate", {
+                                date: new Date(sensor.lastReading.timestamp).toLocaleString(intlLocale),
+                              })}
                             </p>
                           )}
                         </div>

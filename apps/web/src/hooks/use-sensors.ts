@@ -5,18 +5,9 @@ import {
   type PlaceholderDataFunction,
 } from "@tanstack/react-query";
 import { client } from "@/lib/api";
+import { errorMessage } from "@/lib/errors";
 import { BUILDINGS_QUERY_KEY } from "./use-buildings";
 import { DASHBOARD_QUERY_KEY } from "./use-dashboard";
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function extractError(data: unknown, fallback: string): string {
-  if (data && typeof data === "object" && "error" in data) {
-    const err = (data as Record<string, unknown>).error;
-    return typeof err === "string" ? err : fallback;
-  }
-  return fallback;
-}
 
 // ── Query Keys ──────────────────────────────────────────────────────────────
 
@@ -117,7 +108,7 @@ async function fetchSensorPage(params?: ListSensorsParams): Promise<SensorListDa
 
   if (!res.ok) {
     const data = await res.json();
-    throw new Error(extractError(data, "Errore nel caricamento dei sensori"));
+    throw new Error(errorMessage(data));
   }
 
   return (await res.json()) as SensorListData;
@@ -189,7 +180,7 @@ export function useSensor(id: string | undefined) {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Sensore non trovato"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -221,7 +212,7 @@ export function useSensorReadings(id: string | undefined, params?: SensorReading
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Errore nel caricamento delle letture"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -259,7 +250,7 @@ export function useCreateSensor() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Errore nella creazione del sensore"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -298,7 +289,7 @@ export function useUpdateSensor() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Errore nell'aggiornamento del sensore"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -328,7 +319,7 @@ export function useDeleteSensor() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Errore nell'eliminazione del sensore"));
+        throw new Error(errorMessage(data));
       }
 
       return data;

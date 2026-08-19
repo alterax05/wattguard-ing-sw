@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/api";
+import { errorMessage } from "@/lib/errors";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export interface Alert {
   id: string;
@@ -10,7 +12,11 @@ export interface Alert {
   type: string;
   thresholdType?: "min" | "max";
   severity: "low" | "medium" | "high" | "critical";
-  message: string;
+  sensorType?: string;
+  location?: string;
+  value?: number;
+  unit?: string;
+  limit?: number;
   status: "active" | "acknowledged" | "resolved";
   acknowledgedBy?: string;
   acknowledgedAt?: string;
@@ -36,10 +42,11 @@ export function useAlerts(params?: { status?: string; buildingId?: string }) {
       const query: Record<string, string> = {};
       if (params?.status) query.status = params.status;
       if (params?.buildingId) query.buildingId = params.buildingId;
-      
+
       const res = await client.api.alerts.$get({ query });
       if (!res.ok) {
-        throw new Error("Failed to fetch alerts");
+        const data = await res.json();
+        throw new Error(errorMessage(data));
       }
       return await res.json() as ListAlertsResponse;
     },
@@ -48,6 +55,7 @@ export function useAlerts(params?: { status?: string; buildingId?: string }) {
 
 export function useAcknowledgeAlert() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   return useMutation({
     mutationFn: async (alertId: string) => {
@@ -56,22 +64,23 @@ export function useAcknowledgeAlert() {
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
-        throw new Error((error as { error?: string }).error || "Failed to acknowledge alert");
+        throw new Error(errorMessage(error));
       }
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Notifica presa in carico");
+      toast.success(t("alerts.acknowledgedToast"));
       queryClient.invalidateQueries({ queryKey: ["alerts"] });
     },
     onError: (error) => {
-      toast.error(`Errore: ${error.message}`);
+      toast.error(t("errors.prefix", { message: error.message }));
     },
   });
 }
 
 export function useResolveAlert() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   return useMutation({
     mutationFn: async (alertId: string) => {
@@ -80,16 +89,16 @@ export function useResolveAlert() {
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
-        throw new Error((error as { error?: string }).error || "Failed to resolve alert");
+        throw new Error(errorMessage(error));
       }
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Notifica risolta");
+      toast.success(t("alerts.resolvedToast"));
       queryClient.invalidateQueries({ queryKey: ["alerts"] });
     },
     onError: (error) => {
-      toast.error(`Errore: ${error.message}`);
+      toast.error(t("errors.prefix", { message: error.message }));
     },
   });
 }

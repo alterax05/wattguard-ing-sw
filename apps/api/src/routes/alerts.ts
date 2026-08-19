@@ -53,7 +53,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const filter: QueryFilter<AlertDocument> = {};
       if (buildingId) {
         if (!Types.ObjectId.isValid(buildingId)) {
-          return c.json({ error: "Invalid building ID format" }, 400);
+          return c.json({ error: "Invalid building ID format", code: "invalid_building_id" }, 400);
         }
         filter.buildingId = buildingId;
       }
@@ -82,7 +82,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
             type: a.type,
             thresholdType: a.thresholdType ?? undefined,
             severity: a.severity,
-            message: a.message,
+            sensorType: a.sensorType ?? undefined,
+            location: a.location ?? undefined,
+            value: a.value ?? undefined,
+            unit: a.unit ?? undefined,
+            limit: a.limit ?? undefined,
             status: a.status,
             acknowledgedBy: a.acknowledgedBy ?? undefined,
             acknowledgedAt: a.acknowledgedAt?.toISOString() ?? undefined,
@@ -99,7 +103,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         } satisfies ListAlertsResponse);
       } catch (error) {
         console.error("Error fetching alerts:", error);
-        return c.json({ error: "Internal server error" }, 500);
+        return c.json({ error: "Internal server error", code: "internal_server_error" }, 500);
       }
     }
   )
@@ -130,17 +134,17 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const user = c.get("userDoc");
 
       if (!Types.ObjectId.isValid(id)) {
-        return c.json({ error: "Invalid alert ID format" }, 400);
+        return c.json({ error: "Invalid alert ID format", code: "invalid_alert_id" }, 400);
       }
 
       try {
         const alert = await AlertModel.findById(id);
         if (!alert) {
-          return c.json({ error: "Alert not found" }, 404);
+          return c.json({ error: "Alert not found", code: "alert_not_found" }, 404);
         }
 
         if (alert.status !== "active") {
-          return c.json({ error: "Only active alerts can be acknowledged" }, 400);
+          return c.json({ error: "Only active alerts can be acknowledged", code: "alert_not_active" }, 400);
         }
 
         alert.status = "acknowledged";
@@ -158,7 +162,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
             type: alert.type,
             thresholdType: alert.thresholdType ?? undefined,
             severity: alert.severity,
-            message: alert.message,
+            sensorType: alert.sensorType ?? undefined,
+            location: alert.location ?? undefined,
+            value: alert.value ?? undefined,
+            unit: alert.unit ?? undefined,
+            limit: alert.limit ?? undefined,
             status: alert.status,
             acknowledgedBy: alert.acknowledgedBy ?? undefined,
             acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? undefined,
@@ -170,7 +178,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         } satisfies UpdateAlertStatusResponse);
       } catch (error) {
         console.error("Error acknowledging alert:", error);
-        return c.json({ error: "Internal server error" }, 500);
+        return c.json({ error: "Internal server error", code: "internal_server_error" }, 500);
       }
     }
   )
@@ -201,17 +209,17 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const user = c.get("userDoc");
 
       if (!Types.ObjectId.isValid(id)) {
-        return c.json({ error: "Invalid alert ID format" }, 400);
+        return c.json({ error: "Invalid alert ID format", code: "invalid_alert_id" }, 400);
       }
 
       try {
         const alert = await AlertModel.findById(id);
         if (!alert) {
-          return c.json({ error: "Alert not found" }, 404);
+          return c.json({ error: "Alert not found", code: "alert_not_found" }, 404);
         }
 
         if (alert.status === "resolved") {
-          return c.json({ error: "Alert is already resolved" }, 400);
+          return c.json({ error: "Alert is already resolved", code: "alert_already_resolved" }, 400);
         }
 
         alert.status = "resolved";
@@ -229,7 +237,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
             type: alert.type,
             thresholdType: alert.thresholdType ?? undefined,
             severity: alert.severity,
-            message: alert.message,
+            sensorType: alert.sensorType ?? undefined,
+            location: alert.location ?? undefined,
+            value: alert.value ?? undefined,
+            unit: alert.unit ?? undefined,
+            limit: alert.limit ?? undefined,
             status: alert.status,
             acknowledgedBy: alert.acknowledgedBy ?? undefined,
             acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? undefined,
@@ -241,7 +253,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         } satisfies UpdateAlertStatusResponse);
       } catch (error) {
         console.error("Error resolving alert:", error);
-        return c.json({ error: "Internal server error" }, 500);
+        return c.json({ error: "Internal server error", code: "internal_server_error" }, 500);
       }
     }
   );
