@@ -1,6 +1,7 @@
 /**
  * Local password authentication routes
  */
+import { getRequestLocale } from "../lib/i18n";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import { describeRoute, resolver, validator } from "hono-openapi";
@@ -74,19 +75,19 @@ const app = new Hono()
       const invite = await Invite.findOne({ tokenHash, status: "pending" });
 
       if (!invite) {
-        return c.json({ error: "Invalid or already used invite" }, 400);
+        return c.json({ error: "Invalid or already used invite", code: "invite_invalid_or_used" }, 400);
       }
 
       if (invite.expiresAt < new Date()) {
         invite.status = "expired";
         await invite.save();
-        return c.json({ error: "Invite has expired" }, 400);
+        return c.json({ error: "Invite has expired", code: "invite_expired" }, 400);
       }
 
       // Check if user already exists
       const existingUser = await User.findOne({ email: invite.email });
       if (existingUser) {
-        return c.json({ error: "User already exists" }, 400);
+        return c.json({ error: "User already exists", code: "user_email_exists" }, 400);
       }
 
       // Hash password using Bun's built-in password hasher
@@ -188,11 +189,11 @@ const app = new Hono()
       
       // Check if user exists and has password after verification
       if (!user || !user.passwordHash || !valid) {
-        return c.json({ error: "Invalid credentials" }, 401);
+        return c.json({ error: "Invalid credentials", code: "invalid_credentials" }, 401);
       }
 
       if (user.isDisabled) {
-        return c.json({ error: "Account is disabled" }, 403);
+        return c.json({ error: "Account is disabled", code: "account_disabled" }, 403);
       }
 
       // Update last login
@@ -274,7 +275,7 @@ const app = new Hono()
           });
 
           // Send email
-          await sendPasswordResetEmail(user.email, token);
+          await sendPasswordResetEmail(user.email, token, getRequestLocale(c));
         }
 
         return c.json(successResponse);
@@ -324,12 +325,12 @@ const app = new Hono()
       const resetToken = await PasswordResetToken.findOne({ tokenHash });
 
       if (!resetToken) {
-        return c.json({ error: "Invalid reset token" }, 404);
+        return c.json({ error: "Invalid reset token", code: "invalid_reset_token" }, 404);
       }
 
       if (resetToken.expiresAt < new Date()) {
         await PasswordResetToken.findByIdAndDelete(resetToken._id);
-        return c.json({ error: "Reset token has expired" }, 400);
+        return c.json({ error: "Reset token has expired", code: "reset_token_expired" }, 400);
       }
 
       return c.json({ valid: true } satisfies ValidateResetTokenResponse);
@@ -376,18 +377,18 @@ const app = new Hono()
       const resetToken = await PasswordResetToken.findOne({ tokenHash });
 
       if (!resetToken) {
-        return c.json({ error: "Invalid reset token" }, 404);
+        return c.json({ error: "Invalid reset token", code: "invalid_reset_token" }, 404);
       }
 
       if (resetToken.expiresAt < new Date()) {
         await PasswordResetToken.findByIdAndDelete(resetToken._id);
-        return c.json({ error: "Reset token has expired" }, 400);
+        return c.json({ error: "Reset token has expired", code: "reset_token_expired" }, 400);
       }
 
       // Find user
       const user = await User.findById(resetToken.userId);
       if (!user) {
-        return c.json({ error: "User not found" }, 404);
+        return c.json({ error: "User not found", code: "user_not_found" }, 404);
       }
 
       // Hash new password

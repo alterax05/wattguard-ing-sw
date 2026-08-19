@@ -135,13 +135,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Check if admin (this route should only be accessible to admins)
       if (payload.role !== "admin") {
-        return c.json({ error: "Only admins can create building types" }, 403);
+        return c.json({ error: "Only admins can create building types", code: "admin_only" }, 403);
       }
 
       // Check for duplicate name
       const existing = await BuildingType.findOne({ name });
       if (existing) {
-        return c.json({ error: "Building type with this name already exists" }, 400);
+        return c.json({ error: "Building type with this name already exists", code: "building_type_name_exists" }, 400);
       }
 
       // Create building type
@@ -228,20 +228,20 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Check if admin
       if (payload.role !== "admin") {
-        return c.json({ error: "Only admins can update building types" }, 403);
+        return c.json({ error: "Only admins can update building types", code: "admin_only" }, 403);
       }
 
       // Find building type
       const buildingType = await BuildingType.findById(id);
       if (!buildingType) {
-        return c.json({ error: "Building type not found" }, 404);
+        return c.json({ error: "Building type not found", code: "building_type_not_found" }, 404);
       }
 
       // Check for duplicate name if name is being updated
       if (updates.name && updates.name !== buildingType.name) {
         const existing = await BuildingType.findOne({ name: updates.name });
         if (existing) {
-          return c.json({ error: "Building type with this name already exists" }, 400);
+          return c.json({ error: "Building type with this name already exists", code: "building_type_name_exists" }, 400);
         }
       }
 
@@ -324,13 +324,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Check if admin
       if (payload.role !== "admin") {
-        return c.json({ error: "Only admins can delete building types" }, 403);
+        return c.json({ error: "Only admins can delete building types", code: "admin_only" }, 403);
       }
 
       // Find building type
       const buildingType = await BuildingType.findById(id);
       if (!buildingType) {
-        return c.json({ error: "Building type not found" }, 404);
+        return c.json({ error: "Building type not found", code: "building_type_not_found" }, 404);
       }
 
       // Check if any buildings use this type
@@ -339,6 +339,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json(
           {
             error: `Cannot delete building type: ${buildingsUsingType} building(s) are using it`,
+            code: "building_type_in_use",
           },
           400
         );

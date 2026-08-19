@@ -36,17 +36,17 @@ export const loadUserDoc = () => createMiddleware<{
   const payload = c.get("jwtPayload");
 
   if (!payload || !payload.sub) {
-    return c.json({ error: "Unauthorized: Invalid token payload" }, 401);
+    return c.json({ error: "Unauthorized: Invalid token payload", code: "unauthorized_invalid_token" }, 401);
   }
 
   // Fetch user from DB to ensure still exists and not disabled
   const userDoc = await User.findById(payload.sub);
   if (!userDoc) {
-    return c.json({ error: "Unauthorized: User not found" }, 401);
+    return c.json({ error: "Unauthorized: User not found", code: "unauthorized_user_not_found" }, 401);
   }
 
   if (userDoc.isDisabled) {
-    return c.json({ error: "Forbidden: Account disabled" }, 403);
+    return c.json({ error: "Forbidden: Account disabled", code: "account_disabled" }, 403);
   }
 
   // Attach userDoc to context
@@ -69,14 +69,14 @@ export const requireRole = (...roles: ("admin" | "operator")[]) =>
 
     if (!payload) {
       return c.json(
-        { error: "Forbidden: Authentication required" },
+        { error: "Forbidden: Authentication required", code: "unauthorized_invalid_token" },
         403
       );
     }
 
     if (!roles.includes(payload.role)) {
       return c.json(
-        { error: `Forbidden: Requires one of: ${roles.join(", ")}` },
+        { error: `Forbidden: Requires one of: ${roles.join(", ")}`, code: "forbidden_role" },
         403
       );
     }

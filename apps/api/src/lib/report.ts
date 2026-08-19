@@ -2,11 +2,14 @@ import path from "path";
 import { Types } from "mongoose";
 import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
+import type { TFunction } from "i18next";
 import { Building } from "../models/Building";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
 import fullLogoUrl from "../../../../shared/assets/full-logo.png";
+import { ensureI18nReady, getTranslator } from "./i18n";
+import { DEFAULT_LOCALE, type LocaleCode } from "@wattguard/shared";
 import {
   aggregateConsumptionForBuildings,
   aggregateDailyConsumptionForBuildings,
@@ -227,6 +230,20 @@ function formatNum(value: number | null, digits = 2): string {
   return value === null ? "—" : value.toFixed(digits);
 }
 
+function statusLabel(status: string, t: TFunction): string {
+  switch (status) {
+    case "active":
+      return t("reports.statusActive");
+    case "inactive":
+      return t("reports.statusInactive");
+    case "decommissioned":
+      return t("reports.statusDecommissioned");
+    default:
+      break;
+  }
+  return status;
+}
+
 function drawSectionTitle(
   doc: PDFKit.PDFDocument,
   text: string,
@@ -266,20 +283,25 @@ function drawLabelValueRow(
   return y + Math.max(labelHeight, valueHeight) + 5;
 }
 
-function drawSummaryTable(doc: PDFKit.PDFDocument, data: ReportData, startY: number): number {
+function drawSummaryTable(
+  doc: PDFKit.PDFDocument,
+  data: ReportData,
+  t: TFunction,
+  startY: number,
+): number {
   const tableLeft = 48;
   const tableWidth = 595 - 96;
   const colWidths = [150, 80, 90, 80, 80, 70]; // name, type, zone, kWh, avg kW, alerts
-  const headerY = drawSectionTitle(doc, "Riepilogo", startY);
+  const headerY = drawSectionTitle(doc, t("reports.summary"), startY);
 
   // Column headers
   const headers = [
-    "Edificio",
-    "Tipologia",
-    "Zona",
-    "Consumo",
-    "Pot. media",
-    "Allarmi",
+    t("reports.colBuilding"),
+    t("reports.colType"),
+    t("reports.colZone"),
+    t("reports.colConsumption"),
+    t("reports.colAvgPower"),
+    t("reports.colAlarms"),
   ];
   doc.font("Helvetica-Bold").fontSize(8.5).fillColor(PDF_MUTED);
   const headerCells = headers.map((header, i) => ({
@@ -335,6 +357,7 @@ function drawSummaryTable(doc: PDFKit.PDFDocument, data: ReportData, startY: num
 function drawDailyChart(
   doc: PDFKit.PDFDocument,
   points: DailyConsumptionPoint[],
+  t: TFunction,
   y: number,
 ): number {
   const chartLeft = 48;
@@ -348,7 +371,7 @@ function drawDailyChart(
       .font("Helvetica")
       .fontSize(9)
       .fillColor(PDF_MUTED)
-      .text("Nessuna lettura nel periodo selezionato.", chartLeft, chartTop);
+      .text(t("reports.noReadings"), chartLeft, chartTop);
     return chartTop + 20;
   }
 
@@ -414,15 +437,10 @@ function drawDailyChart(
   return chartTop + chartHeight + 10;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  active: "Attivo",
-  inactive: "Inattivo",
-  decommissioned: "Dismesso",
-};
-
 function drawBuildingSections(
   doc: PDFKit.PDFDocument,
   data: ReportData,
+  t: TFunction,
   logo: Buffer | null,
 ): void {
   data.buildings.forEach((building) => {
@@ -455,29 +473,27 @@ function drawBuildingSections(
     // Metadata
     y = drawLabelValueRow(
       doc,
-      "Stato",
-      STATUS_LABELS[building.status] ?? building.status,
+      t("reports.colStatus"),
+      statusLabel(building.status, t),
       y,
     );
-    y = drawLabelValueRow(doc, "Tipo riscaldamento", building.heatingSystemType, y);
-    y = drawLabelValueRow(doc, "Superficie", `${building.surface} m²`, y);
-    y = drawLabelValueRow(doc, "Sensori", [
-      `Temperatura interna: ${building.sensorCounts.internal_temp}`,
-      `Temperatura esterna: ${building.sensorCounts.external_temp}`,
-      `Energia: ${building.sensorCounts.energy_meter}`,
-      `Gas: ${building.sensorCounts.gas_meter}`,
+    y = drawLabelValueRow(doc, t("reports.colHeating"), building.heatingSystemType, y);
+    y = drawLabelValueRow(doc, t("reports.colSurface"), `${building.surface} m²`, y);
+    y = drawLabelValueRow(doc, t("reports.colSensors"), [
+      t("reports.sensorInternal", { count: building.sensorCounts.internal_temp }),
+      t("reports.sensorExternal", { count: building.sensorCounts.external_temp }),
+      t("reports.sensorEnergy", { count: building.sensorCounts.energy_meter }),
+      t("reports.sensorGas", { count: building.sensorCounts.gas_meter }),
     ].join(" · "), y);
-    y = drawLabelValueRow(doc, "Letture nel periodo", String(building.readingCount), y);
+    y = drawLabelValueRow(doc, t("reports.colReadings"), String(building.readingCount), y);
     y = drawLabelValueRow(
       doc,
-      "Temperature",
-      `Interna media: ${formatNum(building.avgInternalTemp, 1)}°C · Esterna media: ${formatNum(
-        building.avgExternalTemp,
-        1,
-      )}°C (min ${formatNum(building.minExternalTemp, 1)}°C / max ${formatNum(
-        building.maxExternalTemp,
-        1,
-      )}°C)`,
+      t("reports.colTemperatures"),
+      `${t("reports.tempInternalAvg", { value: formatNum(building.avgInternalTemp, 1) })} · ${t("reports.tempExternalAvg", {
+        value: formatNum(building.avgExternalTemp, 1),
+        min: formatNum(building.minExternalTemp, 1),
+        max: formatNum(building.maxExternalTemp, 1),
+      })}`,
       y,
     );
     y += 6;
@@ -490,7 +506,7 @@ function drawBuildingSections(
       .font("Helvetica-Bold")
       .fontSize(9)
       .fillColor(PDF_MUTED)
-      .text("Consumo nel periodo", 60, y + 8);
+      .text(t("reports.colConsumptionPeriod"), 60, y + 8);
     doc
       .font("Helvetica-Bold")
       .fontSize(16)
@@ -501,7 +517,7 @@ function drawBuildingSections(
       .fontSize(8)
       .fillColor(PDF_MUTED)
       .text(
-        `Potenza media: ${formatNum(building.consumption.avgPowerKW)} kW`,
+        t("reports.avgPowerValue", { value: formatNum(building.consumption.avgPowerKW) }),
         60,
         y + 42,
       );
@@ -514,7 +530,7 @@ function drawBuildingSections(
       .font("Helvetica-Bold")
       .fontSize(9)
       .fillColor(PDF_MUTED)
-      .text("Allarmi nel periodo", 256, y + 8);
+      .text(t("reports.colAlarmsPeriod"), 256, y + 8);
     doc
       .font("Helvetica-Bold")
       .fontSize(16)
@@ -523,13 +539,21 @@ function drawBuildingSections(
 
     // Daily consumption chart
     const chartY = y + 72;
-    drawSectionTitle(doc, "Consumo giornaliero", chartY);
-    drawDailyChart(doc, building.dailyConsumption, chartY + 26);
+    drawSectionTitle(doc, t("reports.dailyConsumption"), chartY);
+    drawDailyChart(doc, building.dailyConsumption, t, chartY + 26);
   });
 }
 
-/** Serialize the report as a PDF document (A4, Italian labels). */
-export async function serializeReportPdf(data: ReportData): Promise<Buffer> {
+/**
+ * Serialize the report as a PDF document (A4) with labels in the given
+ * language (falls back to English).
+ */
+export async function serializeReportPdf(
+  data: ReportData,
+  lang: LocaleCode = DEFAULT_LOCALE,
+): Promise<Buffer> {
+  await ensureI18nReady();
+  const t = getTranslator(lang);
   const logo = await loadLogo();
 
   return new Promise((resolve, reject) => {
@@ -547,13 +571,13 @@ export async function serializeReportPdf(data: ReportData): Promise<Buffer> {
       .font("Helvetica-Bold")
       .fontSize(20)
       .fillColor("#111827")
-      .text("Report consumi energetici", 48, 80);
+      .text(t("reports.title"), 48, 80);
     doc
       .font("Helvetica")
       .fontSize(9)
       .fillColor(PDF_MUTED)
       .text(
-        `Periodo: ${data.startDate} – ${data.endDate}`,
+        t("reports.period", { start: data.startDate, end: data.endDate }),
         48,
         106,
       );
@@ -561,11 +585,11 @@ export async function serializeReportPdf(data: ReportData): Promise<Buffer> {
       .font("Helvetica")
       .fontSize(9)
       .fillColor(PDF_MUTED)
-      .text(`Generato il: ${data.generatedAt.toISOString()}`, 48, 120);
+      .text(t("reports.generatedAt", { date: data.generatedAt.toISOString() }), 48, 120);
 
-    drawSummaryTable(doc, data, 140);
+    drawSummaryTable(doc, data, t, 140);
 
-    drawBuildingSections(doc, data, logo);
+    drawBuildingSections(doc, data, t, logo);
 
     doc.end();
   });
@@ -585,32 +609,42 @@ function styleHeaderRow(sheet: ExcelJS.Worksheet): void {
   sheet.getRow(1).alignment = { vertical: "middle" };
 }
 
-const XLSX_SUMMARY_COLUMNS: Partial<ExcelJS.Column>[] = [
-  { header: "Edificio", key: "name", width: 28 },
-  { header: "Indirizzo", key: "address", width: 26 },
-  { header: "Tipologia", key: "buildingType", width: 18 },
-  { header: "Zona", key: "zone", width: 16 },
-  { header: "Stato", key: "status", width: 12 },
-  { header: "Superficie (m²)", key: "surface", width: 14 },
-  { header: "Tipo riscaldamento", key: "heatingSystem", width: 20 },
-  { header: "Consumo totale (kWh)", key: "totalKwh", width: 16, style: { numFmt: "0.00" } },
-  { header: "Potenza media (kW)", key: "avgKw", width: 15, style: { numFmt: "0.00" } },
-  { header: "Letture", key: "readings", width: 10 },
-  { header: "Allarmi", key: "alerts", width: 10 },
-  { header: "T. interna media (°C)", key: "avgInternal", width: 16, style: { numFmt: "0.0" } },
-  { header: "T. esterna media (°C)", key: "avgExternal", width: 16, style: { numFmt: "0.0" } },
-];
+function summaryColumns(t: TFunction): Partial<ExcelJS.Column>[] {
+  return [
+    { header: t("reports.colBuilding"), key: "name", width: 28 },
+    { header: t("reports.colAddress"), key: "address", width: 26 },
+    { header: t("reports.colType"), key: "buildingType", width: 18 },
+    { header: t("reports.colZone"), key: "zone", width: 16 },
+    { header: t("reports.colStatus"), key: "status", width: 12 },
+    { header: t("reports.colSurface"), key: "surface", width: 14 },
+    { header: t("reports.colHeating"), key: "heatingSystem", width: 20 },
+    { header: t("reports.colTotalConsumption"), key: "totalKwh", width: 16, style: { numFmt: "0.00" } },
+    { header: t("reports.colAvgPower"), key: "avgKw", width: 15, style: { numFmt: "0.00" } },
+    { header: t("reports.colReadings"), key: "readings", width: 10 },
+    { header: t("reports.colAlarms"), key: "alerts", width: 10 },
+    { header: t("reports.colAvgInternal"), key: "avgInternal", width: 16, style: { numFmt: "0.0" } },
+    { header: t("reports.colAvgExternal"), key: "avgExternal", width: 16, style: { numFmt: "0.0" } },
+  ];
+}
 
-/** Serialize the report as an .xlsx workbook (Riepilogo + Consumo giornaliero sheets). */
-export async function serializeReportXlsx(data: ReportData): Promise<Buffer> {
+/**
+ * Serialize the report as an .xlsx workbook with localized labels in the given
+ * language (falls back to English).
+ */
+export async function serializeReportXlsx(
+  data: ReportData,
+  lang: LocaleCode = DEFAULT_LOCALE,
+): Promise<Buffer> {
+  await ensureI18nReady();
+  const t = getTranslator(lang);
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "WattGuard";
   workbook.created = data.generatedAt;
 
   // ── Summary sheet ──────────────────────────────────────────────────────────
-  const summary = workbook.addWorksheet("Riepilogo");
+  const summary = workbook.addWorksheet(t("reports.summary"));
   styleHeaderRow(summary);
-  summary.columns = XLSX_SUMMARY_COLUMNS;
+  summary.columns = summaryColumns(t);
 
   for (const building of data.buildings) {
     summary.addRow({
@@ -618,7 +652,7 @@ export async function serializeReportXlsx(data: ReportData): Promise<Buffer> {
       address: building.address,
       buildingType: building.buildingType ?? "—",
       zone: building.geographicZone,
-      status: STATUS_LABELS[building.status] ?? building.status,
+      status: statusLabel(building.status, t),
       surface: building.surface,
       heatingSystem: building.heatingSystemType,
       totalKwh: building.consumption.totalEnergyKWh,
@@ -631,12 +665,12 @@ export async function serializeReportXlsx(data: ReportData): Promise<Buffer> {
   }
 
   // ── Daily consumption sheet ────────────────────────────────────────────────
-  const daily = workbook.addWorksheet("Consumo giornaliero");
+  const daily = workbook.addWorksheet(t("reports.dailyConsumption"));
   styleHeaderRow(daily);
   daily.columns = [
-    { header: "Edificio", key: "name", width: 28 },
-    { header: "Data", key: "date", width: 14 },
-    { header: "Consumo (kWh)", key: "kwh", width: 14, style: { numFmt: "0.00" } },
+    { header: t("reports.colBuilding"), key: "name", width: 28 },
+    { header: t("reports.colDailyConsumption"), key: "date", width: 14 },
+    { header: t("reports.colConsumption"), key: "kwh", width: 14, style: { numFmt: "0.00" } },
   ];
 
   for (const building of data.buildings) {

@@ -2,11 +2,16 @@ import { serve } from "bun";
 import { Hono } from "hono";
 import { jwt } from "hono/jwt";
 import { logger } from "hono/logger";
+import { languageDetector } from "hono/language";
 import { serveStatic } from "hono/bun";
 import { openAPIRouteHandler } from "hono-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import mongoose from "mongoose";
 import path from "path";
+
+// Import shared i18n constants and server-side i18n bootstrap
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@wattguard/shared";
+import { ensureI18nReady } from "./lib/i18n";
 
 // Import routes
 import health from "./routes/health";
@@ -52,6 +57,12 @@ import {
 } from "./config/variables";
 
 const app = new Hono()
+  .use(
+    languageDetector({
+      supportedLanguages: [...SUPPORTED_LOCALES],
+      fallbackLanguage: DEFAULT_LOCALE,
+    }),
+  )
   .use(
     "/api/admin/*",
     jwt({ secret: getJWTSecret(), cookie: "access_token", alg: "HS256" }),
@@ -183,6 +194,9 @@ export type AppType = typeof app;
 async function startServer() {
   await mongoose.connect(MONGO_URI);
   console.log("✅ Connected to MongoDB");
+
+  // Warm up the translation catalogs (emails/reports) before serving traffic.
+  await ensureI18nReady();
 
   // Start MQTT client after DB connection.
   if (MQTT_ENABLED) connectAndSubscribe();

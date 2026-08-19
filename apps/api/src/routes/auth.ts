@@ -3,6 +3,7 @@
  * 
  * Protected routes (/me, /admin/*) have JWT authentication applied globally in src/index.ts
  */
+import { getRequestLocale } from "../lib/i18n";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import { describeRoute, resolver, validator } from "hono-openapi";
@@ -139,12 +140,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
       try {
         const { to } = c.req.valid("json");
 
-        await sendTestEmail(to);
+        await sendTestEmail(to, getRequestLocale(c));
 
         return c.json({ success: true, message: "Test email sent" } satisfies TestEmailResponse);
       } catch (err) {
         console.error("Test email failed:", err);
-        return c.json({ error: "Failed to send test email. Check email configuration." }, 500);
+        return c.json({ error: "Failed to send test email. Check email configuration.", code: "test_email_failed" }, 500);
       }
     }
   );

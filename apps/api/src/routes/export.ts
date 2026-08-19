@@ -1,3 +1,4 @@
+import { getRequestLocale } from "../lib/i18n";
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { Types, type QueryFilter } from "mongoose";
@@ -88,7 +89,7 @@ const app = new Hono<{ Variables: AuthVariables }>().get(
       .lean();
 
     if (buildings.length !== requestedBuildingIds.length) {
-      return c.json({ error: "One or more buildings were not found" }, 404);
+      return c.json({ error: "One or more buildings were not found", code: "buildings_not_found" }, 404);
     }
 
     const buildingNames = new Map(
@@ -183,13 +184,14 @@ const app = new Hono<{ Variables: AuthVariables }>().get(
       _id: { $in: requestedBuildingIds.map((id) => new Types.ObjectId(id)) },
     });
     if (found !== requestedBuildingIds.length) {
-      return c.json({ error: "One or more buildings were not found" }, 404);
+      return c.json({ error: "One or more buildings were not found", code: "buildings_not_found" }, 404);
     }
 
     const report = await buildReportData(requestedBuildingIds, startDate, endDate);
+    const lang = getRequestLocale(c);
 
     if (format === "xlsx") {
-      const buffer = await serializeReportXlsx(report);
+      const buffer = await serializeReportXlsx(report, lang);
       setDownloadHeaders(
         c,
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -199,7 +201,7 @@ const app = new Hono<{ Variables: AuthVariables }>().get(
       return c.body(new Uint8Array(buffer));
     }
 
-    const buffer = await serializeReportPdf(report);
+    const buffer = await serializeReportPdf(report, lang);
     setDownloadHeaders(c, "application/pdf", `wattguard-report-${startDate}-${endDate}.pdf`);
 
     return c.body(new Uint8Array(buffer));

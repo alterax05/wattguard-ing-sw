@@ -4,6 +4,7 @@
  * All routes in this file are protected by JWT authentication and admin role requirement,
  * applied globally in src/index.ts
  */
+import { getRequestLocale } from "../lib/i18n";
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import type { AuthVariables } from "../middleware/auth";
@@ -146,12 +147,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Prevent admin from updating their own account (role or disabled status)
       if (payload.sub === id) {
-        return c.json({ error: "Cannot update your own account" }, 400);
+        return c.json({ error: "Cannot update your own account", code: "cannot_update_own_account" }, 400);
       }
 
       const user = await User.findById(id);
       if (!user) {
-        return c.json({ error: "User not found" }, 404);
+        return c.json({ error: "User not found", code: "user_not_found" }, 404);
       }
 
       if (role !== undefined) {
@@ -234,12 +235,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Prevent admin from deleting themselves
       if (payload.sub === id) {
-        return c.json({ error: "Cannot delete your own account" }, 400);
+        return c.json({ error: "Cannot delete your own account", code: "cannot_delete_own_account" }, 400);
       }
 
       const user = await User.findByIdAndDelete(id);
       if (!user) {
-        return c.json({ error: "User not found" }, 404);
+        return c.json({ error: "User not found", code: "user_not_found" }, 404);
       }
 
       return c.json({ success: true as const } satisfies DeleteUserResponse);
@@ -358,7 +359,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return c.json({ error: "User with this email already exists" }, 400);
+        return c.json({ error: "User with this email already exists", code: "user_email_exists" }, 400);
       }
 
       // Check if there's already a pending invite
@@ -369,7 +370,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
 
       if (existingInvite) {
-        return c.json({ error: "A pending invite already exists for this email" }, 400);
+        return c.json({ error: "A pending invite already exists for this email", code: "invite_pending_exists" }, 400);
       }
 
       // Generate token
@@ -388,12 +389,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Send email
       try {
-        await sendInviteEmail(email, token, role);
+        await sendInviteEmail(email, token, role, getRequestLocale(c));
       } catch (err) {
         console.error("Failed to send invite email:", err);
         // Delete the invite if email fails
         await Invite.findByIdAndDelete(invite._id);
-        return c.json({ error: "Failed to send invite email. Check email configuration." }, 500);
+        return c.json({ error: "Failed to send invite email. Check email configuration.", code: "invite_email_failed" }, 500);
       }
 
       return c.json({
@@ -463,11 +464,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const invite = await Invite.findById(id);
       if (!invite) {
-        return c.json({ error: "Invite not found" }, 404);
+        return c.json({ error: "Invite not found", code: "invite_not_found" }, 404);
       }
 
       if (invite.status !== "pending") {
-        return c.json({ error: "Can only revoke pending invites" }, 400);
+        return c.json({ error: "Can only revoke pending invites", code: "only_pending_invites_revocable" }, 400);
       }
 
       invite.status = "revoked";

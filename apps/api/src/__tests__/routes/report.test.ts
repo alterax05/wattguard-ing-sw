@@ -195,7 +195,12 @@ describe("Admin report export API", () => {
   test("returns a valid Excel file with the aggregated data", async () => {
     const response = await app.request(
       `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
-      { headers: { Cookie: `access_token=${adminToken}` } },
+      {
+        headers: {
+          Cookie: `access_token=${adminToken}`,
+          "Accept-Language": "it",
+        },
+      },
     );
     const body = await response.arrayBuffer();
 
@@ -285,7 +290,12 @@ describe("Admin report export API", () => {
 
     const response = await app.request(
       `/api/export/report?buildingIds=${gasBuilding._id}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
-      { headers: { Cookie: `access_token=${adminToken}` } },
+      {
+        headers: {
+          Cookie: `access_token=${adminToken}`,
+          "Accept-Language": "it",
+        },
+      },
     );
     const body = await response.arrayBuffer();
 
@@ -306,5 +316,34 @@ describe("Admin report export API", () => {
     });
     expect(gasRows).toHaveLength(1); // only the gas delta day, no energy_meter day
     expect(gasRows[0]!.values as unknown[]).toContain(52.75);
+  });
+
+  test("localizes report labels for the requested language", async () => {
+    const response = await app.request(
+      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
+      {
+        headers: {
+          Cookie: `access_token=${adminToken}`,
+          "Accept-Language": "de",
+        },
+      },
+    );
+    const body = await response.arrayBuffer();
+
+    expect(response.status).toBe(200);
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(body);
+
+    const summary = workbook.getWorksheet("Zusammenfassung");
+    expect(summary).toBeDefined();
+    const header = summary!.getRow(1).values as unknown[];
+    expect(header).toContain("Gesamtverbrauch (kWh)");
+    expect(header).toContain("Gebäude");
+
+    const daily = workbook.getWorksheet("Tagesverbrauch");
+    expect(daily).toBeDefined();
+    const dailyHeader = daily!.getRow(1).values as unknown[];
+    expect(dailyHeader).toContain("Gebäude");
   });
 });
