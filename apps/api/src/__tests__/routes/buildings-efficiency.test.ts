@@ -101,7 +101,7 @@ async function getEfficiency(
   endDate: string,
   token: string = adminToken,
 ) {
-  const res = await client.api.buildings[":id"].efficiency.$get(
+  const res = await client.api.v1.buildings[":id"].efficiency.$get(
     { param: { id: buildingId }, query: { startDate, endDate } },
     { headers: { Authorization: `Bearer ${token}` } },
   );

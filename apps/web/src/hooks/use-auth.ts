@@ -29,7 +29,7 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async (): Promise<AuthUser | null> => {
-      const res = await client.api.auth.me.$get();
+      const res = await client.api.v1.auth.me.$get();
 
       if (res.status === 401) {
         return null;
@@ -58,7 +58,7 @@ export function useValidateInvite(token: string | null) {
   return useQuery({
     queryKey: ["invites", "validate", token],
     queryFn: async () => {
-      const res = await client.api.invites.validate.$get({
+      const res = await client.api.v1.invites.validate.$get({
         query: { token: token! },
       });
 
@@ -82,7 +82,7 @@ export function useValidateResetToken(token: string | null) {
   return useQuery({
     queryKey: ["auth", "validate-reset-token", token],
     queryFn: async () => {
-      const res = await client.api.auth.local["validate-reset-token"].$get({
+      const res = await client.api.v1.auth.local["validate-reset-token"].$get({
         query: { token: token! },
       });
 
@@ -110,7 +110,7 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (input: { email: string; password: string }) => {
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: input,
       });
 
@@ -138,7 +138,7 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await client.api.auth.logout.$post();
+      const res = await client.api.v1.auth.logout.$post();
 
       if (!res.ok) {
         throw new Error("Logout failed");
@@ -171,7 +171,7 @@ export function useSetup() {
       password: string;
       name: string;
     }) => {
-      const res = await client.api.auth.local.setup.$post({
+      const res = await client.api.v1.auth.local.setup.$post({
         json: input,
       });
 
@@ -196,7 +196,7 @@ export function useSetup() {
 export function useForgotPassword() {
   return useMutation({
     mutationFn: async (input: { email: string }) => {
-      const res = await client.api.auth.local["forgot-password"].$post({
+      const res = await client.api.v1.auth.local["forgot-password"].$post({
         json: input,
       });
 
@@ -217,7 +217,7 @@ export function useForgotPassword() {
 export function useResetPassword() {
   return useMutation({
     mutationFn: async (input: { token: string; password: string }) => {
-      const res = await client.api.auth.local["reset-password"].$post({
+      const res = await client.api.v1.auth.local["reset-password"].$post({
         json: input,
       });
 
@@ -244,7 +244,7 @@ export function useUsers() {
   return useQuery({
     queryKey: USERS_QUERY_KEY,
     queryFn: async (): Promise<AdminUser[]> => {
-      const res = await client.api.admin.users.$get();
+      const res = await client.api.v1.admin.users.$get();
 
       if (!res.ok) {
         const data = await res.json();
@@ -271,7 +271,7 @@ export function useUpdateUser() {
       role?: "admin" | "operator";
       isDisabled?: boolean;
     }) => {
-      const res = await client.api.admin.users[":id"].$patch({
+      const res = await client.api.v1.admin.users[":id"].$patch({
         param: { id: input.id },
         json: {
           role: input.role,
@@ -302,7 +302,7 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await client.api.admin.users[":id"].$delete({
+      const res = await client.api.v1.admin.users[":id"].$delete({
         param: { id },
       });
 
@@ -327,7 +327,7 @@ export function useDeleteUser() {
 export function useCreateInvite() {
   return useMutation({
     mutationFn: async (input: { email: string; role: "admin" | "operator" }) => {
-      const res = await client.api.admin.invites.$post({
+      const res = await client.api.v1.admin.invites.$post({
         json: input,
       });
 

@@ -37,7 +37,7 @@ export function useSettings() {
   return useQuery({
     queryKey: SETTINGS_QUERY_KEY,
     queryFn: async () => {
-      const res = await client.api.settings.$get();
+      const res = await client.api.v1.settings.$get();
 
       if (!res.ok) {
         const data = await res.json();
@@ -62,7 +62,7 @@ export function useUpdateSettings() {
 
   return useMutation({
     mutationFn: async (input: UpdateSettingsInput) => {
-      const res = await client.api.settings.$patch({
+      const res = await client.api.v1.settings.$patch({
         json: input,
       });
 

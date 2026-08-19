@@ -74,7 +74,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login as admin
-      const loginRes = await client.api.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.local.login.$post({
         json: {
           email: "admin@test.com",
           password: "admin123",
@@ -97,7 +97,7 @@ describe("Authentication Integration Tests", () => {
       const token = tokenMatch![1];
 
       // Create invite
-      const inviteRes = await client.api.admin.invites.$post(
+      const inviteRes = await client.api.v1.admin.invites.$post(
         {
           json: {
             email: "user@test.com",
@@ -145,7 +145,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Validate invite
-      const res = await client.api.invites.validate.$get({
+      const res = await client.api.v1.invites.validate.$get({
         query: { token },
       });
       expect(res.status).toBe(200);
@@ -184,7 +184,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Setup password
-      const res = await client.api.auth.local.setup.$post({
+      const res = await client.api.v1.auth.local.setup.$post({
         json: {
           inviteToken: token,
           password: "password123",
@@ -223,7 +223,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: {
           email: "user@test.com",
           password: "password123",
@@ -257,7 +257,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login with wrong password
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: {
           email: "user@test.com",
           password: "wrongpassword",
@@ -285,7 +285,7 @@ describe("Authentication Integration Tests", () => {
         }),
       });
 
-      const loginRes = await client.api.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.local.login.$post({
         json: {
           email: "user@test.com",
           password: "password123",
@@ -297,7 +297,7 @@ describe("Authentication Integration Tests", () => {
       const token = tokenMatch![1];
 
       // Access protected route
-      const res = await client.api.auth.me.$get(undefined, {
+      const res = await client.api.v1.auth.me.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -311,7 +311,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     test("should reject access without token", async () => {
-      const res = await client.api.auth.me.$get();
+      const res = await client.api.v1.auth.me.$get();
       expect(res.status).toBe(401);
     });
 
@@ -326,7 +326,7 @@ describe("Authentication Integration Tests", () => {
         }),
       });
 
-      const loginRes = await client.api.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.local.login.$post({
         json: {
           email: "operator@test.com",
           password: "password123",
@@ -338,7 +338,7 @@ describe("Authentication Integration Tests", () => {
       const token = tokenMatch![1];
 
       // Try to access admin route
-      const res = await client.api.admin.invites.$get(undefined, {
+      const res = await client.api.v1.admin.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -363,7 +363,7 @@ describe("Authentication Integration Tests", () => {
         }),
       });
 
-      const res = await client.api.auth.logout.$post();
+      const res = await client.api.v1.auth.logout.$post();
 
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -389,7 +389,7 @@ describe("Authentication Integration Tests", () => {
         }),
       });
 
-      const loginRes = await client.api.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.local.login.$post({
         json: {
           email: "admin@test.com",
           password: "admin123",
@@ -401,7 +401,7 @@ describe("Authentication Integration Tests", () => {
         .match(/access_token=([^;]+)/);
       const token = tokenMatch![1];
 
-      const res = await client.api.auth.admin["test-email"].$post(
+      const res = await client.api.v1.auth.admin["test-email"].$post(
         {
           json: { to: "test@test.com" },
         },
@@ -433,7 +433,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login with uppercase email
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: {
           email: "USER@TEST.COM",
           password: "password123",
@@ -462,7 +462,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Login with mixed case email
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: {
           email: "User@Test.COM",
           password: "password123",
@@ -479,7 +479,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     test("should reject invalid email format on login", async () => {
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: {
           email: "not-an-email",
           password: "password123",
@@ -519,7 +519,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Try to setup with short password
-      const res = await client.api.auth.local.setup.$post({
+      const res = await client.api.v1.auth.local.setup.$post({
         json: {
           inviteToken: token,
           password: "short",
@@ -538,7 +538,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     test("should reject empty password field", async () => {
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: {
           email: "user@test.com",
           password: "",
@@ -554,7 +554,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     test("should reject missing email field", async () => {
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         // @ts-expect-error intentionally missing required email field
         json: {
           password: "password123",
@@ -570,7 +570,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     test("should reject missing password field", async () => {
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         // @ts-expect-error intentionally missing required password field
         json: {
           email: "user@test.com",
@@ -586,7 +586,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     test("should reject malformed JSON request body", async () => {
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: "{ invalid json" as never,
       });
 
@@ -617,7 +617,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Validate invite
-      const res = await client.api.invites.validate.$get({
+      const res = await client.api.v1.invites.validate.$get({
         query: { token },
       });
       expect(res.status).toBe(200);
@@ -631,7 +631,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     test("should reject missing token query parameter", async () => {
-      const res = await client.api.invites.validate.$get({
+      const res = await client.api.v1.invites.validate.$get({
         // @ts-expect-error intentionally missing required token query
         query: {},
       });
@@ -644,7 +644,7 @@ describe("Authentication Integration Tests", () => {
     });
 
     test("should reject empty token query parameter", async () => {
-      const res = await client.api.invites.validate.$get({
+      const res = await client.api.v1.invites.validate.$get({
         query: { token: "" },
       });
       expect(res.status).toBe(400);
@@ -669,7 +669,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Request reset
-      const res = await client.api.auth.local["forgot-password"].$post({
+      const res = await client.api.v1.auth.local["forgot-password"].$post({
         json: { email: "user@test.com" },
       });
 
@@ -709,7 +709,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Validate token
-      const validateRes = await client.api.auth.local["validate-reset-token"].$get({
+      const validateRes = await client.api.v1.auth.local["validate-reset-token"].$get({
         query: { token },
       });
       expect(validateRes.status).toBe(200);
@@ -717,7 +717,7 @@ describe("Authentication Integration Tests", () => {
       expectTypeOf(validateData).toExtend<ValidateResetTokenResponse | ErrorResponse>();
 
       // Reset password
-      const resetRes = await client.api.auth.local["reset-password"].$post({
+      const resetRes = await client.api.v1.auth.local["reset-password"].$post({
         json: {
           token,
           password: "newpassword123",
@@ -737,7 +737,7 @@ describe("Authentication Integration Tests", () => {
       expect(deletedToken).toBeNull();
 
       // Login with new password
-      const loginRes = await client.api.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.local.login.$post({
         json: {
           email: "user@test.com",
           password: "newpassword123",
@@ -747,7 +747,7 @@ describe("Authentication Integration Tests", () => {
       expect(loginRes.status).toBe(200);
 
       // Verify old password doesn't work
-      const oldLoginRes = await client.api.auth.local.login.$post({
+      const oldLoginRes = await client.api.v1.auth.local.login.$post({
         json: {
           email: "user@test.com",
           password: "oldpassword",
@@ -778,7 +778,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Try to use expired token
-      const res = await client.api.auth.local["reset-password"].$post({
+      const res = await client.api.v1.auth.local["reset-password"].$post({
         json: {
           token,
           password: "newpassword123",

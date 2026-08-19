@@ -106,7 +106,7 @@ beforeEach(async () => {
 
 describe("Alerts API", () => {
   it("should list alerts", async () => {
-    const res = await client.api.alerts.$get(
+    const res = await client.api.v1.alerts.$get(
       { query: {} },
       {
         headers: { Cookie: `access_token=${adminToken}` },
@@ -137,7 +137,7 @@ describe("Alerts API", () => {
     const alert = await Alert.findOne({ status: "active" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.alerts[":id"].acknowledge.$patch(
+    const res = await client.api.v1.alerts[":id"].acknowledge.$patch(
       {
         param: { id: alert!._id.toString() },
       },
@@ -161,7 +161,7 @@ describe("Alerts API", () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.alerts[":id"].acknowledge.$patch(
+    const res = await client.api.v1.alerts[":id"].acknowledge.$patch(
       {
         param: { id: alert!._id.toString() },
       },
@@ -183,7 +183,7 @@ describe("Alerts API", () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.alerts[":id"].resolve.$patch(
+    const res = await client.api.v1.alerts[":id"].resolve.$patch(
       {
         param: { id: alert!._id.toString() },
       },

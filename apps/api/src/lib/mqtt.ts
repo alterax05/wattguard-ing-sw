@@ -18,8 +18,8 @@ const MqttReadingPayloadSchema = LastReadingSchema.extend({
 
 const READING_TOPIC_PATTERN = /^sensors\/([^/]+)\/readings$/;
 
-export function connectAndSubscribe() {
-  const client = mqtt.connect(MQTT_BROKER_URL);
+export async function connectAndSubscribe() {
+  const client = await mqtt.connectAsync(MQTT_BROKER_URL);
 
   client.on("connect", () => {
     console.log("✅ Connected to MQTT Broker");

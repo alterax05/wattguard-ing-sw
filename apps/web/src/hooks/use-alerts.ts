@@ -43,7 +43,7 @@ export function useAlerts(params?: { status?: string; buildingId?: string }) {
       if (params?.status) query.status = params.status;
       if (params?.buildingId) query.buildingId = params.buildingId;
 
-      const res = await client.api.alerts.$get({ query });
+      const res = await client.api.v1.alerts.$get({ query });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(errorMessage(data));
@@ -59,7 +59,7 @@ export function useAcknowledgeAlert() {
 
   return useMutation({
     mutationFn: async (alertId: string) => {
-      const res = await client.api.alerts[":id"].acknowledge.$patch({
+      const res = await client.api.v1.alerts[":id"].acknowledge.$patch({
         param: { id: alertId }
       });
       if (!res.ok) {
@@ -84,7 +84,7 @@ export function useResolveAlert() {
 
   return useMutation({
     mutationFn: async (alertId: string) => {
-      const res = await client.api.alerts[":id"].resolve.$patch({
+      const res = await client.api.v1.alerts[":id"].resolve.$patch({
         param: { id: alertId }
       });
       if (!res.ok) {

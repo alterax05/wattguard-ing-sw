@@ -146,7 +146,7 @@ describe("Sensors Routes - Integration Tests", () => {
         transmissionInterval: 90,
       };
 
-      const res = await client.api.sensors.$post(
+      const res = await client.api.v1.sensors.$post(
         {
           json: sensorData,
         },
@@ -182,7 +182,7 @@ describe("Sensors Routes - Integration Tests", () => {
         location: "Facciata Nord",
       };
 
-      const res = await client.api.sensors.$post(
+      const res = await client.api.v1.sensors.$post(
         {
           json: sensorData,
         },
@@ -208,7 +208,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$post(
+      const res = await client.api.v1.sensors.$post(
         {
           json: {
             buildingId,
@@ -233,7 +233,7 @@ describe("Sensors Routes - Integration Tests", () => {
     });
 
     test("should reject invalid building ID", async () => {
-      const res = await client.api.sensors.$post(
+      const res = await client.api.v1.sensors.$post(
         {
           json: {
             buildingId: "507f1f77bcf86cd799439011",
@@ -252,7 +252,7 @@ describe("Sensors Routes - Integration Tests", () => {
     });
 
     test("should reject invalid data", async () => {
-      const res = await client.api.sensors.$post(
+      const res = await client.api.v1.sensors.$post(
         {
           json: {
             buildingId,
@@ -295,7 +295,7 @@ describe("Sensors Routes - Integration Tests", () => {
         },
       });
 
-      const res = await client.api.sensors[":id"].$get(
+      const res = await client.api.v1.sensors[":id"].$get(
         {
           param: { id: sensor._id.toString() },
         },
@@ -321,7 +321,7 @@ describe("Sensors Routes - Integration Tests", () => {
     test("should return 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api.sensors[":id"].$get(
+      const res = await client.api.v1.sensors[":id"].$get(
         {
           param: { id: fakeId },
         },
@@ -356,7 +356,7 @@ describe("Sensors Routes - Integration Tests", () => {
         status: "inactive" as const,
       };
 
-      const res = await client.api.sensors[":id"].$patch(
+      const res = await client.api.v1.sensors[":id"].$patch(
         {
           param: { id: sensor._id.toString() },
           json: updateData,
@@ -384,7 +384,7 @@ describe("Sensors Routes - Integration Tests", () => {
     test("should return 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api.sensors[":id"].$patch(
+      const res = await client.api.v1.sensors[":id"].$patch(
         {
           param: { id: fakeId },
           json: {
@@ -467,7 +467,7 @@ describe("Sensors Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.sensors[":id"].$patch(
+      const res = await client.api.v1.sensors[":id"].$patch(
         {
           param: { id: sensor._id.toString() },
           json: { maxThreshold: null },
@@ -531,7 +531,7 @@ describe("Sensors Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.sensors[":id"].$delete(
+      const res = await client.api.v1.sensors[":id"].$delete(
         {
           param: { id: sensor._id.toString() },
         },
@@ -569,7 +569,7 @@ describe("Sensors Routes - Integration Tests", () => {
     test("should return 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api.sensors[":id"].$delete(
+      const res = await client.api.v1.sensors[":id"].$delete(
         {
           param: { id: fakeId },
         },
@@ -606,7 +606,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$get(
+      const res = await client.api.v1.sensors.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -644,7 +644,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$get(
+      const res = await client.api.v1.sensors.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -687,7 +687,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$get(
+      const res = await client.api.v1.sensors.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -719,7 +719,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$get(
+      const res = await client.api.v1.sensors.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -785,7 +785,7 @@ describe("Sensors Routes - Integration Tests", () => {
         },
       ]);
 
-      const res = await client.api.sensors[":id"].readings.$get(
+      const res = await client.api.v1.sensors[":id"].readings.$get(
         {
           param: { id: sensor._id.toString() },
           query: {},
@@ -843,7 +843,7 @@ describe("Sensors Routes - Integration Tests", () => {
 
       const startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(); // 2 days ago
 
-      const res = await client.api.sensors[":id"].readings.$get(
+      const res = await client.api.v1.sensors[":id"].readings.$get(
         {
           param: { id: sensor._id.toString() },
           query: { startDate },
@@ -886,7 +886,7 @@ describe("Sensors Routes - Integration Tests", () => {
       }));
       await SensorReading.create(readings);
 
-      const res = await client.api.sensors[":id"].readings.$get(
+      const res = await client.api.v1.sensors[":id"].readings.$get(
         {
           param: { id: sensor._id.toString() },
           query: { limit: "2", offset: "0" },
@@ -910,7 +910,7 @@ describe("Sensors Routes - Integration Tests", () => {
     test("should return 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api.sensors[":id"].readings.$get(
+      const res = await client.api.v1.sensors[":id"].readings.$get(
         {
           param: { id: fakeId },
           query: {},

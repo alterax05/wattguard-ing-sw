@@ -66,7 +66,7 @@ describe("Email Validation and Normalization", () => {
         passwordHash: await Bun.password.hash("password123", { algorithm: "bcrypt", cost: 10 }),
       });
 
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: { email, password: "password123" },
       });
 
@@ -112,7 +112,7 @@ describe("Email Validation and Normalization", () => {
     const variations = ["USER@TEST.COM", "User@Test.Com", "UsEr@TeSt.CoM"];
 
     for (const email of variations) {
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: { email, password: "password123" },
       });
 
@@ -160,7 +160,7 @@ describe("Password Validation", () => {
         createdBy: admin._id,
       });
 
-      const res = await client.api.auth.local.setup.$post({
+      const res = await client.api.v1.auth.local.setup.$post({
         json: { inviteToken: newToken, password, name: "Test User" },
       });
 
@@ -321,7 +321,7 @@ describe("Query Parameter Validation", () => {
       createdBy: admin._id,
     });
 
-    const res = await client.api.invites.validate.$get({
+    const res = await client.api.v1.invites.validate.$get({
       query: { token },
     });
     expect(res.status).toBe(200);
@@ -353,7 +353,7 @@ describe("Role Validation", () => {
     const validRoles = ["admin", "operator"] as const;
 
     for (const role of validRoles) {
-      const res = await client.api.admin.invites.$post(
+      const res = await client.api.v1.admin.invites.$post(
         {
           json: {
             email: `${role}${Math.random()}@test.com`,

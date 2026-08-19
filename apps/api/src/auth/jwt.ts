@@ -23,14 +23,6 @@ export type AccessTokenPayload = {
 }
 
 /**
- * Get the JWT secret (for use in middleware)
- * @returns JWT secret string
- */
-export function getJWTSecret(): string {
-  return JWT_SECRET;
-}
-
-/**
  * Sign a JWT access token
  * @param payload - Token payload (accepts userId, maps to sub)
  * @returns Signed JWT string

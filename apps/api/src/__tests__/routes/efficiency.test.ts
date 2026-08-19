@@ -216,7 +216,7 @@ describe("Building Efficiency Route - Integration Tests", () => {
     const startDate = "2024-01-01T10:00:00Z";
     const endDate = new Date(new Date(startDate).getTime() + 4.5 * 60 * 60 * 1000).toISOString();
 
-    const res = await client.api.buildings[":id"].efficiency.$get(
+    const res = await client.api.v1.buildings[":id"].efficiency.$get(
       {
         param: { id: buildingId },
         query: { startDate, endDate },

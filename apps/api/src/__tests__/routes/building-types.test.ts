@@ -109,7 +109,7 @@ describe("Building Types Routes - Integration Tests", () => {
 
   describe("GET /api/building-types", () => {
     test("should return empty array when no building types exist", async () => {
-      const res = await client.api["building-types"].$get(undefined, {
+      const res = await client.api.v1["building-types"].$get(undefined, {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
 
@@ -130,7 +130,7 @@ describe("Building Types Routes - Integration Tests", () => {
         { name: "Ufficio", description: "Edificio per uffici" },
       ]);
 
-      const res = await client.api["building-types"].$get(undefined, {
+      const res = await client.api.v1["building-types"].$get(undefined, {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
 
@@ -153,7 +153,7 @@ describe("Building Types Routes - Integration Tests", () => {
         { name: "Scuola", description: "Edificio scolastico" },
       ]);
 
-      const res = await client.api["building-types"].$get(undefined, {
+      const res = await client.api.v1["building-types"].$get(undefined, {
         headers: { Authorization: `Bearer ${operatorToken}` },
       });
 
@@ -166,7 +166,7 @@ describe("Building Types Routes - Integration Tests", () => {
     });
 
     test("should reject request without token (401)", async () => {
-      const res = await client.api["building-types"].$get();
+      const res = await client.api.v1["building-types"].$get();
 
       expect(res.status as number).toBe(401);
     });
@@ -178,7 +178,7 @@ describe("Building Types Routes - Integration Tests", () => {
         { name: "Ospedale", description: "A" },
       ]);
 
-      const res = await client.api["building-types"].$get(undefined, {
+      const res = await client.api.v1["building-types"].$get(undefined, {
         headers: { Authorization: `Bearer ${adminToken}` },
       });
 
@@ -204,7 +204,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Edificio pubblico per consultazione libri",
       };
 
-      const res = await client.api["building-types"].$post(
+      const res = await client.api.v1["building-types"].$post(
         {
           json: buildingTypeData,
         },
@@ -238,7 +238,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Existing",
       });
 
-      const res = await client.api["building-types"].$post(
+      const res = await client.api.v1["building-types"].$post(
         {
           json: {
             name: "Scuola",
@@ -261,7 +261,7 @@ describe("Building Types Routes - Integration Tests", () => {
     });
 
     test("should reject invalid data", async () => {
-      const res = await client.api["building-types"].$post(
+      const res = await client.api.v1["building-types"].$post(
         {
           json: {
             name: "", // Empty name
@@ -279,7 +279,7 @@ describe("Building Types Routes - Integration Tests", () => {
     });
 
     test("should reject request from operator (403)", async () => {
-      const res = await client.api["building-types"].$post(
+      const res = await client.api.v1["building-types"].$post(
         {
           json: {
             name: "Test",
@@ -313,7 +313,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Updated Description",
       };
 
-      const res = await client.api["building-types"][":id"].$patch(
+      const res = await client.api.v1["building-types"][":id"].$patch(
         {
           param: { id: buildingType._id.toString() },
           json: updateData,
@@ -346,7 +346,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Original Description",
       });
 
-      const res = await client.api["building-types"][":id"].$patch(
+      const res = await client.api.v1["building-types"][":id"].$patch(
         {
           param: { id: buildingType._id.toString() },
           json: {
@@ -375,7 +375,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Original",
       });
 
-      const res = await client.api["building-types"][":id"].$patch(
+      const res = await client.api.v1["building-types"][":id"].$patch(
         {
           param: { id: buildingType._id.toString() },
           json: {
@@ -409,7 +409,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Test",
       });
 
-      const res = await client.api["building-types"][":id"].$patch(
+      const res = await client.api.v1["building-types"][":id"].$patch(
         {
           param: { id: buildingType._id.toString() },
           json: {
@@ -434,7 +434,7 @@ describe("Building Types Routes - Integration Tests", () => {
     test("should return 404 for non-existent building type", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api["building-types"][":id"].$patch(
+      const res = await client.api.v1["building-types"][":id"].$patch(
         {
           param: { id: fakeId },
           json: {
@@ -457,7 +457,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Test",
       });
 
-      const res = await client.api["building-types"][":id"].$patch(
+      const res = await client.api.v1["building-types"][":id"].$patch(
         {
           param: { id: buildingType._id.toString() },
           json: {
@@ -486,7 +486,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "This will be deleted",
       });
 
-      const res = await client.api["building-types"][":id"].$delete(
+      const res = await client.api.v1["building-types"][":id"].$delete(
         {
           param: { id: buildingType._id.toString() },
         },
@@ -530,7 +530,7 @@ describe("Building Types Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api["building-types"][":id"].$delete(
+      const res = await client.api.v1["building-types"][":id"].$delete(
         {
           param: { id: buildingType._id.toString() },
         },
@@ -557,7 +557,7 @@ describe("Building Types Routes - Integration Tests", () => {
     test("should return 404 for non-existent building type", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api["building-types"][":id"].$delete(
+      const res = await client.api.v1["building-types"][":id"].$delete(
         {
           param: { id: fakeId },
         },
@@ -577,7 +577,7 @@ describe("Building Types Routes - Integration Tests", () => {
         description: "Test",
       });
 
-      const res = await client.api["building-types"][":id"].$delete(
+      const res = await client.api.v1["building-types"][":id"].$delete(
         {
           param: { id: buildingType._id.toString() },
         },

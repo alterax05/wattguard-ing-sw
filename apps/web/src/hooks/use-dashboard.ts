@@ -64,7 +64,7 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: [...DASHBOARD_QUERY_KEY, "stats"],
     queryFn: async () => {
-      const res = await client.api.dashboard.stats.$get();
+      const res = await client.api.v1.dashboard.stats.$get();
       if (!res.ok) {
         throw new Error("Failed to fetch dashboard stats");
       }
@@ -83,7 +83,7 @@ export function useDashboardHistory(params: DashboardHistoryParams) {
   return useQuery({
     queryKey: [...DASHBOARD_QUERY_KEY, "history", params],
     queryFn: async () => {
-      const res = await client.api.dashboard.history.$get({
+      const res = await client.api.v1.dashboard.history.$get({
         query: {
           startDate: params.startDate,
           endDate: params.endDate,

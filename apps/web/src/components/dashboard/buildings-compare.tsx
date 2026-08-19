@@ -103,7 +103,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
     queries: buildingIds.map((id) => ({
       queryKey: [...BUILDINGS_QUERY_KEY, "detail", id],
       queryFn: async () => {
-        const res = await client.api.buildings[":id"].$get({
+        const res = await client.api.v1.buildings[":id"].$get({
           param: { id },
         })
         if (!res.ok) {
@@ -122,7 +122,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
     queries: buildingIds.map((id) => ({
         queryKey: [...BUILDINGS_QUERY_KEY, "efficiency", id, efficiencyParams],
         queryFn: async () => {
-          const res = await client.api.buildings[":id"].efficiency.$get({
+          const res = await client.api.v1.buildings[":id"].efficiency.$get({
             param: { id },
             query: {
               startDate: efficiencyParams!.startDate,

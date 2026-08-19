@@ -127,7 +127,7 @@ export function useBuildings(params?: SearchBuildingsParams) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "list", params ?? {}],
     queryFn: async () => {
-      const res = await client.api.buildings.$get({
+      const res = await client.api.v1.buildings.$get({
         query: {
           ...(params?.name ? { name: params.name } : {}),
           ...(params?.address ? { address: params.address } : {}),
@@ -164,7 +164,7 @@ export function useBuildingTypes() {
   return useQuery({
     queryKey: BUILDING_TYPES_QUERY_KEY,
     queryFn: async () => {
-      const res = await client.api["building-types"].$get();
+      const res = await client.api.v1["building-types"].$get();
 
       if (!res.ok) {
         const data = await res.json();
@@ -186,7 +186,7 @@ export function useBuilding(id: string | undefined) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "detail", id],
     queryFn: async () => {
-      const res = await client.api.buildings[":id"].$get({
+      const res = await client.api.v1.buildings[":id"].$get({
         param: { id: id! },
       });
 
@@ -211,7 +211,7 @@ export function useBuildingRealTime(id: string | undefined) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "real-time", id],
     queryFn: async () => {
-      const res = await client.api.buildings[":id"]["real-time"].$get({
+      const res = await client.api.v1.buildings[":id"]["real-time"].$get({
         param: { id: id! },
       });
 
@@ -237,7 +237,7 @@ export function useBuildingHistory(id: string | undefined, params: HistoryParams
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "history", id, params],
     queryFn: async () => {
-      const res = await client.api.buildings[":id"].history.$get({
+      const res = await client.api.v1.buildings[":id"].history.$get({
         param: { id: id! },
         query: {
           startDate: params!.startDate,
@@ -273,7 +273,7 @@ export function useBuildingEfficiency(id: string | undefined, params: Efficiency
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "efficiency", id, params],
     queryFn: async () => {
-      const res = await client.api.buildings[":id"].efficiency.$get({
+      const res = await client.api.v1.buildings[":id"].efficiency.$get({
         param: { id: id! },
         query: {
           startDate: params!.startDate,
@@ -315,7 +315,7 @@ export function useCreateBuilding() {
       constructionYear?: number;
       geographicZone: string;
     }) => {
-      const res = await client.api.buildings.$post({
+      const res = await client.api.v1.buildings.$post({
         json: input,
       });
 
@@ -356,7 +356,7 @@ export function useUpdateBuilding() {
       efficiencyThresholds?: { enabled: boolean; minCop: number | null };
     }) => {
       const { id, ...body } = input;
-      const res = await client.api.buildings[":id"].$patch({
+      const res = await client.api.v1.buildings[":id"].$patch({
         param: { id },
         json: body,
       });
@@ -384,7 +384,7 @@ export function useDeleteBuilding() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await client.api.buildings[":id"].$delete({
+      const res = await client.api.v1.buildings[":id"].$delete({
         param: { id },
       });
 

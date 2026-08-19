@@ -63,7 +63,7 @@ beforeEach(async () => {
 
 describe("Health", () => {
   test("GET /api/health returns ok", async () => {
-    const res = await client.api.health.$get();
+    const res = await client.api.v1.health.$get();
 
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -90,7 +90,7 @@ describe("Dashboard", () => {
       status: "active",
     });
 
-    const res = await client.api.dashboard.stats.$get(undefined, {
+    const res = await client.api.v1.dashboard.stats.$get(undefined, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
@@ -112,7 +112,7 @@ describe("Dashboard", () => {
     const startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = now.toISOString();
 
-    const res = await client.api.dashboard.history.$get(
+    const res = await client.api.v1.dashboard.history.$get(
       {
         query: { startDate, endDate, interval: "day" },
       },
@@ -132,7 +132,7 @@ describe("Dashboard", () => {
   });
 
   test("GET /api/dashboard/history rejects invalid date range", async () => {
-    const res = await client.api.dashboard.history.$get(
+    const res = await client.api.v1.dashboard.history.$get(
       {
         query: { startDate: "2026-01-02T00:00:00.000Z", endDate: "2026-01-01T00:00:00.000Z" },
       },
@@ -147,7 +147,7 @@ describe("Dashboard", () => {
 
 describe("Settings", () => {
   test("GET /api/settings returns the system config", async () => {
-    const res = await client.api.settings.$get(undefined, {
+    const res = await client.api.v1.settings.$get(undefined, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
@@ -163,7 +163,7 @@ describe("Settings", () => {
   });
 
   test("PATCH /api/settings updates the config", async () => {
-    const res = await client.api.settings.$patch(
+    const res = await client.api.v1.settings.$patch(
       {
         json: { polling: { intervalSeconds: 60 } },
       },
@@ -199,7 +199,7 @@ describe("Settings", () => {
     const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
     const operatorToken = tokenMatch![1]!;
 
-    const res = await client.api.settings.$get(undefined, {
+    const res = await client.api.v1.settings.$get(undefined, {
       headers: { Authorization: `Bearer ${operatorToken}` },
     });
 

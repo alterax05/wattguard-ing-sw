@@ -128,7 +128,7 @@ describe("Buildings Routes - Integration Tests", () => {
         location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await client.api.buildings.$post(
+      const res = await client.api.v1.buildings.$post(
         {
           json: buildingData,
         },
@@ -173,7 +173,7 @@ describe("Buildings Routes - Integration Tests", () => {
         location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await client.api.buildings.$post(
+      const res = await client.api.v1.buildings.$post(
         {
           json: buildingData,
         },
@@ -194,7 +194,7 @@ describe("Buildings Routes - Integration Tests", () => {
         surface: -100, // Negative surface
       };
 
-      const res = await client.api.buildings.$post(
+      const res = await client.api.v1.buildings.$post(
         {
           // @ts-expect-error intentionally incomplete building payload
           json: invalidData,
@@ -221,7 +221,7 @@ describe("Buildings Routes - Integration Tests", () => {
         location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await client.api.buildings.$post(
+      const res = await client.api.v1.buildings.$post(
         {
           json: buildingData,
         },
@@ -258,7 +258,7 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "inactive" as const,
       };
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: updateData,
@@ -285,7 +285,7 @@ describe("Buildings Routes - Integration Tests", () => {
     test("should return 404 for non-existent building", async () => {
       const fakeId = "507f1f77bcf86cd799439011"; // Valid ObjectId format
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: fakeId },
           json: { name: "New Name" },
@@ -318,7 +318,7 @@ describe("Buildings Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { efficiencyThresholds: { enabled: true, minCop: 2.5 } },
@@ -351,7 +351,7 @@ describe("Buildings Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { efficiencyThresholds: { enabled: true, minCop: null } },
@@ -377,7 +377,7 @@ describe("Buildings Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { efficiencyThresholds: { enabled: true, minCop: 2.5 } },
@@ -417,7 +417,7 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { heatingSystemType: "Teleriscaldamento" },
@@ -464,7 +464,7 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { efficiencyThresholds: { enabled: false, minCop: null } },
@@ -533,7 +533,7 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.buildings[":id"].$delete(
+      const res = await client.api.v1.buildings[":id"].$delete(
         {
           param: { id: building._id.toString() },
         },
@@ -617,7 +617,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should search by name", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         {
           query: { name: "Scuola" },
         },
@@ -637,7 +637,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should search by address", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         {
           query: { address: "Garibaldi" },
         },
@@ -656,7 +656,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should filter by zone", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         {
           query: { zone: "Centro" },
         },
@@ -675,7 +675,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should filter by building type", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         {
           query: { buildingType: buildingTypeId.toString() },
         },
@@ -693,7 +693,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should filter by status", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         {
           query: { status: "inactive" },
         },
@@ -712,7 +712,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should combine multiple filters", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         {
           query: { zone: "Centro", status: "active", name: "Scuola" },
         },
@@ -731,7 +731,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should support pagination", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         {
           query: { limit: "2", offset: "0" },
         },
@@ -752,7 +752,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should support sorting", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         {
           query: { sortBy: "name", sortOrder: "asc" },
         },
@@ -774,7 +774,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("should return all required details in search results", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -812,7 +812,7 @@ describe("Buildings Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.buildings[":id"].$get(
+      const res = await client.api.v1.buildings[":id"].$get(
         {
           param: { id: building._id.toString() },
         },
@@ -888,7 +888,7 @@ describe("Buildings Routes - Integration Tests", () => {
         },
       ]);
 
-      const res = await client.api.buildings[":id"]["real-time"].$get(
+      const res = await client.api.v1.buildings[":id"]["real-time"].$get(
         {
           param: { id: building._id.toString() },
         },
@@ -943,7 +943,7 @@ describe("Buildings Routes - Integration Tests", () => {
         lastReading: { value: 22.5, unit: "°C", timestamp: new Date() },
       });
 
-      const res = await client.api.buildings[":id"]["real-time"].$get(
+      const res = await client.api.v1.buildings[":id"]["real-time"].$get(
         {
           param: { id: building._id.toString() },
         },
@@ -1010,7 +1010,7 @@ describe("Buildings Routes - Integration Tests", () => {
       const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const endDate = now.toISOString();
 
-      const res = await client.api.buildings[":id"].history.$get(
+      const res = await client.api.v1.buildings[":id"].history.$get(
         {
           param: { id: building._id.toString() },
           query: { startDate, endDate, sensorType: "internal_temp", interval: "hour" },
@@ -1092,7 +1092,7 @@ describe("Buildings Routes - Integration Tests", () => {
       const startDate = oneDayAgo.toISOString();
       const endDate = now.toISOString();
 
-      const res = await client.api.buildings[":id"].history.$get(
+      const res = await client.api.v1.buildings[":id"].history.$get(
         {
           param: { id: building._id.toString() },
           query: { startDate, endDate, sensorType: "energy_meter" },
@@ -1159,7 +1159,7 @@ describe("Buildings Routes - Integration Tests", () => {
       const intervals = ["minute", "hour", "day"] as const;
 
       for (const interval of intervals) {
-        const res = await client.api.buildings[":id"].history.$get(
+        const res = await client.api.v1.buildings[":id"].history.$get(
           {
             param: { id: building._id.toString() },
             query: { startDate, endDate, sensorType: "internal_temp", interval },
@@ -1186,12 +1186,12 @@ describe("Buildings Routes - Integration Tests", () => {
 
   describe("Authorization", () => {
     test("should deny access without token", async () => {
-      const res = await client.api.buildings.$get({ query: {} });
+      const res = await client.api.v1.buildings.$get({ query: {} });
       expect(res.status as number).toBe(401);
     });
 
     test("should deny access with invalid token", async () => {
-      const res = await client.api.buildings.$get(
+      const res = await client.api.v1.buildings.$get(
         { query: {} },
         {
           headers: {
@@ -1218,7 +1218,7 @@ describe("Buildings Routes - Integration Tests", () => {
       });
 
       // Admin should have access
-      const adminRes = await client.api.buildings[":id"].$get(
+      const adminRes = await client.api.v1.buildings[":id"].$get(
         {
           param: { id: building._id.toString() },
         },
@@ -1229,7 +1229,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(adminRes.status).toBe(200);
 
       // Operator should also have access
-      const operatorRes = await client.api.buildings[":id"].$get(
+      const operatorRes = await client.api.v1.buildings[":id"].$get(
         {
           param: { id: building._id.toString() },
         },

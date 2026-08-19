@@ -53,7 +53,7 @@ export function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    const url = client.api.auth.google.login.$url();
+    const url = client.api.v1.auth.google.login.$url();
     window.location.href = url.toString();
   };
 

@@ -105,7 +105,7 @@ describe("Admin Routes", () => {
     test("should create invite with valid data", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites.$post(
+      const res = await client.api.v1.admin.invites.$post(
         {
           json: {
             email: "newuser@test.com",
@@ -134,7 +134,7 @@ describe("Admin Routes", () => {
     test("should normalize email on invite creation", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites.$post(
+      const res = await client.api.v1.admin.invites.$post(
         {
           json: {
             email: "NEWUSER@TEST.COM",
@@ -160,7 +160,7 @@ describe("Admin Routes", () => {
     test("should reject invalid email format", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites.$post(
+      const res = await client.api.v1.admin.invites.$post(
         {
           json: {
             email: "not-an-email",
@@ -186,7 +186,7 @@ describe("Admin Routes", () => {
     test("should reject invalid role", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites.$post(
+      const res = await client.api.v1.admin.invites.$post(
         {
           json: {
             email: "newuser@test.com",
@@ -212,7 +212,7 @@ describe("Admin Routes", () => {
     test("should reject missing email field", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites.$post(
+      const res = await client.api.v1.admin.invites.$post(
         {
           // @ts-expect-error intentionally missing required email field
           json: {
@@ -237,7 +237,7 @@ describe("Admin Routes", () => {
     test("should reject missing role field", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites.$post(
+      const res = await client.api.v1.admin.invites.$post(
         {
           // @ts-expect-error intentionally missing required role field
           json: {
@@ -262,7 +262,7 @@ describe("Admin Routes", () => {
     test("should reject operator from creating invites", async () => {
       const token = await getOperatorToken();
 
-      const res = await client.api.admin.invites.$post(
+      const res = await client.api.v1.admin.invites.$post(
         {
           json: {
             email: "newuser@test.com",
@@ -280,7 +280,7 @@ describe("Admin Routes", () => {
     });
 
     test("should reject unauthenticated requests", async () => {
-      const res = await client.api.admin.invites.$post({
+      const res = await client.api.v1.admin.invites.$post({
         json: {
           email: "newuser@test.com",
           role: "operator",
@@ -316,7 +316,7 @@ describe("Admin Routes", () => {
         },
       ]);
 
-      const res = await client.api.admin.invites.$get(undefined, {
+      const res = await client.api.v1.admin.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -335,7 +335,7 @@ describe("Admin Routes", () => {
     test("should return empty array when no invites exist", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites.$get(undefined, {
+      const res = await client.api.v1.admin.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -351,7 +351,7 @@ describe("Admin Routes", () => {
     test("should reject operator from listing invites", async () => {
       const token = await getOperatorToken();
 
-      const res = await client.api.admin.invites.$get(undefined, {
+      const res = await client.api.v1.admin.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -359,7 +359,7 @@ describe("Admin Routes", () => {
     });
 
     test("should reject unauthenticated requests", async () => {
-      const res = await client.api.admin.invites.$get();
+      const res = await client.api.v1.admin.invites.$get();
       expect(res.status).toBe(401);
     });
   });
@@ -378,7 +378,7 @@ describe("Admin Routes", () => {
         createdBy: admin!._id,
       });
 
-      const res = await client.api.admin.invites[":id"].revoke.$post(
+      const res = await client.api.v1.admin.invites[":id"].revoke.$post(
         {
           param: { id: invite._id.toString() },
         },
@@ -404,7 +404,7 @@ describe("Admin Routes", () => {
     test("should reject revoking non-existent invite", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites[":id"].revoke.$post(
+      const res = await client.api.v1.admin.invites[":id"].revoke.$post(
         {
           param: { id: "507f1f77bcf86cd799439011" },
         },
@@ -419,7 +419,7 @@ describe("Admin Routes", () => {
     test("should handle invalid invite ID format gracefully", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.invites[":id"].revoke.$post(
+      const res = await client.api.v1.admin.invites[":id"].revoke.$post(
         {
           param: { id: "invalid-id" },
         },
@@ -437,7 +437,7 @@ describe("Admin Routes", () => {
       const adminToken = await getAdminToken();
 
       // Create an invite using admin token
-      const createRes = await client.api.admin.invites.$post(
+      const createRes = await client.api.v1.admin.invites.$post(
         {
           json: {
             email: "testrevoke@test.com",
@@ -458,7 +458,7 @@ describe("Admin Routes", () => {
       const inviteId = createData.invite.id;
 
       // Try to revoke with operator token
-      const res = await client.api.admin.invites[":id"].revoke.$post(
+      const res = await client.api.v1.admin.invites[":id"].revoke.$post(
         {
           param: { id: inviteId! },
         },
@@ -471,7 +471,7 @@ describe("Admin Routes", () => {
     });
 
     test("should reject unauthenticated requests", async () => {
-      const res = await client.api.admin.invites[":id"].revoke.$post({
+      const res = await client.api.v1.admin.invites[":id"].revoke.$post({
         param: { id: "507f1f77bcf86cd799439011" },
       });
 
@@ -485,7 +485,7 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: operator!._id.toString() },
           json: { role: "admin" },
@@ -517,7 +517,7 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: operator!._id.toString() },
           json: { isDisabled: true },
@@ -550,7 +550,7 @@ describe("Admin Routes", () => {
       operator!.isDisabled = true;
       await operator!.save();
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: operator!._id.toString() },
           json: { isDisabled: false },
@@ -580,7 +580,7 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: operator!._id.toString() },
           json: { role: "admin", isDisabled: true },
@@ -607,7 +607,7 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: operator!._id.toString() },
           json: {},
@@ -626,7 +626,7 @@ describe("Admin Routes", () => {
       const token = await getAdminToken();
       const admin = await User.findOne({ email: "admin@test.com" });
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: admin!._id.toString() },
           json: { isDisabled: true },
@@ -644,7 +644,7 @@ describe("Admin Routes", () => {
     test("should return 404 for non-existent user", async () => {
       const token = await getAdminToken();
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: "507f1f77bcf86cd799439011" },
           json: { isDisabled: true },
@@ -664,7 +664,7 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: operator!._id.toString() },
           json: {
@@ -687,7 +687,7 @@ describe("Admin Routes", () => {
       await getAdminToken();
       const admin = await User.findOne({ email: "admin@test.com" });
 
-      const res = await client.api.admin.users[":id"].$patch(
+      const res = await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: admin!._id.toString() },
           json: { isDisabled: true },
@@ -703,7 +703,7 @@ describe("Admin Routes", () => {
     });
 
     test("should reject unauthenticated requests", async () => {
-      const res = await client.api.admin.users[":id"].$patch({
+      const res = await client.api.v1.admin.users[":id"].$patch({
         param: { id: "507f1f77bcf86cd799439011" },
         json: { isDisabled: true },
       });
@@ -716,7 +716,7 @@ describe("Admin Routes", () => {
       await getOperatorToken();
       const operator = await User.findOne({ email: "operator@test.com" });
 
-      await client.api.admin.users[":id"].$patch(
+      await client.api.v1.admin.users[":id"].$patch(
         {
           param: { id: operator!._id.toString() },
           json: { isDisabled: true },

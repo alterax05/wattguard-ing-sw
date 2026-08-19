@@ -94,7 +94,7 @@ export interface SensorReadingsParams {
 // ── Queries ─────────────────────────────────────────────────────────────────
 
 async function fetchSensorPage(params?: ListSensorsParams): Promise<SensorListData> {
-  const res = await client.api.sensors.$get({
+  const res = await client.api.v1.sensors.$get({
     query: {
       ...(params?.buildingId ? { buildingId: params.buildingId } : {}),
       ...(params?.sensorType ? { sensorType: params.sensorType } : {}),
@@ -174,7 +174,7 @@ export function useSensor(id: string | undefined) {
   return useQuery({
     queryKey: [...SENSORS_QUERY_KEY, "detail", id],
     queryFn: async () => {
-      const res = await client.api.sensors[":id"].$get({
+      const res = await client.api.v1.sensors[":id"].$get({
         param: { id: id! },
       });
 
@@ -199,7 +199,7 @@ export function useSensorReadings(id: string | undefined, params?: SensorReading
   return useQuery({
     queryKey: [...SENSORS_QUERY_KEY, "readings", id, params ?? {}],
     queryFn: async () => {
-      const res = await client.api.sensors[":id"].readings.$get({
+      const res = await client.api.v1.sensors[":id"].readings.$get({
         param: { id: id! },
         query: {
           ...(params?.startDate ? { startDate: params.startDate } : {}),
@@ -243,7 +243,7 @@ export function useCreateSensor() {
       minThreshold?: number;
       maxThreshold?: number;
     }) => {
-      const res = await client.api.sensors.$post({
+      const res = await client.api.v1.sensors.$post({
         json: input,
       });
 
@@ -281,7 +281,7 @@ export function useUpdateSensor() {
       maxThreshold?: number | null;
     }) => {
       const { id, ...body } = input;
-      const res = await client.api.sensors[":id"].$patch({
+      const res = await client.api.v1.sensors[":id"].$patch({
         param: { id },
         json: body,
       });
@@ -312,7 +312,7 @@ export function useDeleteSensor() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await client.api.sensors[":id"].$delete({
+      const res = await client.api.v1.sensors[":id"].$delete({
         param: { id },
       });
 
