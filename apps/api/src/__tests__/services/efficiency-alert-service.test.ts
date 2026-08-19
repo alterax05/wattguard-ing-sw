@@ -199,7 +199,12 @@ describe("evaluateEfficiencyAlerts", () => {
     expect(alerts[0]!.status).toBe("active");
     expect(alerts[0]!.thresholdType).toBe("min");
     expect(alerts[0]!.severity).toBe("high");
-    expect(alerts[0]!.message).toContain(building.name);
+    expect(alerts[0]!.value).toBeGreaterThan(0);
+    expect(alerts[0]!.value).toBeLessThan(10);
+    expect(alerts[0]!.limit).toBe(10);
+    expect(alerts[0]!.unit).toBe("COP");
+    expect(alerts[0]!.location).toBe(building.name);
+    expect(alerts[0]!.sensorType).toBeUndefined();
   });
 
   test("dedupes: second evaluation does not create a second active alert", async () => {

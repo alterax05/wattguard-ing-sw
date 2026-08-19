@@ -97,7 +97,6 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
         if (!existingAlert) {
           const limit = isMin ? current.minThreshold : current.maxThreshold;
           const severity = "high";
-          const message = `Valore fuori soglia rilevato per il sensore ${current.sensorType} (${current.location}): ${input.value}${input.unit} (Limite: ${limit}${input.unit})`;
 
           await Alert.create(
             [
@@ -108,7 +107,11 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
                 type: THRESHOLD_ALERT_TYPE,
                 thresholdType,
                 severity,
-                message,
+                sensorType: current.sensorType,
+                location: current.location,
+                value: input.value,
+                unit: input.unit,
+                limit: limit ?? null,
                 status: "active",
               },
             ],

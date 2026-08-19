@@ -1,9 +1,11 @@
+import { useTranslation } from "react-i18next"
 import { useAlerts } from "@/hooks/use-alerts"
 import { AlertTriangle, AlertCircle, Info } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDistanceToNow } from "date-fns"
-import { it } from "date-fns/locale"
+import { getDateFnsLocale } from "@/lib/dates"
+import { composeAlertMessage, getAlertTypeLabel } from "@/lib/alerts"
 
 interface AlertsListProps {
   limit?: number
@@ -11,6 +13,7 @@ interface AlertsListProps {
 
 export function AlertsList({ limit = 10 }: AlertsListProps) {
   const { data, isLoading, isError } = useAlerts({ status: "active" })
+  const { t } = useTranslation()
 
   if (isLoading) {
     return (
@@ -33,7 +36,7 @@ export function AlertsList({ limit = 10 }: AlertsListProps) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <AlertCircle className="mb-2 h-8 w-8 text-destructive" />
-        <p className="text-sm text-muted-foreground">Errore nel caricamento delle notifiche</p>
+        <p className="text-sm text-muted-foreground">{t("alerts.loadError")}</p>
       </div>
     )
   }
@@ -44,7 +47,7 @@ export function AlertsList({ limit = 10 }: AlertsListProps) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <Info className="mb-2 h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Nessuna notifica attiva</p>
+        <p className="text-sm text-muted-foreground">{t("alerts.noActive")}</p>
       </div>
     )
   }
@@ -72,6 +75,8 @@ export function AlertsList({ limit = 10 }: AlertsListProps) {
     }
   }
 
+  const dateFnsLocale = getDateFnsLocale()
+
   return (
     <div className="space-y-2">
       {alerts.map((alert) => (
@@ -83,17 +88,17 @@ export function AlertsList({ limit = 10 }: AlertsListProps) {
             {getSeverityIcon(alert.severity)}
           </div>
           <div className="flex-1 space-y-1">
-            <p className="text-sm font-medium leading-none">{alert.message}</p>
+            <p className="text-sm font-medium leading-none">{composeAlertMessage(alert, t)}</p>
             <p className="text-xs text-muted-foreground">
               {alert.buildingName} •{" "}
               {formatDistanceToNow(new Date(alert.createdAt), {
                 addSuffix: true,
-                locale: it,
+                locale: dateFnsLocale,
               })}
             </p>
           </div>
           <Badge variant="outline" className="capitalize">
-            {alert.type.replace(/_/g, " ")}
+            {getAlertTypeLabel(alert.type, t)}
           </Badge>
         </div>
       ))}

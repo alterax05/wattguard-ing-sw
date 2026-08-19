@@ -109,7 +109,11 @@ beforeEach(async () => {
     buildingName: building.name,
     type: "threshold",
     severity: "high",
-    message: "Consumo elevato",
+    sensorType: "energy_meter",
+    location: "Quadro",
+    value: 52.75,
+    unit: "kWh",
+    limit: 50,
     status: "active",
     createdAt: new Date("2026-01-10T08:00:00.000Z"),
   });

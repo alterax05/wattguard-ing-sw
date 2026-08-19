@@ -83,7 +83,11 @@ beforeEach(async () => {
       buildingName: "Test Building",
       type: "temperature_anomaly",
       severity: "critical",
-      message: "Temperature too high",
+      sensorType: "internal_temp",
+      location: "Sala Principale",
+      value: 31.5,
+      unit: "°C",
+      limit: 30,
       status: "active",
     },
     {
@@ -91,7 +95,8 @@ beforeEach(async () => {
       buildingName: "Test Building",
       type: "sensor_offline",
       severity: "medium",
-      message: "Sensor unreachable",
+      sensorType: "energy_meter",
+      location: "Quadro Elettrico",
       status: "acknowledged",
       acknowledgedBy: "Test User",
       acknowledgedAt: new Date(),
@@ -116,6 +121,16 @@ describe("Alerts API", () => {
     }
     expect(body.alerts).toBeInstanceOf(Array);
     expect(body.alerts.length).toBe(2);
+    const thresholdAlert = body.alerts.find(
+      (alert) => alert.type === "temperature_anomaly",
+    );
+    expect(thresholdAlert).toBeDefined();
+    expect(thresholdAlert!.sensorType).toBe("internal_temp");
+    expect(thresholdAlert!.location).toBe("Sala Principale");
+    expect(thresholdAlert!.value).toBe(31.5);
+    expect(thresholdAlert!.unit).toBe("°C");
+    expect(thresholdAlert!.limit).toBe(30);
+    expect(thresholdAlert).not.toHaveProperty("message");
   });
 
   it("should acknowledge an active alert", async () => {
@@ -161,6 +176,7 @@ describe("Alerts API", () => {
       throw new Error("Expected response to contain 'error'");
     }
     expect(body.error).toBe("Only active alerts can be acknowledged");
+    expect((body as { error: string; code?: string }).code).toBe("alert_not_active");
   });
 
   it("should resolve an alert", async () => {

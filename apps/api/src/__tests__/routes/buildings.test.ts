@@ -410,7 +410,10 @@ describe("Buildings Routes - Integration Tests", () => {
         type: EFFICIENCY_ALERT_TYPE,
         thresholdType: "min",
         severity: "high",
-        message: "Efficienza sotto soglia",
+        value: 2.1,
+        unit: "COP",
+        limit: 2.5,
+        location: building.name,
         status: "active",
       });
 
@@ -454,7 +457,10 @@ describe("Buildings Routes - Integration Tests", () => {
         type: EFFICIENCY_ALERT_TYPE,
         thresholdType: "min",
         severity: "high",
-        message: "Efficienza sotto soglia",
+        value: 2.1,
+        unit: "COP",
+        limit: 2.5,
+        location: building.name,
         status: "active",
       });
 
@@ -519,7 +525,11 @@ describe("Buildings Routes - Integration Tests", () => {
         type: "threshold_exceeded",
         thresholdType: "max",
         severity: "high",
-        message: "Temperature too high",
+        sensorType: "internal_temp",
+        location: "Sala",
+        value: 35,
+        unit: "°C",
+        limit: 30,
         status: "active",
       });
 

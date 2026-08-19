@@ -85,7 +85,8 @@ describe("Dashboard", () => {
       buildingName: "Test",
       type: "sensor_offline",
       severity: "medium",
-      message: "Offline",
+      sensorType: "energy_meter",
+      location: "Quadro",
       status: "active",
     });
 
