@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -14,10 +15,12 @@ interface BuildingStatusBadgeProps {
 }
 
 export function BuildingStatusBadge({ status, icon, className }: BuildingStatusBadgeProps) {
+  const { t } = useTranslation()
+
   return (
     <Badge variant="secondary" className={cn(BUILDING_STATUS_STYLES[status], className)}>
       {icon}
-      {getBuildingStatusLabel(status)}
+      {getBuildingStatusLabel(status, t)}
     </Badge>
   )
 }

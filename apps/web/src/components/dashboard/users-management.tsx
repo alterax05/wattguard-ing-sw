@@ -1,4 +1,5 @@
 import { useState, useContext } from "react"
+import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 import { useUsers, useUpdateUser, useDeleteUser } from "@/hooks/use-auth"
 import { AuthContext } from "@/lib/auth"
@@ -39,7 +40,7 @@ import {
 } from "lucide-react"
 import { AddUserDialog } from "./add-user-dialog"
 import { format } from "date-fns"
-import { it } from "date-fns/locale"
+import { getDateFnsLocale } from "@/lib/dates"
 import { toast } from "sonner"
 import type { AdminUser } from "@/hooks/use-auth"
 
@@ -51,33 +52,34 @@ export function UsersManagement() {
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
   const { user: currentUser } = useContext(AuthContext)
+  const { t } = useTranslation()
 
   const getRoleBadge = (role: string) => {
     if (role === "admin") {
       return (
         <Badge className="bg-primary text-primary-foreground">
           <Shield className="mr-1 h-3 w-3" />
-          Amministratore
+          {t("users.role.admin")}
         </Badge>
       )
     }
     return (
       <Badge variant="secondary">
         <UserIcon className="mr-1 h-3 w-3" />
-        Operatore
+        {t("users.role.operator")}
       </Badge>
     )
   }
 
   const handleRoleChange = (user: AdminUser) => {
     const newRole = user.role === "admin" ? "operator" : "admin"
-    const roleLabel = newRole === "admin" ? "Amministratore" : "Operatore"
+    const roleLabel = newRole === "admin" ? t("users.role.admin") : t("users.role.operator")
 
     updateUser.mutate(
       { id: user.id, role: newRole },
       {
         onSuccess: () => {
-          toast.success(`Ruolo di ${user.name ?? user.email} aggiornato a ${roleLabel}`)
+          toast.success(t("users.roleUpdated", { name: user.name ?? user.email, role: roleLabel }))
         },
         onError: (err) => {
           toast.error(err.message)
@@ -91,7 +93,7 @@ export function UsersManagement() {
 
     deleteUser.mutate(userToDelete.id, {
       onSuccess: () => {
-        toast.success(`Utente ${userToDelete.name ?? userToDelete.email} eliminato`)
+        toast.success(t("users.deleted", { name: userToDelete.name ?? userToDelete.email }))
         setUserToDelete(null)
       },
       onError: (err) => {
@@ -105,13 +107,13 @@ export function UsersManagement() {
     if (!userToToggle) return
 
     const nextDisabled = !userToToggle.isDisabled
-    const actionLabel = nextDisabled ? "disabilitato" : "riattivato"
+    const actionLabel = nextDisabled ? t("users.disabled") : t("users.reenabled")
 
     updateUser.mutate(
       { id: userToToggle.id, isDisabled: nextDisabled },
       {
         onSuccess: () => {
-          toast.success(`Utente ${userToToggle.name ?? userToToggle.email} ${actionLabel}`)
+          toast.success(t("users.statusChanged", { name: userToToggle.name ?? userToToggle.email, status: actionLabel }))
           setUserToToggle(null)
         },
         onError: (err) => {
@@ -123,16 +125,17 @@ export function UsersManagement() {
   }
 
   const isSelf = (userId: string) => currentUser?.id === userId
+  const dateFnsLocale = getDateFnsLocale()
 
   return (
     <>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Utenti del Sistema</CardTitle>
+            <CardTitle>{t("users.title")}</CardTitle>
             <Button onClick={() => setShowAddDialog(true)}>
               <UserPlus className="mr-2 h-4 w-4" />
-              Aggiungi Utente
+              {t("users.add")}
             </Button>
           </div>
         </CardHeader>
@@ -140,20 +143,20 @@ export function UsersManagement() {
           {isLoading && (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Caricamento utenti...
+              {t("users.loading")}
             </div>
           )}
 
           {error && (
             <div className="flex items-center justify-center gap-2 py-8 text-destructive">
               <AlertCircle className="h-5 w-5" />
-              <span>Errore nel caricamento degli utenti: {error.message}</span>
+              <span>{t("users.loadError", { message: error.message })}</span>
             </div>
           )}
 
           {!isLoading && !error && users?.length === 0 && (
             <div className="py-8 text-center text-muted-foreground">
-              Nessun utente trovato.
+              {t("users.notFound")}
             </div>
           )}
 
@@ -185,7 +188,9 @@ export function UsersManagement() {
                               {user.createdAt && (
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
-                                  Registrato {format(new Date(user.createdAt), "d MMM yyyy", { locale: it })}
+                                  {t("users.registeredOn", {
+                                    date: format(new Date(user.createdAt), "d MMM yyyy", { locale: dateFnsLocale }),
+                                  })}
                                 </div>
                               )}
                             </div>
@@ -197,7 +202,7 @@ export function UsersManagement() {
                         {user.isDisabled && (
                           <Badge variant="outline" className="text-muted-foreground">
                             <Ban className="mr-1 h-3 w-3" />
-                            Disabilitato
+                            {t("users.disabledBadge")}
                           </Badge>
                         )}
                         {!isSelf(user.id) && (
@@ -205,7 +210,7 @@ export function UsersManagement() {
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Azioni utente</span>
+                                <span className="sr-only">{t("users.actions")}</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -214,7 +219,7 @@ export function UsersManagement() {
                                 disabled={updateUser.isPending}
                               >
                                 <ArrowRightLeft className="mr-2 h-4 w-4" />
-                                {user.role === "admin" ? "Rendi Operatore" : "Rendi Amministratore"}
+                                {user.role === "admin" ? t("users.makeOperator") : t("users.makeAdmin")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => setUserToToggle(user)}
@@ -223,12 +228,12 @@ export function UsersManagement() {
                                 {user.isDisabled ? (
                                   <>
                                     <UserCheck className="mr-2 h-4 w-4" />
-                                    Riattiva Utente
+                                    {t("users.enableUser")}
                                   </>
                                 ) : (
                                   <>
                                     <UserX className="mr-2 h-4 w-4" />
-                                    Disabilita Utente
+                                    {t("users.disableUser")}
                                   </>
                                 )}
                               </DropdownMenuItem>
@@ -239,7 +244,7 @@ export function UsersManagement() {
                                 disabled={deleteUser.isPending}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Elimina Utente
+                                {t("users.deleteUser")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -259,15 +264,13 @@ export function UsersManagement() {
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
+            <AlertDialogTitle>{t("users.deleteConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare l&apos;utente{" "}
-              <strong>{userToDelete?.name ?? userToDelete?.email}</strong>? Questa azione non
-              può essere annullata.
+              {t("users.deleteConfirmDescription", { name: userToDelete?.name ?? userToDelete?.email })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteUser.isPending}>Annulla</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteUser.isPending}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={handleDeleteConfirm}
@@ -276,10 +279,10 @@ export function UsersManagement() {
               {deleteUser.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Eliminazione...
+                  {t("common.deleting")}
                 </>
               ) : (
-                "Elimina"
+                t("common.delete")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -290,26 +293,16 @@ export function UsersManagement() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {userToToggle?.isDisabled ? "Conferma Riattivazione" : "Conferma Disabilitazione"}
+              {userToToggle?.isDisabled ? t("users.enableConfirmTitle") : t("users.disableConfirmTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {userToToggle?.isDisabled ? (
-                <>
-                  Sei sicuro di voler riattivare l&apos;utente{" "}
-                  <strong>{userToToggle?.name ?? userToToggle?.email}</strong>? Potrà nuovamente
-                  accedere al sistema.
-                </>
-              ) : (
-                <>
-                  Sei sicuro di voler disabilitare l&apos;utente{" "}
-                  <strong>{userToToggle?.name ?? userToToggle?.email}</strong>? Verrà disconnesso e
-                  non potrà più accedere finché non verrà riattivato.
-                </>
-              )}
+              {userToToggle?.isDisabled
+                ? t("users.enableConfirmDescription", { name: userToToggle?.name ?? userToToggle?.email })
+                : t("users.disableConfirmDescription", { name: userToToggle?.name ?? userToToggle?.email })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={updateUser.isPending}>Annulla</AlertDialogCancel>
+            <AlertDialogCancel disabled={updateUser.isPending}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant={userToToggle?.isDisabled ? undefined : "destructive"}
               onClick={handleStatusChange}
@@ -318,12 +311,12 @@ export function UsersManagement() {
               {updateUser.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvataggio...
+                  {t("common.saving")}
                 </>
               ) : userToToggle?.isDisabled ? (
-                "Riattiva"
+                t("users.enable")
               ) : (
-                "Disabilita"
+                t("users.disable")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

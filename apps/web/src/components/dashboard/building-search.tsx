@@ -1,5 +1,6 @@
 import { useContext, useState, useMemo } from "react"
 import { format } from "date-fns"
+import { useTranslation } from "react-i18next"
 import type { DateRange } from "react-day-picker"
 import { useNavigate } from "react-router-dom"
 import { useBuildings, useBuildingTypes, type BuildingSummary } from "@/hooks/use-buildings"
@@ -55,29 +56,21 @@ const EXPORT_ACTIONS: Record<
     url: string
     formatParam?: string
     filename: (start: string, end: string) => string
-    loading: string
-    success: string
   }
 > = {
   csv: {
     url: "/api/export/consumption",
     filename: (start, end) => `wattguard-consumption-${start}-${end}.csv`,
-    loading: "Preparazione esportazione CSV…",
-    success: "Esportazione CSV completata",
   },
   xlsx: {
     url: "/api/export/report",
     formatParam: "xlsx",
     filename: (start, end) => `wattguard-report-${start}-${end}.xlsx`,
-    loading: "Preparazione report Excel…",
-    success: "Report Excel scaricato",
   },
   pdf: {
     url: "/api/export/report",
     formatParam: "pdf",
     filename: (start, end) => `wattguard-report-${start}-${end}.pdf`,
-    loading: "Preparazione report PDF…",
-    success: "Report PDF scaricato",
   },
 }
 
@@ -90,6 +83,7 @@ function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
 export function BuildingSearch() {
   const { user } = useContext(AuthContext)
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<BuildingStatus | "all">("all")
@@ -127,7 +121,7 @@ export function BuildingSearch() {
     setSelectedIds((prev) => {
       if (prev.includes(id)) return prev.filter((i) => i !== id)
       if (prev.length >= MAX_COMPARE_BUILDINGS) {
-        toast.error(`Puoi confrontare al massimo ${MAX_COMPARE_BUILDINGS} edifici`)
+        toast.error(t("buildings.maxCompareReached", { count: MAX_COMPARE_BUILDINGS }))
         return prev
       }
       return [...prev, id]
@@ -144,7 +138,7 @@ export function BuildingSearch() {
 
   const handleExport = async (fileFormat: ExportFormat) => {
     if (!exportRange?.from || !exportRange?.to) {
-      toast.error("Seleziona una data di inizio e una data di fine")
+      toast.error(t("buildings.selectExportRange"))
       return
     }
 
@@ -152,7 +146,7 @@ export function BuildingSearch() {
     const endDate = format(exportRange.to, "yyyy-MM-dd")
     const action = EXPORT_ACTIONS[fileFormat]
 
-    const toastId = toast.loading(action.loading)
+    const toastId = toast.loading(t(`buildings.export.loading.${fileFormat}`))
     setIsExporting(true)
 
     try {
@@ -167,10 +161,10 @@ export function BuildingSearch() {
         `${action.url}?${params.toString()}`,
         action.filename(startDate, endDate),
       )
-      toast.success(action.success, { id: toastId })
+      toast.success(t(`buildings.export.success.${fileFormat}`), { id: toastId })
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Errore durante l'esportazione",
+        error instanceof Error ? error.message : t("buildings.export.error"),
         { id: toastId },
       )
     } finally {
@@ -192,7 +186,7 @@ export function BuildingSearch() {
               <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Cerca edificio per nome o indirizzo..."
+                  placeholder={t("buildings.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -200,10 +194,10 @@ export function BuildingSearch() {
               </div>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-full md:w-44">
-                  <SelectValue placeholder="Tipologia" />
+                  <SelectValue placeholder={t("buildings.type")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tutte le tipologie</SelectItem>
+                  <SelectItem value="all">{t("buildings.allTypes")}</SelectItem>
                   {buildingTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       {type.name}
@@ -216,13 +210,13 @@ export function BuildingSearch() {
                 onValueChange={(value) => setStatusFilter(value as BuildingStatus | "all")}
               >
                 <SelectTrigger className="w-full md:w-36">
-                  <SelectValue placeholder="Stato" />
+                  <SelectValue placeholder={t("common.status")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  <SelectItem value="active">{getBuildingStatusLabel("active")}</SelectItem>
-                  <SelectItem value="inactive">{getBuildingStatusLabel("inactive")}</SelectItem>
-                  <SelectItem value="decommissioned">{getBuildingStatusLabel("decommissioned")}</SelectItem>
+                  <SelectItem value="all">{t("common.all")}</SelectItem>
+                  <SelectItem value="active">{getBuildingStatusLabel("active", t)}</SelectItem>
+                  <SelectItem value="inactive">{getBuildingStatusLabel("inactive", t)}</SelectItem>
+                  <SelectItem value="decommissioned">{getBuildingStatusLabel("decommissioned", t)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -238,14 +232,17 @@ export function BuildingSearch() {
                   disabled={filteredBuildings.length === 0}
                 >
                   {selectedIds.length === filteredBuildings.length && filteredBuildings.length > 0
-                    ? "Deseleziona tutti"
-                    : "Seleziona tutti"}
+                    ? t("buildings.deselectAll")
+                    : t("buildings.selectAll")}
                 </Button>
 
                 {selectedIds.length > 0 && (
                   <>
                     <Badge variant="secondary" className="text-xs">
-                      {selectedIds.length}/{MAX_COMPARE_BUILDINGS} selezionati
+                      {t("buildings.selectedCount", {
+                        selected: selectedIds.length,
+                        max: MAX_COMPARE_BUILDINGS,
+                      })}
                     </Badge>
 
                     <Button
@@ -257,7 +254,7 @@ export function BuildingSearch() {
                       }}
                     >
                       <Eye className="mr-2 h-4 w-4" />
-                      Vedi Dettagli
+                      {t("buildings.viewDetails")}
                     </Button>
 
                     <Separator orientation="vertical" className="h-6" />
@@ -278,7 +275,7 @@ export function BuildingSearch() {
                           disabled={!exportRange?.from || !exportRange?.to || isExporting}
                         >
                           <Download className="mr-2 h-4 w-4" />
-                          {isExporting ? "Esportazione..." : "Scarica report"}
+                          {isExporting ? t("buildings.export.inProgress") : t("buildings.export.downloadReport")}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -287,21 +284,21 @@ export function BuildingSearch() {
                           disabled={isExporting}
                         >
                           <FileText className="mr-2 h-4 w-4" />
-                          CSV
+                          {t("buildings.export.csv")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleExport("xlsx")}
                           disabled={isExporting}
                         >
                           <FileSpreadsheet className="mr-2 h-4 w-4" />
-                          Excel (.xlsx)
+                          {t("buildings.export.xlsx")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleExport("pdf")}
                           disabled={isExporting}
                         >
                           <FileType className="mr-2 h-4 w-4" />
-                          PDF
+                          {t("buildings.export.pdf")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -316,7 +313,7 @@ export function BuildingSearch() {
       {/* Results count */}
       {!isLoading && !isError && (
         <p className="text-sm text-muted-foreground">
-          {filteredBuildings.length} edifici trovati
+          {t("buildings.resultsCount", { count: filteredBuildings.length })}
         </p>
       )}
 
@@ -324,9 +321,9 @@ export function BuildingSearch() {
       {isError && (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-destructive/50 py-16 text-center">
           <AlertCircle className="mb-3 h-10 w-10 text-destructive" />
-          <p className="font-medium text-destructive">Errore nel caricamento</p>
+          <p className="font-medium text-destructive">{t("buildings.loadErrorTitle")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {error?.message ?? "Impossibile caricare gli edifici"}
+            {error?.message ?? t("buildings.loadErrorDescription")}
           </p>
         </div>
       )}
@@ -363,9 +360,9 @@ export function BuildingSearch() {
           {filteredBuildings.length === 0 ? (
             <div className="col-span-full flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
               <Building2 className="mb-3 h-10 w-10 text-muted-foreground" />
-              <p className="font-medium">Nessun edificio trovato</p>
+              <p className="font-medium">{t("buildings.notFound")}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Prova a modificare i filtri di ricerca
+                {t("buildings.adjustFilters")}
               </p>
             </div>
           ) : (
@@ -424,24 +421,24 @@ export function BuildingSearch() {
                             <BuildingStatusBadge status={building.status} />
                           </div>
                           <Separator orientation="vertical" className="h-4" />
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Sensori attivi">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground" title={t("buildings.activeSensors")}>
                             <Radio className="h-3.5 w-3.5" />
                             <span className="font-medium text-foreground">{building.activeSensors}</span>
                           </div>
                           {building.currentConsumption !== null && (
                             <>
                               <Separator orientation="vertical" className="h-4" />
-                              <div className="flex items-center gap-1 text-xs" title="Consumo attuale">
+                              <div className="flex items-center gap-1 text-xs" title={t("buildings.currentConsumption")}>
                                 <Zap className="h-3.5 w-3.5 text-chart-1" />
                                 <span className="font-medium text-chart-1">
-                                  {building.currentConsumption.toFixed(1)} kWh
+                                  {building.currentConsumption.toFixed(1)} {t("common.kwh")}
                                 </span>
                               </div>
                             </>
                           )}
                           <Separator orientation="vertical" className="h-4" />
                           <div className="text-xs text-muted-foreground">
-                            {building.surface} m&sup2;
+                            {building.surface} {t("common.squareMeters")}
                           </div>
                         </div>
                       </div>

@@ -1,8 +1,9 @@
 import { useContext, useMemo, useState } from "react";
 import { endOfDay } from "date-fns";
+import { useTranslation } from "react-i18next";
 import type { DateRange } from "react-day-picker";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { toIsoDate } from "@/lib/dates";
+import { toIsoDate, getIntlLocale } from "@/lib/dates";
 import {
   useBuilding,
   useBuildingRealTime,
@@ -116,19 +117,6 @@ function getSensorIcon(sensorType: SensorWithBuilding["sensorType"]) {
   }
 }
 
-function getSensorTypeLabel(sensorType: SensorWithBuilding["sensorType"]) {
-  switch (sensorType) {
-    case "internal_temp":
-      return "Temp. Interna";
-    case "external_temp":
-      return "Temp. Esterna";
-    case "energy_meter":
-      return "Contatore Energia";
-    case "gas_meter":
-      return "Contatore Gas";
-  }
-}
-
 /** Default date range: last 30 days */
 function getDefaultDateRange(): DateRange {
   const end = new Date();
@@ -142,32 +130,32 @@ type SensorTypeKey = HistoryParams["sensorType"] & string;
 const SENSOR_TYPE_CONFIG: Record<
   SensorTypeKey,
   {
-    label: string;
+    labelKey: string;
     unit: string;
     color: string;
     icon: typeof Zap;
   }
 > = {
   energy_meter: {
-    label: "Energia",
+    labelKey: "sensors.type.energy_meter",
     unit: "kWh",
     color: "var(--chart-1)",
     icon: Zap,
   },
   internal_temp: {
-    label: "Temp. Interna",
+    labelKey: "sensors.type.internal_temp",
     unit: "°C",
     color: "var(--chart-2)",
     icon: Thermometer,
   },
   external_temp: {
-    label: "Temp. Esterna",
+    labelKey: "sensors.type.external_temp",
     unit: "°C",
     color: "var(--chart-3)",
     icon: Thermometer,
   },
   gas_meter: {
-    label: "Gas",
+    labelKey: "sensors.type.gas_meter",
     unit: "m³",
     color: "var(--chart-4)",
     icon: Flame,
@@ -197,6 +185,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   const { user } = useContext(AuthContext);
   const isAdmin = user?.role === "admin";
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -370,12 +359,12 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
     deleteSensor.mutate(deletingSensor.id, {
       onSuccess: () => {
         toast.success(
-          `Sensore "${deletingSensor.location}" eliminato con successo`,
+          t("sensors.deleted", { location: deletingSensor.location }),
         );
         setDeletingSensor(null);
       },
       onError: (error) => {
-        toast.error(error.message || "Errore nell'eliminazione del sensore");
+        toast.error(error.message || t("sensors.deleteError"));
       },
     });
   };
@@ -383,21 +372,23 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   const handleDeleteBuilding = () => {
     deleteBuilding.mutate(buildingId, {
       onSuccess: () => {
-        toast.success("Edificio eliminato con successo");
+        toast.success(t("buildings.deleted"));
         navigate("/dashboard/buildings");
       },
       onError: (error) => {
-        toast.error(error.message || "Errore nell'eliminazione dell'edificio");
+        toast.error(error.message || t("buildings.deleteError"));
         setConfirmDeleteBuildingOpen(false);
       },
     });
   };
 
+  const intlLocale = getIntlLocale();
+
   // Prepare history chart data
   const chartData = useMemo(() => {
     if (!historyData?.data) return [];
     return historyData.data.map((point) => ({
-      timestamp: new Date(point.timestamp).toLocaleString("it-IT", {
+      timestamp: new Date(point.timestamp).toLocaleString(intlLocale, {
         day: "2-digit",
         month: "short",
         hour: "2-digit",
@@ -407,7 +398,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       sensorType: point.sensorType,
       unit: point.unit,
     }));
-  }, [historyData]);
+  }, [historyData, intlLocale]);
 
   // Loading state
   if (buildingLoading) {
@@ -442,14 +433,14 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <Building2 className="mb-3 h-10 w-10 text-muted-foreground" />
-        <p className="font-medium">Edificio non trovato</p>
+        <p className="font-medium">{t("errors.building_not_found")}</p>
         <Button
           variant="outline"
           className="mt-4 bg-transparent"
           onClick={() => navigate("/dashboard/buildings")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Torna alla ricerca
+          {t("buildings.backToSearch")}
         </Button>
       </div>
     );
@@ -465,7 +456,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           onClick={() => navigate("/dashboard/buildings")}
         >
           <ArrowLeft className="h-5 w-5" />
-          <span className="sr-only">Indietro</span>
+          <span className="sr-only">{t("common.back")}</span>
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-balance flex items-center gap-2">
@@ -477,7 +468,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               onClick={() => setIsEditingBuilding(true)}
             >
               <Pencil className="h-4 w-4" />
-              <span className="sr-only">Modifica edificio</span>
+              <span className="sr-only">{t("buildings.edit")}</span>
             </Button>
             {isAdmin && (
               <Button
@@ -487,7 +478,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                 onClick={() => setConfirmDeleteBuildingOpen(true)}
               >
                 <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Elimina edificio</span>
+                <span className="sr-only">{t("buildings.delete")}</span>
               </Button>
             )}
           </h1>
@@ -512,7 +503,9 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                 : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {realTimeData?.data.energyConsumption.unit ?? "W"} corrente
+              {t("buildings.currentPower", {
+                unit: realTimeData?.data.energyConsumption.unit ?? "W",
+              })}
             </p>
           </CardContent>
         </Card>
@@ -524,7 +517,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                 ? `${realTimeData.data.internalTemperature.value}°`
                 : "—"}
             </p>
-            <p className="text-xs text-muted-foreground">Temp. interna</p>
+            <p className="text-xs text-muted-foreground">{t("sensors.type.internal_temp")}</p>
           </CardContent>
         </Card>
         <Card>
@@ -532,7 +525,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
             <Activity className="mb-2 h-5 w-5 text-chart-3" />
             <p className="text-2xl font-bold">{activeSensors}</p>
             <p className="text-xs text-muted-foreground">
-              Sensori attivi / {totalSensors}
+              {t("buildings.activeSensorsOf", { total: totalSensors })}
             </p>
           </CardContent>
         </Card>
@@ -540,7 +533,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
             <Building2 className="mb-2 h-5 w-5 text-chart-2" />
             <p className="text-2xl font-bold">{building.surface}</p>
-            <p className="text-xs text-muted-foreground">m&sup2; superficie</p>
+            <p className="text-xs text-muted-foreground">{t("buildings.surfaceLabel")}</p>
           </CardContent>
         </Card>
       </div>
@@ -549,7 +542,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       <Card>
         <CardContent>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium">Periodo di analisi:</span>
+            <span className="text-sm font-medium">{t("buildings.analysisPeriod")}</span>
             <DateRangePicker value={range} onChange={setRange} />
           </div>
         </CardContent>
@@ -560,7 +553,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       <Card className="lg:col-span-2">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base">Dati Storici</CardTitle>
+            <CardTitle className="text-base">{t("buildings.historicalData")}</CardTitle>
             <Tabs
               value={selectedSensorType}
               onValueChange={(v) => setSelectedSensorType(v as SensorTypeKey)}
@@ -580,7 +573,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                       className="gap-1 text-xs px-2.5"
                     >
                       <Icon className="h-3 w-3" />
-                      {cfg.label}
+                      {t(cfg.labelKey)}
                     </TabsTrigger>
                   );
                 })}
@@ -596,15 +589,15 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           ) : chartData.length === 0 ? (
             <div className="flex h-64 flex-col items-center justify-center text-sm text-muted-foreground">
               <AlertCircle className="mb-2 h-8 w-8" />
-              Nessun dato disponibile per "
-              {SENSOR_TYPE_CONFIG[selectedSensorType].label}" nel periodo
-              selezionato
+              {t("buildings.noDataForPeriod", {
+                label: t(SENSOR_TYPE_CONFIG[selectedSensorType].labelKey),
+              })}
             </div>
           ) : (
             <ChartContainer
               config={{
                 value: {
-                  label: `${SENSOR_TYPE_CONFIG[selectedSensorType].label} (${SENSOR_TYPE_CONFIG[selectedSensorType].unit})`,
+                  label: `${t(SENSOR_TYPE_CONFIG[selectedSensorType].labelKey)} (${SENSOR_TYPE_CONFIG[selectedSensorType].unit})`,
                   color: SENSOR_TYPE_CONFIG[selectedSensorType].color,
                 },
               }}
@@ -654,7 +647,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Gauge className="h-4 w-4" />
-            Efficienza Energetica
+            {t("buildings.energyEfficiency")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -671,41 +664,45 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">
-                  Efficienza Impianto (COP)
+                  {t("buildings.efficiencyCop")}
                 </p>
                 <p className="mt-1 text-lg font-semibold tabular-nums">
                   {efficiencyData.metrics.averageCop != null
                     ? efficiencyData.metrics.averageCop.toFixed(2)
-                    : "N/D"}
+                    : t("common.na")}
                 </p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <TrendingDown className="h-3 w-3" />
-                    Qualità Isolamento
+                    {t("buildings.efficiencyInsulation")}
                   </span>
                 </p>
                 <p className="mt-1 text-lg font-semibold tabular-nums">
                   {efficiencyData.metrics.insulationQuality != null
                     ? `${efficiencyData.metrics.insulationQuality.toFixed(2)}`
-                    : "N/D"}
+                    : t("common.na")}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
                   W/(m²·K) -{" "}
                   {efficiencyData.metrics.estimatedHeatLossCoefficient != null
-                    ? `Tot: ${efficiencyData.metrics.estimatedHeatLossCoefficient.toFixed(0)} W/K`
+                    ? t("buildings.efficiencyHeatLoss", {
+                        value: efficiencyData.metrics.estimatedHeatLossCoefficient.toFixed(0),
+                      })
                     : ""}
                 </p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Consumo Totale</p>
+                <p className="text-xs text-muted-foreground">{t("buildings.totalConsumption")}</p>
                 <p className="mt-1 text-lg font-semibold tabular-nums">
-                  {efficiencyData.metrics.totalEnergyConsumed.toFixed(1)} kWh
+                  {efficiencyData.metrics.totalEnergyConsumed.toFixed(1)} {t("common.kwh")}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
                   {efficiencyData.metrics.averageExternalTemperature != null
-                    ? `Temp. esterna media: ${efficiencyData.metrics.averageExternalTemperature.toFixed(1)}°C`
+                    ? t("buildings.efficiencyAvgTemp", {
+                        value: efficiencyData.metrics.averageExternalTemperature.toFixed(1),
+                      })
                     : ""}
                 </p>
               </div>
@@ -713,7 +710,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           ) : (
             <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
               <AlertCircle className="mr-2 h-4 w-4" />
-              Dati di efficienza non disponibili per il periodo selezionato
+              {t("buildings.efficiencyUnavailable")}
             </div>
           )}
           <div className="mt-4 border-t pt-4">
@@ -787,11 +784,11 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Activity className="h-4 w-4" />
-              Sensori Installati ({totalSensors})
+              {t("buildings.installedSensors", { count: totalSensors })}
             </CardTitle>
             <Button size="sm" onClick={() => setAddSensorOpen(true)}>
               <Plus className="mr-1 h-4 w-4" />
-              Aggiungi
+              {t("common.add")}
             </Button>
           </CardHeader>
           <CardContent>
@@ -816,7 +813,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
             ) : sensors.length === 0 ? (
               <div className="flex h-32 flex-col items-center justify-center text-sm text-muted-foreground">
                 <Activity className="mb-2 h-8 w-8" />
-                <p>Nessun sensore installato</p>
+                <p>{t("buildings.noSensors")}</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -824,7 +821,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                   onClick={() => setAddSensorOpen(true)}
                 >
                   <Plus className="mr-1 h-4 w-4" />
-                  Aggiungi il primo sensore
+                  {t("buildings.addFirstSensor")}
                 </Button>
               </div>
             ) : (
@@ -832,6 +829,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                 {sensors.map((sensor) => {
                   const statusPresentation = getMonitoringStatusPresentation(
                     getMonitoringStatus(sensor),
+                    t,
                   );
                   const StatusIcon = statusPresentation.icon;
                   return (
@@ -846,7 +844,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                         <div>
                           <p className="text-sm font-medium">{sensor.location}</p>
                           <p className="text-xs text-muted-foreground">
-                            {getSensorTypeLabel(sensor.sensorType)}
+                            {t(`sensors.type.${sensor.sensorType}`, { defaultValue: sensor.sensorType })}
                           </p>
                         </div>
                       </div>
@@ -876,7 +874,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                               className="h-8 w-8"
                             >
                               <MoreVertical className="h-4 w-4" />
-                              <span className="sr-only">Azioni sensore</span>
+                              <span className="sr-only">{t("sensors.actions")}</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -884,14 +882,14 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                               onClick={() => setManuallyEditingSensorId(sensor.id)}
                             >
                               <Pencil className="mr-2 h-4 w-4" />
-                              Modifica
+                              {t("common.edit")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => setDeletingSensor(sensor)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Elimina
+                              {t("common.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -969,35 +967,35 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Building2 className="h-4 w-4" />
-              Dettagli Edificio
+              {t("buildings.details")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">
-                  Anno Costruzione
+                  {t("buildings.constructionYear")}
                 </p>
                 <p className="mt-1 text-lg font-semibold">
-                  {building.constructionYear ?? "N/D"}
+                  {building.constructionYear ?? t("common.na")}
                 </p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">
-                  Impianto Riscaldamento
+                  {t("buildings.heatingSystem")}
                 </p>
                 <p className="mt-1 text-sm font-semibold">
                   {building.heatingSystemType}
                 </p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Zona Geografica</p>
+                <p className="text-xs text-muted-foreground">{t("buildings.geographicZone")}</p>
                 <p className="mt-1 text-sm font-semibold">
                   {building.geographicZone}
                 </p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Stato</p>
+                <p className="text-xs text-muted-foreground">{t("common.status")}</p>
                 <p className="mt-1"><BuildingStatusBadge status={building.status} className="text-sm" /></p>
               </div>
             </div>
@@ -1038,21 +1036,20 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Elimina Sensore</AlertDialogTitle>
+            <AlertDialogTitle>{t("sensors.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare il sensore{" "}
-              <span className="font-medium">"{deletingSensor?.location}"</span>?
-              Questa azione eliminerà anche tutte le letture associate e non può
-              essere annullata.
+              {t("sensors.deleteConfirmDescription", {
+                location: deletingSensor?.location ?? "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteSensor}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteSensor.isPending ? "Eliminazione..." : "Elimina"}
+              {deleteSensor.isPending ? t("common.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1066,21 +1063,18 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Elimina Edificio</AlertDialogTitle>
+            <AlertDialogTitle>{t("buildings.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare l&apos;edificio{" "}
-              <span className="font-medium">"{building.name}"</span>? Questa
-              azione eliminerà anche tutti i sensori, le letture e gli alert
-              associati e non può essere annullata.
+              {t("buildings.deleteConfirmDescription", { name: building.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteBuilding}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteBuilding.isPending ? "Eliminazione..." : "Elimina"}
+              {deleteBuilding.isPending ? t("common.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

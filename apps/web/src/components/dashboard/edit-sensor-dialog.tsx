@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import {
   Dialog,
   DialogContent,
@@ -26,18 +27,18 @@ import {
   type SensorWithBuilding,
 } from "@/hooks/use-sensors"
 
-const SENSOR_TYPE_OPTIONS: { value: SensorType; label: string }[] = [
-  { value: "internal_temp", label: "Temperatura Interna" },
-  { value: "external_temp", label: "Temperatura Esterna" },
-  { value: "energy_meter", label: "Contatore Energia" },
-  { value: "gas_meter", label: "Contatore Gas" },
+const SENSOR_TYPES: SensorType[] = [
+  "internal_temp",
+  "external_temp",
+  "energy_meter",
+  "gas_meter",
 ]
 
-const SENSOR_STATUS_OPTIONS: { value: SensorStatus; label: string }[] = [
-  { value: "active", label: "Attivo" },
-  { value: "inactive", label: "Inattivo" },
-  { value: "maintenance", label: "Manutenzione" },
-  { value: "error", label: "Errore" },
+const SENSOR_STATUSES: SensorStatus[] = [
+  "active",
+  "inactive",
+  "maintenance",
+  "error",
 ]
 
 interface EditSensorDialogProps {
@@ -48,6 +49,7 @@ interface EditSensorDialogProps {
 
 export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialogProps) {
   const updateSensor = useUpdateSensor()
+  const { t } = useTranslation()
 
   const [sensorType, setSensorType] = useState<SensorType>(sensor.sensorType)
   const [location, setLocation] = useState(sensor.location)
@@ -63,13 +65,13 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
     e.preventDefault()
 
     if (!location.trim()) {
-      toast.error("Inserisci la posizione del sensore")
+      toast.error(t("sensors.validation.locationRequired"))
       return
     }
 
     const interval = parseInt(transmissionInterval, 10)
     if (isNaN(interval) || interval < 10 || interval > 3600) {
-      toast.error("L'intervallo di trasmissione deve essere tra 10 e 3600 secondi")
+      toast.error(t("sensors.validation.intervalRange"))
       return
     }
 
@@ -86,11 +88,11 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
       },
       {
         onSuccess: () => {
-          toast.success("Sensore aggiornato con successo")
+          toast.success(t("sensors.updated"))
           onOpenChange(false)
         },
         onError: (error) => {
-          toast.error(error.message || "Errore nell'aggiornamento del sensore")
+          toast.error(error.message || t("sensors.updateError"))
         },
       }
     )
@@ -101,23 +103,23 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Modifica Sensore</DialogTitle>
+            <DialogTitle>{t("sensors.editTitle")}</DialogTitle>
             <DialogDescription>
-              Modifica le impostazioni del sensore <span className="font-medium">{sensor.location}</span>
+              {t("sensors.editDescription", { location: sensor.location })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-sensorType">Tipo Sensore</Label>
+              <Label htmlFor="edit-sensorType">{t("sensors.typeLabel")}</Label>
               <Select value={sensorType} onValueChange={(v) => setSensorType(v as SensorType)}>
                 <SelectTrigger id="edit-sensorType">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SENSOR_TYPE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {SENSOR_TYPES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(`sensors.type.${value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -125,35 +127,35 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="edit-location">Posizione nell'edificio *</Label>
+              <Label htmlFor="edit-location">{t("sensors.locationLabel")}</Label>
               <Input
                 id="edit-location"
-                placeholder="es. Piano 1, Sala Server"
+                placeholder={t("sensors.locationPlaceholder")}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="edit-serialNumber">Numero Seriale</Label>
+              <Label htmlFor="edit-serialNumber">{t("sensors.serialNumber")}</Label>
               <Input
                 id="edit-serialNumber"
-                placeholder="es. SN-2024-001 (opzionale)"
+                placeholder={t("sensors.serialNumberPlaceholder")}
                 value={serialNumber}
                 onChange={(e) => setSerialNumber(e.target.value)}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="edit-status">Stato</Label>
+              <Label htmlFor="edit-status">{t("common.status")}</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as SensorStatus)}>
                 <SelectTrigger id="edit-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SENSOR_STATUS_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                  {SENSOR_STATUSES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(`sensors.status.${value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -161,7 +163,7 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="edit-transmissionInterval">Intervallo Trasmissione (secondi)</Label>
+              <Label htmlFor="edit-transmissionInterval">{t("sensors.transmissionInterval")}</Label>
               <Input
                 id="edit-transmissionInterval"
                 type="number"
@@ -170,28 +172,28 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
                 value={transmissionInterval}
                 onChange={(e) => setTransmissionInterval(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Minimo 10s, massimo 3600s</p>
+              <p className="text-xs text-muted-foreground">{t("sensors.intervalHintShort")}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-minThreshold">Soglia Minima (opzionale)</Label>
+                <Label htmlFor="edit-minThreshold">{t("sensors.minThreshold")}</Label>
                 <Input
                   id="edit-minThreshold"
                   type="number"
                   step="0.01"
-                  placeholder="es. 18.5"
+                  placeholder={t("sensors.thresholdPlaceholder")}
                   value={minThreshold}
                   onChange={(e) => setMinThreshold(e.target.value)}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-maxThreshold">Soglia Massima (opzionale)</Label>
+                <Label htmlFor="edit-maxThreshold">{t("sensors.maxThreshold")}</Label>
                 <Input
                   id="edit-maxThreshold"
                   type="number"
                   step="0.01"
-                  placeholder="es. 26.0"
+                  placeholder={t("sensors.thresholdPlaceholder")}
                   value={maxThreshold}
                   onChange={(e) => setMaxThreshold(e.target.value)}
                 />
@@ -200,11 +202,11 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={updateSensor.isPending}>
               {updateSensor.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salva Modifiche
+              {t("sensors.saveChanges")}
             </Button>
           </DialogFooter>
         </form>

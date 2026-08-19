@@ -1,6 +1,7 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +17,7 @@ interface AddUserDialogProps {
 
 export function AddUserDialog({ onClose }: AddUserDialogProps) {
   const createInvite = useCreateInvite()
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     email: "",
     role: "operator" as "admin" | "operator",
@@ -28,13 +30,13 @@ export function AddUserDialog({ onClose }: AddUserDialogProps) {
       { email: formData.email, role: formData.role },
       {
         onSuccess: () => {
-          toast.success("Invito inviato con successo", {
-            description: `Un'email di invito è stata inviata a ${formData.email}`,
+          toast.success(t("users.inviteSent"), {
+            description: t("users.inviteSentDescription", { email: formData.email }),
           })
           onClose()
         },
         onError: (err) => {
-          toast.error("Errore nell'invio dell'invito", {
+          toast.error(t("users.inviteError"), {
             description: err.message,
           })
         },
@@ -46,21 +48,21 @@ export function AddUserDialog({ onClose }: AddUserDialogProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Invita Nuovo Utente</DialogTitle>
+          <DialogTitle>{t("users.inviteTitle")}</DialogTitle>
           <DialogDescription>
-            Inserisci l'email e il ruolo del nuovo utente. Riceverà un'email con il link per completare la registrazione.
+            {t("users.inviteDescription")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("auth.email")}</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="email"
                 type="email"
-                placeholder="utente@esempio.com"
+                placeholder={t("users.emailPlaceholder")}
                 className="pl-9"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -71,7 +73,7 @@ export function AddUserDialog({ onClose }: AddUserDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Ruolo</Label>
+            <Label htmlFor="role">{t("users.roleLabel")}</Label>
             <Select
               value={formData.role}
               onValueChange={(value: "admin" | "operator") => setFormData({ ...formData, role: value })}
@@ -81,24 +83,24 @@ export function AddUserDialog({ onClose }: AddUserDialogProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="operator">Operatore Tecnico</SelectItem>
-                <SelectItem value="admin">Amministratore</SelectItem>
+                <SelectItem value="operator">{t("users.role.operator")}</SelectItem>
+                <SelectItem value="admin">{t("users.role.admin")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={createInvite.isPending}>
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={createInvite.isPending}>
               {createInvite.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Invio in corso...
+                  {t("users.inviting")}
                 </>
               ) : (
-                "Invia Invito"
+                t("users.sendInvite")
               )}
             </Button>
           </div>

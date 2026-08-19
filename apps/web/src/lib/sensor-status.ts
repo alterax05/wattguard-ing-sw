@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { AlertCircle, CheckCircle2, WifiOff, Wrench, type LucideIcon } from "lucide-react"
 import type { SensorStatus } from "@/hooks/use-sensors"
 
@@ -26,29 +27,32 @@ export function getMonitoringStatus(sensor: {
   return sensor.status
 }
 
-export function getMonitoringStatusPresentation(status: MonitoringStatus): MonitoringStatusPresentation {
+export function getMonitoringStatusPresentation(
+  status: MonitoringStatus,
+  t: TFunction,
+): MonitoringStatusPresentation {
   switch (status) {
     case "active":
       return {
-        label: "Attivo",
+        label: t("sensors.status.active"),
         icon: CheckCircle2,
         className: "bg-chart-3 text-white",
       }
     case "offline":
       return {
-        label: "Offline",
+        label: t("sensors.status.offline"),
         icon: WifiOff,
         className: "bg-muted text-muted-foreground",
       }
     case "maintenance":
       return {
-        label: "Manutenzione",
+        label: t("sensors.status.maintenance"),
         icon: Wrench,
         className: "bg-chart-4 text-foreground",
       }
     case "error":
       return {
-        label: "Errore",
+        label: t("sensors.status.error"),
         icon: AlertCircle,
         className: "bg-destructive text-destructive-foreground",
       }

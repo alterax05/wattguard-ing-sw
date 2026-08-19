@@ -1,19 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { client } from "@/lib/api";
+import { errorMessage } from "@/lib/errors";
 import { UserSchema } from "@wattguard/shared";
 import { z } from "zod";
-
-/** 
- * Safely extract an error message from an RPC response body.
- */
-function extractError(data: unknown, fallback: string): string {
-  if (data && typeof data === "object" && "error" in data) {
-    const err = (data as Record<string, unknown>).error;
-    return typeof err === "string" ? err : fallback;
-  }
-  return fallback;
-}
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;
 
@@ -75,7 +65,7 @@ export function useValidateInvite(token: string | null) {
       const data = await res.json();
 
       if (!res.ok || 'error' in data) {
-        throw new Error(extractError(data, "Invalid invite"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -99,7 +89,7 @@ export function useValidateResetToken(token: string | null) {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Invalid token"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -127,7 +117,7 @@ export function useLogin() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Login failed"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -188,7 +178,7 @@ export function useSetup() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Setup failed"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -213,7 +203,7 @@ export function useForgotPassword() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Request failed"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -234,7 +224,7 @@ export function useResetPassword() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Reset failed"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -258,7 +248,7 @@ export function useUsers() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Failed to fetch users"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -292,7 +282,7 @@ export function useUpdateUser() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Failed to update user"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -319,7 +309,7 @@ export function useDeleteUser() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Failed to delete user"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -344,7 +334,7 @@ export function useCreateInvite() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Failed to create invite"));
+        throw new Error(errorMessage(data));
       }
 
       return data;

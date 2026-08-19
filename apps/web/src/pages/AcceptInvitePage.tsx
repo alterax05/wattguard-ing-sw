@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useValidateInvite, useSetup } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,31 +13,35 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+import { LanguageToggle } from "@/components/ui/language-toggle";
 import { Loader2, Mail, Shield, UserIcon } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
-const passwordFormSchema = z
-  .object({
-    name: z
-      .string()
-      .min(2, "Il nome deve avere almeno 2 caratteri.")
-      .max(64, "Il nome deve avere al massimo 64 caratteri."),
-    password: z
-      .string()
-      .min(8, "La password deve avere almeno 8 caratteri.")
-      .max(128, "La password deve avere al massimo 128 caratteri."),
-    passwordConfirm: z.string(),
-  })
-  .refine((data) => data.password === data.passwordConfirm, {
-    message: "Le password non corrispondono.",
-    path: ["passwordConfirm"],
-  });
-
-type PasswordFormValues = z.infer<typeof passwordFormSchema>;
-
 export function AcceptInvitePage() {
+  const { t } = useTranslation();
+
+  const passwordFormSchema = z
+    .object({
+      name: z
+        .string()
+        .min(2, t("auth.validationNameMin"))
+        .max(64, t("auth.validationNameMax")),
+      password: z
+        .string()
+        .min(8, t("auth.validationPasswordMin"))
+        .max(128, t("auth.validationPasswordMax")),
+      passwordConfirm: z.string(),
+    })
+    .refine((data) => data.password === data.passwordConfirm, {
+      message: t("auth.passwordMismatch"),
+      path: ["passwordConfirm"],
+    });
+
+  type PasswordFormValues = z.infer<typeof passwordFormSchema>;
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
@@ -71,7 +76,8 @@ export function AcceptInvitePage() {
     );
   }
 
-  const roleLabel = inviteQuery.data?.role === "admin" ? "Amministratore" : "Operatore";
+  const roleLabel =
+    inviteQuery.data?.role === "admin" ? t("users.role.admin") : t("users.role.operator");
 
   // Loading state
   if (inviteQuery.isLoading) {
@@ -80,8 +86,8 @@ export function AcceptInvitePage() {
         <Card className="w-full max-w-md">
           <CardHeader className="items-center text-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <CardTitle className="mt-2">Verifica invito...</CardTitle>
-            <CardDescription>Stiamo verificando il tuo invito</CardDescription>
+            <CardTitle className="mt-2">{t("auth.verifyingInvite")}</CardTitle>
+            <CardDescription>{t("auth.verifyingInviteDescription")}</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -94,11 +100,11 @@ export function AcceptInvitePage() {
       <div className="flex min-h-svh items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle>Invito non valido</CardTitle>
+            <CardTitle>{t("auth.invalidInvite")}</CardTitle>
             <CardDescription className="text-destructive">
               {!token
-                ? "Il link non contiene un token di invito."
-                : inviteQuery.error?.message ?? "L'invito non è valido o è scaduto."}
+                ? t("auth.inviteTokenMissing")
+                : inviteQuery.error?.message ?? t("auth.inviteInvalidOrExpired")}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -110,11 +116,15 @@ export function AcceptInvitePage() {
 
   return (
     <div className="flex min-h-svh items-center justify-center p-4">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <ModeToggle />
+        <LanguageToggle />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle>Accetta Invito</CardTitle>
+          <CardTitle>{t("auth.acceptInviteTitle")}</CardTitle>
           <CardDescription>
-            Sei stato invitato a unirti a WattGuard
+            {t("auth.acceptInviteSubtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -122,7 +132,7 @@ export function AcceptInvitePage() {
           <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm">
               <Mail className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Email:</span>
+              <span className="text-muted-foreground">{t("auth.email")}:</span>
               <span className="font-medium">{inviteData.email}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
@@ -131,7 +141,7 @@ export function AcceptInvitePage() {
               ) : (
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
               )}
-              <span className="text-muted-foreground">Ruolo:</span>
+              <span className="text-muted-foreground">{t("common.role")}:</span>
               <Badge variant={inviteData.role === "admin" ? "default" : "secondary"}>
                 {roleLabel}
               </Badge>
@@ -159,7 +169,7 @@ export function AcceptInvitePage() {
                     fill="#EA4335"
                   />
                 </svg>
-                Continua con Google
+                {t("auth.continueWithGoogle")}
               </Button>
 
               <div className="relative">
@@ -167,12 +177,12 @@ export function AcceptInvitePage() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">oppure</span>
+                  <span className="bg-card px-2 text-muted-foreground">{t("common.or")}</span>
                 </div>
               </div>
 
               <Button onClick={() => setMode("password")} className="w-full">
-                Crea account con password
+                {t("auth.createAccountWithPassword")}
               </Button>
             </FieldGroup>
           )}
@@ -189,18 +199,18 @@ export function AcceptInvitePage() {
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
                       <FieldLabel htmlFor="accept-invite-name">
-                        Nome Completo
+                        {t("auth.name")}
                       </FieldLabel>
                       <Input
                         {...field}
                         id="accept-invite-name"
                         aria-invalid={fieldState.invalid}
-                        placeholder="Mario Rossi"
+                        placeholder={t("auth.namePlaceholder")}
                         autoComplete="name"
                         disabled={setup.isPending}
                       />
                       <FieldDescription>
-                        Il tuo nome come verrà visualizzato nel sistema.
+                        {t("auth.nameDescription")}
                       </FieldDescription>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
@@ -215,19 +225,19 @@ export function AcceptInvitePage() {
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
                       <FieldLabel htmlFor="accept-invite-password">
-                        Password
+                        {t("auth.password")}
                       </FieldLabel>
                       <Input
                         {...field}
                         id="accept-invite-password"
                         type="password"
                         aria-invalid={fieldState.invalid}
-                        placeholder="Almeno 8 caratteri"
+                        placeholder={t("auth.passwordMinLength")}
                         autoComplete="new-password"
                         disabled={setup.isPending}
                       />
                       <FieldDescription>
-                        Scegli una password sicura di almeno 8 caratteri.
+                        {t("auth.passwordDescription")}
                       </FieldDescription>
                       {fieldState.invalid && (
                         <FieldError errors={[fieldState.error]} />
@@ -242,14 +252,14 @@ export function AcceptInvitePage() {
                   render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
                       <FieldLabel htmlFor="accept-invite-password-confirm">
-                        Conferma Password
+                        {t("auth.confirmPassword")}
                       </FieldLabel>
                       <Input
                         {...field}
                         id="accept-invite-password-confirm"
                         type="password"
                         aria-invalid={fieldState.invalid}
-                        placeholder="Ripeti la password"
+                        placeholder={t("auth.confirmPasswordPlaceholder")}
                         autoComplete="new-password"
                         disabled={setup.isPending}
                       />
@@ -281,7 +291,7 @@ export function AcceptInvitePage() {
               }}
               disabled={setup.isPending}
             >
-              Indietro
+              {t("common.back")}
             </Button>
             <Button
               type="submit"
@@ -291,10 +301,10 @@ export function AcceptInvitePage() {
               {setup.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creazione account...
+                  {t("auth.creatingAccount")}
                 </>
               ) : (
-                "Crea Account"
+                t("auth.createAccount")
               )}
             </Button>
           </CardFooter>

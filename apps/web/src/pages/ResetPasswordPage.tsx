@@ -1,16 +1,20 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useValidateResetToken, useResetPassword } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+import { LanguageToggle } from "@/components/ui/language-toggle";
 import { Loader2 } from "lucide-react";
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
+  const { t } = useTranslation();
 
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -24,12 +28,12 @@ export function ResetPasswordPage() {
     setValidationError(null);
 
     if (password !== passwordConfirm) {
-      setValidationError("Le password non corrispondono");
+      setValidationError(t("auth.passwordMismatch"));
       return;
     }
 
     if (password.length < 8) {
-      setValidationError("La password deve essere almeno 8 caratteri");
+      setValidationError(t("auth.validationPasswordMin"));
       return;
     }
 
@@ -51,7 +55,7 @@ export function ResetPasswordPage() {
         <Card>
           <CardHeader className="flex items-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <CardTitle className="mt-2">Validazione...</CardTitle>
+            <CardTitle className="mt-2">{t("auth.validating")}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -64,17 +68,17 @@ export function ResetPasswordPage() {
       <div className="container mx-auto p-8 max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle>Errore</CardTitle>
+            <CardTitle>{t("common.error")}</CardTitle>
             <CardDescription className="text-red-500">
               {!token
-                ? "Token mancante"
-                : tokenQuery.error?.message ?? "Token non valido o scaduto"}
+                ? t("auth.resetTokenMissing")
+                : tokenQuery.error?.message ?? t("auth.resetTokenInvalidOrExpired")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link to="/forgot-password">
               <Button variant="outline" className="w-full">
-                Richiedi nuovo link
+                {t("auth.requestNewLink")}
               </Button>
             </Link>
           </CardContent>
@@ -89,17 +93,17 @@ export function ResetPasswordPage() {
       <div className="container mx-auto p-8 max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle>Password Reimpostata</CardTitle>
+            <CardTitle>{t("auth.passwordResetSuccess")}</CardTitle>
             <CardDescription className="text-green-600">
-              La tua password è stata reimpostata con successo.
+              {t("auth.passwordResetSuccessMessage")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Verrai reindirizzato al login tra un attimo...
+              {t("auth.redirectingToLogin")}
             </p>
             <Link to="/login">
-              <Button className="w-full">Vai al Login</Button>
+              <Button className="w-full">{t("auth.goToLogin")}</Button>
             </Link>
           </CardContent>
         </Card>
@@ -112,38 +116,42 @@ export function ResetPasswordPage() {
 
   return (
     <div className="container mx-auto p-8 max-w-md">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <ModeToggle />
+        <LanguageToggle />
+      </div>
       <Card>
         <CardHeader>
-          <CardTitle>Reimposta Password</CardTitle>
-          <CardDescription>Scegli una nuova password</CardDescription>
+          <CardTitle>{t("auth.resetPasswordTitle")}</CardTitle>
+          <CardDescription>{t("auth.chooseNewPassword")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="password">Nuova Password</Label>
+              <Label htmlFor="password">{t("auth.newPassword")}</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Almeno 8 caratteri"
+                placeholder={t("auth.passwordMinLength")}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="passwordConfirm">Conferma Password</Label>
+              <Label htmlFor="passwordConfirm">{t("auth.confirmPassword")}</Label>
               <Input
                 id="passwordConfirm"
                 type="password"
                 value={passwordConfirm}
                 onChange={(e) => setPasswordConfirm(e.target.value)}
-                placeholder="Ripeti la password"
+                placeholder={t("auth.confirmPasswordPlaceholder")}
                 required
               />
             </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
             <Button type="submit" disabled={resetPassword.isPending} className="w-full">
-              {resetPassword.isPending ? "Attendere..." : "Reimposta Password"}
+              {resetPassword.isPending ? t("auth.resetting") : t("auth.resetPasswordTitle")}
             </Button>
           </form>
         </CardContent>

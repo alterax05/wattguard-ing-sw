@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useLogin } from "@/hooks/use-auth";
 import { client } from "@/lib/api";
@@ -9,19 +10,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import { LanguageToggle } from "@/components/ui/language-toggle";
 import fullLogo from "@wattguard/shared/assets/full-logo.png";
 import fullLogoBlack from "@wattguard/shared/assets/full-logo-black.png";
 
-/** Map OAuth error codes (from Google callback redirects) to user-friendly messages. */
-const OAUTH_ERRORS: Record<string, string> = {
-  no_account: "No account found for this Google email. Contact your administrator.",
-  account_disabled: "Your account has been disabled.",
-  account_mismatch: "This Google account is linked to a different user.",
-  email_not_verified: "Your Google email is not verified.",
-  token_exchange_failed: "Google authentication failed. Please try again.",
-  invalid_state: "Authentication session expired. Please try again.",
-  missing_params: "Google authentication failed. Please try again.",
-  server_error: "An unexpected error occurred. Please try again.",
+/** Map OAuth error codes (from Google callback redirects) to i18n auth.* keys. */
+const OAUTH_ERROR_KEYS: Record<string, string> = {
+  no_account: "auth.oauthNoAccount",
+  account_disabled: "auth.oauthAccountDisabled",
+  account_mismatch: "auth.oauthAccountMismatch",
+  email_not_verified: "auth.oauthEmailNotVerified",
+  token_exchange_failed: "auth.oauthTokenExchangeFailed",
+  invalid_state: "auth.oauthInvalidState",
+  missing_params: "auth.oauthMissingParams",
+  server_error: "auth.oauthServerError",
 };
 
 export function LoginPage() {
@@ -31,9 +33,12 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const login = useLogin();
+  const { t } = useTranslation();
 
   const oauthError = searchParams.get("error");
-  const oauthErrorMessage = oauthError ? OAUTH_ERRORS[oauthError] ?? "Authentication failed." : null;
+  const oauthErrorMessage = oauthError
+    ? t(OAUTH_ERROR_KEYS[oauthError] ?? "auth.oauthFailed")
+    : null;
 
   const handleLogin = async (e: React.SubmitEvent) => {
     e.preventDefault();
@@ -54,8 +59,9 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
         <ModeToggle />
+        <LanguageToggle />
       </div>
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center space-y-6">
@@ -67,9 +73,9 @@ export function LoginPage() {
         </div>
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Sign In</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">{t("auth.signIn")}</CardTitle>
             <CardDescription className="text-center">
-              Enter your credentials to access WattGuard
+              {t("auth.signInSubtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -101,7 +107,7 @@ export function LoginPage() {
                     fill="#EA4335"
                   />
                 </svg>
-                Continue with Google
+                {t("auth.continueWithGoogle")}
               </Button>
 
               <div className="relative">
@@ -109,30 +115,30 @@ export function LoginPage() {
                   <Separator className="w-full" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                  <span className="bg-card px-2 text-muted-foreground">{t("common.or")}</span>
                 </div>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t("auth.email")}</Label>
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t("auth.password")}</Label>
                   <Input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder={t("auth.passwordPlaceholder")}
                     required
                   />
                 </div>
@@ -140,11 +146,11 @@ export function LoginPage() {
                   <p className="text-sm text-destructive">{login.error.message}</p>
                 )}
                 <Button type="submit" disabled={login.isPending} className="w-full">
-                  {login.isPending ? "Signing in..." : "Sign In"}
+                  {login.isPending ? t("auth.signingIn") : t("auth.signIn")}
                 </Button>
                 <div className="text-center pt-2">
                   <Link to="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Forgot your password?
+                    {t("auth.forgotPassword")}
                   </Link>
                 </div>
               </form>

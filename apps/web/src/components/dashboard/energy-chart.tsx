@@ -1,10 +1,13 @@
 import { useMemo } from "react"
+import { useTranslation } from "react-i18next"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDashboardHistory } from "@/hooks/use-dashboard"
 
 export function EnergyChart() {
+  const { t } = useTranslation()
+
   // Last 30 days
   const { startDate, endDate } = useMemo(() => {
     const end = new Date()
@@ -25,7 +28,7 @@ export function EnergyChart() {
   if (isError || !data) {
     return (
       <div className="flex h-80 items-center justify-center">
-        <p className="text-sm text-muted-foreground">Errore nel caricamento dei dati storici</p>
+        <p className="text-sm text-muted-foreground">{t("dashboard.historyLoadError")}</p>
       </div>
     )
   }
@@ -33,7 +36,7 @@ export function EnergyChart() {
   if (data.data.length === 0) {
     return (
       <div className="flex h-80 items-center justify-center">
-        <p className="text-sm text-muted-foreground">Nessun dato disponibile per gli ultimi 30 giorni</p>
+        <p className="text-sm text-muted-foreground">{t("dashboard.noData30d")}</p>
       </div>
     )
   }
@@ -42,11 +45,11 @@ export function EnergyChart() {
     <ChartContainer
       config={{
         electricity: {
-          label: "Elettricità (kWh)",
+          label: t("dashboard.chartElectricity"),
           color: "var(--chart-1)",
         },
         gas: {
-          label: "Gas (m³)",
+          label: t("dashboard.chartGas"),
           color: "var(--chart-5)",
         },
       }}

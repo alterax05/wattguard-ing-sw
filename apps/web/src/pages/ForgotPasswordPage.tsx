@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useForgotPassword } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import { LanguageToggle } from "@/components/ui/language-toggle";
 import fullLogo from "@wattguard/shared/assets/full-logo.png";
 import fullLogoBlack from "@wattguard/shared/assets/full-logo-black.png";
 
@@ -14,6 +16,7 @@ export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const { theme } = useTheme();
   const forgotPassword = useForgotPassword();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
@@ -23,8 +26,9 @@ export function ForgotPasswordPage() {
   if (forgotPassword.isSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex items-center gap-2">
           <ModeToggle />
+          <LanguageToggle />
         </div>
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center space-y-6">
@@ -36,18 +40,18 @@ export function ForgotPasswordPage() {
           </div>
           <Card>
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold text-center">Email Sent</CardTitle>
+              <CardTitle className="text-2xl font-bold text-center">{t("auth.emailSent")}</CardTitle>
               <CardDescription className="text-center">
-                If the email exists in our system, you will receive a password reset link.
+                {t("auth.emailSentSubtitle")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
-                Please check your inbox (and spam folder).
+                {t("auth.emailSentHint")}
               </p>
               <Link to="/login" className="block">
                 <Button variant="outline" className="w-full">
-                  Back to Sign In
+                  {t("auth.backToSignIn")}
                 </Button>
               </Link>
             </CardContent>
@@ -59,8 +63,9 @@ export function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
         <ModeToggle />
+        <LanguageToggle />
       </div>
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center space-y-6">
@@ -72,33 +77,33 @@ export function ForgotPasswordPage() {
         </div>
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Forgot Password</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">{t("auth.forgotPasswordTitle")}</CardTitle>
             <CardDescription className="text-center">
-              Enter your email below to reset the password of your account
+              {t("auth.forgotPasswordSubtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="name@example.com"
+                  placeholder={t("auth.emailPlaceholder")}
                 />
               </div>
               {forgotPassword.error && (
                 <p className="text-sm text-destructive">{forgotPassword.error.message}</p>
               )}
               <Button type="submit" disabled={forgotPassword.isPending} className="w-full">
-                {forgotPassword.isPending ? "Sending..." : "Send Reset Link"}
+                {forgotPassword.isPending ? t("auth.sending") : t("auth.sendResetLink")}
               </Button>
               <Link to="/login" className="block">
                 <Button variant="ghost" className="w-full">
-                  Back to Sign In
+                  {t("auth.backToSignIn")}
                 </Button>
               </Link>
             </form>

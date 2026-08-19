@@ -1,6 +1,7 @@
 import type React from "react"
 
 import { useState, useEffect, useCallback } from "react"
+import { useTranslation } from "react-i18next"
 import {
   Dialog,
   DialogContent,
@@ -104,6 +105,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
   const createBuilding = useCreateBuilding()
   const { data: buildingTypesData, isLoading: typesLoading } =
     useBuildingTypes()
+  const { t } = useTranslation()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -132,7 +134,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
 
   const handleGeocode = useCallback(async () => {
     if (!formData.address.trim()) {
-      toast.error("Inserisci un indirizzo prima di cercare le coordinate")
+      toast.error(t("buildings.form.geocodeNoAddress"))
       return
     }
 
@@ -146,19 +148,18 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
           longitude: result.lon.toFixed(6),
         }))
         setMapCenter([result.lat, result.lon])
-        toast.success("Coordinate trovate")
+        toast.success(t("buildings.form.coordinatesFound"))
       } else {
-        toast.error("Indirizzo non trovato", {
-          description:
-            "Prova a inserire un indirizzo più specifico o posiziona il marker sulla mappa",
+        toast.error(t("buildings.form.addressNotFound"), {
+          description: t("buildings.form.addressNotFoundHint"),
         })
       }
     } catch {
-      toast.error("Errore nella ricerca delle coordinate")
+      toast.error(t("buildings.form.geocodeError"))
     } finally {
       setGeocoding(false)
     }
-  }, [formData.address])
+  }, [formData.address, t])
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
     setFormData((prev) => ({
@@ -177,17 +178,17 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
     const lng = parseFloat(formData.longitude)
 
     if (isNaN(surface) || surface < 0) {
-      toast.error("La superficie deve essere un numero positivo")
+      toast.error(t("buildings.form.surfaceInvalid"))
       return
     }
 
     if (isNaN(ceilingHeight) || ceilingHeight < 0.5) {
-      toast.error("L'altezza soffitto deve essere almeno 0.5m")
+      toast.error(t("buildings.form.ceilingHeightInvalid"))
       return
     }
 
     if (isNaN(lat) || isNaN(lng)) {
-      toast.error("Inserisci coordinate valide o cerca l'indirizzo")
+      toast.error(t("buildings.form.coordinatesInvalid"))
       return
     }
 
@@ -210,11 +211,11 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
       },
       {
         onSuccess: () => {
-          toast.success("Edificio creato con successo")
+          toast.success(t("buildings.created"))
           onClose()
         },
         onError: (err) => {
-          toast.error("Errore nella creazione dell'edificio", {
+          toast.error(t("buildings.createError"), {
             description: err.message,
           })
         },
@@ -228,19 +229,19 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Aggiungi Nuovo Edificio</DialogTitle>
+          <DialogTitle>{t("buildings.addTitle")}</DialogTitle>
           <DialogDescription>
-            Compila i campi per registrare un nuovo edificio nel sistema.
+            {t("buildings.addDescription")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nome */}
           <div className="space-y-2">
-            <Label htmlFor="building-name">Nome *</Label>
+            <Label htmlFor="building-name">{t("buildings.form.name")}</Label>
             <Input
               id="building-name"
-              placeholder="es. Scuola Elementare Dante"
+              placeholder={t("buildings.form.namePlaceholder")}
               value={formData.name}
               onChange={(e) => updateField("name", e.target.value)}
               disabled={isPending}
@@ -250,11 +251,11 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
 
           {/* Indirizzo + Geocoding */}
           <div className="space-y-2">
-            <Label htmlFor="building-address">Indirizzo *</Label>
+            <Label htmlFor="building-address">{t("buildings.form.address")}</Label>
             <div className="flex gap-2">
               <Input
                 id="building-address"
-                placeholder="es. Via Roma 1, Trento"
+                placeholder={t("buildings.form.addressPlaceholder")}
                 value={formData.address}
                 onChange={(e) => updateField("address", e.target.value)}
                 disabled={isPending}
@@ -267,7 +268,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                 size="icon"
                 onClick={handleGeocode}
                 disabled={isPending || geocoding || !formData.address.trim()}
-                title="Cerca coordinate dall'indirizzo"
+                title={t("buildings.form.geocodeButton")}
               >
                 {geocoding ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -277,21 +278,20 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Inserisci l'indirizzo e premi il pulsante di ricerca per trovare
-              le coordinate automaticamente
+              {t("buildings.form.geocodeHint")}
             </p>
           </div>
 
           {/* Surface & Ceiling Height */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="building-surface">Superficie (m&sup2;) *</Label>
+              <Label htmlFor="building-surface">{t("buildings.form.surface")}</Label>
               <Input
                 id="building-surface"
                 type="number"
                 min="0"
                 step="any"
-                placeholder="es. 1500"
+                placeholder={t("buildings.form.surfacePlaceholder")}
                 value={formData.surface}
                 onChange={(e) => updateField("surface", e.target.value)}
                 disabled={isPending}
@@ -300,13 +300,13 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="building-ceiling">Altezza Soffitto (m) *</Label>
+              <Label htmlFor="building-ceiling">{t("buildings.form.ceilingHeight")}</Label>
               <Input
                 id="building-ceiling"
                 type="number"
                 min="0.5"
                 step="0.1"
-                placeholder="es. 3.0"
+                placeholder={t("buildings.form.ceilingHeightPlaceholder")}
                 value={formData.ceilingHeight}
                 onChange={(e) => updateField("ceilingHeight", e.target.value)}
                 disabled={isPending}
@@ -317,13 +317,13 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
 
           {/* Construction Year */}
           <div className="space-y-2">
-            <Label htmlFor="building-year">Anno di costruzione</Label>
+            <Label htmlFor="building-year">{t("buildings.form.constructionYear")}</Label>
             <Input
               id="building-year"
               type="number"
               min="1000"
               max={new Date().getFullYear() + 10}
-              placeholder="es. 1985"
+              placeholder={t("buildings.form.constructionYearPlaceholder")}
               value={formData.constructionYear}
               onChange={(e) => updateField("constructionYear", e.target.value)}
               disabled={isPending}
@@ -332,7 +332,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
 
           {/* Tipo edificio */}
           <div className="space-y-2">
-            <Label htmlFor="building-type">Tipo edificio *</Label>
+            <Label htmlFor="building-type">{t("buildings.form.type")}</Label>
             <Select
               value={formData.buildingType}
               onValueChange={(value) => updateField("buildingType", value)}
@@ -342,8 +342,8 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                 <SelectValue
                   placeholder={
                     typesLoading
-                      ? "Caricamento tipologie..."
-                      : "Seleziona tipo edificio"
+                      ? t("buildings.form.typesLoading")
+                      : t("buildings.form.typePlaceholder")
                   }
                 />
               </SelectTrigger>
@@ -360,10 +360,10 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
           {/* Two columns: Riscaldamento + Zona */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="building-heating">Tipo riscaldamento *</Label>
+              <Label htmlFor="building-heating">{t("buildings.form.heatingSystem")}</Label>
               <Input
                 id="building-heating"
-                placeholder="es. Centralizzato a gas"
+                placeholder={t("buildings.form.heatingSystemPlaceholder")}
                 value={formData.heatingSystemType}
                 onChange={(e) =>
                   updateField("heatingSystemType", e.target.value)
@@ -374,10 +374,10 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="building-zone">Zona geografica *</Label>
+              <Label htmlFor="building-zone">{t("buildings.form.geographicZone")}</Label>
               <Input
                 id="building-zone"
-                placeholder="es. Centro"
+                placeholder={t("buildings.form.geographicZonePlaceholder")}
                 value={formData.geographicZone}
                 onChange={(e) => updateField("geographicZone", e.target.value)}
                 disabled={isPending}
@@ -390,18 +390,18 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5">
               <MapPin className="h-4 w-4" />
-              Posizione *
+              {t("buildings.form.location")}
             </Label>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="building-lat" className="text-xs text-muted-foreground">
-                  Latitudine
+                  {t("buildings.form.latitude")}
                 </Label>
                 <Input
                   id="building-lat"
                   type="number"
                   step="any"
-                  placeholder="es. 46.0667"
+                  placeholder={t("buildings.form.latitudePlaceholder")}
                   value={formData.latitude}
                   onChange={(e) => updateField("latitude", e.target.value)}
                   disabled={isPending}
@@ -410,13 +410,13 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="building-lng" className="text-xs text-muted-foreground">
-                  Longitudine
+                  {t("buildings.form.longitude")}
                 </Label>
                 <Input
                   id="building-lng"
                   type="number"
                   step="any"
-                  placeholder="es. 11.1167"
+                  placeholder={t("buildings.form.longitudePlaceholder")}
                   value={formData.longitude}
                   onChange={(e) => updateField("longitude", e.target.value)}
                   disabled={isPending}
@@ -425,8 +425,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Clicca sulla mappa per posizionare il marker oppure inserisci le
-              coordinate manualmente
+              {t("buildings.form.mapHint")}
             </p>
           </div>
 
@@ -466,7 +465,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
               onClick={onClose}
               disabled={isPending}
             >
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -475,10 +474,10 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creazione in corso...
+                  {t("buildings.creating")}
                 </>
               ) : (
-                "Crea Edificio"
+                t("buildings.create")
               )}
             </Button>
           </div>

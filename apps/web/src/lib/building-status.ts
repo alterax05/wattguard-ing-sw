@@ -1,10 +1,6 @@
-export type BuildingStatus = "active" | "inactive" | "decommissioned"
+import type { TFunction } from "i18next"
 
-export const BUILDING_STATUS_LABELS: Record<BuildingStatus, string> = {
-  active: "Attivo",
-  inactive: "Inattivo",
-  decommissioned: "Dismesso",
-}
+export type BuildingStatus = "active" | "inactive" | "decommissioned"
 
 export const BUILDING_STATUS_STYLES: Record<BuildingStatus, string> = {
   active: "bg-chart-3/15 text-chart-3",
@@ -12,6 +8,9 @@ export const BUILDING_STATUS_STYLES: Record<BuildingStatus, string> = {
   decommissioned: "bg-destructive/15 text-destructive",
 }
 
-export function getBuildingStatusLabel(status: BuildingStatus): string {
-  return BUILDING_STATUS_LABELS[status]
+export function getBuildingStatusLabel(
+  status: BuildingStatus,
+  t: TFunction,
+): string {
+  return t(`buildings.status.${status}`, { defaultValue: status })
 }

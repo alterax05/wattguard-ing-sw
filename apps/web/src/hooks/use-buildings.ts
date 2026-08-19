@@ -1,15 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/api";
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function extractError(data: unknown, fallback: string): string {
-  if (data && typeof data === "object" && "error" in data) {
-    const err = (data as Record<string, unknown>).error;
-    return typeof err === "string" ? err : fallback;
-  }
-  return fallback;
-}
+import { errorMessage } from "@/lib/errors";
 
 // ── Query Keys ──────────────────────────────────────────────────────────────
 
@@ -152,7 +143,7 @@ export function useBuildings(params?: SearchBuildingsParams) {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Errore nel caricamento degli edifici"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -177,7 +168,7 @@ export function useBuildingTypes() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Errore nel caricamento delle tipologie"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -201,7 +192,7 @@ export function useBuilding(id: string | undefined) {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Edificio non trovato"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -226,7 +217,7 @@ export function useBuildingRealTime(id: string | undefined) {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Errore dati in tempo reale"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -258,7 +249,7 @@ export function useBuildingHistory(id: string | undefined, params: HistoryParams
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Errore nel caricamento dello storico"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -292,7 +283,7 @@ export function useBuildingEfficiency(id: string | undefined, params: Efficiency
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(extractError(data, "Errore nel calcolo dell'efficienza"));
+        throw new Error(errorMessage(data));
       }
 
       const data = await res.json();
@@ -331,7 +322,7 @@ export function useCreateBuilding() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Errore nella creazione dell'edificio"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -373,7 +364,7 @@ export function useUpdateBuilding() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Errore nell'aggiornamento dell'edificio"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
@@ -400,7 +391,7 @@ export function useDeleteBuilding() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(extractError(data, "Errore nell'eliminazione dell'edificio"));
+        throw new Error(errorMessage(data));
       }
 
       return data;
