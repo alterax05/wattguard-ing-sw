@@ -293,9 +293,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       effEnabled &&
       (parsed === null || Number.isNaN(parsed) || parsed < 0 || parsed > 10)
     ) {
-      toast.error(
-        "Inserisci un COP minimo valido (0-10) per abilitare l'allarme",
-      );
+      toast.error(t("buildings.invalidMinCop"));
       return;
     }
     updateBuilding.mutate(
@@ -306,13 +304,13 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       {
         onSuccess: () => {
           setEffDirty(false);
-          toast.success("Soglia di efficienza salvata");
+          toast.success(t("buildings.efficiencyThresholdSaved"));
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Errore nel salvataggio della soglia",
+              : t("buildings.efficiencyThresholdSaveError"),
           );
         },
       },
@@ -716,16 +714,15 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           <div className="mt-4 border-t pt-4">
             {building && isDistrictHeating(building.heatingSystemType) ? (
               <p className="text-sm text-muted-foreground">
-                Gli allarmi di efficienza non sono disponibili per impianti a
-                teleriscaldamento.
+                {t("buildings.efficiencyUnavailableDistrict")}
               </p>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium">Allarme efficienza</p>
+                    <p className="text-sm font-medium">{t("buildings.efficiencyAlertTitle")}</p>
                     <p className="text-xs text-muted-foreground">
-                      Avvisa quando il COP medio (24h) scende sotto la soglia
+                      {t("buildings.efficiencyAlertDescription")}
                     </p>
                   </div>
                   <Switch
@@ -742,7 +739,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                       className="text-xs text-muted-foreground"
                       htmlFor="eff-min-cop"
                     >
-                      COP minimo
+                      {t("buildings.minCop")}
                     </label>
                     <Input
                       id="eff-min-cop"
@@ -752,7 +749,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                       step={0.1}
                       value={effMinCop}
                       disabled={!effEnabled}
-                      placeholder="es. 2.5"
+                      placeholder={t("buildings.minCopPlaceholder")}
                       onChange={(e) => {
                         setEffMinCop(e.target.value);
                         setEffDirty(true);
@@ -767,7 +764,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                     {updateBuilding.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      "Salva"
+                      t("common.save")
                     )}
                   </Button>
                 </div>

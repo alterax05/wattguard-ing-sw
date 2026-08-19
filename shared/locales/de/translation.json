@@ -267,7 +267,8 @@
       "critical": "Kritisch"
     },
     "type": {
-      "threshold_exceeded": "Schwellenwert überschritten"
+      "threshold_exceeded": "Schwellenwert überschritten",
+      "efficiency_below_threshold": "Effizienz unter Schwellenwert"
     },
     "thresholdExceeded": "Schwellenwert überschritten für den {{sensorType}}-Sensor ({{location}}): {{value}}{{unit}} (Limit: {{limit}}{{unit}})",
     "generic": "Meldung für Sensor {{sensorType}} in {{location}}",
@@ -296,7 +297,8 @@
       "offline": "Offline",
       "maintenance": "Wartung",
       "error": "Fehler"
-    }
+    },
+    "efficiencyBelowThreshold": "Anlageneffizienz unter Schwellenwert für {{building}}: durchschnittliche COP {{value}} (Mindestschwelle: {{limit}})"
   },
   "buildings": {
     "status": {
@@ -431,7 +433,15 @@
       "addressNotFoundHint": "Versuchen Sie eine genauere Adresse oder setzen Sie die Markierung auf der Karte",
       "geocodeError": "Fehler bei der Koordinatensuche",
       "geocodeNoAddress": "Geben Sie eine Adresse ein, bevor Sie nach Koordinaten suchen"
-    }
+    },
+    "efficiencyAlertTitle": "Effizienzbenachrichtigung",
+    "efficiencyAlertDescription": "Benachrichtigen, wenn die durchschnittliche COP (24h) unter den Schwellenwert fällt",
+    "efficiencyUnavailableDistrict": "Effizienzbenachrichtigungen sind für Fernwärmeanlagen nicht verfügbar.",
+    "minCop": "Mindest-COP",
+    "minCopPlaceholder": "z. B. 2.5",
+    "invalidMinCop": "Geben Sie eine gültige Mindest-COP (0-10) ein, um die Benachrichtigung zu aktivieren",
+    "efficiencyThresholdSaved": "Effizienzschwelle gespeichert",
+    "efficiencyThresholdSaveError": "Fehler beim Speichern der Schwelle"
   },
   "sensors": {
     "type": {

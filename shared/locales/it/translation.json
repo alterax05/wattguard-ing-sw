@@ -267,7 +267,8 @@
       "critical": "Critico"
     },
     "type": {
-      "threshold_exceeded": "Soglia superata"
+      "threshold_exceeded": "Soglia superata",
+      "efficiency_below_threshold": "Efficienza sotto soglia"
     },
     "thresholdExceeded": "Valore fuori soglia rilevato per il sensore {{sensorType}} ({{location}}): {{value}}{{unit}} (Limite: {{limit}}{{unit}})",
     "generic": "Notifica per il sensore {{sensorType}} in {{location}}",
@@ -296,7 +297,8 @@
       "offline": "Offline",
       "maintenance": "Manutenzione",
       "error": "Errore"
-    }
+    },
+    "efficiencyBelowThreshold": "Efficienza impianto sotto soglia per {{building}}: COP medio {{value}} (soglia minima: {{limit}})"
   },
   "buildings": {
     "status": {
@@ -431,7 +433,15 @@
       "addressNotFoundHint": "Prova a inserire un indirizzo più specifico o posiziona il marker sulla mappa",
       "geocodeError": "Errore nella ricerca delle coordinate",
       "geocodeNoAddress": "Inserisci un indirizzo prima di cercare le coordinate"
-    }
+    },
+    "efficiencyAlertTitle": "Allarme efficienza",
+    "efficiencyAlertDescription": "Avvisa quando il COP medio (24h) scende sotto la soglia",
+    "efficiencyUnavailableDistrict": "Gli allarmi di efficienza non sono disponibili per impianti a teleriscaldamento.",
+    "minCop": "COP minimo",
+    "minCopPlaceholder": "es. 2.5",
+    "invalidMinCop": "Inserisci un COP minimo valido (0-10) per abilitare l'allarme",
+    "efficiencyThresholdSaved": "Soglia di efficienza salvata",
+    "efficiencyThresholdSaveError": "Errore nel salvataggio della soglia"
   },
   "sensors": {
     "type": {

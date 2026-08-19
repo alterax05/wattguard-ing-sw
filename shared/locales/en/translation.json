@@ -267,7 +267,8 @@
       "critical": "Critical"
     },
     "type": {
-      "threshold_exceeded": "Threshold exceeded"
+      "threshold_exceeded": "Threshold exceeded",
+      "efficiency_below_threshold": "Efficiency below threshold"
     },
     "thresholdExceeded": "Threshold exceeded for the {{sensorType}} sensor ({{location}}): {{value}}{{unit}} (Limit: {{limit}}{{unit}})",
     "generic": "Alert for sensor {{sensorType}} at {{location}}",
@@ -296,7 +297,8 @@
       "offline": "Offline",
       "maintenance": "Maintenance",
       "error": "Error"
-    }
+    },
+    "efficiencyBelowThreshold": "System efficiency below threshold for {{building}}: average COP {{value}} (minimum threshold: {{limit}})"
   },
   "buildings": {
     "status": {
@@ -431,7 +433,15 @@
       "addressNotFoundHint": "Try a more specific address or place the marker on the map",
       "geocodeError": "Error searching coordinates",
       "geocodeNoAddress": "Enter an address before searching for coordinates"
-    }
+    },
+    "efficiencyAlertTitle": "Efficiency alert",
+    "efficiencyAlertDescription": "Notify when the average COP (24h) drops below the threshold",
+    "efficiencyUnavailableDistrict": "Efficiency alerts are not available for district heating systems.",
+    "minCop": "Minimum COP",
+    "minCopPlaceholder": "e.g. 2.5",
+    "invalidMinCop": "Enter a valid minimum COP (0-10) to enable the alert",
+    "efficiencyThresholdSaved": "Efficiency threshold saved",
+    "efficiencyThresholdSaveError": "Error saving the threshold"
   },
   "sensors": {
     "type": {
