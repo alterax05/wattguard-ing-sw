@@ -47,10 +47,23 @@ export const BuildingSummarySchema = z.object({
 });
 
 /**
+ * Efficiency alert thresholds — alert when average COP drops below minCop
+ */
+export const EfficiencyThresholdsSchema = z.object({
+  enabled: z.boolean().describe("Enable automatic efficiency alerts"),
+  minCop: z.number().min(0).max(10).nullable().describe("Minimum average COP; alert when below"),
+}).superRefine((v, ctx) => {
+  if (v.enabled && v.minCop == null) {
+    ctx.addIssue({ code: "custom", path: ["minCop"], message: "minCop is required when enabled" });
+  }
+});
+
+/**
  * Building response schema
  */
 export const BuildingDetailSchema = BuildingSummarySchema.extend({
   constructionYear: z.number().optional().describe("Year of construction"),
+  efficiencyThresholds: EfficiencyThresholdsSchema,
   createdBy: z.string().optional().describe("User who created this building"),
   updatedBy: z.string().optional().describe("User who last updated this building"),
   createdAt: z.iso.datetime().optional().describe("Creation timestamp"),
@@ -146,6 +159,7 @@ export const UpdateBuildingRequestSchema = z.object({
   constructionYear: z.number().min(1000).max(new Date().getFullYear() + 10).optional().describe("Year of construction"),
   geographicZone: z.string().min(1).trim().optional().describe("Geographic zone"),
   status: BuildingStatusSchema.optional().describe("Building status"),
+  efficiencyThresholds: EfficiencyThresholdsSchema.optional(),
 });
 
 /**

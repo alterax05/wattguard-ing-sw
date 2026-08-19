@@ -33,12 +33,15 @@ import { connectAndSubscribe } from "./lib/mqtt";
 // Import in-process simulator and reading ingestion
 import { startSimulator } from "./services/simulator";
 import { ingestReading } from "./services/reading-service";
+import { evaluateEfficiencyAlerts } from "./services/efficiency-alert-service";
 
 // Import OpenAPI configuration
 import { openapiConfig } from "./config/openapi";
 
 // Import environment variables
 import {
+  EFFICIENCY_ALERTS_ENABLED,
+  EFFICIENCY_ALERT_INTERVAL_MINUTES,
   IS_DEVELOPMENT,
   IS_PRODUCTION,
   IS_TEST,
@@ -193,6 +196,24 @@ async function startServer() {
       onReading: (reading) => ingestReading(reading),
     });
     console.log("🧪 In-process simulator started");
+  }
+
+  // Schedule periodic evaluation of efficiency alert thresholds (Bun.cron).
+  if (EFFICIENCY_ALERTS_ENABLED) {
+    const run = async () => {
+      try {
+        await evaluateEfficiencyAlerts();
+      } catch (error) {
+        console.error("❌ Efficiency alert evaluation failed:", error);
+      }
+    };
+    await run(); // valutazione immediata al boot
+    try {
+      Bun.cron(`*/${EFFICIENCY_ALERT_INTERVAL_MINUTES} * * * *`, run);
+    } catch (error) {
+      console.error("❌ Failed to register efficiency alert cron:", error);
+    }
+    console.log(`⏰ Efficiency alert cron started (every ${EFFICIENCY_ALERT_INTERVAL_MINUTES} min)`);
   }
 
   const server = serve({
