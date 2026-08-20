@@ -32,7 +32,7 @@ export const buildingSchema = new Schema(
     surface: {
       type: Number,
       required: true,
-      min: [0, "Surface must be positive"],
+      min: [1, "Surface must be positive"],
     },
     ceilingHeight: {
       type: Number,

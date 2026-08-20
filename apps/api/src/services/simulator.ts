@@ -164,7 +164,7 @@ function getOrInitState(
 ): BuildingState {
   let state = buildingStates.get(buildingId);
   if (!state) {
-    const surface = building.surface || 250;
+    const surface = building.surface;
     const ceilingHeight = building.ceilingHeight || 3.0;
     const C = roomHeatCapacity(surface, ceilingHeight);
 

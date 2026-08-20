@@ -103,7 +103,7 @@ export type SearchBuildingsResponse = z.infer<typeof SearchBuildingsResponseSche
 export const CreateBuildingRequestSchema = z.object({
   name: z.string().min(1, "Name is required").trim().describe("Building name"),
   address: z.string().min(1, "Address is required").trim().describe("Building address"),
-  surface: z.number().min(0, "Surface must be positive").describe("Surface area in square meters"),
+  surface: z.number().min(1, "Surface must be positive").describe("Surface area in square meters"),
   ceilingHeight: z.number().min(0.5, "Height must be at least 0.5m").max(20).default(3.0).describe("Ceiling height in meters"),
   location: GeoJSONPointSchema.describe("Geographic location as GeoJSON Point"),
   buildingType: ObjectIdSchema.describe("Building type identifier"),
@@ -151,7 +151,7 @@ export const UpdateBuildingParamsSchema = z.object({
 export const UpdateBuildingRequestSchema = z.object({
   name: z.string().min(1).trim().optional().describe("Building name"),
   address: z.string().min(1).trim().optional().describe("Building address"),
-  surface: z.number().min(0).optional().describe("Surface area in square meters"),
+  surface: z.number().min(1).optional().describe("Surface area in square meters"),
   ceilingHeight: z.number().min(0.5).max(20).optional().describe("Ceiling height in meters"),
   location: GeoJSONPointSchema.optional().describe("Geographic location as GeoJSON Point"),
   buildingType: ObjectIdSchema.optional().describe("Building type identifier"),

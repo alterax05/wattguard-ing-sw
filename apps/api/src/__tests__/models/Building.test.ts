@@ -268,23 +268,6 @@ describe("Building Model", () => {
         expect(error.errors.surface).toBeDefined();
       }
     });
-
-    //TODO: Fix this
-    test("should accept surface of 0", async () => {
-      const building = await Building.create({
-        name: "Zero Surface",
-        address: "Via Test 1",
-        surface: 0,
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
-        buildingType: buildingTypeId,
-        heatingSystemType: "caldaia_gas",
-        geographicZone: "Centro",
-        createdBy: userId,
-        updatedBy: userId,
-      });
-
-      expect(building.surface).toBe(0);
-    });
   });
 
   describe("Construction Year Validation", () => {
