@@ -460,7 +460,7 @@ describe("Sensors Routes - Integration Tests", () => {
         buildingId,
         buildingName: "Test Building",
         sensorId: sensor._id,
-        type: "sensor_offline",
+        type: "efficiency_below_threshold",
         severity: "medium",
         sensorType: "energy_meter",
         location: "Quadro",

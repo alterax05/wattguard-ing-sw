@@ -83,7 +83,7 @@ describe("Dashboard", () => {
     await Alert.create({
       buildingId: "507f1f77bcf86cd799439011",
       buildingName: "Test",
-      type: "sensor_offline",
+      type: "efficiency_below_threshold",
       severity: "medium",
       sensorType: "energy_meter",
       location: "Quadro",

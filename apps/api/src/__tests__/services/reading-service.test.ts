@@ -213,7 +213,7 @@ describe("Reading Service", () => {
         unit: "°C",
         timestamp: new Date(),
       }),
-    ).rejects.toThrow("db down");
+    ).rejects.toThrow("Failed to create threshold alert");
 
     alertCreateSpy.mockRestore();
 

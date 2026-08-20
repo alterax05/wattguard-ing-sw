@@ -275,7 +275,7 @@ describe("evaluateEfficiencyAlerts", () => {
 
     const alert = await Alert.findOne({ buildingId: building._id, type: EFFICIENCY_ALERT_TYPE });
     expect(alert!.status).toBe("resolved");
-    expect(alert!.resolvedBy).toBe("Sistema");
+    expect(alert!.resolvedBy).toBe("system");
     expect(alert!.resolvedAt).toBeDefined();
   });
 

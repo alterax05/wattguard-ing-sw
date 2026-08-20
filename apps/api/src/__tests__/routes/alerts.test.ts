@@ -81,7 +81,7 @@ beforeEach(async () => {
     {
       buildingId,
       buildingName: "Test Building",
-      type: "temperature_anomaly",
+      type: "threshold_exceeded",
       severity: "critical",
       sensorType: "internal_temp",
       location: "Sala Principale",
@@ -93,7 +93,7 @@ beforeEach(async () => {
     {
       buildingId,
       buildingName: "Test Building",
-      type: "sensor_offline",
+      type: "efficiency_below_threshold",
       severity: "medium",
       sensorType: "energy_meter",
       location: "Quadro Elettrico",
@@ -122,7 +122,7 @@ describe("Alerts API", () => {
     expect(body.alerts).toBeInstanceOf(Array);
     expect(body.alerts.length).toBe(2);
     const thresholdAlert = body.alerts.find(
-      (alert) => alert.type === "temperature_anomaly",
+      (alert) => alert.type === "threshold_exceeded",
     );
     expect(thresholdAlert).toBeDefined();
     expect(thresholdAlert!.sensorType).toBe("internal_temp");
