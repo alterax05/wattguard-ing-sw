@@ -1,5 +1,5 @@
 /**
- * Comprehensive integration tests for GET /api/buildings/:id/efficiency
+ * Comprehensive integration tests for GET /api/v1/buildings/:id/efficiency
  *
  * The efficiency endpoint computes physics-based thermal metrics:
  *   - totalEnergyConsumed  (kWh)
@@ -134,7 +134,7 @@ beforeEach(async () => {
   adminUserId = admin._id as mongoose.Types.ObjectId;
 
   // Log in
-  const loginRes = await app.request("/api/auth/local/login", {
+  const loginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: "admin@test.com", password: "admin123" }),
@@ -192,7 +192,7 @@ async function createSensor(
 //  TESTS
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
+describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
 
   // ── 1. Authentication ───────────────────────────────────────────────────────
   describe("1. Authentication", () => {
@@ -200,7 +200,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       const building = await createBuilding();
       const now = new Date();
       const res = await app.request(
-        `/api/buildings/${building._id}/efficiency?startDate=${ts(now, -3_600_000)}&endDate=${now.toISOString()}`,
+        `/api/v1/buildings/${building._id}/efficiency?startDate=${ts(now, -3_600_000)}&endDate=${now.toISOString()}`,
       );
       expect(res.status).toBe(401);
     });
@@ -222,7 +222,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       const building = await createBuilding();
       const now = new Date();
       const res = await app.request(
-        `/api/buildings/${building._id}/efficiency?endDate=${now.toISOString()}`,
+        `/api/v1/buildings/${building._id}/efficiency?endDate=${now.toISOString()}`,
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);
@@ -232,7 +232,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       const building = await createBuilding();
       const now = new Date();
       const res = await app.request(
-        `/api/buildings/${building._id}/efficiency?startDate=${now.toISOString()}`,
+        `/api/v1/buildings/${building._id}/efficiency?startDate=${now.toISOString()}`,
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);
@@ -242,7 +242,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       const building = await createBuilding();
       const now = new Date();
       const res = await app.request(
-        `/api/buildings/${building._id}/efficiency?startDate=not-a-date&endDate=${now.toISOString()}`,
+        `/api/v1/buildings/${building._id}/efficiency?startDate=not-a-date&endDate=${now.toISOString()}`,
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);

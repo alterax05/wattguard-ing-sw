@@ -47,19 +47,24 @@ describe("MQTT Service", () => {
       return mockMqttClient;
     });
 
-    // Mock the connect function
-    // @ts-expect-error assigning a mock to the typed connect function
-    mqtt.connect = mock(() => mockMqttClient);
+    // Mock connectAsync (connectAndSubscribe awaits it). The mqtt package
+    // exposes connectAsync as a read-only getter, so override it with a
+    // writable value property on the shared module object.
+    Object.defineProperty(mqtt, "connectAsync", {
+      value: mock(async () => mockMqttClient),
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
     warnSpy.mockRestore();
   });
 
-  test("should connect and subscribe on initialization", () => {
-    connectAndSubscribe();
+  test("should connect and subscribe on initialization", async () => {
+    await connectAndSubscribe();
 
-    expect(mqtt.connect).toHaveBeenCalled();
+    expect(mqtt.connectAsync).toHaveBeenCalled();
 
     // Trigger connect event
     connectCallback();
@@ -71,7 +76,7 @@ describe("MQTT Service", () => {
   });
 
   test("should delegate valid messages to the reading service", async () => {
-    connectAndSubscribe();
+    await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
     await messageHandler(
@@ -95,7 +100,7 @@ describe("MQTT Service", () => {
   });
 
   test("should default the timestamp to now when omitted", async () => {
-    connectAndSubscribe();
+    await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
     await messageHandler(
@@ -110,7 +115,7 @@ describe("MQTT Service", () => {
   });
 
   test("should ignore invalid topics", async () => {
-    connectAndSubscribe();
+    await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
     await messageHandler("wrong/topic", Buffer.from("{}"));
@@ -121,7 +126,7 @@ describe("MQTT Service", () => {
   });
 
   test("should ignore invalid sensor ids", async () => {
-    connectAndSubscribe();
+    await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
     await messageHandler(
@@ -133,7 +138,7 @@ describe("MQTT Service", () => {
   });
 
   test("should ignore malformed JSON payloads", async () => {
-    connectAndSubscribe();
+    await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
     await messageHandler(
@@ -145,7 +150,7 @@ describe("MQTT Service", () => {
   });
 
   test("should ignore payloads failing validation", async () => {
-    connectAndSubscribe();
+    await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
     // value is not a number
@@ -176,7 +181,7 @@ describe("MQTT Service", () => {
     ingestReadingMock.mockRejectedValue(
       new SensorNotFoundError(VALID_SENSOR_ID),
     );
-    connectAndSubscribe();
+    await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
     await messageHandler(
@@ -192,7 +197,7 @@ describe("MQTT Service", () => {
 
   test("should swallow unexpected service errors without throwing", async () => {
     ingestReadingMock.mockRejectedValue(new Error("db down"));
-    connectAndSubscribe();
+    await connectAndSubscribe();
     const messageHandler = getMessageHandler();
     const errorSpy = spyOn(console, "error").mockImplementation(() => {});
 

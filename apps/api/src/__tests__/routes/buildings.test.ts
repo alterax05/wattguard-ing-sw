@@ -75,7 +75,7 @@ beforeEach(async () => {
   });
 
   // Login to get tokens
-  const adminLoginRes = await app.request("/api/auth/local/login", {
+  const adminLoginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -92,7 +92,7 @@ beforeEach(async () => {
   console.log("Admin login status:", adminLoginRes.status);
   console.log("Admin token:", adminToken ? "exists" : "missing");
 
-  const operatorLoginRes = await app.request("/api/auth/local/login", {
+  const operatorLoginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

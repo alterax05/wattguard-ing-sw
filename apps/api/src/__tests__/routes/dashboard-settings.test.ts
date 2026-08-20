@@ -50,7 +50,7 @@ beforeEach(async () => {
     passwordHash: hash,
   });
 
-  const loginRes = await app.request("/api/auth/local/login", {
+  const loginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: "admin@test.com", password: "admin123" }),
@@ -190,7 +190,7 @@ describe("Settings", () => {
       passwordHash: await Bun.password.hash("operator123", { algorithm: "bcrypt", cost: 10 }),
     });
 
-    const loginRes = await app.request("/api/auth/local/login", {
+    const loginRes = await app.request("/api/v1/auth/local/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "operator@test.com", password: "operator123" }),

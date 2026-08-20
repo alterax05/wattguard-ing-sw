@@ -14,7 +14,7 @@ let operatorToken: string;
 let buildingId: string;
 
 async function login(email: string, password: string): Promise<string> {
-  const response = await app.request("/api/auth/local/login", {
+  const response = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -122,7 +122,7 @@ beforeEach(async () => {
 describe("Admin report export API", () => {
   test("requires authentication", async () => {
     const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
     );
 
     expect(response.status).toBe(401);
@@ -130,7 +130,7 @@ describe("Admin report export API", () => {
 
   test("allows only administrators", async () => {
     const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
       { headers: { Cookie: `access_token=${operatorToken}` } },
     );
 
@@ -139,13 +139,13 @@ describe("Admin report export API", () => {
 
   test("rejects missing and reversed date ranges", async () => {
     const missingDateResponse = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-01-01`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     expect(missingDateResponse.status).toBe(400);
 
     const reversedDateResponse = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-02-01&endDate=2026-01-01&format=pdf`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-02-01&endDate=2026-01-01&format=pdf`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     expect(reversedDateResponse.status).toBe(400);
@@ -153,7 +153,7 @@ describe("Admin report export API", () => {
 
   test("rejects an invalid format", async () => {
     const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=csv`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=csv`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
 
@@ -162,7 +162,7 @@ describe("Admin report export API", () => {
 
   test("returns 404 when a selected building does not exist", async () => {
     const response = await app.request(
-      `/api/export/report?buildingIds=${new Types.ObjectId()}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
+      `/api/v1/export/report?buildingIds=${new Types.ObjectId()}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
 
@@ -171,7 +171,7 @@ describe("Admin report export API", () => {
 
   test("defaults to PDF when format is omitted", async () => {
     const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
 
@@ -181,7 +181,7 @@ describe("Admin report export API", () => {
 
   test("returns a valid PDF file", async () => {
     const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     const body = await response.arrayBuffer();
@@ -198,7 +198,7 @@ describe("Admin report export API", () => {
 
   test("returns a valid Excel file with the aggregated data", async () => {
     const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
       {
         headers: {
           Cookie: `access_token=${adminToken}`,
@@ -293,7 +293,7 @@ describe("Admin report export API", () => {
     ]);
 
     const response = await app.request(
-      `/api/export/report?buildingIds=${gasBuilding._id}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
+      `/api/v1/export/report?buildingIds=${gasBuilding._id}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
       {
         headers: {
           Cookie: `access_token=${adminToken}`,
@@ -324,7 +324,7 @@ describe("Admin report export API", () => {
 
   test("localizes report labels for the requested language", async () => {
     const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
+      `/api/v1/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
       {
         headers: {
           Cookie: `access_token=${adminToken}`,

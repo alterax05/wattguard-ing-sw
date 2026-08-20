@@ -13,7 +13,7 @@ let buildingId: string;
 let buildingName: string;
 
 async function login(email: string, password: string): Promise<string> {
-  const response = await app.request("/api/auth/local/login", {
+  const response = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -117,7 +117,7 @@ beforeEach(async () => {
 describe("Consumption export API", () => {
   test("requires authentication", async () => {
     const response = await app.request(
-      `/api/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
+      `/api/v1/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
     );
 
     expect(response.status).toBe(401);
@@ -125,7 +125,7 @@ describe("Consumption export API", () => {
 
   test("allows only administrators", async () => {
     const response = await app.request(
-      `/api/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
+      `/api/v1/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
       { headers: { Cookie: `access_token=${operatorToken}` } },
     );
 
@@ -134,13 +134,13 @@ describe("Consumption export API", () => {
 
   test("rejects missing and reversed date ranges", async () => {
     const missingDateResponse = await app.request(
-      `/api/export/consumption?buildingIds=${buildingId}`,
+      `/api/v1/export/consumption?buildingIds=${buildingId}`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     expect(missingDateResponse.status).toBe(400);
 
     const reversedDateResponse = await app.request(
-      `/api/export/consumption?buildingIds=${buildingId}&startDate=2026-02-01&endDate=2026-01-01`,
+      `/api/v1/export/consumption?buildingIds=${buildingId}&startDate=2026-02-01&endDate=2026-01-01`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     expect(reversedDateResponse.status).toBe(400);
@@ -148,7 +148,7 @@ describe("Consumption export API", () => {
 
   test("returns selected readings in the requested period as CSV", async () => {
     const response = await app.request(
-      `/api/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
+      `/api/v1/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     const csv = await response.text();
@@ -172,7 +172,7 @@ describe("Consumption export API", () => {
 
   test("returns 404 when a selected building does not exist", async () => {
     const response = await app.request(
-      `/api/export/consumption?buildingIds=${new Types.ObjectId()}&startDate=2026-01-01&endDate=2026-01-31`,
+      `/api/v1/export/consumption?buildingIds=${new Types.ObjectId()}&startDate=2026-01-01&endDate=2026-01-31`,
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
 

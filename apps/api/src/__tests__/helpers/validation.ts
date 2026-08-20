@@ -65,7 +65,7 @@ export async function createUserAndGetToken(
     }),
   });
 
-  const loginRes = await app.request("/api/auth/local/login", {
+  const loginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),

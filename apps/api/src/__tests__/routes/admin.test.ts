@@ -60,7 +60,7 @@ async function getAdminToken() {
     }),
   });
 
-  const loginRes = await app.request("/api/auth/local/login", {
+  const loginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -86,7 +86,7 @@ async function getOperatorToken() {
     }),
   });
 
-  const loginRes = await app.request("/api/auth/local/login", {
+  const loginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -101,7 +101,7 @@ async function getOperatorToken() {
 }
 
 describe("Admin Routes", () => {
-  describe("POST /api/admin/invites - Create Invite", () => {
+  describe("POST /api/v1/admin/invites - Create Invite", () => {
     test("should create invite with valid data", async () => {
       const token = await getAdminToken();
 
@@ -291,7 +291,7 @@ describe("Admin Routes", () => {
     });
   });
 
-  describe("GET /api/admin/invites - List Invites", () => {
+  describe("GET /api/v1/admin/invites - List Invites", () => {
     test("should list all invites", async () => {
       const token = await getAdminToken();
       const admin = await User.findOne({ email: "admin@test.com" });
@@ -364,7 +364,7 @@ describe("Admin Routes", () => {
     });
   });
 
-  describe("POST /api/admin/invites/:id/revoke - Revoke Invite", () => {
+  describe("POST /api/v1/admin/invites/:id/revoke - Revoke Invite", () => {
     test("should revoke pending invite", async () => {
       const token = await getAdminToken();
       const admin = await User.findOne({ email: "admin@test.com" });
@@ -728,7 +728,7 @@ describe("Admin Routes", () => {
         }
       );
 
-      const loginRes = await app.request("/api/auth/local/login", {
+      const loginRes = await app.request("/api/v1/auth/local/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

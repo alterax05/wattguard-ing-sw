@@ -90,7 +90,7 @@ describe("Email Validation and Normalization", () => {
     ];
 
     for (const email of invalidEmails) {
-      const res = await app.request("/api/auth/local/login", {
+      const res = await app.request("/api/v1/auth/local/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: "password123" }),
@@ -192,7 +192,7 @@ describe("Password Validation", () => {
     const shortPasswords = ["", "a", "ab", "abc", "1234567"];
 
     for (const password of shortPasswords) {
-      const res = await app.request("/api/auth/local/setup", {
+      const res = await app.request("/api/v1/auth/local/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ inviteToken: token, password, name: "Test User" }),
@@ -206,7 +206,7 @@ describe("Password Validation", () => {
   });
 
   test("should reject missing password field", async () => {
-    const res = await app.request("/api/auth/local/login", {
+    const res = await app.request("/api/v1/auth/local/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "user@test.com" }),
@@ -218,7 +218,7 @@ describe("Password Validation", () => {
   });
 
   test("should reject null password", async () => {
-    const res = await app.request("/api/auth/local/login", {
+    const res = await app.request("/api/v1/auth/local/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "user@test.com", password: null }),
@@ -238,7 +238,7 @@ describe("Request Body Validation", () => {
     ];
 
     for (const body of malformedBodies) {
-      const res = await app.request("/api/auth/local/login", {
+      const res = await app.request("/api/v1/auth/local/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body,
@@ -249,7 +249,7 @@ describe("Request Body Validation", () => {
   });
 
   test("should reject empty request body", async () => {
-    const res = await app.request("/api/auth/local/login", {
+    const res = await app.request("/api/v1/auth/local/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "",
@@ -259,7 +259,7 @@ describe("Request Body Validation", () => {
   });
 
   test("should reject requests with wrong content type", async () => {
-    const res = await app.request("/api/auth/local/login", {
+    const res = await app.request("/api/v1/auth/local/login", {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({ email: "user@test.com", password: "password123" }),
@@ -270,7 +270,7 @@ describe("Request Body Validation", () => {
   });
 
   test("should handle missing required fields", async () => {
-    const res = await app.request("/api/auth/local/login", {
+    const res = await app.request("/api/v1/auth/local/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
@@ -290,7 +290,7 @@ describe("Request Body Validation", () => {
     ];
 
     for (const body of wrongTypes) {
-      const res = await app.request("/api/auth/local/login", {
+      const res = await app.request("/api/v1/auth/local/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -330,18 +330,18 @@ describe("Query Parameter Validation", () => {
   });
 
   test("should reject missing token query parameter", async () => {
-    const res = await app.request("/api/invites/validate");
+    const res = await app.request("/api/v1/invites/validate");
     expect(res.status).toBe(400);
   });
 
   test("should reject empty token query parameter", async () => {
-    const res = await app.request("/api/invites/validate?token=");
+    const res = await app.request("/api/v1/invites/validate?token=");
     expect(res.status).toBe(400);
   });
 
   test("should reject whitespace-only token query parameter", async () => {
     // Whitespace-only token is invalid, but URL encoding may affect behavior
-    const res = await app.request("/api/invites/validate?token=   ");
+    const res = await app.request("/api/v1/invites/validate?token=   ");
     // May return 400 (validation error) or 404 (not found)
     expect([400, 404]).toContain(res.status);
   });
@@ -378,7 +378,7 @@ describe("Role Validation", () => {
     const invalidRoles = ["user", "superadmin", "guest", "", "admin123"];
 
     for (const role of invalidRoles) {
-      const res = await app.request("/api/admin/invites", {
+      const res = await app.request("/api/v1/admin/invites", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -397,7 +397,7 @@ describe("Role Validation", () => {
   test("should reject missing role field", async () => {
     const token = await getAdminToken();
 
-    const res = await app.request("/api/admin/invites", {
+    const res = await app.request("/api/v1/admin/invites", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -420,7 +420,7 @@ async function getAdminToken() {
     passwordHash: await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 }),
   });
 
-  const loginRes = await app.request("/api/auth/local/login", {
+  const loginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

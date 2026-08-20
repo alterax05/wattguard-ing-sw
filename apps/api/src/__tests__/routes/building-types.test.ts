@@ -75,7 +75,7 @@ beforeEach(async () => {
   });
 
   // Login to get tokens
-  const adminLoginRes = await app.request("/api/auth/local/login", {
+  const adminLoginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -88,7 +88,7 @@ beforeEach(async () => {
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
   adminToken = adminTokenMatch?.[1] ?? "";
 
-  const operatorLoginRes = await app.request("/api/auth/local/login", {
+  const operatorLoginRes = await app.request("/api/v1/auth/local/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
