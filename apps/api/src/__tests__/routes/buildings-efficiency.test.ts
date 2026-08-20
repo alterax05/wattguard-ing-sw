@@ -134,10 +134,8 @@ beforeEach(async () => {
   adminUserId = admin._id as mongoose.Types.ObjectId;
 
   // Log in
-  const loginRes = await app.request("/api/v1/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "admin@test.com", password: "admin123" }),
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: { email: "admin@test.com", password: "admin123" },
   });
   const cookie = loginRes.headers.get("set-cookie") ?? "";
   const match = cookie.match(/access_token=([^;]+)/);
@@ -199,9 +197,10 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
     test("returns 401 without a token", async () => {
       const building = await createBuilding();
       const now = new Date();
-      const res = await app.request(
-        `/api/v1/buildings/${building._id}/efficiency?startDate=${ts(now, -3_600_000)}&endDate=${now.toISOString()}`,
-      );
+      const res = await client.api.v1.buildings[":id"].efficiency.$get({
+        param: { id: building._id.toString() },
+        query: { startDate: ts(now, -3_600_000), endDate: now.toISOString() },
+      });
       expect(res.status).toBe(401);
     });
   });
@@ -221,8 +220,12 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
     test("returns 400 when startDate is missing", async () => {
       const building = await createBuilding();
       const now = new Date();
-      const res = await app.request(
-        `/api/v1/buildings/${building._id}/efficiency?endDate=${now.toISOString()}`,
+      const res = await client.api.v1.buildings[":id"].efficiency.$get(
+        {
+          param: { id: building._id.toString() },
+          // @ts-expect-error intentionally missing required startDate
+          query: { endDate: now.toISOString() },
+        },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);
@@ -231,8 +234,12 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
     test("returns 400 when endDate is missing", async () => {
       const building = await createBuilding();
       const now = new Date();
-      const res = await app.request(
-        `/api/v1/buildings/${building._id}/efficiency?startDate=${now.toISOString()}`,
+      const res = await client.api.v1.buildings[":id"].efficiency.$get(
+        {
+          param: { id: building._id.toString() },
+          // @ts-expect-error intentionally missing required endDate
+          query: { startDate: now.toISOString() },
+        },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);
@@ -241,8 +248,11 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
     test("returns 400 when startDate is not a valid ISO datetime", async () => {
       const building = await createBuilding();
       const now = new Date();
-      const res = await app.request(
-        `/api/v1/buildings/${building._id}/efficiency?startDate=not-a-date&endDate=${now.toISOString()}`,
+      const res = await client.api.v1.buildings[":id"].efficiency.$get(
+        {
+          param: { id: building._id.toString() },
+          query: { startDate: "not-a-date", endDate: now.toISOString() },
+        },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);

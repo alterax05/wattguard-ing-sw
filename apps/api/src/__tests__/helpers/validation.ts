@@ -2,8 +2,11 @@
  * Test helper utilities for validation testing
  */
 import { expect } from "bun:test";
+import { testClient } from "hono/testing";
 import { app } from "../../index";
 import { User } from "../../models/User";
+
+export const client = testClient(app);
 
 /**
  * Asserts that a response is a validation error (400)
@@ -65,10 +68,8 @@ export async function createUserAndGetToken(
     }),
   });
 
-  const loginRes = await app.request("/api/v1/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: { email, password },
   });
 
   const setCookieHeader = loginRes.headers.get("set-cookie");
@@ -85,14 +86,20 @@ export async function createUserAndGetToken(
 }
 
 /**
- * Makes an authenticated request with Bearer token
+ * Type-safe signature for a typed Hono client request that accepts a
+ * RequestInit (e.g. `(init) => client.api.v1...$get({ ... }, init)`).
+ */
+type TypedRequest = (init: RequestInit) => Promise<Response>;
+
+/**
+ * Runs a typed client request injecting a Bearer token into its headers
  */
 export async function authenticatedRequest(
-  url: string,
+  request: TypedRequest,
   token: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  return app.request(url, {
+  return request({
     ...options,
     headers: {
       ...options.headers,
@@ -102,9 +109,13 @@ export async function authenticatedRequest(
 }
 
 /**
- * Makes a POST request with JSON body
+ * Runs a typed JSON POST request, optionally with a Bearer token
  */
-export async function postJSON(url: string, body: unknown, token?: string): Promise<Response> {
+export async function postJSON(
+  request: TypedRequest,
+  body: unknown,
+  token?: string
+): Promise<Response> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -113,8 +124,7 @@ export async function postJSON(url: string, body: unknown, token?: string): Prom
     headers.Authorization = `Bearer ${token}`;
   }
 
-  return app.request(url, {
-    method: "POST",
+  return request({
     headers,
     body: JSON.stringify(body),
   });

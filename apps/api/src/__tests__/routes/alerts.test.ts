@@ -45,13 +45,11 @@ beforeEach(async () => {
   
 
   // Generate token through login route
-  const loginRes = await app.request("/api/v1/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "admin-alerts@test.com",
       password: "admin123",
-    }),
+    },
   });
 
   const cookie = loginRes.headers.get("set-cookie");

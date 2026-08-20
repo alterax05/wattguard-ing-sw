@@ -90,14 +90,15 @@ describe("Email Validation and Normalization", () => {
     ];
 
     for (const email of invalidEmails) {
-      const res = await app.request("/api/v1/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: "password123" }),
+      const res = await client.api.v1.auth.local.login.$post({
+        json: { email, password: "password123" },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
+      }
       expect(data.error).toBeDefined();
     }
   });
@@ -192,36 +193,38 @@ describe("Password Validation", () => {
     const shortPasswords = ["", "a", "ab", "abc", "1234567"];
 
     for (const password of shortPasswords) {
-      const res = await app.request("/api/v1/auth/local/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteToken: token, password, name: "Test User" }),
+      const res = await client.api.v1.auth.local.setup.$post({
+        json: { inviteToken: token, password, name: "Test User" },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
+      if (!("error" in data)) {
+        throw new Error("Expected response to contain 'error'");
+      }
       const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
       expect(errorText).toMatch(/8|Password/);
     }
   });
 
   test("should reject missing password field", async () => {
-    const res = await app.request("/api/v1/auth/local/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "user@test.com" }),
+    const res = await client.api.v1.auth.local.login.$post({
+      // @ts-expect-error intentionally missing required password field
+      json: { email: "user@test.com" },
     });
 
     expect(res.status).toBe(400);
     const data = await res.json();
+    if (!("error" in data)) {
+      throw new Error("Expected response to contain 'error'");
+    }
     expect(data.error).toBeDefined();
   });
 
   test("should reject null password", async () => {
-    const res = await app.request("/api/v1/auth/local/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "user@test.com", password: null }),
+    const res = await client.api.v1.auth.local.login.$post({
+      // @ts-expect-error intentionally null password
+      json: { email: "user@test.com", password: null },
     });
 
     expect(res.status).toBe(400);
@@ -238,10 +241,8 @@ describe("Request Body Validation", () => {
     ];
 
     for (const body of malformedBodies) {
-      const res = await app.request("/api/v1/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
+      const res = await client.api.v1.auth.local.login.$post({
+        json: body as never,
       });
 
       expect(res.status).toBe(400);
@@ -249,35 +250,45 @@ describe("Request Body Validation", () => {
   });
 
   test("should reject empty request body", async () => {
-    const res = await app.request("/api/v1/auth/local/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "",
-    });
+    const res = await client.api.v1.auth.local.login.$post(
+      {} as never,
+      {
+        init: {
+          body: "",
+          headers: { "Content-Type": "application/json" },
+        },
+      },
+    );
 
     expect(res.status).toBe(400);
   });
 
   test("should reject requests with wrong content type", async () => {
-    const res = await app.request("/api/v1/auth/local/login", {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ email: "user@test.com", password: "password123" }),
-    });
+    const res = await client.api.v1.auth.local.login.$post(
+      {} as never,
+      {
+        init: {
+          body: JSON.stringify({ email: "user@test.com", password: "password123" }),
+          headers: { "Content-Type": "text/plain" },
+        },
+      },
+    );
 
     // May accept or reject depending on implementation
     expect([200, 400, 401, 415]).toContain(res.status);
   });
 
   test("should handle missing required fields", async () => {
-    const res = await app.request("/api/v1/auth/local/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+    const res = await client.api.v1.auth.local.login.$post({
+      // @ts-expect-error intentionally missing required fields
+      json: {},
     });
 
     expect(res.status).toBe(400);
     const data = await res.json();
+    if (!("error" in data)) {
+      throw new Error("Expected response to contain 'error'");
+    }
     expect(data.error).toBeDefined();
   });
 
@@ -290,10 +301,9 @@ describe("Request Body Validation", () => {
     ];
 
     for (const body of wrongTypes) {
-      const res = await app.request("/api/v1/auth/local/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      const res = await client.api.v1.auth.local.login.$post({
+        // @ts-expect-error intentionally wrong field types
+        json: body,
       });
 
       expect(res.status).toBe(400);
@@ -330,18 +340,25 @@ describe("Query Parameter Validation", () => {
   });
 
   test("should reject missing token query parameter", async () => {
-    const res = await app.request("/api/v1/invites/validate");
+    const res = await client.api.v1.invites.validate.$get({
+      // @ts-expect-error intentionally missing required token query
+      query: {},
+    });
     expect(res.status).toBe(400);
   });
 
   test("should reject empty token query parameter", async () => {
-    const res = await app.request("/api/v1/invites/validate?token=");
+    const res = await client.api.v1.invites.validate.$get({
+      query: { token: "" },
+    });
     expect(res.status).toBe(400);
   });
 
   test("should reject whitespace-only token query parameter", async () => {
     // Whitespace-only token is invalid, but URL encoding may affect behavior
-    const res = await app.request("/api/v1/invites/validate?token=   ");
+    const res = await client.api.v1.invites.validate.$get({
+      query: { token: "   " },
+    });
     // May return 400 (validation error) or 404 (not found)
     expect([400, 404]).toContain(res.status);
   });
@@ -378,17 +395,17 @@ describe("Role Validation", () => {
     const invalidRoles = ["user", "superadmin", "guest", "", "admin123"];
 
     for (const role of invalidRoles) {
-      const res = await app.request("/api/v1/admin/invites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await client.api.v1.admin.invites.$post(
+        {
+          json: {
+            email: "test@test.com",
+            role: role as never,
+          },
         },
-        body: JSON.stringify({
-          email: "test@test.com",
-          role,
-        }),
-      });
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       expect(res.status).toBe(400);
     }
@@ -397,16 +414,17 @@ describe("Role Validation", () => {
   test("should reject missing role field", async () => {
     const token = await getAdminToken();
 
-    const res = await app.request("/api/v1/admin/invites", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const res = await client.api.v1.admin.invites.$post(
+      {
+        // @ts-expect-error intentionally missing required role
+        json: {
+          email: "test@test.com",
+        },
       },
-      body: JSON.stringify({
-        email: "test@test.com",
-      }),
-    });
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
 
     expect(res.status).toBe(400);
   });
@@ -420,13 +438,11 @@ async function getAdminToken() {
     passwordHash: await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 }),
   });
 
-  const loginRes = await app.request("/api/v1/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "admin@test.com",
       password: "admin123",
-    }),
+    },
   });
 
   const setCookieHeader = loginRes.headers.get("set-cookie");

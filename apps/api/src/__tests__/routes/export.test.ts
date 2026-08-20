@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { Types } from "mongoose";
+import { testClient } from "hono/testing";
 import { app } from "../../index";
 import { Building } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
@@ -7,16 +8,16 @@ import { SensorReading } from "../../models/SensorReading";
 import { User } from "../../models/User";
 import { clearTestDB, connectTestDB, disconnectTestDB } from "../helpers/db";
 
+const client = testClient(app);
+
 let adminToken: string;
 let operatorToken: string;
 let buildingId: string;
 let buildingName: string;
 
 async function login(email: string, password: string): Promise<string> {
-  const response = await app.request("/api/v1/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+  const response = await client.api.v1.auth.local.login.$post({
+    json: { email, password },
   });
   const cookie = response.headers.get("set-cookie");
   const token = cookie?.match(/access_token=([^;]+)/)?.[1];
@@ -116,16 +117,26 @@ beforeEach(async () => {
 
 describe("Consumption export API", () => {
   test("requires authentication", async () => {
-    const response = await app.request(
-      `/api/v1/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
-    );
+    const response = await client.api.v1.export.consumption.$get({
+      query: {
+        buildingIds: buildingId,
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
+      },
+    });
 
     expect(response.status).toBe(401);
   });
 
   test("allows only administrators", async () => {
-    const response = await app.request(
-      `/api/v1/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
+    const response = await client.api.v1.export.consumption.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+        },
+      },
       { headers: { Cookie: `access_token=${operatorToken}` } },
     );
 
@@ -133,22 +144,39 @@ describe("Consumption export API", () => {
   });
 
   test("rejects missing and reversed date ranges", async () => {
-    const missingDateResponse = await app.request(
-      `/api/v1/export/consumption?buildingIds=${buildingId}`,
+    const missingDateResponse = await client.api.v1.export.consumption.$get(
+      {
+        // @ts-expect-error intentionally missing date range
+        query: {
+          buildingIds: buildingId,
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     expect(missingDateResponse.status).toBe(400);
 
-    const reversedDateResponse = await app.request(
-      `/api/v1/export/consumption?buildingIds=${buildingId}&startDate=2026-02-01&endDate=2026-01-01`,
+    const reversedDateResponse = await client.api.v1.export.consumption.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-02-01",
+          endDate: "2026-01-01",
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     expect(reversedDateResponse.status).toBe(400);
   });
 
   test("returns selected readings in the requested period as CSV", async () => {
-    const response = await app.request(
-      `/api/v1/export/consumption?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
+    const response = await client.api.v1.export.consumption.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     const csv = await response.text();
@@ -171,8 +199,14 @@ describe("Consumption export API", () => {
   });
 
   test("returns 404 when a selected building does not exist", async () => {
-    const response = await app.request(
-      `/api/v1/export/consumption?buildingIds=${new Types.ObjectId()}&startDate=2026-01-01&endDate=2026-01-31`,
+    const response = await client.api.v1.export.consumption.$get(
+      {
+        query: {
+          buildingIds: new Types.ObjectId().toString(),
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
 

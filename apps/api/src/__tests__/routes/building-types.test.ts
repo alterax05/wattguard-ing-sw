@@ -75,26 +75,22 @@ beforeEach(async () => {
   });
 
   // Login to get tokens
-  const adminLoginRes = await app.request("/api/v1/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const adminLoginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "admin@test.com",
       password: "admin123",
-    }),
+    },
   });
   
   const adminCookie = adminLoginRes.headers.get("set-cookie");
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
   adminToken = adminTokenMatch?.[1] ?? "";
 
-  const operatorLoginRes = await app.request("/api/v1/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const operatorLoginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "operator@test.com",
       password: "operator123",
-    }),
+    },
   });
   
   const operatorCookie = operatorLoginRes.headers.get("set-cookie");

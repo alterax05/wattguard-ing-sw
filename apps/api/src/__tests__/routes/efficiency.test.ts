@@ -57,13 +57,11 @@ beforeEach(async () => {
   adminUserId = admin._id as mongoose.Types.ObjectId;
 
   // Login to get token
-  const loginRes = await app.request("/api/v1/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "admin@test.com",
       password: "admin123",
-    }),
+    },
   });
 
   const cookie = loginRes.headers.get("set-cookie");
@@ -251,10 +249,12 @@ describe("Building Efficiency Route - Integration Tests", () => {
   });
 
   test("should return 400 for invalid dates", async () => {
-    const res = await app.request(
-      `/api/v1/buildings/${buildingId}/efficiency?startDate=invalid&endDate=invalid`,
+    const res = await client.api.v1.buildings[":id"].efficiency.$get(
       {
-        method: "GET",
+        param: { id: buildingId },
+        query: { startDate: "invalid", endDate: "invalid" },
+      },
+      {
         headers: {
           "Authorization": `Bearer ${adminToken}`,
         },
@@ -269,10 +269,12 @@ describe("Building Efficiency Route - Integration Tests", () => {
     const startDate = "2024-01-01T10:00:00Z";
     const endDate = "2024-01-01T13:00:00Z";
 
-    const res = await app.request(
-      `/api/v1/buildings/${fakeId}/efficiency?startDate=${startDate}&endDate=${endDate}`,
+    const res = await client.api.v1.buildings[":id"].efficiency.$get(
       {
-        method: "GET",
+        param: { id: fakeId },
+        query: { startDate, endDate },
+      },
+      {
         headers: {
           "Authorization": `Bearer ${adminToken}`,
         },
