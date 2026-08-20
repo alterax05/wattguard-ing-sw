@@ -18,7 +18,7 @@ import {
   isGasBoilerBuilding,
   type DailyConsumptionPoint,
   type PeriodConsumptionSummary,
-} from "./consumption";
+} from "./energy";
 
 export type SensorTypeCounts = {
   internal_temp: number;

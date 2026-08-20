@@ -37,7 +37,7 @@ import type {
   UpdateBuildingResponse,
 } from "@wattguard/shared";
 import { calculateBuildingEfficiency } from "../lib/efficiency";
-import { isDistrictHeatingBuilding } from "../lib/consumption";
+import { isDistrictHeatingBuilding } from "../lib/energy";
 import { deleteForBuilding, resolveEfficiencyForBuilding } from "../lib/alerts";
 
 const app = new Hono<{ Variables: AuthVariables }>()

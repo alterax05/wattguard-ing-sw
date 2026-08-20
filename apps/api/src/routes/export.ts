@@ -16,7 +16,7 @@ import {
   serializeReportPdf,
   serializeReportXlsx,
 } from "../lib/report";
-import { getUtcEndOfDay, getUtcStartOfDay } from "../lib/consumption";
+import { getUtcEndOfDay, getUtcStartOfDay } from "../lib/energy";
 
 const CSV_HEADERS = [
   "timestamp",

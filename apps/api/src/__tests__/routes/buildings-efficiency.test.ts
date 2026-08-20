@@ -68,8 +68,8 @@ let adminToken: string;
 let adminUserId: mongoose.Types.ObjectId;
 let buildingTypeId: mongoose.Types.ObjectId;
 
-// ── physics constants (must mirror the handler) ───────────────────────────────
-const GAS_LHV_KWH_PER_M3 = 10.55;
+// ── physics constants (shared with the handler) ──────────────────────────────
+import { GAS_LHV_KWH_PER_M3 } from "../../lib/energy";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
