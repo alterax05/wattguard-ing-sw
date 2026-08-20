@@ -280,6 +280,7 @@
     "allClear": "Alles unter Kontrolle!",
     "acknowledgedBy": "Übernommen von {{name}} • {{time}}",
     "resolvedBy": "Behoben von {{name}} • {{time}}",
+    "systemResolver": "System",
     "acknowledge": "Übernehmen",
     "resolve": "Beheben",
     "noActive": "Keine aktiven Meldungen",

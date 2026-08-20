@@ -5,12 +5,18 @@ export const AlertSeveritySchema = z.enum(["low", "medium", "high", "critical"])
 export const AlertStatusSchema = z.enum(["active", "acknowledged", "resolved"]);
 export const AlertThresholdTypeSchema = z.enum(["min", "max"]);
 
+export const THRESHOLD_ALERT_TYPE = "threshold_exceeded";
+export const EFFICIENCY_ALERT_TYPE = "efficiency_below_threshold";
+export const ALERT_TYPES = [THRESHOLD_ALERT_TYPE, EFFICIENCY_ALERT_TYPE] as const;
+export type AlertType = (typeof ALERT_TYPES)[number];
+export const AlertTypeSchema = z.enum(ALERT_TYPES);
+
 export const AlertSchema = z.object({
   id: ObjectIdSchema.describe("Unique alert identifier"),
   buildingId: ObjectIdSchema.describe("Building identifier this alert belongs to"),
   buildingName: z.string().describe("Name of the building"),
   sensorId: ObjectIdSchema.optional().describe("Optional sensor identifier this alert relates to"),
-  type: z.string().describe("Type of the alert (e.g., temperature_anomaly)"),
+  type: AlertTypeSchema.describe("Type of the alert"),
   thresholdType: AlertThresholdTypeSchema.optional().describe("Threshold direction for threshold alerts"),
   severity: AlertSeveritySchema.describe("Severity level"),
   sensorType: z.string().optional().describe("Sensor type the alert relates to"),

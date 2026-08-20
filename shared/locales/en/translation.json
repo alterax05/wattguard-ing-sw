@@ -280,6 +280,7 @@
     "allClear": "All clear!",
     "acknowledgedBy": "Acknowledged by {{name}} • {{time}}",
     "resolvedBy": "Resolved by {{name}} • {{time}}",
+    "systemResolver": "System",
     "acknowledge": "Acknowledge",
     "resolve": "Resolve",
     "noActive": "No active alerts",

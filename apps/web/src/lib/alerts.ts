@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
+import { EFFICIENCY_ALERT_TYPE } from "@wattguard/shared";
 
-/** Alert type emitted by the periodic efficiency evaluator (Bun.cron). */
-export const EFFICIENCY_ALERT_TYPE = "efficiency_below_threshold";
+export { EFFICIENCY_ALERT_TYPE };
 
 /**
  * Minimal structured fields used to compose a localized alert message.

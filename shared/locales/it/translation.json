@@ -280,6 +280,7 @@
     "allClear": "Tutto sotto controllo!",
     "acknowledgedBy": "Presa in carico da {{name}} • {{time}}",
     "resolvedBy": "Risolta da {{name}} • {{time}}",
+    "systemResolver": "Sistema",
     "acknowledge": "Prendi in carico",
     "resolve": "Risolvi",
     "noActive": "Nessuna notifica attiva",
