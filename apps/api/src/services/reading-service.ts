@@ -1,9 +1,8 @@
 import mongoose from "mongoose";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
-import { Alert } from "../models/Alert";
 import type { BuildingDocument } from "../models/Building";
-import { THRESHOLD_ALERT_TYPE } from "../lib/alerts";
+import { raiseThreshold } from "../lib/alerts";
 
 export type IngestReadingInput = {
   sensorId: string;
@@ -86,37 +85,24 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
         const isMin =
           current.minThreshold != null && input.value < current.minThreshold;
         const thresholdType = isMin ? "min" : "max";
+        const limit = isMin ? current.minThreshold : current.maxThreshold;
 
-        // Check if an active alert already exists for this sensor and type
-        const existingAlert = await Alert.findOne({
+        const result = await raiseThreshold({
           sensorId: current._id,
-          type: THRESHOLD_ALERT_TYPE,
-          status: "active",
-        }).session(session);
-
-        if (!existingAlert) {
-          const limit = isMin ? current.minThreshold : current.maxThreshold;
-          const severity = "high";
-
-          await Alert.create(
-            [
-              {
-                buildingId,
-                buildingName,
-                sensorId: current._id,
-                type: THRESHOLD_ALERT_TYPE,
-                thresholdType,
-                severity,
-                sensorType: current.sensorType,
-                location: current.location,
-                value: input.value,
-                unit: input.unit,
-                limit: limit ?? null,
-                status: "active",
-              },
-            ],
-            { session },
-          );
+          buildingId,
+          buildingName,
+          sensorType: current.sensorType,
+          location: current.location,
+          thresholdType,
+          value: input.value,
+          unit: input.unit,
+          limit: limit ?? null,
+          session,
+        });
+        if (!result.ok) {
+          // An alert-creation failure aborts the transaction so the alert and
+          // the denormalized lastReading are rolled back together.
+          throw new Error("Failed to create threshold alert");
         }
       }
 

@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { Types, type QueryFilter } from "mongoose";
 import { Alert as AlertModel, type AlertDocument } from "../models/Alert";
@@ -14,6 +14,31 @@ import type {
 } from "@wattguard/shared";
 import { ErrorSchema } from "@wattguard/shared";
 import type { AuthVariables } from "../middleware/auth";
+import {
+  acknowledge,
+  resolveManually,
+  toAlertDTO,
+  type AlertDTOInput,
+  type AlertErrorCode,
+} from "../lib/alerts";
+import { getRequestLocale } from "../lib/i18n";
+
+type AlertRouteContext = Context<{ Variables: AuthVariables }>;
+
+function alertErrorResponse(c: AlertRouteContext, code: AlertErrorCode) {
+  switch (code) {
+    case "invalid_alert_id":
+      return c.json({ error: "Invalid alert ID format", code }, 400);
+    case "alert_not_found":
+      return c.json({ error: "Alert not found", code }, 404);
+    case "alert_not_active":
+      return c.json({ error: "Only active alerts can be acknowledged", code }, 400);
+    case "alert_already_resolved":
+      return c.json({ error: "Alert is already resolved", code }, 400);
+    case "internal_server_error":
+      return c.json({ error: "Internal server error", code }, 500);
+  }
+}
 
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
@@ -74,27 +99,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         ]);
 
         return c.json({
-          alerts: alerts.map(a => ({
-            id: (a._id as Types.ObjectId).toString(),
-            buildingId: a.buildingId.toString(),
-            buildingName: a.buildingName,
-            sensorId: a.sensorId?.toString(),
-            type: a.type,
-            thresholdType: a.thresholdType ?? undefined,
-            severity: a.severity,
-            sensorType: a.sensorType ?? undefined,
-            location: a.location ?? undefined,
-            value: a.value ?? undefined,
-            unit: a.unit ?? undefined,
-            limit: a.limit ?? undefined,
-            status: a.status,
-            acknowledgedBy: a.acknowledgedBy ?? undefined,
-            acknowledgedAt: a.acknowledgedAt?.toISOString() ?? undefined,
-            resolvedBy: a.resolvedBy ?? undefined,
-            resolvedAt: a.resolvedAt?.toISOString() ?? undefined,
-            createdAt: (a as AlertDocument).createdAt.toISOString(),
-            updatedAt: (a as AlertDocument).updatedAt.toISOString(),
-          })),
+          alerts: alerts.map((a) => toAlertDTO(a, { locale: getRequestLocale(c) })),
           pagination: {
             limit,
             offset,
@@ -133,53 +138,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const { id } = c.req.valid("param");
       const user = c.get("userDoc");
 
-      if (!Types.ObjectId.isValid(id)) {
-        return c.json({ error: "Invalid alert ID format", code: "invalid_alert_id" }, 400);
+      const result = await acknowledge({ id, actor: user.name || user.email });
+      if (!result.ok) {
+        return alertErrorResponse(c, result.code);
       }
 
-      try {
-        const alert = await AlertModel.findById(id);
-        if (!alert) {
-          return c.json({ error: "Alert not found", code: "alert_not_found" }, 404);
-        }
-
-        if (alert.status !== "active") {
-          return c.json({ error: "Only active alerts can be acknowledged", code: "alert_not_active" }, 400);
-        }
-
-        alert.status = "acknowledged";
-        alert.acknowledgedBy = user.name || user.email;
-        alert.acknowledgedAt = new Date();
-        await alert.save();
-
-        return c.json({
-          success: true as const,
-          alert: {
-            id: alert._id.toString(),
-            buildingId: alert.buildingId.toString(),
-            buildingName: alert.buildingName,
-            sensorId: alert.sensorId?.toString(),
-            type: alert.type,
-            thresholdType: alert.thresholdType ?? undefined,
-            severity: alert.severity,
-            sensorType: alert.sensorType ?? undefined,
-            location: alert.location ?? undefined,
-            value: alert.value ?? undefined,
-            unit: alert.unit ?? undefined,
-            limit: alert.limit ?? undefined,
-            status: alert.status,
-            acknowledgedBy: alert.acknowledgedBy ?? undefined,
-            acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? undefined,
-            resolvedBy: alert.resolvedBy ?? undefined,
-            resolvedAt: alert.resolvedAt?.toISOString() ?? undefined,
-            createdAt: alert.createdAt.toISOString(),
-            updatedAt: alert.updatedAt.toISOString(),
-          }
-        } satisfies UpdateAlertStatusResponse);
-      } catch (error) {
-        console.error("Error acknowledging alert:", error);
-        return c.json({ error: "Internal server error", code: "internal_server_error" }, 500);
-      }
+      return c.json({
+        success: true as const,
+        alert: toAlertDTO(result.alert as AlertDTOInput, { locale: getRequestLocale(c) }),
+      } satisfies UpdateAlertStatusResponse);
     }
   )
   .patch(
@@ -208,53 +175,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const { id } = c.req.valid("param");
       const user = c.get("userDoc");
 
-      if (!Types.ObjectId.isValid(id)) {
-        return c.json({ error: "Invalid alert ID format", code: "invalid_alert_id" }, 400);
+      const result = await resolveManually({ id, actor: user.name || user.email });
+      if (!result.ok) {
+        return alertErrorResponse(c, result.code);
       }
 
-      try {
-        const alert = await AlertModel.findById(id);
-        if (!alert) {
-          return c.json({ error: "Alert not found", code: "alert_not_found" }, 404);
-        }
-
-        if (alert.status === "resolved") {
-          return c.json({ error: "Alert is already resolved", code: "alert_already_resolved" }, 400);
-        }
-
-        alert.status = "resolved";
-        alert.resolvedBy = user.name || user.email;
-        alert.resolvedAt = new Date();
-        await alert.save();
-
-        return c.json({
-          success: true as const,
-          alert: {
-            id: alert._id.toString(),
-            buildingId: alert.buildingId.toString(),
-            buildingName: alert.buildingName,
-            sensorId: alert.sensorId?.toString(),
-            type: alert.type,
-            thresholdType: alert.thresholdType ?? undefined,
-            severity: alert.severity,
-            sensorType: alert.sensorType ?? undefined,
-            location: alert.location ?? undefined,
-            value: alert.value ?? undefined,
-            unit: alert.unit ?? undefined,
-            limit: alert.limit ?? undefined,
-            status: alert.status,
-            acknowledgedBy: alert.acknowledgedBy ?? undefined,
-            acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? undefined,
-            resolvedBy: alert.resolvedBy ?? undefined,
-            resolvedAt: alert.resolvedAt?.toISOString() ?? undefined,
-            createdAt: alert.createdAt.toISOString(),
-            updatedAt: alert.updatedAt.toISOString(),
-          }
-        } satisfies UpdateAlertStatusResponse);
-      } catch (error) {
-        console.error("Error resolving alert:", error);
-        return c.json({ error: "Internal server error", code: "internal_server_error" }, 500);
-      }
+      return c.json({
+        success: true as const,
+        alert: toAlertDTO(result.alert as AlertDTOInput, { locale: getRequestLocale(c) }),
+      } satisfies UpdateAlertStatusResponse);
     }
   );
 

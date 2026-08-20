@@ -14,8 +14,11 @@
  *   pochi millisecondi e si auto-risana alla risoluzione successiva.
  */
 import { Building } from "../models/Building";
-import { Alert } from "../models/Alert";
-import { EFFICIENCY_ALERT_TYPE, SYSTEM_RESOLVER } from "../lib/alerts";
+import {
+  raiseEfficiency,
+  resolveEfficiencyForBuilding,
+  SYSTEM_RESOLVER,
+} from "../lib/alerts";
 import { calculateBuildingEfficiency } from "../lib/efficiency";
 
 // Finestra di valutazione fissa: 24h (decisione di prodotto, non configurabile).
@@ -39,37 +42,23 @@ export async function evaluateEfficiencyAlerts(): Promise<void> {
       if (cop == null) continue; // dati insufficienti o teleriscaldamento: silenzioso
 
       if (cop < minCop) {
-        const existing = await Alert.findOne({
+        const result = await raiseEfficiency({
           buildingId: building._id,
-          type: EFFICIENCY_ALERT_TYPE,
-          status: "active",
+          buildingName: building.name,
+          cop,
+          minCop,
         });
-        if (!existing) {
-          await Alert.create({
-            buildingId: building._id,
-            buildingName: building.name,
-            type: EFFICIENCY_ALERT_TYPE,
-            thresholdType: "min",
-            severity: "high",
-            // Structured fields: the frontend composes the localized message
-            // from these (see apps/web/src/lib/alerts.ts), so no pre-rendered
-            // message string is stored.
-            value: Number(cop.toFixed(2)),
-            unit: "COP",
-            limit: minCop,
-            location: building.name,
-            status: "active",
-          });
+        if (!result.ok) {
+          console.error(`Efficienza: errore nella creazione dell'alert per l'edificio ${building._id}`);
         }
       } else {
-        await Alert.updateMany(
-          {
-            buildingId: building._id,
-            type: EFFICIENCY_ALERT_TYPE,
-            status: { $in: ["active", "acknowledged"] },
-          },
-          { $set: { status: "resolved", resolvedBy: SYSTEM_RESOLVER, resolvedAt: new Date() } },
-        );
+        const result = await resolveEfficiencyForBuilding({
+          buildingId: building._id,
+          actor: SYSTEM_RESOLVER,
+        });
+        if (!result.ok) {
+          console.error(`Efficienza: errore nella risoluzione degli alert per l'edificio ${building._id}`);
+        }
       }
     } catch (error) {
       console.error(`Efficienza: errore nella valutazione per l'edificio ${building._id}`, error);

@@ -6,7 +6,6 @@ import { Building, type BuildingDocument } from "../models/Building";
 import { BuildingType } from "../models/BuildingType";
 import { Sensor, type SensorDocument, type SensorType } from "../models/Sensor";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
-import { Alert } from "../models/Alert";
 
 import {
   SearchBuildingsQuerySchema,
@@ -39,7 +38,7 @@ import type {
 } from "@wattguard/shared";
 import { calculateBuildingEfficiency } from "../lib/efficiency";
 import { isDistrictHeatingBuilding } from "../lib/consumption";
-import { EFFICIENCY_ALERT_TYPE } from "../lib/alerts";
+import { deleteForBuilding, resolveEfficiencyForBuilding } from "../lib/alerts";
 
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
@@ -491,10 +490,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (resultingDistrictHeating && building.efficiencyThresholds.enabled) {
         // Passaggio a teleriscaldamento: azzera la config e risolve gli alert efficienza.
         building.efficiencyThresholds = { enabled: false, minCop: null };
-        await Alert.updateMany(
-          { buildingId: building._id, type: EFFICIENCY_ALERT_TYPE, status: { $ne: "resolved" } },
-          { $set: { status: "resolved", resolvedBy: userDoc.name || userDoc.email, resolvedAt: new Date() } },
-        );
+        await resolveEfficiencyForBuilding({
+          buildingId: building._id,
+          actor: userDoc.name || userDoc.email,
+        });
       }
 
       // Apply updates
@@ -515,10 +514,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       if (updates.efficiencyThresholds !== undefined && !updates.efficiencyThresholds.enabled) {
         // Disabilitazione soglie: risolve gli alert efficienza ancora aperti.
-        await Alert.updateMany(
-          { buildingId: building._id, type: EFFICIENCY_ALERT_TYPE, status: { $ne: "resolved" } },
-          { $set: { status: "resolved", resolvedBy: userDoc.name || userDoc.email, resolvedAt: new Date() } },
-        );
+        await resolveEfficiencyForBuilding({
+          buildingId: building._id,
+          actor: userDoc.name || userDoc.email,
+        });
       }
 
       building.updatedBy = userDoc._id as Types.ObjectId;
@@ -637,7 +636,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Cascade delete: first delete sensor readings, then sensors, then building
       await Promise.all([
         SensorReading.deleteMany({ "metadata.buildingId": new Types.ObjectId(id) }),
-        Alert.deleteMany({ buildingId: id }),
+        deleteForBuilding(new Types.ObjectId(id)),
         Sensor.deleteMany({ buildingId: id }),
         building.deleteOne(),
       ]);
