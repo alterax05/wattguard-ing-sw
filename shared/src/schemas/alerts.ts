@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ObjectIdSchema, PaginationQuerySchema, SortOrderSchema } from "./common";
+import { ObjectIdSchema, PaginationQuerySchema, PaginationResponseSchema, SortOrderSchema } from "./common";
 
 export const AlertSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
 export const AlertStatusSchema = z.enum(["active", "acknowledged", "resolved"]);
@@ -26,11 +26,11 @@ export const AlertSchema = z.object({
   limit: z.number().optional().describe("Threshold limit that was exceeded"),
   status: AlertStatusSchema.describe("Current status"),
   acknowledgedBy: z.string().optional().describe("Name of the user who acknowledged"),
-  acknowledgedAt: z.string().datetime().optional().describe("When it was acknowledged"),
+  acknowledgedAt: z.iso.datetime().optional().describe("When it was acknowledged"),
   resolvedBy: z.string().optional().describe("Name of the user who resolved"),
-  resolvedAt: z.string().datetime().optional().describe("When it was resolved"),
-  createdAt: z.string().datetime().describe("Creation timestamp"),
-  updatedAt: z.string().datetime().describe("Last update timestamp"),
+  resolvedAt: z.iso.datetime().optional().describe("When it was resolved"),
+  createdAt: z.iso.datetime().describe("Creation timestamp"),
+  updatedAt: z.iso.datetime().describe("Last update timestamp"),
 });
 
 /**
@@ -52,11 +52,7 @@ export const ListAlertsQuerySchema = PaginationQuerySchema.extend({
  */
 export const ListAlertsResponseSchema = z.object({
   alerts: z.array(AlertSchema).describe("List of alerts"),
-  pagination: z.object({
-    limit: z.number(),
-    offset: z.number(),
-    total: z.number(),
-  }).describe("Pagination information"),
+  pagination: PaginationResponseSchema,
 });
 
 export type ListAlertsResponse = z.infer<typeof ListAlertsResponseSchema>;

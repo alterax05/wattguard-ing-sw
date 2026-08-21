@@ -5,12 +5,11 @@
  */
 
 import { z } from "zod";
-import { ErrorSchema } from "./common";
 
 // ── Query Schemas ────────────────────────────────────────────────────────────
 
 /**
- * Query params for GET /api/dashboard/history
+ * Query params for GET /api/v1/dashboard/history
  */
 export const DashboardHistoryQuerySchema = z.object({
   startDate: z.iso.datetime({ offset: true }).or(z.string().date()).describe("Start of the time range (ISO 8601)"),
@@ -25,7 +24,7 @@ export const DashboardHistoryQuerySchema = z.object({
 // ── Response Schemas ─────────────────────────────────────────────────────────
 
 /**
- * Response for GET /api/dashboard/stats
+ * Response for GET /api/v1/dashboard/stats
  */
 export const DashboardStatsResponseSchema = z.object({
   sensors: z.object({
@@ -53,7 +52,7 @@ export const DashboardHistoryDataPointSchema = z.object({
 });
 
 /**
- * Response for GET /api/dashboard/history
+ * Response for GET /api/v1/dashboard/history
  */
 export const DashboardHistoryResponseSchema = z.object({
   period: z.object({
@@ -65,6 +64,3 @@ export const DashboardHistoryResponseSchema = z.object({
 });
 
 export type DashboardHistoryResponse = z.infer<typeof DashboardHistoryResponseSchema>;
-
-// Re-export error schema for convenience
-export { ErrorSchema };

@@ -1,10 +1,9 @@
 /**
  * Settings route schemas
  *
- * Routes: /api/settings (GET, PATCH), /api/settings/export (GET), /api/settings/backup (POST)
+ * Routes: /api/v1/settings (GET, PATCH), /api/v1/settings/export (GET), /api/v1/settings/backup (POST)
  */
 import { z } from "zod";
-import { ErrorSchema } from "./common";
 
 // ── Sub-schemas ──────────────────────────────────────────────────────────────
 
@@ -70,6 +69,3 @@ export const UpdateSettingsResponseSchema = z.object({
 });
 
 export type UpdateSettingsResponse = z.infer<typeof UpdateSettingsResponseSchema>;
-
-// Re-export for convenience
-export { ErrorSchema };

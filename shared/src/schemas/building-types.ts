@@ -1,10 +1,10 @@
 /**
  * Building Type schemas
  * 
- * Routes: /api/building-types (GET, POST), /api/building-types/:id (PATCH, DELETE)
+ * Routes: /api/v1/building-types (GET, POST), /api/v1/building-types/:id (PATCH, DELETE)
  */
 import { z } from "zod";
-import { ErrorSchema, ObjectIdSchema } from "./common";
+import { ObjectIdParamSchema, DeleteResponseSchema } from "./common";
 
 /**
  * BuildingType response schema
@@ -18,7 +18,7 @@ export const BuildingTypeSchema = z.object({
 });
 
 /**
- * GET /api/building-types - List all building types response
+ * GET /api/v1/building-types - List all building types response
  */
 export const ListBuildingTypesResponseSchema = z.object({
   buildingTypes: z.array(BuildingTypeSchema).describe("List of building types"),
@@ -27,7 +27,7 @@ export const ListBuildingTypesResponseSchema = z.object({
 export type ListBuildingTypesResponse = z.infer<typeof ListBuildingTypesResponseSchema>;
 
 /**
- * POST /api/building-types - Create building type request
+ * POST /api/v1/building-types - Create building type request
  */
 export const CreateBuildingTypeRequestSchema = z.object({
   name: z.string().min(1, "Name is required").trim().describe("Building type name"),
@@ -35,7 +35,7 @@ export const CreateBuildingTypeRequestSchema = z.object({
 });
 
 /**
- * POST /api/building-types - Create building type response
+ * POST /api/v1/building-types - Create building type response
  */
 export const CreateBuildingTypeResponseSchema = z.object({
   success: z.literal(true),
@@ -45,22 +45,17 @@ export const CreateBuildingTypeResponseSchema = z.object({
 export type CreateBuildingTypeResponse = z.infer<typeof CreateBuildingTypeResponseSchema>;
 
 /**
- * PATCH /api/building-types/:id - Update building type path parameter
+ * PATCH /api/v1/building-types/:id - Update building type path parameter
  */
-export const UpdateBuildingTypeParamsSchema = z.object({
-  id: ObjectIdSchema.describe("Building type identifier"),
-});
+export const UpdateBuildingTypeParamsSchema = ObjectIdParamSchema;
 
 /**
- * PATCH /api/building-types/:id - Update building type request
+ * PATCH /api/v1/building-types/:id - Update building type request
  */
-export const UpdateBuildingTypeRequestSchema = z.object({
-  name: z.string().min(1, "Name is required").trim().optional().describe("Building type name"),
-  description: z.string().trim().optional().describe("Optional description"),
-});
+export const UpdateBuildingTypeRequestSchema = CreateBuildingTypeRequestSchema.partial();
 
 /**
- * PATCH /api/building-types/:id - Update building type response
+ * PATCH /api/v1/building-types/:id - Update building type response
  */
 export const UpdateBuildingTypeResponseSchema = z.object({
   success: z.literal(true),
@@ -70,21 +65,13 @@ export const UpdateBuildingTypeResponseSchema = z.object({
 export type UpdateBuildingTypeResponse = z.infer<typeof UpdateBuildingTypeResponseSchema>;
 
 /**
- * DELETE /api/building-types/:id - Delete building type path parameter
+ * DELETE /api/v1/building-types/:id - Delete building type path parameter
  */
-export const DeleteBuildingTypeParamsSchema = z.object({
-  id: ObjectIdSchema.describe("Building type identifier"),
-});
+export const DeleteBuildingTypeParamsSchema = ObjectIdParamSchema;
 
 /**
- * DELETE /api/building-types/:id - Delete building type response
+ * DELETE /api/v1/building-types/:id - Delete building type response
  */
-export const DeleteBuildingTypeResponseSchema = z.object({
-  success: z.literal(true),
-  message: z.string().describe("Confirmation message"),
-});
+export const DeleteBuildingTypeResponseSchema = DeleteResponseSchema;
 
 export type DeleteBuildingTypeResponse = z.infer<typeof DeleteBuildingTypeResponseSchema>;
-
-// Re-export for convenience
-export { ErrorSchema };

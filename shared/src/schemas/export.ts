@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ErrorSchema, ObjectIdSchema } from "./common";
+import { ObjectIdSchema } from "./common";
 
 const BuildingIdsQuerySchema = z
   .string()
@@ -23,7 +23,7 @@ const DateRangeQuerySchema = z
   });
 
 /**
- * GET /api/export/consumption - Consumption export query parameters
+ * GET /api/v1/export/consumption - Consumption export query parameters
  *
  * Dates are calendar dates. The endpoint includes the complete UTC day for
  * both boundaries, which matches the values submitted by an HTML date input.
@@ -31,7 +31,7 @@ const DateRangeQuerySchema = z
 export const ExportConsumptionQuerySchema = DateRangeQuerySchema;
 
 /**
- * GET /api/export/report - Aggregated admin report query parameters
+ * GET /api/v1/export/report - Aggregated admin report query parameters
  *
  * Same date semantics as the consumption export. The format selects the
  * serialization used by the endpoint.
@@ -42,5 +42,3 @@ export const ExportReportQuerySchema = DateRangeQuerySchema.extend({
     .default("pdf")
     .describe("Report file format (pdf or xlsx)"),
 });
-
-export { ErrorSchema };

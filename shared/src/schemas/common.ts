@@ -33,6 +33,14 @@ export const SuccessSchema = z.object({
 });
 
 /**
+ * Standard delete response schema
+ */
+export const DeleteResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string().describe("Confirmation message"),
+});
+
+/**
  * Email validation schema with normalization
  */
 export const EmailSchema = z
@@ -64,6 +72,13 @@ export const ObjectIdSchema = z
   .describe("MongoDB ObjectId");
 
 /**
+ * Path parameter schema for a resource identified by an ObjectId
+ */
+export const ObjectIdParamSchema = z.object({
+  id: ObjectIdSchema.describe("Resource identifier"),
+});
+
+/**
  * User response schema
  */
 export const UserSchema = z.object({
@@ -74,6 +89,16 @@ export const UserSchema = z.object({
   isDisabled: z.boolean().optional().describe("Whether the user account is disabled"),
   lastLoginAt: z.iso.datetime().optional().describe("Timestamp of last login"),
   createdAt: z.iso.datetime().optional().describe("Account creation timestamp"),
+});
+
+/**
+ * Public user projection (no audit/timestamps) — used in auth responses
+ */
+export const PublicUserSchema = UserSchema.pick({
+  id: true,
+  email: true,
+  name: true,
+  role: true,
 });
 
 /**
@@ -133,3 +158,20 @@ export const PaginationQuerySchema = z.object({
 export const SortOrderSchema = z
   .enum(["asc", "desc"])
   .describe("Sort order (ascending or descending)");
+
+/**
+ * Pagination metadata included in list responses
+ */
+export const PaginationResponseSchema = z.object({
+  limit: z.number(),
+  offset: z.number(),
+  total: z.number(),
+}).describe("Pagination information");
+
+/**
+ * Inclusive date range used in period-based responses
+ */
+export const PeriodSchema = z.object({
+  startDate: z.iso.datetime(),
+  endDate: z.iso.datetime(),
+});

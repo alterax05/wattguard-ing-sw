@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { 
-  ErrorSchema, 
   ObjectIdSchema, 
   SensorTypeSchema, 
   SensorStatusSchema,
   PaginationQuerySchema,
+  PaginationResponseSchema,
+  ObjectIdParamSchema,
+  DeleteResponseSchema,
   SortOrderSchema,
 } from "./common";
 
@@ -51,7 +53,7 @@ export const SensorWithBuildingSchema = SensorSchema.extend({
 });
 
 /**
- * POST /api/sensors - Create sensor request
+ * POST /api/v1/sensors - Create sensor request
  */
 export const CreateSensorRequestSchema = z.object({
   buildingId: ObjectIdSchema.describe("Building identifier"),
@@ -65,7 +67,7 @@ export const CreateSensorRequestSchema = z.object({
 });
 
 /**
- * POST /api/sensors - Create sensor response
+ * POST /api/v1/sensors - Create sensor response
  */
 export const CreateSensorResponseSchema = z.object({
   success: z.literal(true),
@@ -75,14 +77,12 @@ export const CreateSensorResponseSchema = z.object({
 export type CreateSensorResponse = z.infer<typeof CreateSensorResponseSchema>;
 
 /**
- * GET /api/sensors/:id - Get sensor path parameter
+ * GET /api/v1/sensors/:id - Get sensor path parameter
  */
-export const GetSensorParamsSchema = z.object({
-  id: ObjectIdSchema.describe("Sensor identifier"),
-});
+export const GetSensorParamsSchema = ObjectIdParamSchema;
 
 /**
- * GET /api/sensors/:id - Get sensor response
+ * GET /api/v1/sensors/:id - Get sensor response
  */
 export const GetSensorResponseSchema = z.object({
   sensor: SensorWithBuildingSchema,
@@ -91,27 +91,24 @@ export const GetSensorResponseSchema = z.object({
 export type GetSensorResponse = z.infer<typeof GetSensorResponseSchema>;
 
 /**
- * PATCH /api/sensors/:id - Update sensor path parameter
+ * PATCH /api/v1/sensors/:id - Update sensor path parameter
  */
-export const UpdateSensorParamsSchema = z.object({
-  id: ObjectIdSchema.describe("Sensor identifier"),
-});
+export const UpdateSensorParamsSchema = ObjectIdParamSchema;
 
 /**
- * PATCH /api/sensors/:id - Update sensor request
+ * PATCH /api/v1/sensors/:id - Update sensor request
  */
-export const UpdateSensorRequestSchema = z.object({
-  sensorType: SensorTypeSchema.optional(),
-  location: z.string().min(1).trim().optional().describe("Physical location"),
-  serialNumber: z.string().trim().optional().describe("Sensor serial number"),
-  status: SensorStatusSchema.optional(),
-  transmissionInterval: z.number().min(10).max(3600).optional().describe("Transmission interval in seconds"),
+export const UpdateSensorRequestSchema = CreateSensorRequestSchema.omit({
+  buildingId: true,
+  installationDate: true,
+}).partial().extend({
   minThreshold: z.number().nullable().optional().describe("Minimum threshold for alerts"),
   maxThreshold: z.number().nullable().optional().describe("Maximum threshold for alerts"),
+  status: SensorStatusSchema.optional(),
 });
 
 /**
- * PATCH /api/sensors/:id - Update sensor response
+ * PATCH /api/v1/sensors/:id - Update sensor response
  */
 export const UpdateSensorResponseSchema = z.object({
   success: z.literal(true),
@@ -121,19 +118,14 @@ export const UpdateSensorResponseSchema = z.object({
 export type UpdateSensorResponse = z.infer<typeof UpdateSensorResponseSchema>;
 
 /**
- * DELETE /api/sensors/:id - Delete sensor path parameter
+ * DELETE /api/v1/sensors/:id - Delete sensor path parameter
  */
-export const DeleteSensorParamsSchema = z.object({
-  id: ObjectIdSchema.describe("Sensor identifier"),
-});
+export const DeleteSensorParamsSchema = ObjectIdParamSchema;
 
 /**
- * DELETE /api/sensors/:id - Delete sensor response
+ * DELETE /api/v1/sensors/:id - Delete sensor response
  */
-export const DeleteSensorResponseSchema = z.object({
-  success: z.literal(true),
-  message: z.string().describe("Confirmation message"),
-});
+export const DeleteSensorResponseSchema = DeleteResponseSchema;
 
 export type DeleteSensorResponse = z.infer<typeof DeleteSensorResponseSchema>;
 
@@ -153,7 +145,7 @@ export const SensorReadingSchema = z.object({
 });
 
 /**
- * POST /api/sensors/:id/readings - Create reading request (for testing/simulation)
+ * POST /api/v1/sensors/:id/readings - Create reading request (for testing/simulation)
  */
 export const CreateReadingRequestSchema = z.object({
   value: z.number().describe("Reading value"),
@@ -162,7 +154,7 @@ export const CreateReadingRequestSchema = z.object({
 });
 
 /**
- * POST /api/sensors/:id/readings - Create reading response
+ * POST /api/v1/sensors/:id/readings - Create reading response
  */
 export const CreateReadingResponseSchema = z.object({
   success: z.literal(true),
@@ -172,30 +164,26 @@ export const CreateReadingResponseSchema = z.object({
 export type CreateReadingResponse = z.infer<typeof CreateReadingResponseSchema>;
 
 /**
- * GET /api/sensors/:id/readings - Get sensor readings query parameters
+ * GET /api/v1/sensors/:id/readings - Get sensor readings query parameters
  */
 export const GetSensorReadingsQuerySchema = PaginationQuerySchema.extend({
-  startDate: z.string().datetime().optional().describe("Start date for filtering readings (ISO 8601)"),
-  endDate: z.string().datetime().optional().describe("End date for filtering readings (ISO 8601)"),
+  startDate: z.iso.datetime().optional().describe("Start date for filtering readings (ISO 8601)"),
+  endDate: z.iso.datetime().optional().describe("End date for filtering readings (ISO 8601)"),
   sortOrder: SortOrderSchema.optional().describe("Sort order by timestamp (default: desc)"),
 });
 
 /**
- * GET /api/sensors/:id/readings - Get sensor readings response
+ * GET /api/v1/sensors/:id/readings - Get sensor readings response
  */
 export const GetSensorReadingsResponseSchema = z.object({
   readings: z.array(SensorReadingSchema).describe("List of sensor readings"),
-  pagination: z.object({
-    limit: z.number(),
-    offset: z.number(),
-    total: z.number(),
-  }).describe("Pagination information"),
+  pagination: PaginationResponseSchema,
 });
 
 export type GetSensorReadingsResponse = z.infer<typeof GetSensorReadingsResponseSchema>;
 
 /**
- * GET /api/sensors - List sensors query parameters
+ * GET /api/v1/sensors - List sensors query parameters
  */
 export const ListSensorsQuerySchema = PaginationQuerySchema.extend({
   buildingId: ObjectIdSchema.optional().describe("Filter by building ID"),
@@ -209,18 +197,11 @@ export const ListSensorsQuerySchema = PaginationQuerySchema.extend({
 });
 
 /**
- * GET /api/sensors - List sensors response
+ * GET /api/v1/sensors - List sensors response
  */
 export const ListSensorsResponseSchema = z.object({
   sensors: z.array(SensorWithBuildingSchema).describe("List of sensors"),
-  pagination: z.object({
-    limit: z.number(),
-    offset: z.number(),
-    total: z.number(),
-  }).describe("Pagination information"),
+  pagination: PaginationResponseSchema,
 });
 
 export type ListSensorsResponse = z.infer<typeof ListSensorsResponseSchema>;
-
-// Re-export for convenience
-export { ErrorSchema };
