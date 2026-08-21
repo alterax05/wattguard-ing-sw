@@ -1,36 +1,30 @@
 /**
  * Tests for OpenAPI documentation endpoints
  */
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+} from "bun:test";
+
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 
 // Suppress console logs during tests
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
 
-beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
-  await connectTestDB();
-});
+setupIntegrationTests(import.meta.path, { clearBetweenTests: false });
 
-afterAll(async () => {
-  console.log = originalConsoleLog;
-  console.error = originalConsoleError;
-  await disconnectTestDB();
-});
 
-describe("OpenAPI Documentation", () => {
-  describe("GET /api/v1/openapi.json - OpenAPI Specification", () => {
-    test("should serve OpenAPI spec at /api/v1/openapi.json", async () => {
+describe("openapi api", () => {
+  describe("GET /api/v1/openapi.json", () => {
+    test("serves OpenAPI spec at /api/v1/openapi.json", async () => {
       const res = await app.request("/api/v1/openapi.json");
       
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toContain("application/json");
     });
 
-    test("should return valid OpenAPI 3.x specification", async () => {
+    test("returns valid OpenAPI 3.x specification", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -45,7 +39,7 @@ describe("OpenAPI Documentation", () => {
       expect(spec.paths).toBeDefined();
     });
 
-    test("should include API metadata", async () => {
+    test("includes API metadata", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -54,7 +48,7 @@ describe("OpenAPI Documentation", () => {
       expect(spec.info.version).toBeDefined();
     });
 
-    test("should include server configurations", async () => {
+    test("includes server configurations", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -63,7 +57,7 @@ describe("OpenAPI Documentation", () => {
       expect(spec.servers.length).toBeGreaterThan(0);
     });
 
-    test("should define security schemes", async () => {
+    test("defines security schemes", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -73,7 +67,7 @@ describe("OpenAPI Documentation", () => {
       expect(spec.components.securitySchemes.cookieAuth).toBeDefined();
     });
 
-    test("should include documented authentication routes", async () => {
+    test("includes documented authentication routes", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -83,7 +77,7 @@ describe("OpenAPI Documentation", () => {
       expect(spec.paths["/auth/me"]).toBeDefined();
     });
 
-    test("should include documented admin routes", async () => {
+    test("includes documented admin routes", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -91,7 +85,7 @@ describe("OpenAPI Documentation", () => {
       expect(spec.paths["/admin/invites"]).toBeDefined();
     });
 
-    test("should include tags for route organization", async () => {
+    test("includes tags for route organization", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -104,7 +98,7 @@ describe("OpenAPI Documentation", () => {
       expect(tagNames).toContain("Admin");
     });
 
-    test("should define request/response schemas", async () => {
+    test("defines request/response schemas", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -117,7 +111,7 @@ describe("OpenAPI Documentation", () => {
       expect(loginPost.responses["401"]).toBeDefined();
     });
 
-    test("should mark protected routes with security requirements", async () => {
+    test("marks protected routes with security requirements", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -128,7 +122,7 @@ describe("OpenAPI Documentation", () => {
       expect(Array.isArray(meGet.security)).toBe(true);
     });
 
-    test("should include response descriptions", async () => {
+    test("includes response descriptions", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -138,15 +132,15 @@ describe("OpenAPI Documentation", () => {
     });
   });
 
-  describe("GET /api/v1/docs - API Documentation UI", () => {
-    test("should serve documentation UI at /api/v1/docs", async () => {
+  describe("GET /api/v1/docs", () => {
+    test("serves documentation UI at /api/v1/docs", async () => {
       const res = await app.request("/api/v1/docs");
       
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toContain("text/html");
     });
 
-    test("should return HTML content", async () => {
+    test("returns HTML content", async () => {
       const res = await app.request("/api/v1/docs");
       const html = await res.text();
 
@@ -155,7 +149,7 @@ describe("OpenAPI Documentation", () => {
       expect(html).toContain("</html>");
     });
 
-    test("should include Scalar UI reference", async () => {
+    test("includes Scalar UI reference", async () => {
       const res = await app.request("/api/v1/docs");
       const html = await res.text();
 
@@ -164,8 +158,8 @@ describe("OpenAPI Documentation", () => {
     });
   });
 
-  describe("OpenAPI Spec Validation", () => {
-    test("should have consistent path definitions", async () => {
+  describe("spec validation", () => {
+    test("has consistent path definitions", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -176,7 +170,7 @@ describe("OpenAPI Documentation", () => {
       }
     });
 
-    test("should define HTTP methods correctly", async () => {
+    test("defines HTTP methods correctly", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -191,7 +185,7 @@ describe("OpenAPI Documentation", () => {
       }
     });
 
-    test("should have unique operation IDs if defined", async () => {
+    test("has unique operation IDs if defined", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 
@@ -208,7 +202,7 @@ describe("OpenAPI Documentation", () => {
       }
     });
 
-    test("should define error responses for all endpoints", async () => {
+    test("defines error responses for all endpoints", async () => {
       const res = await app.request("/api/v1/openapi.json");
       const spec = await res.json();
 

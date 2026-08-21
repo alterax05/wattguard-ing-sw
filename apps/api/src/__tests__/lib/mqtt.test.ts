@@ -28,7 +28,7 @@ function getMessageHandler() {
   return handler as (topic: string, message: Buffer) => Promise<void>;
 }
 
-describe("MQTT Service", () => {
+describe("lib/mqtt", () => {
   let connectCallback: () => void;
   let warnSpy: ReturnType<typeof spyOn>;
 
@@ -61,7 +61,7 @@ describe("MQTT Service", () => {
     warnSpy.mockRestore();
   });
 
-  test("should connect and subscribe on initialization", async () => {
+  test("connects and subscribe on initialization", async () => {
     await connectAndSubscribe();
 
     expect(mqtt.connectAsync).toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe("MQTT Service", () => {
     );
   });
 
-  test("should delegate valid messages to the reading service", async () => {
+  test("delegates valid messages to the reading service", async () => {
     await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
@@ -99,7 +99,7 @@ describe("MQTT Service", () => {
     });
   });
 
-  test("should default the timestamp to now when omitted", async () => {
+  test("defaults the timestamp to now when omitted", async () => {
     await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
@@ -114,7 +114,7 @@ describe("MQTT Service", () => {
     expect(Math.abs(input!.timestamp.getTime() - Date.now())).toBeLessThan(5000);
   });
 
-  test("should ignore invalid topics", async () => {
+  test("ignores invalid topics", async () => {
     await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
@@ -125,7 +125,7 @@ describe("MQTT Service", () => {
     expect(ingestReadingMock).not.toHaveBeenCalled();
   });
 
-  test("should ignore invalid sensor ids", async () => {
+  test("ignores invalid sensor ids", async () => {
     await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
@@ -137,7 +137,7 @@ describe("MQTT Service", () => {
     expect(ingestReadingMock).not.toHaveBeenCalled();
   });
 
-  test("should ignore malformed JSON payloads", async () => {
+  test("ignores malformed JSON payloads", async () => {
     await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
@@ -149,7 +149,7 @@ describe("MQTT Service", () => {
     expect(ingestReadingMock).not.toHaveBeenCalled();
   });
 
-  test("should ignore payloads failing validation", async () => {
+  test("ignores payloads failing validation", async () => {
     await connectAndSubscribe();
     const messageHandler = getMessageHandler();
 
@@ -177,7 +177,7 @@ describe("MQTT Service", () => {
     expect(ingestReadingMock).not.toHaveBeenCalled();
   });
 
-  test("should skip messages for unknown sensors without throwing", async () => {
+  test("skips messages for unknown sensors without throwing", async () => {
     ingestReadingMock.mockRejectedValue(
       new SensorNotFoundError(VALID_SENSOR_ID),
     );
@@ -195,7 +195,7 @@ describe("MQTT Service", () => {
     );
   });
 
-  test("should swallow unexpected service errors without throwing", async () => {
+  test("swallows unexpected service errors without throwing", async () => {
     ingestReadingMock.mockRejectedValue(new Error("db down"));
     await connectAndSubscribe();
     const messageHandler = getMessageHandler();

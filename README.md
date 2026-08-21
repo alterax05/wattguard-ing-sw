@@ -26,7 +26,7 @@ Create a `.env` file in `apps/api/` with the following variables (see `apps/api/
 ```env
 # MongoDB
 MONGO_URI=mongodb://localhost:27017/wattguard
-MONGO_URI_TEST=mongodb://localhost:27017/wattguard_test
+# Tests use an in-memory MongoDB automatically; no MONGO_URI needed.
 
 # MQTT
 MQTT_BROKER_URL=mqtt://localhost:1883
@@ -189,12 +189,15 @@ shared/                  # Zod validation schemas (@wattguard/shared)
 Run the test suite:
 
 ```bash
-# All tests (requires MongoDB access — uses MONGO_URI_TEST)
+# All tests (uses a self-managed in-memory MongoDB; runs files across CPU cores)
 bun run test
 
 # Watch mode
 bun run test:watch
 ```
+
+The first run downloads the mongod binary (~80 MB) for `mongodb-memory-server`;
+afterwards tests need no external database or network access.
 
 ## Tech Stack
 

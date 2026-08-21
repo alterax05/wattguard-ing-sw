@@ -1,6 +1,12 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  beforeEach,
+} from "bun:test";
 import mongoose, { Types } from "mongoose";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { Alert } from "../../models/Alert";
 import { ensureI18nReady } from "../../lib/i18n";
 import {
@@ -20,21 +26,17 @@ import {
   SYSTEM_RESOLVER,
 } from "../../lib/alerts";
 
+setupIntegrationTests(import.meta.path);
+
+beforeAll(async () => {
+  await ensureI18nReady();
+});
+
 describe("lib/alerts", () => {
   let buildingId: Types.ObjectId;
   let sensorId: Types.ObjectId;
 
-  beforeAll(async () => {
-    await connectTestDB();
-    await ensureI18nReady();
-  });
-
-  afterAll(async () => {
-    await disconnectTestDB();
-  });
-
   beforeEach(async () => {
-    await clearTestDB();
     buildingId = new Types.ObjectId();
     sensorId = new Types.ObjectId();
   });

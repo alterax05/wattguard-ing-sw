@@ -1,23 +1,13 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { describe, test, expect } from "bun:test";
+import { setupIntegrationTests } from "../helpers/db";
 import { BuildingType } from "../../models/BuildingType";
 import { Error as MongooseError } from "mongoose";
 
-describe("BuildingType Model", () => {
-  beforeAll(async () => {
-    await connectTestDB();
-  });
+setupIntegrationTests(import.meta.path);
 
-  afterAll(async () => {
-    await disconnectTestDB();
-  });
-
-  beforeEach(async () => {
-    await clearTestDB();
-  });
-
-  describe("Schema Validation", () => {
-    test("should create a building type with required fields", async () => {
+describe("BuildingType schema", () => {
+  describe("schema validation", () => {
+    test("creates a building type with required fields", async () => {
       const buildingType = await BuildingType.create({
         name: "Residenziale",
         description: "Edificio residenziale",
@@ -30,7 +20,7 @@ describe("BuildingType Model", () => {
       expect(buildingType.updatedAt).toBeInstanceOf(Date);
     });
 
-    test("should create a building type without optional description", async () => {
+    test("creates a building type without optional description", async () => {
       const buildingType = await BuildingType.create({
         name: "Commerciale",
       });
@@ -39,7 +29,7 @@ describe("BuildingType Model", () => {
       expect(buildingType.description).toBeUndefined();
     });
 
-    test("should fail without required name field", async () => {
+    test("fails without required name field", async () => {
       try {
         await BuildingType.create({
           description: "Test description",
@@ -52,7 +42,7 @@ describe("BuildingType Model", () => {
       }
     });
 
-    test("should trim whitespace from name", async () => {
+    test("trims whitespace from name", async () => {
       const buildingType = await BuildingType.create({
         name: "  Industrial  ",
       });
@@ -60,7 +50,7 @@ describe("BuildingType Model", () => {
       expect(buildingType.name).toBe("Industrial");
     });
 
-    test("should trim whitespace from description", async () => {
+    test("trims whitespace from description", async () => {
       const buildingType = await BuildingType.create({
         name: "Office",
         description: "  Large office building  ",
@@ -70,8 +60,8 @@ describe("BuildingType Model", () => {
     });
   });
 
-  describe("Unique Constraints", () => {
-    test("should enforce unique name constraint", async () => {
+  describe("unique constraints", () => {
+    test("enforces unique name constraint", async () => {
       await BuildingType.create({
         name: "Residenziale",
       });
@@ -87,7 +77,7 @@ describe("BuildingType Model", () => {
       }
     });
 
-    test("should allow same name after deletion", async () => {
+    test("allows same name after deletion", async () => {
       const buildingType1 = await BuildingType.create({
         name: "Temporary",
       });
@@ -102,8 +92,8 @@ describe("BuildingType Model", () => {
     });
   });
 
-  describe("Timestamps", () => {
-    test("should automatically set createdAt and updatedAt on creation", async () => {
+  describe("timestamps", () => {
+    test("automatically sets createdAt and updatedAt on creation", async () => {
       const before = new Date();
       const buildingType = await BuildingType.create({
         name: "Test Type",
@@ -118,7 +108,7 @@ describe("BuildingType Model", () => {
       expect(buildingType.updatedAt.getTime()).toBeLessThanOrEqual(after.getTime());
     });
 
-    test("should update updatedAt timestamp on modification", async () => {
+    test("updates updatedAt timestamp on modification", async () => {
       const buildingType = await BuildingType.create({
         name: "Original Name",
       });
@@ -134,7 +124,7 @@ describe("BuildingType Model", () => {
       expect(buildingType.updatedAt.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
     });
 
-    test("should not change createdAt on update", async () => {
+    test("does not change createdAt on update", async () => {
       const buildingType = await BuildingType.create({
         name: "Original Name",
       });
@@ -150,8 +140,8 @@ describe("BuildingType Model", () => {
     });
   });
 
-  describe("CRUD Operations", () => {
-    test("should find building type by id", async () => {
+  describe("crud operations", () => {
+    test("finds building type by id", async () => {
       const created = await BuildingType.create({
         name: "Findable Type",
       });
@@ -162,7 +152,7 @@ describe("BuildingType Model", () => {
       expect(found!.name).toBe("Findable Type");
     });
 
-    test("should find building type by name", async () => {
+    test("finds building type by name", async () => {
       await BuildingType.create({
         name: "Searchable",
       });
@@ -173,7 +163,7 @@ describe("BuildingType Model", () => {
       expect(found!.name).toBe("Searchable");
     });
 
-    test("should update building type", async () => {
+    test("updates building type", async () => {
       const buildingType = await BuildingType.create({
         name: "Old Name",
         description: "Old description",
@@ -189,7 +179,7 @@ describe("BuildingType Model", () => {
       expect(updated!.description).toBe("New description");
     });
 
-    test("should delete building type", async () => {
+    test("deletes building type", async () => {
       const buildingType = await BuildingType.create({
         name: "To Delete",
       });
@@ -201,7 +191,7 @@ describe("BuildingType Model", () => {
       expect(found).toBeNull();
     });
 
-    test("should list all building types", async () => {
+    test("lists all building types", async () => {
       await BuildingType.create({ name: "Type 1" });
       await BuildingType.create({ name: "Type 2" });
       await BuildingType.create({ name: "Type 3" });
@@ -212,8 +202,8 @@ describe("BuildingType Model", () => {
     });
   });
 
-  describe("Edge Cases", () => {
-    test("should handle empty description", async () => {
+  describe("edge cases", () => {
+    test("handles empty description", async () => {
       const buildingType = await BuildingType.create({
         name: "Empty Desc",
         description: "",
@@ -222,7 +212,7 @@ describe("BuildingType Model", () => {
       expect(buildingType.description).toBe("");
     });
 
-    test("should handle long name", async () => {
+    test("handles long name", async () => {
       const longName = "A".repeat(100);
       const buildingType = await BuildingType.create({
         name: longName,
@@ -231,7 +221,7 @@ describe("BuildingType Model", () => {
       expect(buildingType.name).toBe(longName);
     });
 
-    test("should handle long description", async () => {
+    test("handles long description", async () => {
       const longDescription = "A".repeat(1000);
       const buildingType = await BuildingType.create({
         name: "Long Desc Type",
@@ -241,7 +231,7 @@ describe("BuildingType Model", () => {
       expect(buildingType.description).toBe(longDescription);
     });
 
-    test("should handle special characters in name", async () => {
+    test("handles special characters in name", async () => {
       const specialName = "Type-123 (Special) & More";
       const buildingType = await BuildingType.create({
         name: specialName,

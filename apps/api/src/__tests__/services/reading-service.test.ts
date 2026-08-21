@@ -1,6 +1,12 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, spyOn } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  spyOn,
+} from "bun:test";
 import { Types } from "mongoose";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { Sensor, type SensorStatus } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
@@ -9,20 +15,13 @@ import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { ingestReading, SensorNotFoundError } from "../../services/reading-service";
 
-describe("Reading Service", () => {
+setupIntegrationTests(import.meta.path);
+
+describe("readingService", () => {
   let userId: Types.ObjectId;
   let buildingId: Types.ObjectId;
 
-  beforeAll(async () => {
-    await connectTestDB();
-  });
-
-  afterAll(async () => {
-    await disconnectTestDB();
-  });
-
   beforeEach(async () => {
-    await clearTestDB();
 
     // Create test user
     const user = await User.create({
@@ -65,7 +64,7 @@ describe("Reading Service", () => {
     });
   }
 
-  test("should persist the reading and update lastReading", async () => {
+  test("persists the reading and updates lastReading", async () => {
     const sensor = await createSensor({ maxThreshold: 30 });
     const timestamp = new Date("2024-05-01T10:00:00Z");
 
@@ -92,7 +91,7 @@ describe("Reading Service", () => {
     expect(updated!.lastReading!.unit).toBe("°C");
   });
 
-  test("should reactivate an inactive sensor on new reading", async () => {
+  test("reactivates an inactive sensor on new reading", async () => {
     const sensor = await createSensor({ status: "inactive" });
 
     await ingestReading({
@@ -106,7 +105,7 @@ describe("Reading Service", () => {
     expect(updated!.status).toBe("active");
   });
 
-  test("should not create alerts for readings within thresholds", async () => {
+  test("does not create alerts for readings within thresholds", async () => {
     const sensor = await createSensor({ minThreshold: 10, maxThreshold: 30 });
 
     await ingestReading({
@@ -119,7 +118,7 @@ describe("Reading Service", () => {
     expect(await Alert.countDocuments({ sensorId: sensor._id })).toBe(0);
   });
 
-  test("should create a single active max-threshold alert", async () => {
+  test("creates a single active max-threshold alert", async () => {
     const sensor = await createSensor({ maxThreshold: 30 });
 
     await ingestReading({
@@ -149,7 +148,7 @@ describe("Reading Service", () => {
     expect(alerts[0]!.toObject()).not.toHaveProperty("message");
   });
 
-  test("should create a min-threshold alert", async () => {
+  test("creates a min-threshold alert", async () => {
     const sensor = await createSensor({ minThreshold: 10 });
 
     await ingestReading({
@@ -164,7 +163,7 @@ describe("Reading Service", () => {
     expect(alert!.thresholdType).toBe("min");
   });
 
-  test("should throw SensorNotFoundError for unknown sensors", async () => {
+  test("throws SensorNotFoundError for unknown sensors", async () => {
     await expect(
       ingestReading({
         sensorId: new Types.ObjectId().toString(),
@@ -175,7 +174,7 @@ describe("Reading Service", () => {
     ).rejects.toBeInstanceOf(SensorNotFoundError);
   });
 
-  test("should not persist anything when the reading insert fails", async () => {
+  test("does not persist anything when the reading insert fails", async () => {
     const sensor = await createSensor({ minThreshold: 10, status: "inactive" });
     const readingCreateSpy = spyOn(SensorReading, "create").mockRejectedValueOnce(
       new Error("db down"),
@@ -200,7 +199,7 @@ describe("Reading Service", () => {
     expect(updated!.status).toBe("inactive");
   });
 
-  test("should roll back the alert when the transaction fails", async () => {
+  test("rolls back the alert when the transaction fails", async () => {
     const sensor = await createSensor({ maxThreshold: 30 });
     const alertCreateSpy = spyOn(Alert, "create").mockRejectedValueOnce(
       new Error("db down"),

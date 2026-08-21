@@ -8,11 +8,17 @@
  *  - GET  /api/settings
  *  - PATCH /api/settings
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { Sensor } from "../../models/Sensor";
 import { Alert } from "../../models/Alert";
@@ -31,16 +37,9 @@ const client = testClient(app);
 
 let adminToken: string;
 
-beforeAll(async () => {
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   const hash = await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 });
   await User.create({
@@ -59,7 +58,7 @@ beforeEach(async () => {
   adminToken = tokenMatch[1]!;
 });
 
-describe("Health", () => {
+describe("GET /api/v1/health", () => {
   test("GET /api/health returns ok", async () => {
     const res = await client.api.v1.health.$get();
 
@@ -70,7 +69,7 @@ describe("Health", () => {
   });
 });
 
-describe("Dashboard", () => {
+describe("dashboard api", () => {
   test("GET /api/dashboard/stats returns aggregated counters", async () => {
     const admin = await User.findOne({ email: "admin@test.com" });
     await Sensor.create([
@@ -143,7 +142,7 @@ describe("Dashboard", () => {
   });
 });
 
-describe("Settings", () => {
+describe("settings api", () => {
   test("GET /api/settings returns the system config", async () => {
     const res = await client.api.v1.settings.$get(undefined, {
       headers: { Authorization: `Bearer ${adminToken}` },

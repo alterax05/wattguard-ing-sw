@@ -1,25 +1,24 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, spyOn } from "bun:test";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import { setupIntegrationTests } from "../helpers/db";
 import { Sensor, type SensorStatus, type SensorType } from "../../models/Sensor";
 import { Building, type BuildingDocument } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { Types, Error as MongooseError } from "mongoose";
 
-describe("Sensor Model", () => {
+setupIntegrationTests(import.meta.path);
+
+describe("Sensor schema", () => {
   let userId: Types.ObjectId;
   let buildingId: Types.ObjectId;
 
-  beforeAll(async () => {
-    await connectTestDB();
-  });
-
-  afterAll(async () => {
-    await disconnectTestDB();
-  });
-
   beforeEach(async () => {
-    await clearTestDB();
 
     // Create test user
     const user = await User.create({
@@ -48,8 +47,8 @@ describe("Sensor Model", () => {
     buildingId = building._id;
   });
 
-  describe("Schema Validation", () => {
-    test("should create a sensor with all required fields", async () => {
+  describe("schema validation", () => {
+    test("creates a sensor with all required fields", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -72,7 +71,7 @@ describe("Sensor Model", () => {
       expect(sensor.updatedBy.toString()).toBe(userId.toString());
     });
 
-    test("should create sensor without optional serialNumber", async () => {
+    test("creates sensor without optional serialNumber", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "external_temp",
@@ -85,7 +84,7 @@ describe("Sensor Model", () => {
       expect(sensor.serialNumber).toBeUndefined();
     });
 
-    test("should use default transmissionInterval of 90 seconds", async () => {
+    test("uses default transmissionInterval of 90 seconds", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "energy_meter",
@@ -98,7 +97,7 @@ describe("Sensor Model", () => {
       expect(sensor.transmissionInterval).toBe(90);
     });
 
-    test("should use default status of 'active'", async () => {
+    test("uses default status of 'active'", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -111,7 +110,7 @@ describe("Sensor Model", () => {
       expect(sensor.status).toBe("active");
     });
 
-    test("should fail without required buildingId", async () => {
+    test("fails without required buildingId", async () => {
       try {
         await Sensor.create({
           sensorType: "internal_temp",
@@ -128,7 +127,7 @@ describe("Sensor Model", () => {
       }
     });
 
-    test("should fail without required sensorType", async () => {
+    test("fails without required sensorType", async () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
@@ -145,7 +144,7 @@ describe("Sensor Model", () => {
       }
     });
 
-    test("should fail without required location", async () => {
+    test("fails without required location", async () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
@@ -162,7 +161,7 @@ describe("Sensor Model", () => {
       }
     });
 
-    test("should trim whitespace from location", async () => {
+    test("trims whitespace from location", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -175,7 +174,7 @@ describe("Sensor Model", () => {
       expect(sensor.location).toBe("Trimmed Location");
     });
 
-    test("should trim whitespace from serialNumber", async () => {
+    test("trims whitespace from serialNumber", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -190,8 +189,8 @@ describe("Sensor Model", () => {
     });
   });
 
-  describe("SensorType Enum Validation", () => {
-    test("should accept 'internal_temp' type", async () => {
+  describe("sensorType enum validation", () => {
+    test("accepts 'internal_temp' type", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -204,7 +203,7 @@ describe("Sensor Model", () => {
       expect(sensor.sensorType).toBe("internal_temp");
     });
 
-    test("should accept 'external_temp' type", async () => {
+    test("accepts 'external_temp' type", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "external_temp",
@@ -217,7 +216,7 @@ describe("Sensor Model", () => {
       expect(sensor.sensorType).toBe("external_temp");
     });
 
-    test("should accept 'energy_meter' type", async () => {
+    test("accepts 'energy_meter' type", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "energy_meter",
@@ -230,7 +229,7 @@ describe("Sensor Model", () => {
       expect(sensor.sensorType).toBe("energy_meter");
     });
 
-    test("should fail with invalid sensor type", async () => {
+    test("fails with invalid sensor type", async () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
@@ -249,8 +248,8 @@ describe("Sensor Model", () => {
     });
   });
 
-  describe("Status Enum Validation", () => {
-    test("should accept 'active' status", async () => {
+  describe("status enum validation", () => {
+    test("accepts 'active' status", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -264,7 +263,7 @@ describe("Sensor Model", () => {
       expect(sensor.status).toBe("active");
     });
 
-    test("should accept 'inactive' status", async () => {
+    test("accepts 'inactive' status", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -278,7 +277,7 @@ describe("Sensor Model", () => {
       expect(sensor.status).toBe("inactive");
     });
 
-    test("should accept 'maintenance' status", async () => {
+    test("accepts 'maintenance' status", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -292,7 +291,7 @@ describe("Sensor Model", () => {
       expect(sensor.status).toBe("maintenance");
     });
 
-    test("should accept 'error' status", async () => {
+    test("accepts 'error' status", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -306,7 +305,7 @@ describe("Sensor Model", () => {
       expect(sensor.status).toBe("error");
     });
 
-    test("should fail with invalid status", async () => {
+    test("fails with invalid status", async () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
@@ -326,8 +325,8 @@ describe("Sensor Model", () => {
     });
   });
 
-  describe("Transmission Interval Validation", () => {
-    test("should accept valid transmission interval", async () => {
+  describe("transmission interval validation", () => {
+    test("accepts valid transmission interval", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -341,7 +340,7 @@ describe("Sensor Model", () => {
       expect(sensor.transmissionInterval).toBe(300);
     });
 
-    test("should accept minimum interval of 10 seconds", async () => {
+    test("accepts minimum interval of 10 seconds", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -355,7 +354,7 @@ describe("Sensor Model", () => {
       expect(sensor.transmissionInterval).toBe(10);
     });
 
-    test("should accept maximum interval of 3600 seconds", async () => {
+    test("accepts maximum interval of 3600 seconds", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -369,7 +368,7 @@ describe("Sensor Model", () => {
       expect(sensor.transmissionInterval).toBe(3600);
     });
 
-    test("should fail with interval below 10 seconds", async () => {
+    test("fails with interval below 10 seconds", async () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
@@ -388,7 +387,7 @@ describe("Sensor Model", () => {
       }
     });
 
-    test("should fail with interval above 3600 seconds", async () => {
+    test("fails with interval above 3600 seconds", async () => {
       try {
         await Sensor.create({
           buildingId: buildingId,
@@ -408,8 +407,8 @@ describe("Sensor Model", () => {
     });
   });
 
-  describe("Serial Number Unique Constraint", () => {
-    test("should enforce unique serialNumber", async () => {
+  describe("serial number unique constraint", () => {
+    test("enforces unique serialNumber", async () => {
       await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -437,7 +436,7 @@ describe("Sensor Model", () => {
       }
     });
 
-    test("should allow multiple sensors without serialNumber (sparse index)", async () => {
+    test("allows multiple sensors without serialNumber (sparse index)", async () => {
       const sensor1 = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -461,8 +460,8 @@ describe("Sensor Model", () => {
     });
   });
 
-  describe("Last Reading Subdocument", () => {
-    test("should create sensor with lastReading", async () => {
+  describe("lastReading subdocument", () => {
+    test("creates sensor with lastReading", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -483,7 +482,7 @@ describe("Sensor Model", () => {
       expect(sensor.lastReading!.timestamp).toBeInstanceOf(Date);
     });
 
-    test("should create sensor without lastReading", async () => {
+    test("creates sensor without lastReading", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -496,7 +495,7 @@ describe("Sensor Model", () => {
       expect(sensor.lastReading).toBeUndefined();
     });
 
-    test("should update lastReading", async () => {
+    test("updates lastReading", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -519,8 +518,8 @@ describe("Sensor Model", () => {
     });
   });
 
-  describe("Timestamps", () => {
-    test("should automatically set timestamps", async () => {
+  describe("timestamps", () => {
+    test("automatically sets timestamps", async () => {
       const before = new Date();
       const sensor = await Sensor.create({
         buildingId: buildingId,
@@ -538,7 +537,7 @@ describe("Sensor Model", () => {
       expect(sensor.createdAt!.getTime()).toBeLessThanOrEqual(after.getTime());
     });
 
-    test("should update updatedAt on modification", async () => {
+    test("updates updatedAt on modification", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -559,7 +558,7 @@ describe("Sensor Model", () => {
   });
 
   describe("isActive()", () => {
-    test("should return false when sensor has no lastReading", async () => {
+    test("returns false when sensor has no lastReading", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -573,7 +572,7 @@ describe("Sensor Model", () => {
       expect(sensor.isActive()).toBe(false);
     });
 
-    test("should return true when elapsed time is within 2× transmissionInterval", async () => {
+    test("returns true when elapsed time is within 2× transmissionInterval", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -592,7 +591,7 @@ describe("Sensor Model", () => {
       expect(sensor.isActive()).toBe(true);
     });
 
-    test("should return true when elapsed time is at the 2× transmissionInterval boundary", async () => {
+    test("returns true when elapsed time is at the 2× transmissionInterval boundary", async () => {
       const fixedNow = new Date("2026-01-01T00:00:00.000Z").getTime();
       const nowSpy = spyOn(Date, "now").mockReturnValue(fixedNow);
       try {
@@ -618,7 +617,7 @@ describe("Sensor Model", () => {
       }
     });
 
-    test("should return false when elapsed time exceeds 2× transmissionInterval", async () => {
+    test("returns false when elapsed time exceeds 2× transmissionInterval", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -637,7 +636,7 @@ describe("Sensor Model", () => {
       expect(sensor.isActive()).toBe(false);
     });
 
-    test("should respect each sensor's own transmissionInterval", async () => {
+    test("respects each sensor's own transmissionInterval", async () => {
       const fastSensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -675,8 +674,8 @@ describe("Sensor Model", () => {
     });
   });
 
-  describe("CRUD Operations", () => {
-    test("should find sensor by id", async () => {
+  describe("crud operations", () => {
+    test("finds sensor by id", async () => {
       const created = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -692,7 +691,7 @@ describe("Sensor Model", () => {
       expect(found!.location).toBe("Findable");
     });
 
-    test("should find sensors by buildingId", async () => {
+    test("finds sensors by buildingId", async () => {
       await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -716,7 +715,7 @@ describe("Sensor Model", () => {
       expect(sensors.length).toBe(2);
     });
 
-    test("should filter sensors by sensorType", async () => {
+    test("filters sensors by sensorType", async () => {
       await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -741,7 +740,7 @@ describe("Sensor Model", () => {
       expect(tempSensors[0]!.location).toBe("Interior");
     });
 
-    test("should filter sensors by status", async () => {
+    test("filters sensors by status", async () => {
       await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -768,7 +767,7 @@ describe("Sensor Model", () => {
       expect(activeSensors[0]!.location).toBe("Active");
     });
 
-    test("should populate building reference", async () => {
+    test("populates building reference", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",
@@ -784,7 +783,7 @@ describe("Sensor Model", () => {
       expect((populated!.buildingId as unknown as BuildingDocument).name).toBe("Test Building");
     });
 
-    test("should delete sensor", async () => {
+    test("deletes sensor", async () => {
       const sensor = await Sensor.create({
         buildingId: buildingId,
         sensorType: "internal_temp",

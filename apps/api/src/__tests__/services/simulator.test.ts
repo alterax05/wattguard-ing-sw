@@ -2,14 +2,12 @@ import {
   describe,
   test,
   expect,
-  beforeAll,
-  afterAll,
   beforeEach,
   afterEach,
   spyOn,
 } from "bun:test";
 import { Types } from "mongoose";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -237,7 +235,7 @@ describe("computeSensorReading", () => {
   });
 });
 
-describe("startSimulator (integration)", () => {
+describe("startSimulator", () => {
   let handle: SimulatorHandle | undefined;
   const readings: SimulatorReading[] = [];
   let hpBuildingId: string;
@@ -246,17 +244,10 @@ describe("startSimulator (integration)", () => {
   let hpEnergyId: string;
   let gasMeterId: string;
 
-  beforeAll(async () => {
-    await connectTestDB();
-  });
-
-  afterAll(async () => {
-    await disconnectTestDB();
-  });
+setupIntegrationTests(import.meta.path);
 
   beforeEach(async () => {
     readings.length = 0;
-    await clearTestDB();
 
     const user = await User.create({
       email: "sim@example.com",

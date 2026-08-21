@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { describe, test, expect, beforeEach } from "bun:test";
+import { setupIntegrationTests } from "../helpers/db";
 import { SensorReading } from "../../models/SensorReading";
 import { Sensor } from "../../models/Sensor";
 import { Building } from "../../models/Building";
@@ -7,21 +7,14 @@ import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { Types, Error as MongooseError } from "mongoose";
 
-describe("SensorReading Model", () => {
+setupIntegrationTests(import.meta.path);
+
+describe("SensorReading schema", () => {
   let userId: Types.ObjectId;
   let buildingId: Types.ObjectId;
   let sensorId: Types.ObjectId;
 
-  beforeAll(async () => {
-    await connectTestDB();
-  });
-
-  afterAll(async () => {
-    await disconnectTestDB();
-  });
-
   beforeEach(async () => {
-    await clearTestDB();
 
     // Create test user
     const user = await User.create({
@@ -63,8 +56,8 @@ describe("SensorReading Model", () => {
     sensorId = sensor._id;
   });
 
-  describe("Schema Validation", () => {
-    test("should create a sensor reading with all required fields", async () => {
+  describe("schema validation", () => {
+    test("creates a sensor reading with all required fields", async () => {
       const reading = await SensorReading.create({
         timestamp: new Date(),
         value: 22.5,
@@ -85,7 +78,7 @@ describe("SensorReading Model", () => {
       expect(reading._id).toBeDefined();
     });
 
-    test("should fail without required timestamp", async () => {
+    test("fails without required timestamp", async () => {
       try {
         await SensorReading.create({
           value: 22.5,
@@ -104,7 +97,7 @@ describe("SensorReading Model", () => {
       }
     });
 
-    test("should fail without required value", async () => {
+    test("fails without required value", async () => {
       try {
         await SensorReading.create({
           timestamp: new Date(),
@@ -123,7 +116,7 @@ describe("SensorReading Model", () => {
       }
     });
 
-    test("should fail without required unit", async () => {
+    test("fails without required unit", async () => {
       try {
         await SensorReading.create({
           timestamp: new Date(),
@@ -142,7 +135,7 @@ describe("SensorReading Model", () => {
       }
     });
 
-    test("should fail without required metadata.sensorId", async () => {
+    test("fails without required metadata.sensorId", async () => {
       try {
         await SensorReading.create({
           timestamp: new Date(),
@@ -161,7 +154,7 @@ describe("SensorReading Model", () => {
       }
     });
 
-    test("should fail without required metadata.buildingId", async () => {
+    test("fails without required metadata.buildingId", async () => {
       try {
         await SensorReading.create({
           timestamp: new Date(),
@@ -181,7 +174,7 @@ describe("SensorReading Model", () => {
       }
     });
 
-    test("should fail without required metadata.sensorType", async () => {
+    test("fails without required metadata.sensorType", async () => {
       try {
         await SensorReading.create({
           timestamp: new Date(),
@@ -201,7 +194,7 @@ describe("SensorReading Model", () => {
       }
     });
 
-    test("should trim whitespace from unit", async () => {
+    test("trims whitespace from unit", async () => {
       const reading = await SensorReading.create({
         timestamp: new Date(),
         value: 22.5,
@@ -217,8 +210,8 @@ describe("SensorReading Model", () => {
     });
   });
 
-  describe("Data Types", () => {
-    test("should accept integer values", async () => {
+  describe("data types", () => {
+    test("accepts integer values", async () => {
       const reading = await SensorReading.create({
         timestamp: new Date(),
         value: 100,
@@ -233,7 +226,7 @@ describe("SensorReading Model", () => {
       expect(reading.value).toBe(100);
     });
 
-    test("should accept decimal values", async () => {
+    test("accepts decimal values", async () => {
       const reading = await SensorReading.create({
         timestamp: new Date(),
         value: 22.567,
@@ -248,7 +241,7 @@ describe("SensorReading Model", () => {
       expect(reading.value).toBe(22.567);
     });
 
-    test("should accept negative values", async () => {
+    test("accepts negative values", async () => {
       const reading = await SensorReading.create({
         timestamp: new Date(),
         value: -5.2,
@@ -263,7 +256,7 @@ describe("SensorReading Model", () => {
       expect(reading.value).toBe(-5.2);
     });
 
-    test("should accept zero value", async () => {
+    test("accepts zero value", async () => {
       const reading = await SensorReading.create({
         timestamp: new Date(),
         value: 0,
@@ -279,7 +272,7 @@ describe("SensorReading Model", () => {
     });
   });
 
-  describe("Time-Series Queries", () => {
+  describe("time-series queries", () => {
     beforeEach(async () => {
       // Create multiple readings at different times
       const now = new Date();
@@ -318,7 +311,7 @@ describe("SensorReading Model", () => {
       });
     });
 
-    test("should query readings by time range", async () => {
+    test("queries readings by time range", async () => {
       const now = new Date();
       const startTime = new Date(now.getTime() - 2000000); // 33 min ago
       const endTime = new Date(now.getTime() + 100000); // future
@@ -333,7 +326,7 @@ describe("SensorReading Model", () => {
       expect(readings.length).toBe(2); // Last two readings
     });
 
-    test("should query readings by sensorId", async () => {
+    test("queries readings by sensorId", async () => {
       const readings = await SensorReading.find({
         "metadata.sensorId": sensorId,
       });
@@ -344,7 +337,7 @@ describe("SensorReading Model", () => {
       );
     });
 
-    test("should query readings by buildingId", async () => {
+    test("queries readings by buildingId", async () => {
       const readings = await SensorReading.find({
         "metadata.buildingId": buildingId,
       });
@@ -355,7 +348,7 @@ describe("SensorReading Model", () => {
       ).toBe(true);
     });
 
-    test("should query readings by sensorType", async () => {
+    test("queries readings by sensorType", async () => {
       const readings = await SensorReading.find({
         "metadata.sensorType": "internal_temp",
       });
@@ -364,7 +357,7 @@ describe("SensorReading Model", () => {
       expect(readings.every((r) => r.metadata.sensorType === "internal_temp")).toBe(true);
     });
 
-    test("should sort readings by timestamp", async () => {
+    test("sorts readings by timestamp", async () => {
       const readings = await SensorReading.find({
         "metadata.sensorId": sensorId,
       }).sort({ timestamp: -1 });
@@ -378,7 +371,7 @@ describe("SensorReading Model", () => {
       }
     });
 
-    test("should get latest reading for sensor", async () => {
+    test("gets latest reading for sensor", async () => {
       const latestReading = await SensorReading.findOne({
         "metadata.sensorId": sensorId,
       }).sort({ timestamp: -1 });
@@ -387,7 +380,7 @@ describe("SensorReading Model", () => {
       expect(latestReading!.value).toBe(23.0);
     });
 
-    test("should calculate average value over time range", async () => {
+    test("calculates average value over time range", async () => {
       const readings = await SensorReading.find({
         "metadata.sensorId": sensorId,
       });
@@ -399,7 +392,7 @@ describe("SensorReading Model", () => {
     });
   });
 
-  describe("Multiple Sensors", () => {
+  describe("multiple sensors", () => {
     let sensor2Id: Types.ObjectId;
 
     beforeEach(async () => {
@@ -439,7 +432,7 @@ describe("SensorReading Model", () => {
       });
     });
 
-    test("should filter readings by specific sensor", async () => {
+    test("filters readings by specific sensor", async () => {
       const sensor1Readings = await SensorReading.find({
         "metadata.sensorId": sensorId,
       });
@@ -448,7 +441,7 @@ describe("SensorReading Model", () => {
       expect(sensor1Readings[0]!.value).toBe(22.0);
     });
 
-    test("should get all readings for a building", async () => {
+    test("gets all readings for a building", async () => {
       const buildingReadings = await SensorReading.find({
         "metadata.buildingId": buildingId,
       });
@@ -456,7 +449,7 @@ describe("SensorReading Model", () => {
       expect(buildingReadings.length).toBe(2);
     });
 
-    test("should filter by sensor type", async () => {
+    test("filters by sensor type", async () => {
       const internalReadings = await SensorReading.find({
         "metadata.sensorType": "internal_temp",
       });
@@ -472,8 +465,8 @@ describe("SensorReading Model", () => {
     });
   });
 
-  describe("CRUD Operations", () => {
-    test("should create sensor reading", async () => {
+  describe("crud operations", () => {
+    test("creates sensor reading", async () => {
       const reading = await SensorReading.create({
         timestamp: new Date(),
         value: 22.5,
@@ -488,7 +481,7 @@ describe("SensorReading Model", () => {
       expect(reading._id).toBeDefined();
     });
 
-    test("should find sensor reading by id", async () => {
+    test("finds sensor reading by id", async () => {
       const created = await SensorReading.create({
         timestamp: new Date(),
         value: 22.5,
@@ -506,7 +499,7 @@ describe("SensorReading Model", () => {
       expect(found!.value).toBe(22.5);
     });
 
-    test("should delete sensor reading", async () => {
+    test("deletes sensor reading", async () => {
       const reading = await SensorReading.create({
         timestamp: new Date(),
         value: 22.5,
@@ -525,7 +518,7 @@ describe("SensorReading Model", () => {
       expect(found).toBeNull();
     });
 
-    test("should delete multiple readings", async () => {
+    test("deletes multiple readings", async () => {
       await SensorReading.create({
         timestamp: new Date(),
         value: 21.0,
@@ -555,7 +548,7 @@ describe("SensorReading Model", () => {
       expect(remaining.length).toBe(0);
     });
 
-    test("should count sensor readings", async () => {
+    test("counts sensor readings", async () => {
       await SensorReading.create({
         timestamp: new Date(),
         value: 21.0,

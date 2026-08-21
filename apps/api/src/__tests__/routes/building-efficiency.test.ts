@@ -29,7 +29,14 @@
  * 15.  Response envelope — all required fields present
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  mock,
+} from "bun:test";
+
 import mongoose from "mongoose";
 
 // ── Weather mock — must be declared BEFORE the app import so the route
@@ -52,7 +59,7 @@ import { expectTypeOf } from "bun:test";
 import { z } from "zod";
 import { ErrorSchema } from "@wattguard/shared";
 import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -60,8 +67,6 @@ import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 
 // ── silence console noise during tests ──────────────────────────────────────
-const originalLog = console.log;
-const originalError = console.error;
 
 // ── shared state ─────────────────────────────────────────────────────────────
 let adminToken: string;
@@ -110,20 +115,9 @@ async function getEfficiency(
 
 // ── lifecycle ────────────────────────────────────────────────────────────────
 
-beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  console.log = originalLog;
-  console.error = originalError;
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Reset weather mock to a sensible default before each test
   mockWeatherImpl = async () => 5.0;
@@ -190,10 +184,10 @@ async function createSensor(
 //  TESTS
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
+describe("GET /api/v1/buildings/:id/efficiency", () => {
 
   // ── 1. Authentication ───────────────────────────────────────────────────────
-  describe("1. Authentication", () => {
+  describe("authentication", () => {
     test("returns 401 without a token", async () => {
       const building = await createBuilding();
       const now = new Date();
@@ -206,7 +200,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 2. Not Found ────────────────────────────────────────────────────────────
-  describe("2. Not Found", () => {
+  describe("not found", () => {
     test("returns 404 for a non-existent building ID", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
       const now = new Date();
@@ -216,7 +210,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 3. Bad Request ──────────────────────────────────────────────────────────
-  describe("3. Bad Request", () => {
+  describe("bad request", () => {
     test("returns 400 when startDate is missing", async () => {
       const building = await createBuilding();
       const now = new Date();
@@ -260,7 +254,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 4. No sensor data ───────────────────────────────────────────────────────
-  describe("4. No sensor data at all", () => {
+  describe("no sensor data", () => {
     test("returns 200 with zero energy and null physics metrics", async () => {
       const building = await createBuilding();
       const now = new Date();
@@ -287,7 +281,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 5. Electric building — full sensor suite ────────────────────────────────
-  describe("5. Electric building with internal + external temp + energy meter", () => {
+  describe("electric heating with all sensors", () => {
     test("computes COP and heat-loss coefficient from sensor data", async () => {
       const surface = 400;
       const building = await createBuilding({ surface, heatingSystemType: "pompa_calore" });
@@ -349,7 +343,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 6. Electric building WITHOUT external_temp sensor (weather API fallback) ─
-  describe("6. Electric building without external_temp sensor", () => {
+  describe("electric heating without external sensor", () => {
     test("weather API temperature used in physics loop — COP and H are non-null", async () => {
       const surface = 300;
       const building = await createBuilding({ surface, heatingSystemType: "pompa_calore" });
@@ -426,7 +420,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 7. Gas boiler — totalEnergyConsumed from m³ × LHV ──────────────────────
-  describe("7. Gas boiler building", () => {
+  describe("gas boiler building", () => {
     test("computes totalEnergyConsumed from cumulative gas meter readings × LHV", async () => {
       const building = await createBuilding({ heatingSystemType: "caldaia_gas" });
       const bid = building._id.toString();
@@ -484,7 +478,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 8. District heating — averageCop always null ────────────────────────────
-  describe("8. District heating building", () => {
+  describe("district heating building", () => {
     test("averageCop is null for 'teleriscaldamento' even when data is present", async () => {
       const building = await createBuilding({ heatingSystemType: "teleriscaldamento" });
       const bid = building._id.toString();
@@ -549,7 +543,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 9. Insulation quality ───────────────────────────────────────────────────
-  describe("9. Insulation quality", () => {
+  describe("insulation quality", () => {
     test("insulationQuality equals estimatedHeatLossCoefficient / surface", async () => {
       const surface = 250;
       const building = await createBuilding({ surface, heatingSystemType: "pompa_calore" });
@@ -609,7 +603,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 10. Sensor external temp preferred over weather API ─────────────────────
-  describe("10. External temperature source priority", () => {
+  describe("external temperature source priority", () => {
     test("sensor-based averageExternalTemperature overrides weather API", async () => {
       const building = await createBuilding();
       const bid = building._id.toString();
@@ -646,7 +640,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 11. Weather API unavailable ────────────────────────────────────────────
-  describe("11. Weather API unavailable", () => {
+  describe("weather api unavailable", () => {
     test("returns 200 with null averageExternalTemperature when weather API returns null", async () => {
       const building = await createBuilding();
       const bid = building._id.toString();
@@ -679,7 +673,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 12. Only cooling phases ─────────────────────────────────────────────────
-  describe("12. Only cooling phases (heater always off)", () => {
+  describe("only cooling phases", () => {
     test("H is estimated but averageCop is null (no heating data)", async () => {
       const building = await createBuilding({ heatingSystemType: "pompa_calore" });
       const bid = building._id.toString();
@@ -719,7 +713,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 13. Mixed cooling then heating — two-pass COP computation ───────────────
-  describe("13. Mixed cooling then heating — two-pass COP computation", () => {
+  describe("mixed cooling then heating", () => {
     test("averageCop computed in second pass after H is determined", async () => {
       const building = await createBuilding({ heatingSystemType: "pompa_calore" });
       const bid = building._id.toString();
@@ -767,7 +761,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 14. Fewer than 2 per-minute buckets → all physics null ──────────────────
-  describe("14. Insufficient time-series data (< 2 buckets)", () => {
+  describe("insufficient time-series data", () => {
     test("single data point → null for H, insulationQuality, and COP", async () => {
       const building = await createBuilding();
       const bid = building._id.toString();
@@ -817,7 +811,7 @@ describe("GET /api/v1/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 15. Response envelope ───────────────────────────────────────────────────
-  describe("15. Response envelope", () => {
+  describe("response envelope", () => {
     test("response contains all required top-level fields", async () => {
       const building = await createBuilding();
       const bid = building._id.toString();

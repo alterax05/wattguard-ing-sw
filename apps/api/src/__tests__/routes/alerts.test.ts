@@ -1,8 +1,14 @@
-import { describe, expect, it, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  expect,
+  it,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { ErrorSchema } from "@wattguard/shared";
 import type { ListAlertsResponse, UpdateAlertStatusResponse } from "@wattguard/shared";
 
@@ -18,16 +24,9 @@ let adminToken: string;
 
 let buildingId: string;
 
-beforeAll(async () => {
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Create an admin user with a password to login properly
   const adminPasswordHash = await Bun.password.hash("admin123", {
@@ -102,7 +101,7 @@ beforeEach(async () => {
   ]);
 });
 
-describe("Alerts API", () => {
+describe("alerts api", () => {
   it("should list alerts", async () => {
     const res = await client.api.v1.alerts.$get(
       { query: {} },

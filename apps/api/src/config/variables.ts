@@ -31,14 +31,6 @@ export const MONGO_URI = ((): string => {
   return uri;
 })();
 
-export const MONGO_URI_TEST = ((): string | undefined => {
-  const uri = process.env.MONGO_URI_TEST;
-  if (IS_TEST && !uri) {
-    throw new Error("MONGO_URI_TEST environment variable is not set");
-  }
-  return uri;
-})();
-
 // ── MQTT ─────────────────────────────────────────────────────────────────────
 
 export const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";

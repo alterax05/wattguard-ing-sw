@@ -1,9 +1,16 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
+
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { ErrorSchema } from "@wattguard/shared";
 import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
 
@@ -17,8 +24,6 @@ import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 
 // Suppress console logs during tests
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
 
 let adminToken: string;
 let adminUserId: mongoose.Types.ObjectId;
@@ -28,20 +33,10 @@ let energySensor;
 let tempSensor;
 let extSensor;
 
-beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
-  await connectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
-afterAll(async () => {
-  console.log = originalConsoleLog;
-  console.error = originalConsoleError;
-  await disconnectTestDB();
-});
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Create admin user
   const adminPasswordHash = await Bun.password.hash("admin123", {
@@ -208,7 +203,7 @@ beforeEach(async () => {
   await SensorReading.create(readings);
 });
 
-describe("Building Efficiency Route - Integration Tests", () => {
+describe("GET /api/v1/buildings/:id/efficiency", () => {
   test("GET /api/v1/buildings/:id/efficiency - should calculate efficiency correctly", async () => {
     // 4 hours total duration
     const startDate = "2024-01-01T10:00:00Z";
@@ -248,7 +243,7 @@ describe("Building Efficiency Route - Integration Tests", () => {
     expect(json.metrics.averageCop).toBeLessThan(3.5);
   });
 
-  test("should return 400 for invalid dates", async () => {
+  test("returns 400 for invalid dates", async () => {
     const res = await client.api.v1.buildings[":id"].efficiency.$get(
       {
         param: { id: buildingId },
@@ -264,7 +259,7 @@ describe("Building Efficiency Route - Integration Tests", () => {
     expect(res.status).toBe(400);
   });
 
-  test("should return 404 for non-existent building", async () => {
+  test("returns 404 for non-existent building", async () => {
     const fakeId = "507f1f77bcf86cd799439011";
     const startDate = "2024-01-01T10:00:00Z";
     const endDate = "2024-01-01T13:00:00Z";

@@ -10,7 +10,14 @@
  *     (averageCop null) or the building is district heating
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  mock,
+} from "bun:test";
+
 import mongoose from "mongoose";
 
 // ── Weather mock — must be declared BEFORE the service import so the
@@ -24,7 +31,7 @@ mock.module("../../lib/weather", () => ({
 }));
 
 // ── Imports (after the module mock is registered) ─────────────────────────────
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -35,8 +42,6 @@ import { EFFICIENCY_ALERT_TYPE } from "../../lib/alerts";
 import { evaluateEfficiencyAlerts } from "../../services/efficiency-alert-service";
 
 // ── silence console noise during tests ──────────────────────────────────────
-const originalLog = console.log;
-const originalError = console.error;
 
 // ── shared state ─────────────────────────────────────────────────────────────
 let adminUserId: mongoose.Types.ObjectId;
@@ -58,20 +63,9 @@ function mkReading(
 
 // ── lifecycle ────────────────────────────────────────────────────────────────
 
-beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  console.log = originalLog;
-  console.error = originalError;
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Reset weather mock to a sensible default before each test
   mockWeatherImpl = async () => 5.0;

@@ -1,9 +1,16 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
+
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -27,28 +34,16 @@ type ErrorResponse = z.infer<typeof ErrorSchema>;
 const client = testClient(app);
 
 // Suppress console logs during tests
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
 
 let adminToken: string;
 let operatorToken: string;
 let adminUserId: mongoose.Types.ObjectId;
 let buildingTypeId: mongoose.Types.ObjectId;
 
-beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
-  await connectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
-afterAll(async () => {
-  console.log = originalConsoleLog;
-  console.error = originalConsoleError;
-  await disconnectTestDB();
-});
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Create test users (admin and operator)
   const adminPasswordHash = await Bun.password.hash("admin123", {
@@ -110,9 +105,9 @@ beforeEach(async () => {
   buildingTypeId = buildingType._id as mongoose.Types.ObjectId;
 });
 
-describe("Buildings Routes - Integration Tests", () => {
-  describe("Create Building (POST /api/buildings)", () => {
-    test("should create a new building with valid data (admin)", async () => {
+describe("buildings api", () => {
+  describe("POST /api/v1/buildings", () => {
+    test("creates a new building with valid data (admin)", async () => {
       const buildingData = {
         name: "Scuola Primaria Test",
         address: "Via Test 123, Milano",
@@ -157,7 +152,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(building!.name).toBe(buildingData.name);
     });
 
-    test("should create building with operator role", async () => {
+    test("creates building with operator role", async () => {
       const buildingData = {
         name: "Biblioteca Test",
         address: "Via Test 456, Milano",
@@ -183,7 +178,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(201);
     });
 
-    test("should reject invalid data", async () => {
+    test("rejects invalid data", async () => {
       const invalidData = {
         name: "", // Empty name
         address: "Via Test",
@@ -205,7 +200,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status as number).toBe(400);
     });
 
-    test("should reject invalid building type ID", async () => {
+    test("rejects invalid building type ID", async () => {
       const buildingData = {
         name: "Test Building",
         address: "Via Test 123",
@@ -232,8 +227,8 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Update Building (PATCH /api/buildings/:id)", () => {
-    test("should update building", async () => {
+  describe("PATCH /api/v1/buildings/:id", () => {
+    test("updates building", async () => {
       // Create a building first
       const building = await Building.create({
         name: "Original Name",
@@ -278,7 +273,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.building.status).toBe("inactive");
     });
 
-    test("should return 404 for non-existent building", async () => {
+    test("returns 404 for non-existent building", async () => {
       const fakeId = "507f1f77bcf86cd799439011"; // Valid ObjectId format
 
       const res = await client.api.v1.buildings[":id"].$patch(
@@ -476,8 +471,8 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Delete Building (DELETE /api/buildings/:id)", () => {
-    test("should delete building with cascade delete of sensors and readings", async () => {
+  describe("DELETE /api/v1/buildings/:id", () => {
+    test("deletes building with cascade delete of sensors and readings", async () => {
       // Create building with sensors and readings
       const building = await Building.create({
         name: "Building to Delete",
@@ -565,7 +560,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Search Buildings (GET /api/buildings)", () => {
+  describe("GET /api/v1/buildings", () => {
     beforeEach(async () => {
       // Create multiple buildings for search testing
       const buildings = [
@@ -612,7 +607,7 @@ describe("Buildings Routes - Integration Tests", () => {
       await Building.insertMany(buildings);
     });
 
-    test("should search by name", async () => {
+    test("searches by name", async () => {
       const res = await client.api.v1.buildings.$get(
         {
           query: { name: "Scuola" },
@@ -632,7 +627,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.name).toContain("Scuola");
     });
 
-    test("should search by address", async () => {
+    test("searches by address", async () => {
       const res = await client.api.v1.buildings.$get(
         {
           query: { address: "Garibaldi" },
@@ -651,7 +646,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.address).toContain("Garibaldi");
     });
 
-    test("should filter by zone", async () => {
+    test("filters by zone", async () => {
       const res = await client.api.v1.buildings.$get(
         {
           query: { zone: "Centro" },
@@ -670,7 +665,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.geographicZone).toBe("Centro");
     });
 
-    test("should filter by building type", async () => {
+    test("filters by building type", async () => {
       const res = await client.api.v1.buildings.$get(
         {
           query: { buildingType: buildingTypeId.toString() },
@@ -688,7 +683,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings.length).toBe(3); // All test buildings have same type
     });
 
-    test("should filter by status", async () => {
+    test("filters by status", async () => {
       const res = await client.api.v1.buildings.$get(
         {
           query: { status: "inactive" },
@@ -707,7 +702,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.status).toBe("inactive");
     });
 
-    test("should combine multiple filters", async () => {
+    test("combines multiple filters", async () => {
       const res = await client.api.v1.buildings.$get(
         {
           query: { zone: "Centro", status: "active", name: "Scuola" },
@@ -726,7 +721,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.name).toBe("Scuola Primaria Centro");
     });
 
-    test("should support pagination", async () => {
+    test("supports pagination", async () => {
       const res = await client.api.v1.buildings.$get(
         {
           query: { limit: "2", offset: "0" },
@@ -747,7 +742,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.pagination.offset).toBe(0);
     });
 
-    test("should support sorting", async () => {
+    test("supports sorting", async () => {
       const res = await client.api.v1.buildings.$get(
         {
           query: { sortBy: "name", sortOrder: "asc" },
@@ -769,7 +764,7 @@ describe("Buildings Routes - Integration Tests", () => {
       }
     });
 
-    test("should return all required details in search results", async () => {
+    test("returns all required details in search results", async () => {
       const res = await client.api.v1.buildings.$get(
         { query: {} },
         {
@@ -793,8 +788,8 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Get Building Details (GET /api/buildings/:id)", () => {
-    test("should return complete building details", async () => {
+  describe("GET /api/v1/buildings/:id", () => {
+    test("returns complete building details", async () => {
       const building = await Building.create({
         name: "Test Building Details",
         address: "Via Details 1, Milano",
@@ -831,8 +826,8 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Get Real-time Data (GET /api/buildings/:id/real-time)", () => {
-    test("should return real-time data for all sensor types", async () => {
+  describe("GET /api/v1/buildings/:id/real-time", () => {
+    test("returns real-time data for all sensor types", async () => {
       const building = await Building.create({
         name: "Building Real-time",
         address: "Via Real-time 1",
@@ -912,7 +907,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.data.energyConsumption.unit).toBe("kW");
     });
 
-    test("should handle missing sensors gracefully", async () => {
+    test("handles missing sensors gracefully", async () => {
       const building = await Building.create({
         name: "Building Partial Sensors",
         address: "Via Partial 1",
@@ -959,8 +954,8 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Get Historical Data (GET /api/buildings/:id/history)", () => {
-    test("should return historical data with time aggregation", async () => {
+  describe("GET /api/v1/buildings/:id/history", () => {
+    test("returns historical data with time aggregation", async () => {
       const building = await Building.create({
         name: "Building History",
         address: "Via History 1",
@@ -1034,7 +1029,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(dataPoint.sensorType).toBe("internal_temp");
     });
 
-    test("should filter by date range", async () => {
+    test("filters by date range", async () => {
       const building = await Building.create({
         name: "Building Date Filter",
         address: "Via Date 1",
@@ -1111,7 +1106,7 @@ describe("Buildings Routes - Integration Tests", () => {
       });
     });
 
-    test("should support different interval types", async () => {
+    test("supports different interval types", async () => {
       const building = await Building.create({
         name: "Building Intervals",
         address: "Via Intervals 1",
@@ -1180,13 +1175,13 @@ describe("Buildings Routes - Integration Tests", () => {
   // Authorization Tests
   // ============================================================================
 
-  describe("Authorization", () => {
-    test("should deny access without token", async () => {
+  describe("authorization", () => {
+    test("denies access without token", async () => {
       const res = await client.api.v1.buildings.$get({ query: {} });
       expect(res.status as number).toBe(401);
     });
 
-    test("should deny access with invalid token", async () => {
+    test("denies access with invalid token", async () => {
       const res = await client.api.v1.buildings.$get(
         { query: {} },
         {
@@ -1199,7 +1194,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status as number).toBe(401);
     });
 
-    test("should allow both admin and operator to read buildings", async () => {
+    test("allows both admin and operator to read buildings", async () => {
       const building = await Building.create({
         name: "Test Auth",
         address: "Via Auth 1",

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { Types } from "mongoose";
 import { testClient } from "hono/testing";
 import { app } from "../../index";
@@ -6,7 +6,7 @@ import { Building } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { SensorReading } from "../../models/SensorReading";
 import { User } from "../../models/User";
-import { clearTestDB, connectTestDB, disconnectTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 
 const client = testClient(app);
 
@@ -26,16 +26,9 @@ async function login(email: string, password: string): Promise<string> {
   return token;
 }
 
-beforeAll(async () => {
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   const passwordHash = await Bun.password.hash("admin123", {
     algorithm: "bcrypt",
@@ -115,7 +108,7 @@ beforeEach(async () => {
   ]);
 });
 
-describe("Consumption export API", () => {
+describe("GET /api/v1/export/consumption", () => {
   test("requires authentication", async () => {
     const response = await client.api.v1.export.consumption.$get({
       query: {

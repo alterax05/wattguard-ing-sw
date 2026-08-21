@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "workspaces": ["apps/*", "shared"],
+  "trustedDependencies": ["mongodb-memory-server"],
   "scripts": {
     "dev": "bun run --parallel dev:frontend dev:backend",
     "dev:frontend": "bun run --cwd apps/web dev",

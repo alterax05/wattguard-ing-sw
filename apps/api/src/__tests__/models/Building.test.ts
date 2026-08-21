@@ -1,24 +1,17 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { describe, test, expect, beforeEach } from "bun:test";
+import { setupIntegrationTests } from "../helpers/db";
 import { Building, type BuildingStatus } from "../../models/Building";
 import { BuildingType, type BuildingTypeDocument } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { Types, Error as MongooseError } from "mongoose";
 
-describe("Building Model", () => {
+setupIntegrationTests(import.meta.path);
+
+describe("Building schema", () => {
   let userId: Types.ObjectId;
   let buildingTypeId: Types.ObjectId;
 
-  beforeAll(async () => {
-    await connectTestDB();
-  });
-
-  afterAll(async () => {
-    await disconnectTestDB();
-  });
-
   beforeEach(async () => {
-    await clearTestDB();
 
     // Create a test user
     const user = await User.create({
@@ -36,8 +29,8 @@ describe("Building Model", () => {
     buildingTypeId = buildingType._id;
   });
 
-  describe("Schema Validation", () => {
-    test("should create a building with all required fields", async () => {
+  describe("schema validation", () => {
+    test("creates a building with all required fields", async () => {
       const building = await Building.create({
         name: "Test Building",
         address: "Via Test 1",
@@ -65,7 +58,7 @@ describe("Building Model", () => {
       expect(building.updatedAt).toBeInstanceOf(Date);
     });
 
-    test("should create a building with optional constructionYear", async () => {
+    test("creates a building with optional constructionYear", async () => {
       const building = await Building.create({
         name: "Old Building",
         address: "Via Antica 1",
@@ -82,7 +75,7 @@ describe("Building Model", () => {
       expect(building.constructionYear).toBe(1950);
     });
 
-    test("should use default status of 'active' if not provided", async () => {
+    test("uses default status of 'active' if not provided", async () => {
       const building = await Building.create({
         name: "Default Status Building",
         address: "Via Default 1",
@@ -98,7 +91,7 @@ describe("Building Model", () => {
       expect(building.status).toBe("active");
     });
 
-    test("should fail without required name field", async () => {
+    test("fails without required name field", async () => {
       try {
         await Building.create({
           address: "Via Test 1",
@@ -118,7 +111,7 @@ describe("Building Model", () => {
       }
     });
 
-    test("should fail without required address field", async () => {
+    test("fails without required address field", async () => {
       try {
         await Building.create({
           name: "Test Building",
@@ -138,7 +131,7 @@ describe("Building Model", () => {
       }
     });
 
-    test("should fail without required surface field", async () => {
+    test("fails without required surface field", async () => {
       try {
         await Building.create({
           name: "Test Building",
@@ -158,7 +151,7 @@ describe("Building Model", () => {
       }
     });
 
-    test("should fail without required buildingType field", async () => {
+    test("fails without required buildingType field", async () => {
       try {
         await Building.create({
           name: "Test Building",
@@ -178,7 +171,7 @@ describe("Building Model", () => {
       }
     });
 
-    test("should fail without required createdBy field", async () => {
+    test("fails without required createdBy field", async () => {
       try {
         await Building.create({
           name: "Test Building",
@@ -198,7 +191,7 @@ describe("Building Model", () => {
       }
     });
 
-    test("should trim whitespace from name", async () => {
+    test("trims whitespace from name", async () => {
       const building = await Building.create({
         name: "  Trimmed Building  ",
         address: "Via Test 1",
@@ -214,7 +207,7 @@ describe("Building Model", () => {
       expect(building.name).toBe("Trimmed Building");
     });
 
-    test("should trim whitespace from address", async () => {
+    test("trims whitespace from address", async () => {
       const building = await Building.create({
         name: "Test Building",
         address: "  Via Test 1  ",
@@ -231,8 +224,8 @@ describe("Building Model", () => {
     });
   });
 
-  describe("Surface Validation", () => {
-    test("should accept positive surface values", async () => {
+  describe("surface validation", () => {
+    test("accepts positive surface values", async () => {
       const building = await Building.create({
         name: "Large Building",
         address: "Via Grande 1",
@@ -248,7 +241,7 @@ describe("Building Model", () => {
       expect(building.surface).toBe(50000);
     });
 
-    test("should fail with negative surface value", async () => {
+    test("fails with negative surface value", async () => {
       try {
         await Building.create({
           name: "Invalid Building",
@@ -270,8 +263,8 @@ describe("Building Model", () => {
     });
   });
 
-  describe("Construction Year Validation", () => {
-    test("should accept valid construction year", async () => {
+  describe("construction year validation", () => {
+    test("accepts valid construction year", async () => {
       const building = await Building.create({
         name: "Historic Building",
         address: "Via Storica 1",
@@ -288,7 +281,7 @@ describe("Building Model", () => {
       expect(building.constructionYear).toBe(1850);
     });
 
-    test("should accept current year", async () => {
+    test("accepts current year", async () => {
       const currentYear = new Date().getFullYear();
       const building = await Building.create({
         name: "New Building",
@@ -306,7 +299,7 @@ describe("Building Model", () => {
       expect(building.constructionYear).toBe(currentYear);
     });
 
-    test("should fail with construction year below 1000", async () => {
+    test("fails with construction year below 1000", async () => {
       try {
         await Building.create({
           name: "Ancient Building",
@@ -328,7 +321,7 @@ describe("Building Model", () => {
       }
     });
 
-    test("should fail with construction year too far in future", async () => {
+    test("fails with construction year too far in future", async () => {
       const farFuture = new Date().getFullYear() + 20;
       try {
         await Building.create({
@@ -352,8 +345,8 @@ describe("Building Model", () => {
     });
   });
 
-  describe("Status Enum Validation", () => {
-    test("should accept 'active' status", async () => {
+  describe("status enum validation", () => {
+    test("accepts 'active' status", async () => {
       const building = await Building.create({
         name: "Active Building",
         address: "Via Test 1",
@@ -370,7 +363,7 @@ describe("Building Model", () => {
       expect(building.status).toBe("active");
     });
 
-    test("should accept 'inactive' status", async () => {
+    test("accepts 'inactive' status", async () => {
       const building = await Building.create({
         name: "Inactive Building",
         address: "Via Test 1",
@@ -387,7 +380,7 @@ describe("Building Model", () => {
       expect(building.status).toBe("inactive");
     });
 
-    test("should accept 'decommissioned' status", async () => {
+    test("accepts 'decommissioned' status", async () => {
       const building = await Building.create({
         name: "Decommissioned Building",
         address: "Via Test 1",
@@ -404,7 +397,7 @@ describe("Building Model", () => {
       expect(building.status).toBe("decommissioned");
     });
 
-    test("should fail with invalid status", async () => {
+    test("fails with invalid status", async () => {
       try {
         await Building.create({
           name: "Invalid Status Building",
@@ -427,8 +420,8 @@ describe("Building Model", () => {
     });
   });
 
-  describe("Timestamps", () => {
-    test("should automatically set createdAt and updatedAt on creation", async () => {
+  describe("timestamps", () => {
+    test("automatically sets createdAt and updatedAt on creation", async () => {
       const before = new Date();
       const building = await Building.create({
         name: "Timestamp Test",
@@ -449,7 +442,7 @@ describe("Building Model", () => {
       expect(building.createdAt!.getTime()).toBeLessThanOrEqual(after.getTime());
     });
 
-    test("should update updatedAt on modification", async () => {
+    test("updates updatedAt on modification", async () => {
       const building = await Building.create({
         name: "Original Name",
         address: "Via Test 1",
@@ -471,7 +464,7 @@ describe("Building Model", () => {
       expect(building.updatedAt!.getTime()).toBeGreaterThan(originalUpdatedAt!.getTime());
     });
 
-    test("should not change createdAt on update", async () => {
+    test("does not change createdAt on update", async () => {
       const building = await Building.create({
         name: "Original Name",
         address: "Via Test 1",
@@ -494,8 +487,8 @@ describe("Building Model", () => {
     });
   });
 
-  describe("CRUD Operations", () => {
-    test("should find building by id", async () => {
+  describe("crud operations", () => {
+    test("finds building by id", async () => {
       const created = await Building.create({
         name: "Findable Building",
         address: "Via Test 1",
@@ -514,7 +507,7 @@ describe("Building Model", () => {
       expect(found!.name).toBe("Findable Building");
     });
 
-    test("should find building by name", async () => {
+    test("finds building by name", async () => {
       await Building.create({
         name: "Searchable Building",
         address: "Via Test 1",
@@ -533,7 +526,7 @@ describe("Building Model", () => {
       expect(found!.name).toBe("Searchable Building");
     });
 
-    test("should update building", async () => {
+    test("updates building", async () => {
       const building = await Building.create({
         name: "Old Name",
         address: "Old Address",
@@ -556,7 +549,7 @@ describe("Building Model", () => {
       expect(updated!.address).toBe("New Address");
     });
 
-    test("should delete building", async () => {
+    test("deletes building", async () => {
       const building = await Building.create({
         name: "To Delete",
         address: "Via Test 1",
@@ -576,7 +569,7 @@ describe("Building Model", () => {
       expect(found).toBeNull();
     });
 
-    test("should filter buildings by status", async () => {
+    test("filters buildings by status", async () => {
       await Building.create({
         name: "Active 1",
         address: "Via Test 1",
@@ -609,7 +602,7 @@ describe("Building Model", () => {
       expect(activeBuildings[0]!.name).toBe("Active 1");
     });
 
-    test("should filter buildings by geographic zone", async () => {
+    test("filters buildings by geographic zone", async () => {
       await Building.create({
         name: "Centro Building",
         address: "Via Centro 1",
@@ -640,7 +633,7 @@ describe("Building Model", () => {
       expect(centroBuildings[0]!.name).toBe("Centro Building");
     });
 
-    test("should populate buildingType reference", async () => {
+    test("populates buildingType reference", async () => {
       const building = await Building.create({
         name: "Test Building",
         address: "Via Test 1",
