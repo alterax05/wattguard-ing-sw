@@ -33,6 +33,12 @@ export type BackfillSensorInput = {
 
 export type BackfilledAlert = Required<BackfillAlertInput>;
 
+/** Minimal shape of a legacy alert document as loaded with `.lean()`. */
+export type LegacyAlertDoc = BackfillAlertInput & {
+  _id: mongoose.Types.ObjectId;
+  sensorId?: mongoose.Types.ObjectId | null;
+};
+
 /**
  * Pure: compute the structured fields for an alert from the joined sensor.
  * Keeps fields the alert already has, falls back to the sensor's own
@@ -65,18 +71,15 @@ export async function run(): Promise<{ migrated: number }> {
 
   const legacy = await Alert.find({
     $or: [{ message: { $exists: true } }, { sensorType: { $exists: false } }],
-  }).lean();
+  }).lean<LegacyAlertDoc[]>();
 
   let migrated = 0;
   for (const alert of legacy) {
     const sensor = alert.sensorId
-      ? await Sensor.findById(alert.sensorId).lean()
+      ? await Sensor.findById(alert.sensorId).lean<BackfillSensorInput | null>()
       : null;
 
-    const patch = backfillAlert(
-      alert as unknown as BackfillAlertInput,
-      sensor as unknown as BackfillSensorInput | null,
-    );
+    const patch = backfillAlert(alert, sensor);
 
     await Alert.updateOne(
       { _id: alert._id },

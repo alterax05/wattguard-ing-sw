@@ -1,5 +1,5 @@
 /**
- * Comprehensive integration tests for GET /api/buildings/:id/efficiency
+ * Comprehensive integration tests for GET /api/v1/buildings/:id/efficiency
  *
  * The efficiency endpoint computes physics-based thermal metrics:
  *   - totalEnergyConsumed  (kWh)
@@ -29,7 +29,14 @@
  * 15.  Response envelope — all required fields present
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  mock,
+} from "bun:test";
+
 import mongoose from "mongoose";
 
 // ── Weather mock — must be declared BEFORE the app import so the route
@@ -38,11 +45,11 @@ import mongoose from "mongoose";
 //
 // `mockWeatherFn` is a variable that individual tests can overwrite to control
 // what the weather API "returns".  By default it returns a real-ish 5°C.
-let mockWeatherImpl: () => Promise<number | null> = async () => 5.0;
+let mockWeatherImpl: () => Promise<number | null> = () => Promise.resolve(5.0);
 
-mock.module("../../lib/weather", () => ({
+await mock.module("../../lib/weather", () => ({
   getAverageHistoricalTemperature: mock(() => mockWeatherImpl()),
-  getCoordinates: mock(async () => null),
+  getCoordinates: mock(() => Promise.resolve(null)),
 }));
 
 // ── App and test helpers (imported AFTER the module mock is registered) ──────
@@ -52,7 +59,7 @@ import { expectTypeOf } from "bun:test";
 import { z } from "zod";
 import { ErrorSchema } from "@wattguard/shared";
 import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -60,16 +67,14 @@ import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 
 // ── silence console noise during tests ──────────────────────────────────────
-const originalLog = console.log;
-const originalError = console.error;
 
 // ── shared state ─────────────────────────────────────────────────────────────
 let adminToken: string;
 let adminUserId: mongoose.Types.ObjectId;
 let buildingTypeId: mongoose.Types.ObjectId;
 
-// ── physics constants (must mirror the handler) ───────────────────────────────
-const GAS_LHV_KWH_PER_M3 = 10.55;
+// ── physics constants (shared with the handler) ──────────────────────────────
+import { GAS_LHV_KWH_PER_M3 } from "../../lib/energy";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -101,7 +106,7 @@ async function getEfficiency(
   endDate: string,
   token: string = adminToken,
 ) {
-  const res = await client.api.buildings[":id"].efficiency.$get(
+  const res = await client.api.v1.buildings[":id"].efficiency.$get(
     { param: { id: buildingId }, query: { startDate, endDate } },
     { headers: { Authorization: `Bearer ${token}` } },
   );
@@ -110,34 +115,21 @@ async function getEfficiency(
 
 // ── lifecycle ────────────────────────────────────────────────────────────────
 
-beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  console.log = originalLog;
-  console.error = originalError;
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Reset weather mock to a sensible default before each test
-  mockWeatherImpl = async () => 5.0;
+  mockWeatherImpl = () => Promise.resolve(5.0);
 
   // Create admin user
   const hash = await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 });
   const admin = await User.create({ email: "admin@test.com", role: "admin", passwordHash: hash });
-  adminUserId = admin._id as mongoose.Types.ObjectId;
+  adminUserId = admin._id;
 
   // Log in
-  const loginRes = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "admin@test.com", password: "admin123" }),
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: { email: "admin@test.com", password: "admin123" },
   });
   const cookie = loginRes.headers.get("set-cookie") ?? "";
   const match = cookie.match(/access_token=([^;]+)/);
@@ -146,7 +138,7 @@ beforeEach(async () => {
 
   // Create a building type
   const bt = await BuildingType.create({ name: "TestType", description: "For testing" });
-  buildingTypeId = bt._id as mongoose.Types.ObjectId;
+  buildingTypeId = bt._id;
 });
 
 // ── factory: create a minimal active building ─────────────────────────────────
@@ -192,22 +184,23 @@ async function createSensor(
 //  TESTS
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
+describe("GET /api/v1/buildings/:id/efficiency", () => {
 
   // ── 1. Authentication ───────────────────────────────────────────────────────
-  describe("1. Authentication", () => {
+  describe("authentication", () => {
     test("returns 401 without a token", async () => {
       const building = await createBuilding();
       const now = new Date();
-      const res = await app.request(
-        `/api/buildings/${building._id}/efficiency?startDate=${ts(now, -3_600_000)}&endDate=${now.toISOString()}`,
-      );
+      const res = await client.api.v1.buildings[":id"].efficiency.$get({
+        param: { id: building._id.toString() },
+        query: { startDate: ts(now, -3_600_000), endDate: now.toISOString() },
+      });
       expect(res.status).toBe(401);
     });
   });
 
   // ── 2. Not Found ────────────────────────────────────────────────────────────
-  describe("2. Not Found", () => {
+  describe("not found", () => {
     test("returns 404 for a non-existent building ID", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
       const now = new Date();
@@ -217,12 +210,16 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 3. Bad Request ──────────────────────────────────────────────────────────
-  describe("3. Bad Request", () => {
+  describe("bad request", () => {
     test("returns 400 when startDate is missing", async () => {
       const building = await createBuilding();
       const now = new Date();
-      const res = await app.request(
-        `/api/buildings/${building._id}/efficiency?endDate=${now.toISOString()}`,
+      const res = await client.api.v1.buildings[":id"].efficiency.$get(
+        {
+          param: { id: building._id.toString() },
+          // @ts-expect-error intentionally missing required startDate
+          query: { endDate: now.toISOString() },
+        },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);
@@ -231,8 +228,12 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
     test("returns 400 when endDate is missing", async () => {
       const building = await createBuilding();
       const now = new Date();
-      const res = await app.request(
-        `/api/buildings/${building._id}/efficiency?startDate=${now.toISOString()}`,
+      const res = await client.api.v1.buildings[":id"].efficiency.$get(
+        {
+          param: { id: building._id.toString() },
+          // @ts-expect-error intentionally missing required endDate
+          query: { startDate: now.toISOString() },
+        },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);
@@ -241,8 +242,11 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
     test("returns 400 when startDate is not a valid ISO datetime", async () => {
       const building = await createBuilding();
       const now = new Date();
-      const res = await app.request(
-        `/api/buildings/${building._id}/efficiency?startDate=not-a-date&endDate=${now.toISOString()}`,
+      const res = await client.api.v1.buildings[":id"].efficiency.$get(
+        {
+          param: { id: building._id.toString() },
+          query: { startDate: "not-a-date", endDate: now.toISOString() },
+        },
         { headers: { Authorization: `Bearer ${adminToken}` } },
       );
       expect(res.status).toBe(400);
@@ -250,7 +254,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 4. No sensor data ───────────────────────────────────────────────────────
-  describe("4. No sensor data at all", () => {
+  describe("no sensor data", () => {
     test("returns 200 with zero energy and null physics metrics", async () => {
       const building = await createBuilding();
       const now = new Date();
@@ -277,7 +281,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 5. Electric building — full sensor suite ────────────────────────────────
-  describe("5. Electric building with internal + external temp + energy meter", () => {
+  describe("electric heating with all sensors", () => {
     test("computes COP and heat-loss coefficient from sensor data", async () => {
       const surface = 400;
       const building = await createBuilding({ surface, heatingSystemType: "pompa_calore" });
@@ -316,12 +320,12 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       await SensorReading.insertMany(readings);
 
       // External sensor present → weather API must NOT be called
-      mockWeatherImpl = async () => { throw new Error("weather API must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather API must not be called"));
 
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 9 * MIN));
 
       // restore
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) throw new Error("missing metrics");
@@ -339,7 +343,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 6. Electric building WITHOUT external_temp sensor (weather API fallback) ─
-  describe("6. Electric building without external_temp sensor", () => {
+  describe("electric heating without external sensor", () => {
     test("weather API temperature used in physics loop — COP and H are non-null", async () => {
       const surface = 300;
       const building = await createBuilding({ surface, heatingSystemType: "pompa_calore" });
@@ -353,7 +357,10 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
 
       const WEATHER_TEMP = 3.0;
       let weatherCallCount = 0;
-      mockWeatherImpl = async () => { weatherCallCount++; return WEATHER_TEMP; };
+      mockWeatherImpl = () => {
+        weatherCallCount++;
+        return Promise.resolve(WEATHER_TEMP);
+      };
 
       const t0  = new Date("2025-01-15T12:00:00.000Z");
       const MIN = 60_000;
@@ -397,7 +404,10 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       const bid = building._id.toString();
 
       let weatherCallCount = 0;
-      mockWeatherImpl = async () => { weatherCallCount++; return 4.0; };
+      mockWeatherImpl = () => {
+        weatherCallCount++;
+        return Promise.resolve(4.0);
+      };
 
       const iSensor = await createSensor(bid, "internal_temp");
       const t0  = new Date("2025-01-15T08:00:00.000Z");
@@ -416,7 +426,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 7. Gas boiler — totalEnergyConsumed from m³ × LHV ──────────────────────
-  describe("7. Gas boiler building", () => {
+  describe("gas boiler building", () => {
     test("computes totalEnergyConsumed from cumulative gas meter readings × LHV", async () => {
       const building = await createBuilding({ heatingSystemType: "caldaia_gas" });
       const bid = building._id.toString();
@@ -474,7 +484,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 8. District heating — averageCop always null ────────────────────────────
-  describe("8. District heating building", () => {
+  describe("district heating building", () => {
     test("averageCop is null for 'teleriscaldamento' even when data is present", async () => {
       const building = await createBuilding({ heatingSystemType: "teleriscaldamento" });
       const bid = building._id.toString();
@@ -495,9 +505,9 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 5 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) {
@@ -526,9 +536,9 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 4 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) {
@@ -539,7 +549,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 9. Insulation quality ───────────────────────────────────────────────────
-  describe("9. Insulation quality", () => {
+  describe("insulation quality", () => {
     test("insulationQuality equals estimatedHeatLossCoefficient / surface", async () => {
       const surface = 250;
       const building = await createBuilding({ surface, heatingSystemType: "pompa_calore" });
@@ -563,9 +573,9 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 5 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) throw new Error("missing metrics");
@@ -599,7 +609,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 10. Sensor external temp preferred over weather API ─────────────────────
-  describe("10. External temperature source priority", () => {
+  describe("external temperature source priority", () => {
     test("sensor-based averageExternalTemperature overrides weather API", async () => {
       const building = await createBuilding();
       const bid = building._id.toString();
@@ -621,7 +631,10 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
 
       // Weather API must NOT be called when sensor data is available
       let weatherCallCount = 0;
-      mockWeatherImpl = async () => { weatherCallCount++; return 99.0; };
+      mockWeatherImpl = () => {
+        weatherCallCount++;
+        return Promise.resolve(99.0);
+      };
 
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 2 * MIN));
 
@@ -636,7 +649,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 11. Weather API unavailable ────────────────────────────────────────────
-  describe("11. Weather API unavailable", () => {
+  describe("weather api unavailable", () => {
     test("returns 200 with null averageExternalTemperature when weather API returns null", async () => {
       const building = await createBuilding();
       const bid = building._id.toString();
@@ -652,7 +665,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       ]);
 
       // Simulate API failure
-      mockWeatherImpl = async () => null;
+      mockWeatherImpl = () => Promise.resolve(null);
 
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 2 * MIN));
 
@@ -669,7 +682,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 12. Only cooling phases ─────────────────────────────────────────────────
-  describe("12. Only cooling phases (heater always off)", () => {
+  describe("only cooling phases", () => {
     test("H is estimated but averageCop is null (no heating data)", async () => {
       const building = await createBuilding({ heatingSystemType: "pompa_calore" });
       const bid = building._id.toString();
@@ -692,9 +705,9 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 6 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) throw new Error("missing metrics");
@@ -709,7 +722,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 13. Mixed cooling then heating — two-pass COP computation ───────────────
-  describe("13. Mixed cooling then heating — two-pass COP computation", () => {
+  describe("mixed cooling then heating", () => {
     test("averageCop computed in second pass after H is determined", async () => {
       const building = await createBuilding({ heatingSystemType: "pompa_calore" });
       const bid = building._id.toString();
@@ -742,9 +755,9 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 7 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) throw new Error("missing metrics");
@@ -757,7 +770,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 14. Fewer than 2 per-minute buckets → all physics null ──────────────────
-  describe("14. Insufficient time-series data (< 2 buckets)", () => {
+  describe("insufficient time-series data", () => {
     test("single data point → null for H, insulationQuality, and COP", async () => {
       const building = await createBuilding();
       const bid = building._id.toString();
@@ -807,7 +820,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
   });
 
   // ── 15. Response envelope ───────────────────────────────────────────────────
-  describe("15. Response envelope", () => {
+  describe("response envelope", () => {
     test("response contains all required top-level fields", async () => {
       const building = await createBuilding();
       const bid = building._id.toString();
@@ -826,7 +839,7 @@ describe("GET /api/buildings/:id/efficiency — Comprehensive Tests", () => {
       expect(json.period.startDate).toBeDefined();
       expect(json.period.endDate).toBeDefined();
       expect(json.metrics).toBeDefined();
-      expect(typeof json.metrics.totalEnergyConsumed).toBe("number");
+      expect(Number.isFinite(json.metrics.totalEnergyConsumed)).toBe(true);
       // All nullable metrics must be present as keys (even if null)
       expect("averageExternalTemperature"   in json.metrics).toBe(true);
       expect("estimatedHeatLossCoefficient" in json.metrics).toBe(true);

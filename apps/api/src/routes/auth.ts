@@ -53,7 +53,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    async (c) => {
+    (c) => {
       const payload = c.get("jwtPayload");
       const userDoc = c.get("userDoc");
 
@@ -85,7 +85,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    async (c) => {
+    (c) => {
       setCookie(c, "access_token", "", {
         maxAge: 0,
         path: "/",

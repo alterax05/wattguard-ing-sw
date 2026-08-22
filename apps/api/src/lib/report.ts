@@ -18,7 +18,7 @@ import {
   isGasBoilerBuilding,
   type DailyConsumptionPoint,
   type PeriodConsumptionSummary,
-} from "./consumption";
+} from "./energy";
 
 export type SensorTypeCounts = {
   internal_temp: number;
@@ -560,7 +560,9 @@ export async function serializeReportPdf(
     const doc = new PDFDocument({ size: "A4", margin: 48 });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("end", () => {
+      resolve(Buffer.concat(chunks));
+    });
     doc.on("error", reject);
 
     // Report header (first page)

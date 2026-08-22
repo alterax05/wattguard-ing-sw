@@ -24,7 +24,7 @@ import {
 const TRENTO_CENTER: [number, number] = [46.0667, 11.1167];
 
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
-  if (typeof bt === "string") return bt;
+  if (!(bt instanceof Object)) return bt;
   return bt.name;
 }
 
@@ -186,7 +186,9 @@ export function BuildingsMap() {
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedBuilding(null)}
+                onClick={() => {
+                  setSelectedBuilding(null);
+                }}
                 className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X className="h-4 w-4" />

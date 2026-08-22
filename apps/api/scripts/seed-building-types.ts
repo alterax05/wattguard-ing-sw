@@ -155,4 +155,4 @@ async function seedBuildingTypes() {
 }
 
 // Run the seed function
-seedBuildingTypes();
+await seedBuildingTypes();

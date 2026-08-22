@@ -94,13 +94,13 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
   const goToBuilding = () => {
     if (!sensor?.building) return
     onOpenChange(false)
-    navigate(`/dashboard/buildings/${sensor.building.id}`)
+    void navigate(`/dashboard/buildings/${sensor.building.id}`)
   }
 
   const goToEditSensor = () => {
     if (!sensor) return
     onOpenChange(false)
-    navigate(`/dashboard/buildings/${sensor.buildingId}?sensorId=${sensor.id}`)
+    void navigate(`/dashboard/buildings/${sensor.buildingId}?sensorId=${sensor.id}`)
   }
 
   const handleBuildingKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -244,7 +244,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
               )}
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                <Button variant="outline" onClick={() => { onOpenChange(false) }}>
                   {t("common.close")}
                 </Button>
                 <Button onClick={goToEditSensor}>

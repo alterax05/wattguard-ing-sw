@@ -188,7 +188,8 @@
     "invalid_alert_id": "Ungültiges Meldungs-ID-Format.",
     "invalid_date_range": "Ungültiger Zeitraum: Das Startdatum muss vor dem Enddatum liegen.",
     "settings_update_failed": "Die Konfiguration konnte nicht aktualisiert werden.",
-    "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+    "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "download_failed": "Download fehlgeschlagen. Bitte versuchen Sie es erneut."
   },
   "emails": {
     "invite": {
@@ -280,6 +281,7 @@
     "allClear": "Alles unter Kontrolle!",
     "acknowledgedBy": "Übernommen von {{name}} • {{time}}",
     "resolvedBy": "Behoben von {{name}} • {{time}}",
+    "systemResolver": "System",
     "acknowledge": "Übernehmen",
     "resolve": "Beheben",
     "noActive": "Keine aktiven Meldungen",

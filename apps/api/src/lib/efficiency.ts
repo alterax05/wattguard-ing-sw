@@ -3,10 +3,12 @@ import { SensorReading } from "../models/SensorReading";
 import { getAverageHistoricalTemperature } from "./weather";
 import {
   GAS_LHV_KWH_PER_M3,
+  aggregateGasEnergyByBucket,
   energySensorTypeFor,
   isDistrictHeatingBuilding,
   isGasBoilerBuilding,
-} from "./consumption";
+  roomHeatCapacity,
+} from "./energy";
 import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
 
 export type BuildingEfficiencyMetrics = GetBuildingEfficiencyResponse["metrics"];
@@ -27,13 +29,11 @@ export async function calculateBuildingEfficiency(
 
       // Physics Constants (for COP / heat-loss estimation)
       const CEILING_HEIGHT = building.ceilingHeight || 3.0; // meters (fallback to default)
-      const AIR_DENSITY = 1.225; // kg/m³
-      const SPECIFIC_HEAT_AIR = 1005; // J/(kg·K)
-      const ROOM_HEAT_CAPACITY = building.surface * CEILING_HEIGHT * AIR_DENSITY * SPECIFIC_HEAT_AIR;
+      const ROOM_HEAT_CAPACITY = roomHeatCapacity(building.surface, CEILING_HEIGHT);
 
       // ── Sensor match ───────────────────────────────────────────────────────
       // Gas boiler buildings use gas_meter instead of energy_meter.
-      const energySensorType = energySensorTypeFor(isGasBoiler);
+      const energySensorType = energySensorTypeFor(building.heatingSystemType);
       const sensorMatch = {
         "metadata.buildingId": building._id,
         timestamp: { $gte: start, $lte: end },
@@ -44,73 +44,21 @@ export async function calculateBuildingEfficiency(
       // For gas boiler buildings only: convert cumulative m³ readings into
       // per-minute average fuel power (kW), used by the physics pipeline.
       // Formula: power_kW = deltaM3 / deltaTHours × GAS_LHV_KWH_PER_M3
-      type GasBucket = { _id: Date; avgGasPowerKW: number };
       let gasPowerByMinute = new Map<string, number>(); // minuteISO → kW
 
       if (isGasBoiler) {
-        const gasReadings: GasBucket[] = await SensorReading.aggregate([
-          {
-            $match: {
-              "metadata.buildingId": building._id,
-              timestamp: { $gte: start, $lte: end },
-              "metadata.sensorType": "gas_meter",
-            }
-          },
-          { $sort: { timestamp: 1 } },
-          {
-            $setWindowFields: {
-              sortBy: { timestamp: 1 },
-              output: {
-                prevValue:     { $shift: { output: "$value",     by: -1 } },
-                prevTimestamp: { $shift: { output: "$timestamp", by: -1 } }
-              }
-            }
-          },
-          // Drop the first document (no previous reading → no delta)
-          { $match: { prevValue: { $exists: true } } },
-          {
-            $addFields: {
-              deltaM3: { $subtract: ["$value", "$prevValue"] },
-              deltaTHours: {
-                $divide: [
-                  { $subtract: [{ $toLong: "$timestamp" }, { $toLong: "$prevTimestamp" }] },
-                  3600000
-                ]
-              },
-              minuteBucket: {
-                $toDate: {
-                  $subtract: [
-                    { $toLong: "$timestamp" },
-                    { $mod: [{ $toLong: "$timestamp" }, 60000] }
-                  ]
-                }
-              }
-            }
-          },
-          // Discard negatives (meter resets) and zero-duration intervals
-          { $match: { deltaM3: { $gte: 0 }, deltaTHours: { $gt: 0 } } },
-          {
-            $addFields: {
-              // Convert m³ flow rate to kW of fuel energy input
-              gasPowerKW: {
-                $multiply: [
-                  { $divide: ["$deltaM3", "$deltaTHours"] },
-                  GAS_LHV_KWH_PER_M3
-                ]
-              }
-            }
-          },
-          {
-            $group: {
-              _id: "$minuteBucket",
-              avgGasPowerKW: { $avg: "$gasPowerKW" }
-            }
-          }
-        ]);
-
-        gasPowerByMinute = new Map(
-          gasReadings.map((r) => [r._id.toISOString(), r.avgGasPowerKW])
+        const gasBuckets = await aggregateGasEnergyByBucket(
+          [building._id],
+          start,
+          end,
+          1 * 60 * 1000,
         );
+        const buckets = gasBuckets.get(building._id.toString());
+        if (buckets) {
+          gasPowerByMinute = new Map(
+            [...buckets.values()].map((b) => [b.bucket.toISOString(), b.avgGasPowerKW]),
+          );
+        }
       }
 
       // ── Aggregation 1: Basic metrics ────────────────────────────────────────
@@ -139,7 +87,9 @@ export async function calculateBuildingEfficiency(
         }
 
         // External temperature average for gas buildings
-        const [extResult] = await SensorReading.aggregate([
+        const [extResult] = await SensorReading.aggregate<{
+          avg: number | null;
+        }>([
           {
             $match: {
               "metadata.buildingId": building._id,
@@ -152,7 +102,10 @@ export async function calculateBuildingEfficiency(
         avgExternalTempFromBasic = extResult?.avg ?? null;
 
       } else {
-        const [basicResult] = await SensorReading.aggregate([
+        const [basicResult] = await SensorReading.aggregate<{
+          totalEnergyConsumed: number | null;
+          avgExternalTemp: number | null;
+        }>([
           { $match: sensorMatch },
           {
             $group: {
@@ -286,7 +239,12 @@ export async function calculateBuildingEfficiency(
       if (tempBuckets.length >= 2) {
         const C = ROOM_HEAT_CAPACITY;
         const hEstimates: number[] = [];
-        const copValues: number[] = [];
+        const copValues: {
+          C: number;
+          tempChangeRate: number;
+          tempDiff: number;
+          powerWatts: number;
+        }[] = [];
 
         for (let i = 1; i < tempBuckets.length; i++) {
           const prev = tempBuckets[i - 1]!;
@@ -323,7 +281,7 @@ export async function calculateBuildingEfficiency(
           ) {
             // avgH may not be computed yet — use best estimate so far (or 0 if none)
             // We'll do a second pass after avgH is determined
-            copValues.push({ C, tempChangeRate, tempDiff, powerWatts } as unknown as number);
+            copValues.push({ C, tempChangeRate, tempDiff, powerWatts });
           }
         }
 
@@ -333,10 +291,10 @@ export async function calculateBuildingEfficiency(
 
         // Second pass for COP now that avgH is known
         if (avgH !== null && copValues.length > 0) {
-          const cops = (copValues as unknown as { C: number; tempChangeRate: number; tempDiff: number; powerWatts: number }[])
-            .map(({ C: c, tempChangeRate, tempDiff, powerWatts }) =>
+          const cops = copValues.map(
+            ({ C: c, tempChangeRate, tempDiff, powerWatts }) =>
               (c * tempChangeRate + avgH! * tempDiff) / powerWatts
-            );
+          );
           averageCop = cops.reduce((a, b) => a + b, 0) / cops.length;
         }
       }

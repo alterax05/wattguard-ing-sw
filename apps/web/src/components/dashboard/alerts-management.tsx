@@ -9,11 +9,11 @@ import { formatDistanceToNow } from "date-fns";
 import { getDateFnsLocale } from "@/lib/dates";
 import { composeAlertMessage, getAlertSeverityLabel, getAlertTypeLabel } from "@/lib/alerts";
 
-const STATUS_LABEL_KEYS: Record<Alert["status"], string> = {
+const STATUS_LABEL_KEYS = {
   active: "alerts.statusActive",
   acknowledged: "alerts.statusAcknowledged",
   resolved: "alerts.statusResolved",
-};
+} satisfies Record<Alert["status"], string>;
 
 export function AlertsManagement() {
   const { data, isLoading, error } = useAlerts();
@@ -121,6 +121,7 @@ export function AlertsManagement() {
                 <CheckCircle className="mb-2 h-12 w-12 text-chart-3" />
                 <p className="text-lg font-medium">
                   {t("alerts.emptyTitle", {
+                    // SAFETY: status is a key of alertsByStatus, which holds exactly the three alert statuses.
                     status: t(STATUS_LABEL_KEYS[status as Alert["status"]]),
                   })}
                 </p>
@@ -207,14 +208,14 @@ export function AlertsManagement() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleAcknowledge(alert.id)}
+                              onClick={() => { handleAcknowledge(alert.id) }}
                               disabled={acknowledgeMutation.isPending || resolveMutation.isPending}
                             >
                               {t("alerts.acknowledge")}
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => handleResolve(alert.id)}
+                              onClick={() => { handleResolve(alert.id) }}
                               disabled={acknowledgeMutation.isPending || resolveMutation.isPending}
                             >
                               {t("alerts.resolve")}
@@ -226,7 +227,7 @@ export function AlertsManagement() {
                           <div className="flex gap-2 mt-3">
                             <Button
                               size="sm"
-                              onClick={() => handleResolve(alert.id)}
+                              onClick={() => { handleResolve(alert.id) }}
                               disabled={resolveMutation.isPending}
                             >
                               {t("alerts.resolve")}

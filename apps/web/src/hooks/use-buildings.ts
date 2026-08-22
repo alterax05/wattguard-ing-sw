@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/api";
-import { errorMessage } from "@/lib/errors";
+import { errorMessageFromResponse } from "@/lib/errors";
 
 // ── Query Keys ──────────────────────────────────────────────────────────────
 
@@ -117,6 +117,14 @@ export interface EfficiencyParams {
   endDate: string;
 }
 
+/** Query contract for GET /api/buildings/:id/history. */
+interface BuildingHistoryQuery {
+  startDate: string;
+  endDate: string;
+  sensorType?: HistoryParams["sensorType"];
+  interval?: HistoryParams["interval"];
+}
+
 // ── Queries ─────────────────────────────────────────────────────────────────
 
 /**
@@ -127,30 +135,24 @@ export function useBuildings(params?: SearchBuildingsParams) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "list", params ?? {}],
     queryFn: async () => {
-      const res = await client.api.buildings.$get({
-        query: {
-          ...(params?.name ? { name: params.name } : {}),
-          ...(params?.address ? { address: params.address } : {}),
-          ...(params?.zone ? { zone: params.zone } : {}),
-          ...(params?.buildingType ? { buildingType: params.buildingType } : {}),
-          ...(params?.status ? { status: params.status } : {}),
-          ...(params?.sortBy ? { sortBy: params.sortBy } : {}),
-          ...(params?.sortOrder ? { sortOrder: params.sortOrder } : {}),
-          ...(params?.limit ? { limit: params.limit } : {}),
-          ...(params?.offset ? { offset: params.offset } : {}),
-        },
-      });
+      const query: SearchBuildingsParams = {};
+      if (params?.name) query.name = params.name;
+      if (params?.address) query.address = params.address;
+      if (params?.zone) query.zone = params.zone;
+      if (params?.buildingType) query.buildingType = params.buildingType;
+      if (params?.status) query.status = params.status;
+      if (params?.sortBy) query.sortBy = params.sortBy;
+      if (params?.sortOrder) query.sortOrder = params.sortOrder;
+      if (params?.limit) query.limit = params.limit;
+      if (params?.offset) query.offset = params.offset;
+
+      const res = await client.api.v1.buildings.$get({ query });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data = await res.json();
-      return data as {
-        buildings: BuildingSummary[];
-        pagination: { limit: number; offset: number; total: number };
-      };
+      return res.json();
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -164,15 +166,13 @@ export function useBuildingTypes() {
   return useQuery({
     queryKey: BUILDING_TYPES_QUERY_KEY,
     queryFn: async () => {
-      const res = await client.api["building-types"].$get();
+      const res = await client.api.v1["building-types"].$get();
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data = await res.json();
-      return data as { buildingTypes: BuildingType[] };
+      return res.json();
     },
     staleTime: 10 * 60 * 1000,
   });
@@ -186,17 +186,15 @@ export function useBuilding(id: string | undefined) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "detail", id],
     queryFn: async () => {
-      const res = await client.api.buildings[":id"].$get({
+      const res = await client.api.v1.buildings[":id"].$get({
         param: { id: id! },
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data = await res.json();
-      return data as { building: BuildingDetail };
+      return res.json();
     },
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
@@ -211,17 +209,15 @@ export function useBuildingRealTime(id: string | undefined) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "real-time", id],
     queryFn: async () => {
-      const res = await client.api.buildings[":id"]["real-time"].$get({
+      const res = await client.api.v1.buildings[":id"]["real-time"].$get({
         param: { id: id! },
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data = await res.json();
-      return data as RealTimeData;
+      return res.json();
     },
     enabled: !!id,
     refetchInterval: 90 * 1000, // Refetch every 90 seconds (sensor transmission interval)
@@ -237,28 +233,23 @@ export function useBuildingHistory(id: string | undefined, params: HistoryParams
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "history", id, params],
     queryFn: async () => {
-      const res = await client.api.buildings[":id"].history.$get({
+      const query: BuildingHistoryQuery = {
+        startDate: params!.startDate,
+        endDate: params!.endDate,
+      };
+      if (params!.sensorType) query.sensorType = params!.sensorType;
+      if (params!.interval) query.interval = params!.interval;
+
+      const res = await client.api.v1.buildings[":id"].history.$get({
         param: { id: id! },
-        query: {
-          startDate: params!.startDate,
-          endDate: params!.endDate,
-          ...(params!.sensorType ? { sensorType: params!.sensorType } : {}),
-          ...(params!.interval ? { interval: params!.interval } : {}),
-        },
+        query,
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data = await res.json();
-      return data as {
-        buildingId: string;
-        buildingName: string;
-        period: { startDate: string; endDate: string };
-        data: HistoricalDataPoint[];
-      };
+      return res.json();
     },
     enabled: !!id && !!params?.startDate && !!params?.endDate,
     staleTime: 5 * 60 * 1000,
@@ -273,7 +264,7 @@ export function useBuildingEfficiency(id: string | undefined, params: Efficiency
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "efficiency", id, params],
     queryFn: async () => {
-      const res = await client.api.buildings[":id"].efficiency.$get({
+      const res = await client.api.v1.buildings[":id"].efficiency.$get({
         param: { id: id! },
         query: {
           startDate: params!.startDate,
@@ -282,12 +273,10 @@ export function useBuildingEfficiency(id: string | undefined, params: Efficiency
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data = await res.json();
-      return data as EfficiencyMetrics;
+      return res.json();
     },
     enabled: !!id && !!params?.startDate && !!params?.endDate,
     staleTime: 5 * 60 * 1000,
@@ -315,20 +304,18 @@ export function useCreateBuilding() {
       constructionYear?: number;
       geographicZone: string;
     }) => {
-      const res = await client.api.buildings.$post({
+      const res = await client.api.v1.buildings.$post({
         json: input,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
     },
   });
 }
@@ -356,21 +343,19 @@ export function useUpdateBuilding() {
       efficiencyThresholds?: { enabled: boolean; minCop: number | null };
     }) => {
       const { id, ...body } = input;
-      const res = await client.api.buildings[":id"].$patch({
+      const res = await client.api.v1.buildings[":id"].$patch({
         param: { id },
         json: body,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
     },
   });
 }
@@ -384,20 +369,18 @@ export function useDeleteBuilding() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await client.api.buildings[":id"].$delete({
+      const res = await client.api.v1.buildings[":id"].$delete({
         param: { id },
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
     },
   });
 }

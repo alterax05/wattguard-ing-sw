@@ -65,12 +65,12 @@ export function DateRangePicker({
       </PopoverTrigger>
       <PopoverContent align="start" className="flex w-auto flex-col gap-2 p-2">
         <Select
-          onValueChange={(days) =>
+          onValueChange={(days) => {
             onChange({
               from: addDays(new Date(), -Number(days)),
               to: new Date(),
             })
-          }
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder={t("dateRange.preset")} />

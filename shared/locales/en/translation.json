@@ -188,7 +188,8 @@
     "invalid_alert_id": "Invalid alert ID format.",
     "invalid_date_range": "Invalid date range: start date must be before end date.",
     "settings_update_failed": "Failed to update the configuration.",
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "download_failed": "Download failed. Please try again."
   },
   "emails": {
     "invite": {
@@ -280,6 +281,7 @@
     "allClear": "All clear!",
     "acknowledgedBy": "Acknowledged by {{name}} • {{time}}",
     "resolvedBy": "Resolved by {{name}} • {{time}}",
+    "systemResolver": "System",
     "acknowledge": "Acknowledge",
     "resolve": "Resolve",
     "noActive": "No active alerts",

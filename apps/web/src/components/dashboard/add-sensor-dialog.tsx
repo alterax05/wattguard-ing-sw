@@ -36,6 +36,16 @@ interface AddSensorDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+interface CreateSensorPayload {
+  buildingId: string
+  sensorType: SensorType
+  location: string
+  serialNumber?: string
+  transmissionInterval?: number
+  minThreshold?: number
+  maxThreshold?: number
+}
+
 export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }: AddSensorDialogProps) {
   const createSensor = useCreateSensor()
   const { t } = useTranslation()
@@ -74,16 +84,24 @@ export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }
       return
     }
 
+    const payload: CreateSensorPayload = {
+      buildingId,
+      sensorType,
+      location: location.trim(),
+    }
+    if (serialNumber.trim()) {
+      payload.serialNumber = serialNumber.trim()
+    }
+    payload.transmissionInterval = interval
+    if (minThreshold.trim()) {
+      payload.minThreshold = parseFloat(minThreshold)
+    }
+    if (maxThreshold.trim()) {
+      payload.maxThreshold = parseFloat(maxThreshold)
+    }
+
     createSensor.mutate(
-      {
-        buildingId,
-        sensorType,
-        location: location.trim(),
-        ...(serialNumber.trim() ? { serialNumber: serialNumber.trim() } : {}),
-        transmissionInterval: interval,
-        ...(minThreshold.trim() ? { minThreshold: parseFloat(minThreshold) } : {}),
-        ...(maxThreshold.trim() ? { maxThreshold: parseFloat(maxThreshold) } : {}),
-      },
+      payload,
       {
         onSuccess: () => {
           toast.success(t("sensors.created"))
@@ -111,7 +129,10 @@ export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="sensorType">{t("sensors.typeLabel")} *</Label>
-              <Select value={sensorType} onValueChange={(v) => setSensorType(v as SensorType)}>
+              <Select value={sensorType} onValueChange={(v) => {
+                // SAFETY: the Select only offers the four known sensor types.
+                setSensorType(v as SensorType)
+              }}>
                 <SelectTrigger id="sensorType">
                   <SelectValue placeholder={t("sensors.selectTypePlaceholder")} />
                 </SelectTrigger>
@@ -131,7 +152,7 @@ export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }
                 id="location"
                 placeholder={t("sensors.locationPlaceholder")}
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(e) => { setLocation(e.target.value) }}
               />
             </div>
 
@@ -141,7 +162,7 @@ export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }
                 id="serialNumber"
                 placeholder={t("sensors.serialNumberPlaceholder")}
                 value={serialNumber}
-                onChange={(e) => setSerialNumber(e.target.value)}
+                onChange={(e) => { setSerialNumber(e.target.value) }}
               />
             </div>
 
@@ -153,7 +174,7 @@ export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }
                 min={10}
                 max={3600}
                 value={transmissionInterval}
-                onChange={(e) => setTransmissionInterval(e.target.value)}
+                onChange={(e) => { setTransmissionInterval(e.target.value) }}
               />
               <p className="text-xs text-muted-foreground">{t("sensors.intervalHint")}</p>
             </div>
@@ -167,7 +188,7 @@ export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }
                   step="0.01"
                   placeholder={t("sensors.thresholdPlaceholder")}
                   value={minThreshold}
-                  onChange={(e) => setMinThreshold(e.target.value)}
+                  onChange={(e) => { setMinThreshold(e.target.value) }}
                 />
               </div>
               <div className="grid gap-2">
@@ -178,14 +199,14 @@ export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }
                   step="0.01"
                   placeholder={t("sensors.thresholdPlaceholder")}
                   value={maxThreshold}
-                  onChange={(e) => setMaxThreshold(e.target.value)}
+                  onChange={(e) => { setMaxThreshold(e.target.value) }}
                 />
               </div>
             </div>
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => { onOpenChange(false) }}>
               {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={createSensor.isPending}>

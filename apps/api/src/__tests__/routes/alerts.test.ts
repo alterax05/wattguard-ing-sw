@@ -1,8 +1,14 @@
-import { describe, expect, it, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  expect,
+  it,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { ErrorSchema } from "@wattguard/shared";
 import type { ListAlertsResponse, UpdateAlertStatusResponse } from "@wattguard/shared";
 
@@ -18,16 +24,9 @@ let adminToken: string;
 
 let buildingId: string;
 
-beforeAll(async () => {
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Create an admin user with a password to login properly
   const adminPasswordHash = await Bun.password.hash("admin123", {
@@ -45,18 +44,17 @@ beforeEach(async () => {
   
 
   // Generate token through login route
-  const loginRes = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "admin-alerts@test.com",
       password: "admin123",
-    }),
+    },
   });
 
   const cookie = loginRes.headers.get("set-cookie");
   const tokenMatch = cookie?.match(/access_token=([^;]+)/);
   if (!tokenMatch) throw new Error("Admin token not found, response status: " + loginRes.status);
+  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = tokenMatch[1] as string;
 
   // Create building type and building
@@ -81,7 +79,7 @@ beforeEach(async () => {
     {
       buildingId,
       buildingName: "Test Building",
-      type: "temperature_anomaly",
+      type: "threshold_exceeded",
       severity: "critical",
       sensorType: "internal_temp",
       location: "Sala Principale",
@@ -93,7 +91,7 @@ beforeEach(async () => {
     {
       buildingId,
       buildingName: "Test Building",
-      type: "sensor_offline",
+      type: "efficiency_below_threshold",
       severity: "medium",
       sensorType: "energy_meter",
       location: "Quadro Elettrico",
@@ -104,9 +102,9 @@ beforeEach(async () => {
   ]);
 });
 
-describe("Alerts API", () => {
+describe("alerts api", () => {
   it("should list alerts", async () => {
-    const res = await client.api.alerts.$get(
+    const res = await client.api.v1.alerts.$get(
       { query: {} },
       {
         headers: { Cookie: `access_token=${adminToken}` },
@@ -122,7 +120,7 @@ describe("Alerts API", () => {
     expect(body.alerts).toBeInstanceOf(Array);
     expect(body.alerts.length).toBe(2);
     const thresholdAlert = body.alerts.find(
-      (alert) => alert.type === "temperature_anomaly",
+      (alert) => alert.type === "threshold_exceeded",
     );
     expect(thresholdAlert).toBeDefined();
     expect(thresholdAlert!.sensorType).toBe("internal_temp");
@@ -137,7 +135,7 @@ describe("Alerts API", () => {
     const alert = await Alert.findOne({ status: "active" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.alerts[":id"].acknowledge.$patch(
+    const res = await client.api.v1.alerts[":id"].acknowledge.$patch(
       {
         param: { id: alert!._id.toString() },
       },
@@ -161,7 +159,7 @@ describe("Alerts API", () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.alerts[":id"].acknowledge.$patch(
+    const res = await client.api.v1.alerts[":id"].acknowledge.$patch(
       {
         param: { id: alert!._id.toString() },
       },
@@ -176,6 +174,7 @@ describe("Alerts API", () => {
       throw new Error("Expected response to contain 'error'");
     }
     expect(body.error).toBe("Only active alerts can be acknowledged");
+    // SAFETY: the API error contract pairs the message with an ErrorCode in `code`.
     expect((body as { error: string; code?: string }).code).toBe("alert_not_active");
   });
 
@@ -183,7 +182,7 @@ describe("Alerts API", () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.alerts[":id"].resolve.$patch(
+    const res = await client.api.v1.alerts[":id"].resolve.$patch(
       {
         param: { id: alert!._id.toString() },
       },

@@ -1,12 +1,11 @@
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import type { QueryFilter } from "mongoose";
+import { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Sensor, type SensorDocument, type SensorType } from "../models/Sensor";
 import { Building, type BuildingDocument } from "../models/Building";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
-import { Alert, type AlertThresholdType } from "../models/Alert";
-import { deleteAlertsForRemovedThresholds } from "../lib/alerts";
+import { deleteForSensor, pruneForRemovedThresholds } from "../lib/alerts";
 
 import {
   ListSensorsQuerySchema,
@@ -73,7 +72,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Get sensors with building populated
       const sensors = await Sensor.find(filter)
-        .populate< { buildingId : BuildingDocument } >("buildingId", "name address")
+        .populate<{ buildingId: Types.ObjectId | BuildingDocument }>("buildingId", "name address")
         .sort({ [sortField]: sortOrder })
         .limit(query.limit)
         .skip(query.offset);
@@ -87,10 +86,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       return c.json({
         sensors: sensors.map((sensor) => {
-          const building = sensor.buildingId;
+          const buildingRef = sensor.buildingId;
+          const building =
+            buildingRef instanceof Types.ObjectId ? undefined : buildingRef;
           return {
             id: sensor._id.toString(),
-            buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
+            buildingId:
+              buildingRef instanceof Types.ObjectId
+                ? buildingRef.toString()
+                : buildingRef._id.toString(),
             sensorType: sensor.sensorType,
             location: sensor.location,
             serialNumber: sensor.serialNumber ?? undefined,
@@ -248,20 +252,26 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const { id } = c.req.valid("param");
 
-      const sensor = await Sensor.findById(id).populate<{ buildingId: BuildingDocument }>("buildingId", "name address");
+      const sensor = await Sensor.findById(id).populate<{ buildingId: Types.ObjectId | BuildingDocument }>("buildingId", "name address");
 
       if (!sensor) {
         return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
       }
 
-      const building = sensor.buildingId;
+      const buildingRef = sensor.buildingId;
+      const building =
+        buildingRef instanceof Types.ObjectId ? undefined : buildingRef;
+      const buildingId =
+        buildingRef instanceof Types.ObjectId
+          ? buildingRef.toString()
+          : buildingRef._id.toString();
 
       await sensor.updateStatus();
 
       return c.json({
         sensor: {
           id: sensor._id.toString(),
-          buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
+          buildingId,
           sensorType: sensor.sensorType,
           location: sensor.location,
           serialNumber: sensor.serialNumber ?? undefined,
@@ -342,7 +352,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
       }
 
-      const removedThresholdTypes: AlertThresholdType[] = [];
+      const removedThresholdTypes: ("min" | "max")[] = [];
       if (updates.minThreshold === null) removedThresholdTypes.push("min");
       if (updates.maxThreshold === null) removedThresholdTypes.push("max");
 
@@ -354,15 +364,16 @@ const app = new Hono<{ Variables: AuthVariables }>()
         }
       }
 
+      const $unset: Record<string, number> = {};
+      if (updates.minThreshold === null) $unset.minThreshold = 1;
+      if (updates.maxThreshold === null) $unset.maxThreshold = 1;
+
       const update = {
         $set: {
           ...updates,
           updatedBy: userDoc._id,
         },
-        $unset: {
-          ...(updates.minThreshold === null ? { minThreshold: 1 } : {}),
-          ...(updates.maxThreshold === null ? { maxThreshold: 1 } : {}),
-        },
+        $unset,
       };
 
       if (updates.minThreshold === null) delete update.$set.minThreshold;
@@ -370,7 +381,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const updatedSensor = await Sensor.findByIdAndUpdate(sensor._id, update, { returnDocument: "after" });
 
-      await deleteAlertsForRemovedThresholds(sensor._id, removedThresholdTypes);
+      await pruneForRemovedThresholds({ sensorId: sensor._id, removedThresholdTypes });
 
       return c.json({
         success: true,
@@ -442,7 +453,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       await SensorReading.deleteMany({ "metadata.sensorId": id });
 
       // Delete alerts associated with the sensor
-      await Alert.deleteMany({ sensorId: id });
+      await deleteForSensor(new Types.ObjectId(id));
 
       // Delete sensor
       await Sensor.findByIdAndDelete(id);
@@ -521,6 +532,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
             ? {
                 sensorId: r.metadata.sensorId.toString(),
                 buildingId: r.metadata.buildingId.toString(),
+                // SAFETY: readings persist metadata.sensorType copied from
+                // Sensor.sensorType, which is constrained to SensorType.
                 sensorType: r.metadata.sensorType as SensorType,
               }
             : undefined,

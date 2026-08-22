@@ -1,34 +1,7 @@
 import { Types } from "mongoose";
-import { SensorReading } from "../models/SensorReading";
-
-/** Natural gas lower heating value (Italy standard), kWh per m³. */
-export const GAS_LHV_KWH_PER_M3 = 10.55;
-
-/** Classify a building's heating system as a gas boiler. */
-export function isGasBoilerBuilding(heatingSystemType: string): boolean {
-  const heatingType = heatingSystemType.toLowerCase();
-  return (
-    heatingType.includes("gas") ||
-    heatingType.includes("caldaia") ||
-    heatingType.includes("centralizzato")
-  );
-}
-
-/** Classify a building's heating system as district heating. */
-export function isDistrictHeatingBuilding(heatingSystemType: string): boolean {
-  const heatingType = heatingSystemType.toLowerCase();
-  return (
-    heatingType.includes("teleriscaldamento") ||
-    heatingType.includes("district")
-  );
-}
-
-export type EnergySensorType = "gas_meter" | "energy_meter";
-
-/** Sensor type used as the primary energy source for a building. */
-export function energySensorTypeFor(isGasBoiler: boolean): EnergySensorType {
-  return isGasBoiler ? "gas_meter" : "energy_meter";
-}
+import { SensorReading } from "../../models/SensorReading";
+import { GAS_LHV_KWH_PER_M3 } from "./constants";
+import { aggregateGasEnergyByBucket } from "./gas";
 
 /** Start of the UTC day containing the given calendar date (YYYY-MM-DD). */
 export function getUtcStartOfDay(date: string): Date {
@@ -52,6 +25,8 @@ export type PeriodConsumptionSummary = {
   lastReadingAt: Date | null;
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Aggregate daily energy consumption (kWh per UTC day) for many buildings.
  *
@@ -74,9 +49,8 @@ export async function aggregateDailyConsumptionForBuildings(
     gasBuildingIds.length > 0
       ? { $in: buildingIds.filter((id) => !gasIdStrings.has(id.toString())) }
       : { $in: buildingIds };
-  const gasIdSet = { $in: gasBuildingIds };
 
-  const [energyRows, gasRows] = await Promise.all([
+  const [energyRows, gasBuckets] = await Promise.all([
     SensorReading.aggregate<{
       _id: { buildingId: Types.ObjectId; day: string };
       avgPowerKW: number;
@@ -105,52 +79,7 @@ export async function aggregateDailyConsumptionForBuildings(
       },
       { $sort: { "_id.day": 1 } },
     ]),
-    SensorReading.aggregate<{
-      _id: { buildingId: Types.ObjectId; day: string };
-      deltaM3: number;
-    }>([
-      {
-        $match: {
-          "metadata.buildingId": gasIdSet,
-          timestamp: { $gte: start, $lte: end },
-          "metadata.sensorType": "gas_meter",
-        },
-      },
-      { $sort: { timestamp: 1 } },
-      {
-        $setWindowFields: {
-          partitionBy: "$metadata.buildingId",
-          sortBy: { timestamp: 1 },
-          output: {
-            prevValue: { $shift: { output: "$value", by: -1 } },
-            prevTimestamp: { $shift: { output: "$timestamp", by: -1 } },
-          },
-        },
-      },
-      { $match: { prevValue: { $exists: true } } },
-      {
-        $addFields: {
-          deltaM3: { $subtract: ["$value", "$prevValue"] },
-          deltaTHours: {
-            $divide: [
-              { $subtract: [{ $toLong: "$timestamp" }, { $toLong: "$prevTimestamp" }] },
-              3600000,
-            ],
-          },
-          day: {
-            $dateToString: { format: "%Y-%m-%d", date: "$timestamp", timezone: "UTC" },
-          },
-        },
-      },
-      { $match: { deltaM3: { $gte: 0 }, deltaTHours: { $gt: 0 } } },
-      {
-        $group: {
-          _id: { buildingId: "$metadata.buildingId", day: "$day" },
-          deltaM3: { $sum: "$deltaM3" },
-        },
-      },
-      { $sort: { "_id.day": 1 } },
-    ]),
+    aggregateGasEnergyByBucket(gasBuildingIds, start, end, DAY_MS),
   ]);
 
   for (const row of energyRows) {
@@ -163,14 +92,17 @@ export async function aggregateDailyConsumptionForBuildings(
     results.set(id, points);
   }
 
-  for (const row of gasRows) {
-    const id = row._id.buildingId.toString();
-    const points = results.get(id) ?? [];
-    points.push({
-      date: getUtcStartOfDay(row._id.day),
-      energyKWh: Number((row.deltaM3 * GAS_LHV_KWH_PER_M3).toFixed(2)),
-    });
-    results.set(id, points);
+  for (const id of gasBuildingIds) {
+    const buckets = gasBuckets.get(id.toString());
+    if (!buckets) continue;
+    const points = results.get(id.toString()) ?? [];
+    for (const bucket of buckets.values()) {
+      points.push({
+        date: bucket.bucket,
+        energyKWh: Number(bucket.energyKWh.toFixed(2)),
+      });
+    }
+    results.set(id.toString(), points);
   }
 
   for (const points of results.values()) {

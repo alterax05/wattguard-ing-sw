@@ -4,6 +4,6 @@ services:
     ports:
       - "1883:1883"
     volumes:
-      - ./mosquitto/config:/mosquitto/config
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
+      - ./apps/api/config/mosquitto/config:/mosquitto/config
+      - ./apps/api/src/config/mosquitto/data:/mosquitto/data
+      - ./apps/api/src/config/mosquitto/log:/mosquitto/log

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/api";
-import { errorMessage } from "@/lib/errors";
+import { errorMessageFromResponse } from "@/lib/errors";
 
 // ── Query Key ────────────────────────────────────────────────────────────────
 
@@ -37,17 +37,14 @@ export function useSettings() {
   return useQuery({
     queryKey: SETTINGS_QUERY_KEY,
     queryFn: async () => {
-      const res = await client.api.settings.$get();
+      const res = await client.api.v1.settings.$get();
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(
-          errorMessage(data),
-        );
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data = await res.json();
-      return (data as { config: SystemConfig }).config;
+      const data: { config: SystemConfig } = await res.json();
+      return data.config;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -62,19 +59,16 @@ export function useUpdateSettings() {
 
   return useMutation({
     mutationFn: async (input: UpdateSettingsInput) => {
-      const res = await client.api.settings.$patch({
+      const res = await client.api.v1.settings.$patch({
         json: input,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(
-          errorMessage(data),
-        );
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return (data as { success: true; config: SystemConfig }).config;
+      const data: { success: true; config: SystemConfig } = await res.json();
+      return data.config;
     },
     onSuccess: (updatedConfig) => {
       // Update the cache directly with the returned config

@@ -32,6 +32,7 @@ describe("lib/i18n", () => {
   });
 
   test("falls back to English for a language that is not supported", () => {
+    // SAFETY: the deliberately unsupported locale is cast to the LocaleCode parameter so getTranslator exercises its fallback path.
     const t = getTranslator("fr" as "en" | "it" | "de");
     expect(t("emails.invite.subject")).toBe("Invitation to WattGuard");
   });

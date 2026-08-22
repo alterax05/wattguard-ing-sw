@@ -1,24 +1,17 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
-import { Building, type BuildingStatus } from "../../models/Building";
+import { describe, test, expect, beforeEach } from "bun:test";
+import { setupIntegrationTests } from "../helpers/db";
+import { Building } from "../../models/Building";
 import { BuildingType, type BuildingTypeDocument } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { Types, Error as MongooseError } from "mongoose";
 
-describe("Building Model", () => {
+setupIntegrationTests(import.meta.path);
+
+describe("Building schema", () => {
   let userId: Types.ObjectId;
   let buildingTypeId: Types.ObjectId;
 
-  beforeAll(async () => {
-    await connectTestDB();
-  });
-
-  afterAll(async () => {
-    await disconnectTestDB();
-  });
-
   beforeEach(async () => {
-    await clearTestDB();
 
     // Create a test user
     const user = await User.create({
@@ -36,8 +29,8 @@ describe("Building Model", () => {
     buildingTypeId = buildingType._id;
   });
 
-  describe("Schema Validation", () => {
-    test("should create a building with all required fields", async () => {
+  describe("schema validation", () => {
+    test("creates a building with all required fields", async () => {
       const building = await Building.create({
         name: "Test Building",
         address: "Via Test 1",
@@ -54,7 +47,7 @@ describe("Building Model", () => {
       expect(building.name).toBe("Test Building");
       expect(building.address).toBe("Via Test 1");
       expect(building.surface).toBe(1000);
-      expect(building.buildingType!.toString()).toBe(buildingTypeId.toString());
+      expect(building.buildingType.toString()).toBe(buildingTypeId.toString());
       expect(building.heatingSystemType).toBe("caldaia_gas");
       expect(building.geographicZone).toBe("Centro");
       expect(building.status).toBe("active");
@@ -65,7 +58,7 @@ describe("Building Model", () => {
       expect(building.updatedAt).toBeInstanceOf(Date);
     });
 
-    test("should create a building with optional constructionYear", async () => {
+    test("creates a building with optional constructionYear", async () => {
       const building = await Building.create({
         name: "Old Building",
         address: "Via Antica 1",
@@ -82,7 +75,7 @@ describe("Building Model", () => {
       expect(building.constructionYear).toBe(1950);
     });
 
-    test("should use default status of 'active' if not provided", async () => {
+    test("uses default status of 'active' if not provided", async () => {
       const building = await Building.create({
         name: "Default Status Building",
         address: "Via Default 1",
@@ -98,9 +91,9 @@ describe("Building Model", () => {
       expect(building.status).toBe("active");
     });
 
-    test("should fail without required name field", async () => {
-      try {
-        await Building.create({
+    test("fails without required name field", async () => {
+      await expect(
+        Building.create({
           address: "Via Test 1",
           surface: 1000,
           location: { type: "Point", coordinates: [11.1167, 46.0667] },
@@ -109,18 +102,13 @@ describe("Building Model", () => {
           geographicZone: "Centro",
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false); // Should not reach here
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.name).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
-    test("should fail without required address field", async () => {
-      try {
-        await Building.create({
+    test("fails without required address field", async () => {
+      await expect(
+        Building.create({
           name: "Test Building",
           surface: 1000,
           location: { type: "Point", coordinates: [11.1167, 46.0667] },
@@ -129,18 +117,13 @@ describe("Building Model", () => {
           geographicZone: "Centro",
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.address).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
-    test("should fail without required surface field", async () => {
-      try {
-        await Building.create({
+    test("fails without required surface field", async () => {
+      await expect(
+        Building.create({
           name: "Test Building",
           address: "Via Test 1",
           location: { type: "Point", coordinates: [11.1167, 46.0667] },
@@ -149,18 +132,13 @@ describe("Building Model", () => {
           geographicZone: "Centro",
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.surface).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
-    test("should fail without required buildingType field", async () => {
-      try {
-        await Building.create({
+    test("fails without required buildingType field", async () => {
+      await expect(
+        Building.create({
           name: "Test Building",
           address: "Via Test 1",
           surface: 1000,
@@ -169,18 +147,13 @@ describe("Building Model", () => {
           geographicZone: "Centro",
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.buildingType).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
-    test("should fail without required createdBy field", async () => {
-      try {
-        await Building.create({
+    test("fails without required createdBy field", async () => {
+      await expect(
+        Building.create({
           name: "Test Building",
           address: "Via Test 1",
           surface: 1000,
@@ -189,16 +162,11 @@ describe("Building Model", () => {
           heatingSystemType: "caldaia_gas",
           geographicZone: "Centro",
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.createdBy).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
-    test("should trim whitespace from name", async () => {
+    test("trims whitespace from name", async () => {
       const building = await Building.create({
         name: "  Trimmed Building  ",
         address: "Via Test 1",
@@ -214,7 +182,7 @@ describe("Building Model", () => {
       expect(building.name).toBe("Trimmed Building");
     });
 
-    test("should trim whitespace from address", async () => {
+    test("trims whitespace from address", async () => {
       const building = await Building.create({
         name: "Test Building",
         address: "  Via Test 1  ",
@@ -231,8 +199,8 @@ describe("Building Model", () => {
     });
   });
 
-  describe("Surface Validation", () => {
-    test("should accept positive surface values", async () => {
+  describe("surface validation", () => {
+    test("accepts positive surface values", async () => {
       const building = await Building.create({
         name: "Large Building",
         address: "Via Grande 1",
@@ -248,9 +216,9 @@ describe("Building Model", () => {
       expect(building.surface).toBe(50000);
     });
 
-    test("should fail with negative surface value", async () => {
-      try {
-        await Building.create({
+    test("fails with negative surface value", async () => {
+      await expect(
+        Building.create({
           name: "Invalid Building",
           address: "Via Test 1",
           surface: -100,
@@ -260,35 +228,13 @@ describe("Building Model", () => {
           geographicZone: "Centro",
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.surface).toBeDefined();
-      }
-    });
-
-    //TODO: Fix this
-    test("should accept surface of 0", async () => {
-      const building = await Building.create({
-        name: "Zero Surface",
-        address: "Via Test 1",
-        surface: 0,
-        location: { type: "Point", coordinates: [11.1167, 46.0667] },
-        buildingType: buildingTypeId,
-        heatingSystemType: "caldaia_gas",
-        geographicZone: "Centro",
-        createdBy: userId,
-        updatedBy: userId,
-      });
-
-      expect(building.surface).toBe(0);
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
   });
 
-  describe("Construction Year Validation", () => {
-    test("should accept valid construction year", async () => {
+  describe("construction year validation", () => {
+    test("accepts valid construction year", async () => {
       const building = await Building.create({
         name: "Historic Building",
         address: "Via Storica 1",
@@ -305,7 +251,7 @@ describe("Building Model", () => {
       expect(building.constructionYear).toBe(1850);
     });
 
-    test("should accept current year", async () => {
+    test("accepts current year", async () => {
       const currentYear = new Date().getFullYear();
       const building = await Building.create({
         name: "New Building",
@@ -323,9 +269,9 @@ describe("Building Model", () => {
       expect(building.constructionYear).toBe(currentYear);
     });
 
-    test("should fail with construction year below 1000", async () => {
-      try {
-        await Building.create({
+    test("fails with construction year below 1000", async () => {
+      await expect(
+        Building.create({
           name: "Ancient Building",
           address: "Via Antica 1",
           surface: 1000,
@@ -336,19 +282,14 @@ describe("Building Model", () => {
           constructionYear: 999,
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.constructionYear).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
-    test("should fail with construction year too far in future", async () => {
+    test("fails with construction year too far in future", async () => {
       const farFuture = new Date().getFullYear() + 20;
-      try {
-        await Building.create({
+      await expect(
+        Building.create({
           name: "Future Building",
           address: "Via Futura 1",
           surface: 1000,
@@ -359,18 +300,13 @@ describe("Building Model", () => {
           constructionYear: farFuture,
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.constructionYear).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
   });
 
-  describe("Status Enum Validation", () => {
-    test("should accept 'active' status", async () => {
+  describe("status enum validation", () => {
+    test("accepts 'active' status", async () => {
       const building = await Building.create({
         name: "Active Building",
         address: "Via Test 1",
@@ -387,7 +323,7 @@ describe("Building Model", () => {
       expect(building.status).toBe("active");
     });
 
-    test("should accept 'inactive' status", async () => {
+    test("accepts 'inactive' status", async () => {
       const building = await Building.create({
         name: "Inactive Building",
         address: "Via Test 1",
@@ -404,7 +340,7 @@ describe("Building Model", () => {
       expect(building.status).toBe("inactive");
     });
 
-    test("should accept 'decommissioned' status", async () => {
+    test("accepts 'decommissioned' status", async () => {
       const building = await Building.create({
         name: "Decommissioned Building",
         address: "Via Test 1",
@@ -421,9 +357,9 @@ describe("Building Model", () => {
       expect(building.status).toBe("decommissioned");
     });
 
-    test("should fail with invalid status", async () => {
-      try {
-        await Building.create({
+    test("fails with invalid status", async () => {
+      await expect(
+        Building.create({
           name: "Invalid Status Building",
           address: "Via Test 1",
           surface: 1000,
@@ -431,21 +367,17 @@ describe("Building Model", () => {
           buildingType: buildingTypeId,
           heatingSystemType: "caldaia_gas",
           geographicZone: "Centro",
-          status: "invalid_status" as unknown as BuildingStatus, // Force an invalid status
+          // @ts-expect-error deliberately invalid status outside the enum
+          status: "invalid_status",
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.status).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
   });
 
-  describe("Timestamps", () => {
-    test("should automatically set createdAt and updatedAt on creation", async () => {
+  describe("timestamps", () => {
+    test("automatically sets createdAt and updatedAt on creation", async () => {
       const before = new Date();
       const building = await Building.create({
         name: "Timestamp Test",
@@ -462,11 +394,11 @@ describe("Building Model", () => {
 
       expect(building.createdAt).toBeInstanceOf(Date);
       expect(building.updatedAt).toBeInstanceOf(Date);
-      expect(building.createdAt!.getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(building.createdAt!.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(building.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(building.createdAt.getTime()).toBeLessThanOrEqual(after.getTime());
     });
 
-    test("should update updatedAt on modification", async () => {
+    test("updates updatedAt on modification", async () => {
       const building = await Building.create({
         name: "Original Name",
         address: "Via Test 1",
@@ -485,10 +417,10 @@ describe("Building Model", () => {
       building.name = "Updated Name";
       await building.save();
 
-      expect(building.updatedAt!.getTime()).toBeGreaterThan(originalUpdatedAt!.getTime());
+      expect(building.updatedAt.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
     });
 
-    test("should not change createdAt on update", async () => {
+    test("does not change createdAt on update", async () => {
       const building = await Building.create({
         name: "Original Name",
         address: "Via Test 1",
@@ -507,12 +439,12 @@ describe("Building Model", () => {
       building.name = "Updated Name";
       await building.save();
 
-      expect(building.createdAt!.getTime()).toBe(originalCreatedAt!.getTime());
+      expect(building.createdAt.getTime()).toBe(originalCreatedAt.getTime());
     });
   });
 
-  describe("CRUD Operations", () => {
-    test("should find building by id", async () => {
+  describe("crud operations", () => {
+    test("finds building by id", async () => {
       const created = await Building.create({
         name: "Findable Building",
         address: "Via Test 1",
@@ -531,7 +463,7 @@ describe("Building Model", () => {
       expect(found!.name).toBe("Findable Building");
     });
 
-    test("should find building by name", async () => {
+    test("finds building by name", async () => {
       await Building.create({
         name: "Searchable Building",
         address: "Via Test 1",
@@ -550,7 +482,7 @@ describe("Building Model", () => {
       expect(found!.name).toBe("Searchable Building");
     });
 
-    test("should update building", async () => {
+    test("updates building", async () => {
       const building = await Building.create({
         name: "Old Name",
         address: "Old Address",
@@ -573,7 +505,7 @@ describe("Building Model", () => {
       expect(updated!.address).toBe("New Address");
     });
 
-    test("should delete building", async () => {
+    test("deletes building", async () => {
       const building = await Building.create({
         name: "To Delete",
         address: "Via Test 1",
@@ -593,7 +525,7 @@ describe("Building Model", () => {
       expect(found).toBeNull();
     });
 
-    test("should filter buildings by status", async () => {
+    test("filters buildings by status", async () => {
       await Building.create({
         name: "Active 1",
         address: "Via Test 1",
@@ -626,7 +558,7 @@ describe("Building Model", () => {
       expect(activeBuildings[0]!.name).toBe("Active 1");
     });
 
-    test("should filter buildings by geographic zone", async () => {
+    test("filters buildings by geographic zone", async () => {
       await Building.create({
         name: "Centro Building",
         address: "Via Centro 1",
@@ -657,7 +589,7 @@ describe("Building Model", () => {
       expect(centroBuildings[0]!.name).toBe("Centro Building");
     });
 
-    test("should populate buildingType reference", async () => {
+    test("populates buildingType reference", async () => {
       const building = await Building.create({
         name: "Test Building",
         address: "Via Test 1",

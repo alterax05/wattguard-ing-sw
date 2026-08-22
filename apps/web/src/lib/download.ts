@@ -1,13 +1,13 @@
+import { errorMessageFromResponse } from "./errors";
+
 export async function downloadFromEndpoint(
   url: string,
   filename: string,
 ): Promise<void> {
   const response = await fetch(url, { credentials: "include" });
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    const message = (data as Record<string, unknown>).error;
     throw new Error(
-      typeof message === "string" ? message : "Errore durante il download",
+      await errorMessageFromResponse(response, "errors.download_failed"),
     );
   }
 

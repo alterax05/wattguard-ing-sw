@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
+import { errorMessageFromResponse } from "@/lib/errors"
 import { useForm, useWatch } from "react-hook-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -49,7 +50,7 @@ function toFormValues(config: SystemConfig): SettingsFormValues {
 function SettingsSkeleton() {
   return (
     <div className="space-y-6">
-      {[...Array(4)].map((_, i) => (
+      {Array.from({ length: 4 }).map((_, i) => (
         <Card key={i}>
           <CardHeader>
             <Skeleton className="h-5 w-40" />
@@ -134,9 +135,7 @@ export function SettingsPanel() {
         { method: "POST", credentials: "include" },
       )
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        const msg = (data as Record<string, unknown>).error
-        throw new Error(typeof msg === "string" ? msg : t("settings.backupError"))
+        throw new Error(await errorMessageFromResponse(res, "settings.backupError"))
       }
       const blob = await res.blob()
       const href = URL.createObjectURL(blob)
@@ -159,7 +158,12 @@ export function SettingsPanel() {
   if (isLoading) return <SettingsSkeleton />
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      onSubmit={(e) => {
+        void handleSubmit((values) => { void onSubmit(values) })(e)
+      }}
+      className="space-y-6"
+    >
       {/* ── Polling ─────────────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
@@ -206,9 +210,9 @@ export function SettingsPanel() {
             </div>
             <Switch
               checked={autoPollingEnabled}
-              onCheckedChange={(val) =>
+              onCheckedChange={(val) => {
                 setValue("polling.autoPollingEnabled", val, { shouldDirty: true })
-              }
+              }}
             />
           </div>
         </CardContent>
@@ -233,9 +237,9 @@ export function SettingsPanel() {
             </div>
             <Switch
               checked={emailEnabled}
-              onCheckedChange={(val) =>
+              onCheckedChange={(val) => {
                 setValue("notifications.emailEnabled", val, { shouldDirty: true })
-              }
+              }}
             />
           </div>
         </CardContent>
@@ -275,7 +279,7 @@ export function SettingsPanel() {
             <Button
               type="button"
               variant="outline"
-              onClick={handleExportData}
+              onClick={() => { void handleExportData() }}
             >
               <Download className="mr-2 h-4 w-4" />
               {t("settings.exportData")}
@@ -283,7 +287,7 @@ export function SettingsPanel() {
             <Button
               type="button"
               variant="outline"
-              onClick={handleBackup}
+              onClick={() => { void handleBackup() }}
             >
               <HardDrive className="mr-2 h-4 w-4" />
               {t("settings.backupDatabase")}

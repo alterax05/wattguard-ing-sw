@@ -133,7 +133,7 @@ export function UsersManagement() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>{t("users.title")}</CardTitle>
-            <Button onClick={() => setShowAddDialog(true)}>
+            <Button onClick={() => { setShowAddDialog(true) }}>
               <UserPlus className="mr-2 h-4 w-4" />
               {t("users.add")}
             </Button>
@@ -215,14 +215,14 @@ export function UsersManagement() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => handleRoleChange(user)}
+                                onClick={() => { handleRoleChange(user) }}
                                 disabled={updateUser.isPending}
                               >
                                 <ArrowRightLeft className="mr-2 h-4 w-4" />
                                 {user.role === "admin" ? t("users.makeOperator") : t("users.makeAdmin")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => setUserToToggle(user)}
+                                onClick={() => { setUserToToggle(user) }}
                                 disabled={updateUser.isPending}
                               >
                                 {user.isDisabled ? (
@@ -240,7 +240,7 @@ export function UsersManagement() {
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 variant="destructive"
-                                onClick={() => setUserToDelete(user)}
+                                onClick={() => { setUserToDelete(user) }}
                                 disabled={deleteUser.isPending}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -259,9 +259,9 @@ export function UsersManagement() {
         </CardContent>
       </Card>
 
-      {showAddDialog && <AddUserDialog onClose={() => setShowAddDialog(false)} />}
+      {showAddDialog && <AddUserDialog onClose={() => { setShowAddDialog(false) }} />}
 
-      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if (!open) setUserToDelete(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("users.deleteConfirmTitle")}</AlertDialogTitle>
@@ -289,7 +289,7 @@ export function UsersManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!userToToggle} onOpenChange={(open) => !open && setUserToToggle(null)}>
+      <AlertDialog open={!!userToToggle} onOpenChange={(open) => { if (!open) setUserToToggle(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>

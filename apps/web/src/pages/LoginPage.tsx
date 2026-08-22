@@ -15,7 +15,7 @@ import fullLogo from "@wattguard/shared/assets/full-logo.png";
 import fullLogoBlack from "@wattguard/shared/assets/full-logo-black.png";
 
 /** Map OAuth error codes (from Google callback redirects) to i18n auth.* keys. */
-const OAUTH_ERROR_KEYS: Record<string, string> = {
+const OAUTH_ERROR_KEYS = {
   no_account: "auth.oauthNoAccount",
   account_disabled: "auth.oauthAccountDisabled",
   account_mismatch: "auth.oauthAccountMismatch",
@@ -24,7 +24,13 @@ const OAUTH_ERROR_KEYS: Record<string, string> = {
   invalid_state: "auth.oauthInvalidState",
   missing_params: "auth.oauthMissingParams",
   server_error: "auth.oauthServerError",
-};
+} satisfies Record<string, string>;
+
+/** Resolve an OAuth error code (from Google callback redirects) to its i18n key. */
+function oauthErrorKey(code: string): string {
+  const match = Object.entries(OAUTH_ERROR_KEYS).find(([key]) => key === code);
+  return match?.[1] ?? "auth.oauthFailed";
+}
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -37,23 +43,23 @@ export function LoginPage() {
 
   const oauthError = searchParams.get("error");
   const oauthErrorMessage = oauthError
-    ? t(OAUTH_ERROR_KEYS[oauthError] ?? "auth.oauthFailed")
+    ? t(oauthErrorKey(oauthError))
     : null;
 
-  const handleLogin = async (e: React.SubmitEvent) => {
+  const handleLogin = (e: React.SubmitEvent) => {
     e.preventDefault();
     login.mutate(
       { email, password },
       {
         onSuccess: () => {
-          navigate("/dashboard");
+          void navigate("/dashboard");
         },
       },
     );
   };
 
   const handleGoogleLogin = () => {
-    const url = client.api.auth.google.login.$url();
+    const url = client.api.v1.auth.google.login.$url();
     window.location.href = url.toString();
   };
 
@@ -126,7 +132,7 @@ export function LoginPage() {
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value) }}
                     placeholder={t("auth.emailPlaceholder")}
                     required
                   />
@@ -137,7 +143,7 @@ export function LoginPage() {
                     id="password"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value) }}
                     placeholder={t("auth.passwordPlaceholder")}
                     required
                   />

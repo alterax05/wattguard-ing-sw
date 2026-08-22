@@ -5,7 +5,7 @@ import {
   type PlaceholderDataFunction,
 } from "@tanstack/react-query";
 import { client } from "@/lib/api";
-import { errorMessage } from "@/lib/errors";
+import { errorMessageFromResponse } from "@/lib/errors";
 import { BUILDINGS_QUERY_KEY } from "./use-buildings";
 import { DASHBOARD_QUERY_KEY } from "./use-dashboard";
 
@@ -94,24 +94,22 @@ export interface SensorReadingsParams {
 // ── Queries ─────────────────────────────────────────────────────────────────
 
 async function fetchSensorPage(params?: ListSensorsParams): Promise<SensorListData> {
-  const res = await client.api.sensors.$get({
-    query: {
-      ...(params?.buildingId ? { buildingId: params.buildingId } : {}),
-      ...(params?.sensorType ? { sensorType: params.sensorType } : {}),
-      ...(params?.status ? { status: params.status } : {}),
-      ...(params?.sortBy ? { sortBy: params.sortBy } : {}),
-      ...(params?.sortOrder ? { sortOrder: params.sortOrder } : {}),
-      ...(params?.limit ? { limit: params.limit } : {}),
-      ...(params?.offset ? { offset: params.offset } : {}),
-    },
-  });
+  const query: ListSensorsParams = {};
+  if (params?.buildingId) query.buildingId = params.buildingId;
+  if (params?.sensorType) query.sensorType = params.sensorType;
+  if (params?.status) query.status = params.status;
+  if (params?.sortBy) query.sortBy = params.sortBy;
+  if (params?.sortOrder) query.sortOrder = params.sortOrder;
+  if (params?.limit) query.limit = params.limit;
+  if (params?.offset) query.offset = params.offset;
+
+  const res = await client.api.v1.sensors.$get({ query });
 
   if (!res.ok) {
-    const data = await res.json();
-    throw new Error(errorMessage(data));
+    throw new Error(await errorMessageFromResponse(res));
   }
 
-  return (await res.json()) as SensorListData;
+  return res.json();
 }
 
 /**
@@ -174,13 +172,12 @@ export function useSensor(id: string | undefined) {
   return useQuery({
     queryKey: [...SENSORS_QUERY_KEY, "detail", id],
     queryFn: async () => {
-      const res = await client.api.sensors[":id"].$get({
+      const res = await client.api.v1.sensors[":id"].$get({
         param: { id: id! },
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       const data = await res.json();
@@ -199,20 +196,20 @@ export function useSensorReadings(id: string | undefined, params?: SensorReading
   return useQuery({
     queryKey: [...SENSORS_QUERY_KEY, "readings", id, params ?? {}],
     queryFn: async () => {
-      const res = await client.api.sensors[":id"].readings.$get({
+      const query: SensorReadingsParams = {};
+      if (params?.startDate) query.startDate = params.startDate;
+      if (params?.endDate) query.endDate = params.endDate;
+      if (params?.sortOrder) query.sortOrder = params.sortOrder;
+      if (params?.limit) query.limit = params.limit;
+      if (params?.offset) query.offset = params.offset;
+
+      const res = await client.api.v1.sensors[":id"].readings.$get({
         param: { id: id! },
-        query: {
-          ...(params?.startDate ? { startDate: params.startDate } : {}),
-          ...(params?.endDate ? { endDate: params.endDate } : {}),
-          ...(params?.sortOrder ? { sortOrder: params.sortOrder } : {}),
-          ...(params?.limit ? { limit: params.limit } : {}),
-          ...(params?.offset ? { offset: params.offset } : {}),
-        },
+        query,
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       const data = await res.json();
@@ -243,21 +240,19 @@ export function useCreateSensor() {
       minThreshold?: number;
       maxThreshold?: number;
     }) => {
-      const res = await client.api.sensors.$post({
+      const res = await client.api.v1.sensors.$post({
         json: input,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
     },
   });
 }
@@ -281,24 +276,22 @@ export function useUpdateSensor() {
       maxThreshold?: number | null;
     }) => {
       const { id, ...body } = input;
-      const res = await client.api.sensors[":id"].$patch({
+      const res = await client.api.v1.sensors[":id"].$patch({
         param: { id },
         json: body,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ["alerts"] });
-      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }
@@ -312,23 +305,21 @@ export function useDeleteSensor() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await client.api.sensors[":id"].$delete({
+      const res = await client.api.v1.sensors[":id"].$delete({
         param: { id },
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: ["alerts"] });
-      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      void queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
     },
   });
 }

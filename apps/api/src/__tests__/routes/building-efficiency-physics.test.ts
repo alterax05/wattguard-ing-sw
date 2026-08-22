@@ -1,9 +1,16 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
+
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { ErrorSchema } from "@wattguard/shared";
 import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
 
@@ -17,8 +24,6 @@ import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 
 // Suppress console logs during tests
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
 
 let adminToken: string;
 let adminUserId: mongoose.Types.ObjectId;
@@ -28,20 +33,10 @@ let energySensor;
 let tempSensor;
 let extSensor;
 
-beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
-  await connectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
-afterAll(async () => {
-  console.log = originalConsoleLog;
-  console.error = originalConsoleError;
-  await disconnectTestDB();
-});
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Create admin user
   const adminPasswordHash = await Bun.password.hash("admin123", {
@@ -54,26 +49,25 @@ beforeEach(async () => {
     role: "admin",
     passwordHash: adminPasswordHash,
   });
-  adminUserId = admin._id as mongoose.Types.ObjectId;
+  adminUserId = admin._id;
 
   // Login to get token
-  const loginRes = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "admin@test.com",
       password: "admin123",
-    }),
+    },
   });
 
   const cookie = loginRes.headers.get("set-cookie");
   const tokenMatch = cookie?.match(/access_token=([^;]+)/);
   if (!tokenMatch) throw new Error("Admin token not found");
+  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = tokenMatch[1] as string;
 
   // Create Fixtures
   const buildingType = await BuildingType.create({ name: "Residential" });
-  buildingTypeId = buildingType._id as mongoose.Types.ObjectId;
+  buildingTypeId = buildingType._id;
 
   const building = await Building.create({
     name: "Efficiency Test Building",
@@ -210,13 +204,13 @@ beforeEach(async () => {
   await SensorReading.create(readings);
 });
 
-describe("Building Efficiency Route - Integration Tests", () => {
-  test("GET /api/buildings/:id/efficiency - should calculate efficiency correctly", async () => {
+describe("GET /api/v1/buildings/:id/efficiency", () => {
+  test("GET /api/v1/buildings/:id/efficiency - should calculate efficiency correctly", async () => {
     // 4 hours total duration
     const startDate = "2024-01-01T10:00:00Z";
     const endDate = new Date(new Date(startDate).getTime() + 4.5 * 60 * 60 * 1000).toISOString();
 
-    const res = await client.api.buildings[":id"].efficiency.$get(
+    const res = await client.api.v1.buildings[":id"].efficiency.$get(
       {
         param: { id: buildingId },
         query: { startDate, endDate },
@@ -250,11 +244,13 @@ describe("Building Efficiency Route - Integration Tests", () => {
     expect(json.metrics.averageCop).toBeLessThan(3.5);
   });
 
-  test("should return 400 for invalid dates", async () => {
-    const res = await app.request(
-      `/api/buildings/${buildingId}/efficiency?startDate=invalid&endDate=invalid`,
+  test("returns 400 for invalid dates", async () => {
+    const res = await client.api.v1.buildings[":id"].efficiency.$get(
       {
-        method: "GET",
+        param: { id: buildingId },
+        query: { startDate: "invalid", endDate: "invalid" },
+      },
+      {
         headers: {
           "Authorization": `Bearer ${adminToken}`,
         },
@@ -264,15 +260,17 @@ describe("Building Efficiency Route - Integration Tests", () => {
     expect(res.status).toBe(400);
   });
 
-  test("should return 404 for non-existent building", async () => {
+  test("returns 404 for non-existent building", async () => {
     const fakeId = "507f1f77bcf86cd799439011";
     const startDate = "2024-01-01T10:00:00Z";
     const endDate = "2024-01-01T13:00:00Z";
 
-    const res = await app.request(
-      `/api/buildings/${fakeId}/efficiency?startDate=${startDate}&endDate=${endDate}`,
+    const res = await client.api.v1.buildings[":id"].efficiency.$get(
       {
-        method: "GET",
+        param: { id: fakeId },
+        query: { startDate, endDate },
+      },
+      {
         headers: {
           "Authorization": `Bearer ${adminToken}`,
         },

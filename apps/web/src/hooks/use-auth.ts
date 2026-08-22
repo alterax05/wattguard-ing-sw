@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { client } from "@/lib/api";
-import { errorMessage } from "@/lib/errors";
+import { errorMessageFromResponse } from "@/lib/errors";
 import { UserSchema } from "@wattguard/shared";
 import { z } from "zod";
 
@@ -29,7 +29,7 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async (): Promise<AuthUser | null> => {
-      const res = await client.api.auth.me.$get();
+      const res = await client.api.v1.auth.me.$get();
 
       if (res.status === 401) {
         return null;
@@ -58,17 +58,15 @@ export function useValidateInvite(token: string | null) {
   return useQuery({
     queryKey: ["invites", "validate", token],
     queryFn: async () => {
-      const res = await client.api.invites.validate.$get({
+      const res = await client.api.v1.invites.validate.$get({
         query: { token: token! },
       });
 
-      const data = await res.json();
-
-      if (!res.ok || 'error' in data) {
-        throw new Error(errorMessage(data));
+      if (!res.ok) {
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      return res.json();
     },
     enabled: !!token,
     retry: false,
@@ -82,14 +80,14 @@ export function useValidateResetToken(token: string | null) {
   return useQuery({
     queryKey: ["auth", "validate-reset-token", token],
     queryFn: async () => {
-      const res = await client.api.auth.local["validate-reset-token"].$get({
+      const res = await client.api.v1.auth.local["validate-reset-token"].$get({
         query: { token: token! },
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
@@ -110,20 +108,20 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (input: { email: string; password: string }) => {
-      const res = await client.api.auth.local.login.$post({
+      const res = await client.api.v1.auth.local.login.$post({
         json: input,
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
     },
   });
 }
@@ -138,7 +136,7 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await client.api.auth.logout.$post();
+      const res = await client.api.v1.auth.logout.$post();
 
       if (!res.ok) {
         throw new Error("Logout failed");
@@ -153,7 +151,7 @@ export function useLogout() {
       // Clear all other cached data so nothing stale remains.
       queryClient.clear();
       // Navigate as a safety net (ProtectedRoute will also redirect reactively).
-      navigate("/login");
+      void navigate("/login");
     },
   });
 }
@@ -171,20 +169,20 @@ export function useSetup() {
       password: string;
       name: string;
     }) => {
-      const res = await client.api.auth.local.setup.$post({
+      const res = await client.api.v1.auth.local.setup.$post({
         json: input,
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
     },
   });
 }
@@ -196,14 +194,14 @@ export function useSetup() {
 export function useForgotPassword() {
   return useMutation({
     mutationFn: async (input: { email: string }) => {
-      const res = await client.api.auth.local["forgot-password"].$post({
+      const res = await client.api.v1.auth.local["forgot-password"].$post({
         json: input,
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
@@ -217,14 +215,14 @@ export function useForgotPassword() {
 export function useResetPassword() {
   return useMutation({
     mutationFn: async (input: { token: string; password: string }) => {
-      const res = await client.api.auth.local["reset-password"].$post({
+      const res = await client.api.v1.auth.local["reset-password"].$post({
         json: input,
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
@@ -244,11 +242,10 @@ export function useUsers() {
   return useQuery({
     queryKey: USERS_QUERY_KEY,
     queryFn: async (): Promise<AdminUser[]> => {
-      const res = await client.api.admin.users.$get();
+      const res = await client.api.v1.admin.users.$get();
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       const data = await res.json();
@@ -271,7 +268,7 @@ export function useUpdateUser() {
       role?: "admin" | "operator";
       isDisabled?: boolean;
     }) => {
-      const res = await client.api.admin.users[":id"].$patch({
+      const res = await client.api.v1.admin.users[":id"].$patch({
         param: { id: input.id },
         json: {
           role: input.role,
@@ -282,13 +279,13 @@ export function useUpdateUser() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     },
   });
 }
@@ -302,20 +299,20 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await client.api.admin.users[":id"].$delete({
+      const res = await client.api.v1.admin.users[":id"].$delete({
         param: { id },
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     },
   });
 }
@@ -327,14 +324,14 @@ export function useDeleteUser() {
 export function useCreateInvite() {
   return useMutation({
     mutationFn: async (input: { email: string; role: "admin" | "operator" }) => {
-      const res = await client.api.admin.invites.$post({
+      const res = await client.api.v1.admin.invites.$post({
         json: input,
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;

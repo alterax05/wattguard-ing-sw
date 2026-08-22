@@ -52,6 +52,7 @@ async function geocodeAddress(
 
   if (!res.ok) return null
 
+  // SAFETY: the Nominatim search endpoint returns a JSON array of places with lat/lon strings on 200.
   const results = (await res.json()) as { lat: string; lon: string }[]
   const first = results[0]
   if (!first) return null
@@ -169,7 +170,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
     }))
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     const surface = parseFloat(formData.surface)
@@ -243,7 +244,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
               id="building-name"
               placeholder={t("buildings.form.namePlaceholder")}
               value={formData.name}
-              onChange={(e) => updateField("name", e.target.value)}
+              onChange={(e) => { updateField("name", e.target.value) }}
               disabled={isPending}
               required
             />
@@ -257,7 +258,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                 id="building-address"
                 placeholder={t("buildings.form.addressPlaceholder")}
                 value={formData.address}
-                onChange={(e) => updateField("address", e.target.value)}
+                onChange={(e) => { updateField("address", e.target.value) }}
                 disabled={isPending}
                 required
                 className="flex-1"
@@ -266,7 +267,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                 type="button"
                 variant="outline"
                 size="icon"
-                onClick={handleGeocode}
+                onClick={() => { void handleGeocode() }}
                 disabled={isPending || geocoding || !formData.address.trim()}
                 title={t("buildings.form.geocodeButton")}
               >
@@ -293,7 +294,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                 step="any"
                 placeholder={t("buildings.form.surfacePlaceholder")}
                 value={formData.surface}
-                onChange={(e) => updateField("surface", e.target.value)}
+                onChange={(e) => { updateField("surface", e.target.value) }}
                 disabled={isPending}
                 required
               />
@@ -308,7 +309,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                 step="0.1"
                 placeholder={t("buildings.form.ceilingHeightPlaceholder")}
                 value={formData.ceilingHeight}
-                onChange={(e) => updateField("ceilingHeight", e.target.value)}
+                onChange={(e) => { updateField("ceilingHeight", e.target.value) }}
                 disabled={isPending}
                 required
               />
@@ -325,7 +326,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
               max={new Date().getFullYear() + 10}
               placeholder={t("buildings.form.constructionYearPlaceholder")}
               value={formData.constructionYear}
-              onChange={(e) => updateField("constructionYear", e.target.value)}
+              onChange={(e) => { updateField("constructionYear", e.target.value) }}
               disabled={isPending}
             />
           </div>
@@ -335,7 +336,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
             <Label htmlFor="building-type">{t("buildings.form.type")}</Label>
             <Select
               value={formData.buildingType}
-              onValueChange={(value) => updateField("buildingType", value)}
+              onValueChange={(value) => { updateField("buildingType", value) }}
               disabled={isPending || typesLoading}
             >
               <SelectTrigger>
@@ -365,9 +366,9 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                 id="building-heating"
                 placeholder={t("buildings.form.heatingSystemPlaceholder")}
                 value={formData.heatingSystemType}
-                onChange={(e) =>
+                onChange={(e) => {
                   updateField("heatingSystemType", e.target.value)
-                }
+                }}
                 disabled={isPending}
                 required
               />
@@ -379,7 +380,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                 id="building-zone"
                 placeholder={t("buildings.form.geographicZonePlaceholder")}
                 value={formData.geographicZone}
-                onChange={(e) => updateField("geographicZone", e.target.value)}
+                onChange={(e) => { updateField("geographicZone", e.target.value) }}
                 disabled={isPending}
                 required
               />
@@ -403,7 +404,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                   step="any"
                   placeholder={t("buildings.form.latitudePlaceholder")}
                   value={formData.latitude}
-                  onChange={(e) => updateField("latitude", e.target.value)}
+                  onChange={(e) => { updateField("latitude", e.target.value) }}
                   disabled={isPending}
                   required
                 />
@@ -418,7 +419,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
                   step="any"
                   placeholder={t("buildings.form.longitudePlaceholder")}
                   value={formData.longitude}
-                  onChange={(e) => updateField("longitude", e.target.value)}
+                  onChange={(e) => { updateField("longitude", e.target.value) }}
                   disabled={isPending}
                   required
                 />

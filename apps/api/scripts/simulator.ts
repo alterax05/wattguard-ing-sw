@@ -54,10 +54,11 @@ const handle = await startSimulator({
 
 console.log("🧪 Simulator running. Press Ctrl+C to stop.");
 
-process.on("SIGINT", async () => {
+process.on("SIGINT", () => {
   console.log("\n🛑 Shutting down simulator...");
   handle.stop();
   mqttClient.end();
-  await mongoose.disconnect();
-  process.exit(0);
+  mongoose.disconnect().then(() => {
+    process.exit(0);
+  });
 });

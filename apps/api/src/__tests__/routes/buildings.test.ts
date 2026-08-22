@@ -1,9 +1,16 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
+
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
 import { Building } from "../../models/Building";
@@ -27,28 +34,16 @@ type ErrorResponse = z.infer<typeof ErrorSchema>;
 const client = testClient(app);
 
 // Suppress console logs during tests
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
 
 let adminToken: string;
 let operatorToken: string;
 let adminUserId: mongoose.Types.ObjectId;
 let buildingTypeId: mongoose.Types.ObjectId;
 
-beforeAll(async () => {
-  console.log = () => {};
-  console.error = () => {};
-  await connectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
-afterAll(async () => {
-  console.log = originalConsoleLog;
-  console.error = originalConsoleError;
-  await disconnectTestDB();
-});
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Create test users (admin and operator)
   const adminPasswordHash = await Bun.password.hash("admin123", {
@@ -61,7 +56,7 @@ beforeEach(async () => {
     role: "admin",
     passwordHash: adminPasswordHash,
   });
-  adminUserId = admin._id as mongoose.Types.ObjectId;
+  adminUserId = admin._id;
 
   const operatorPasswordHash = await Bun.password.hash("operator123", {
     algorithm: "bcrypt",
@@ -75,35 +70,33 @@ beforeEach(async () => {
   });
 
   // Login to get tokens
-  const adminLoginRes = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const adminLoginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "admin@test.com",
       password: "admin123",
-    }),
+    },
   });
 
   const adminCookie = adminLoginRes.headers.get("set-cookie");
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
   if (!adminTokenMatch) throw new Error("Admin token not found");
+  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = adminTokenMatch[1] as string;
 
   console.log("Admin login status:", adminLoginRes.status);
   console.log("Admin token:", adminToken ? "exists" : "missing");
 
-  const operatorLoginRes = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const operatorLoginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "operator@test.com",
       password: "operator123",
-    }),
+    },
   });
 
   const operatorCookie = operatorLoginRes.headers.get("set-cookie");
   const operatorTokenMatch = operatorCookie?.match(/access_token=([^;]+)/);
   if (!operatorTokenMatch) throw new Error("Operator token not found");
+  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   operatorToken = operatorTokenMatch[1] as string;
 
   // Create a test building type
@@ -111,12 +104,13 @@ beforeEach(async () => {
     name: "Scuola",
     description: "Edificio scolastico",
   });
-  buildingTypeId = buildingType._id as mongoose.Types.ObjectId;
+  buildingTypeId = buildingType._id;
 });
 
-describe("Buildings Routes - Integration Tests", () => {
-  describe("Create Building (POST /api/buildings)", () => {
-    test("should create a new building with valid data (admin)", async () => {
+describe("buildings api", () => {
+  describe("POST /api/v1/buildings", () => {
+    test("creates a new building with valid data (admin)", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Scuola Primaria Test",
         address: "Via Test 123, Milano",
@@ -128,7 +122,7 @@ describe("Buildings Routes - Integration Tests", () => {
         location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await client.api.buildings.$post(
+      const res = await client.api.v1.buildings.$post(
         {
           json: buildingData,
         },
@@ -156,12 +150,14 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.building.status).toBe("active"); // Default value
 
       // Verify building was created in DB
+      // SAFETY: the create-building route echoes the created document, whose `id` is its ObjectId string.
       const building = await Building.findById((json as { building: { id: string } }).building.id);
       expect(building).toBeDefined();
       expect(building!.name).toBe(buildingData.name);
     });
 
-    test("should create building with operator role", async () => {
+    test("creates building with operator role", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Biblioteca Test",
         address: "Via Test 456, Milano",
@@ -173,7 +169,7 @@ describe("Buildings Routes - Integration Tests", () => {
         location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await client.api.buildings.$post(
+      const res = await client.api.v1.buildings.$post(
         {
           json: buildingData,
         },
@@ -187,14 +183,14 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(res.status).toBe(201);
     });
 
-    test("should reject invalid data", async () => {
+    test("rejects invalid data", async () => {
       const invalidData = {
         name: "", // Empty name
         address: "Via Test",
         surface: -100, // Negative surface
       };
 
-      const res = await client.api.buildings.$post(
+      const res = await client.api.v1.buildings.$post(
         {
           // @ts-expect-error intentionally incomplete building payload
           json: invalidData,
@@ -206,10 +202,12 @@ describe("Buildings Routes - Integration Tests", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(400);
     });
 
-    test("should reject invalid building type ID", async () => {
+    test("rejects invalid building type ID", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Test Building",
         address: "Via Test 123",
@@ -221,7 +219,7 @@ describe("Buildings Routes - Integration Tests", () => {
         location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
       };
 
-      const res = await client.api.buildings.$post(
+      const res = await client.api.v1.buildings.$post(
         {
           json: buildingData,
         },
@@ -232,13 +230,15 @@ describe("Buildings Routes - Integration Tests", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(400);
     });
   });
 
-  describe("Update Building (PATCH /api/buildings/:id)", () => {
-    test("should update building", async () => {
+  describe("PATCH /api/v1/buildings/:id", () => {
+    test("updates building", async () => {
       // Create a building first
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -258,7 +258,7 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "inactive" as const,
       };
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: updateData,
@@ -282,10 +282,10 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.building.status).toBe("inactive");
     });
 
-    test("should return 404 for non-existent building", async () => {
+    test("returns 404 for non-existent building", async () => {
       const fakeId = "507f1f77bcf86cd799439011"; // Valid ObjectId format
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: fakeId },
           json: { name: "New Name" },
@@ -305,6 +305,7 @@ describe("Buildings Routes - Integration Tests", () => {
       // name, address, geographicZone, buildingType: buildingTypeId, surface,
       // constructionYear, heatingSystemType: "caldaia_gas",
       // location GeoJSON Point [11.1167, 46.0667], createdBy/updatedBy: adminUserId)
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -318,7 +319,7 @@ describe("Buildings Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { efficiencyThresholds: { enabled: true, minCop: 2.5 } },
@@ -338,6 +339,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("PATCH rejects enabled threshold without minCop", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -351,7 +353,7 @@ describe("Buildings Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { efficiencyThresholds: { enabled: true, minCop: null } },
@@ -364,6 +366,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("PATCH rejects efficiencyThresholds for district heating buildings", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -377,7 +380,7 @@ describe("Buildings Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { efficiencyThresholds: { enabled: true, minCop: 2.5 } },
@@ -390,6 +393,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("PATCH switching a building to district heating clears thresholds and resolves alerts", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -417,7 +421,7 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { heatingSystemType: "Teleriscaldamento" },
@@ -437,6 +441,7 @@ describe("Buildings Routes - Integration Tests", () => {
     });
 
     test("PATCH disabling efficiency thresholds resolves active efficiency alerts", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -464,7 +469,7 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.buildings[":id"].$patch(
+      const res = await client.api.v1.buildings[":id"].$patch(
         {
           param: { id: building._id.toString() },
           json: { efficiencyThresholds: { enabled: false, minCop: null } },
@@ -480,9 +485,10 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Delete Building (DELETE /api/buildings/:id)", () => {
-    test("should delete building with cascade delete of sensors and readings", async () => {
+  describe("DELETE /api/v1/buildings/:id", () => {
+    test("deletes building with cascade delete of sensors and readings", async () => {
       // Create building with sensors and readings
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building to Delete",
         address: "Via Delete 1",
@@ -533,7 +539,7 @@ describe("Buildings Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.buildings[":id"].$delete(
+      const res = await client.api.v1.buildings[":id"].$delete(
         {
           param: { id: building._id.toString() },
         },
@@ -569,9 +575,10 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Search Buildings (GET /api/buildings)", () => {
+  describe("GET /api/v1/buildings", () => {
     beforeEach(async () => {
       // Create multiple buildings for search testing
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildings = [
         {
           name: "Scuola Primaria Centro",
@@ -616,8 +623,8 @@ describe("Buildings Routes - Integration Tests", () => {
       await Building.insertMany(buildings);
     });
 
-    test("should search by name", async () => {
-      const res = await client.api.buildings.$get(
+    test("searches by name", async () => {
+      const res = await client.api.v1.buildings.$get(
         {
           query: { name: "Scuola" },
         },
@@ -636,8 +643,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.name).toContain("Scuola");
     });
 
-    test("should search by address", async () => {
-      const res = await client.api.buildings.$get(
+    test("searches by address", async () => {
+      const res = await client.api.v1.buildings.$get(
         {
           query: { address: "Garibaldi" },
         },
@@ -655,8 +662,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.address).toContain("Garibaldi");
     });
 
-    test("should filter by zone", async () => {
-      const res = await client.api.buildings.$get(
+    test("filters by zone", async () => {
+      const res = await client.api.v1.buildings.$get(
         {
           query: { zone: "Centro" },
         },
@@ -674,8 +681,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.geographicZone).toBe("Centro");
     });
 
-    test("should filter by building type", async () => {
-      const res = await client.api.buildings.$get(
+    test("filters by building type", async () => {
+      const res = await client.api.v1.buildings.$get(
         {
           query: { buildingType: buildingTypeId.toString() },
         },
@@ -692,8 +699,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings.length).toBe(3); // All test buildings have same type
     });
 
-    test("should filter by status", async () => {
-      const res = await client.api.buildings.$get(
+    test("filters by status", async () => {
+      const res = await client.api.v1.buildings.$get(
         {
           query: { status: "inactive" },
         },
@@ -711,8 +718,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.status).toBe("inactive");
     });
 
-    test("should combine multiple filters", async () => {
-      const res = await client.api.buildings.$get(
+    test("combines multiple filters", async () => {
+      const res = await client.api.v1.buildings.$get(
         {
           query: { zone: "Centro", status: "active", name: "Scuola" },
         },
@@ -730,8 +737,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.buildings[0]!.name).toBe("Scuola Primaria Centro");
     });
 
-    test("should support pagination", async () => {
-      const res = await client.api.buildings.$get(
+    test("supports pagination", async () => {
+      const res = await client.api.v1.buildings.$get(
         {
           query: { limit: "2", offset: "0" },
         },
@@ -751,8 +758,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.pagination.offset).toBe(0);
     });
 
-    test("should support sorting", async () => {
-      const res = await client.api.buildings.$get(
+    test("supports sorting", async () => {
+      const res = await client.api.v1.buildings.$get(
         {
           query: { sortBy: "name", sortOrder: "asc" },
         },
@@ -773,8 +780,8 @@ describe("Buildings Routes - Integration Tests", () => {
       }
     });
 
-    test("should return all required details in search results", async () => {
-      const res = await client.api.buildings.$get(
+    test("returns all required details in search results", async () => {
+      const res = await client.api.v1.buildings.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -797,8 +804,9 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Get Building Details (GET /api/buildings/:id)", () => {
-    test("should return complete building details", async () => {
+  describe("GET /api/v1/buildings/:id", () => {
+    test("returns complete building details", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Test Building Details",
         address: "Via Details 1, Milano",
@@ -812,7 +820,7 @@ describe("Buildings Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.buildings[":id"].$get(
+      const res = await client.api.v1.buildings[":id"].$get(
         {
           param: { id: building._id.toString() },
         },
@@ -835,8 +843,9 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Get Real-time Data (GET /api/buildings/:id/real-time)", () => {
-    test("should return real-time data for all sensor types", async () => {
+  describe("GET /api/v1/buildings/:id/real-time", () => {
+    test("returns real-time data for all sensor types", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Real-time",
         address: "Via Real-time 1",
@@ -888,7 +897,7 @@ describe("Buildings Routes - Integration Tests", () => {
         },
       ]);
 
-      const res = await client.api.buildings[":id"]["real-time"].$get(
+      const res = await client.api.v1.buildings[":id"]["real-time"].$get(
         {
           param: { id: building._id.toString() },
         },
@@ -916,7 +925,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(json.data.energyConsumption.unit).toBe("kW");
     });
 
-    test("should handle missing sensors gracefully", async () => {
+    test("handles missing sensors gracefully", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Partial Sensors",
         address: "Via Partial 1",
@@ -943,7 +953,7 @@ describe("Buildings Routes - Integration Tests", () => {
         lastReading: { value: 22.5, unit: "°C", timestamp: new Date() },
       });
 
-      const res = await client.api.buildings[":id"]["real-time"].$get(
+      const res = await client.api.v1.buildings[":id"]["real-time"].$get(
         {
           param: { id: building._id.toString() },
         },
@@ -963,8 +973,9 @@ describe("Buildings Routes - Integration Tests", () => {
     });
   });
 
-  describe("Get Historical Data (GET /api/buildings/:id/history)", () => {
-    test("should return historical data with time aggregation", async () => {
+  describe("GET /api/v1/buildings/:id/history", () => {
+    test("returns historical data with time aggregation", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building History",
         address: "Via History 1",
@@ -1010,7 +1021,7 @@ describe("Buildings Routes - Integration Tests", () => {
       const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const endDate = now.toISOString();
 
-      const res = await client.api.buildings[":id"].history.$get(
+      const res = await client.api.v1.buildings[":id"].history.$get(
         {
           param: { id: building._id.toString() },
           query: { startDate, endDate, sensorType: "internal_temp", interval: "hour" },
@@ -1038,7 +1049,8 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(dataPoint.sensorType).toBe("internal_temp");
     });
 
-    test("should filter by date range", async () => {
+    test("filters by date range", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Date Filter",
         address: "Via Date 1",
@@ -1092,7 +1104,7 @@ describe("Buildings Routes - Integration Tests", () => {
       const startDate = oneDayAgo.toISOString();
       const endDate = now.toISOString();
 
-      const res = await client.api.buildings[":id"].history.$get(
+      const res = await client.api.v1.buildings[":id"].history.$get(
         {
           param: { id: building._id.toString() },
           query: { startDate, endDate, sensorType: "energy_meter" },
@@ -1115,7 +1127,8 @@ describe("Buildings Routes - Integration Tests", () => {
       });
     });
 
-    test("should support different interval types", async () => {
+    test("supports different interval types", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Intervals",
         address: "Via Intervals 1",
@@ -1159,7 +1172,7 @@ describe("Buildings Routes - Integration Tests", () => {
       const intervals = ["minute", "hour", "day"] as const;
 
       for (const interval of intervals) {
-        const res = await client.api.buildings[":id"].history.$get(
+        const res = await client.api.v1.buildings[":id"].history.$get(
           {
             param: { id: building._id.toString() },
             query: { startDate, endDate, sensorType: "internal_temp", interval },
@@ -1184,14 +1197,15 @@ describe("Buildings Routes - Integration Tests", () => {
   // Authorization Tests
   // ============================================================================
 
-  describe("Authorization", () => {
-    test("should deny access without token", async () => {
-      const res = await client.api.buildings.$get({ query: {} });
+  describe("authorization", () => {
+    test("denies access without token", async () => {
+      const res = await client.api.v1.buildings.$get({ query: {} });
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(401);
     });
 
-    test("should deny access with invalid token", async () => {
-      const res = await client.api.buildings.$get(
+    test("denies access with invalid token", async () => {
+      const res = await client.api.v1.buildings.$get(
         { query: {} },
         {
           headers: {
@@ -1200,10 +1214,12 @@ describe("Buildings Routes - Integration Tests", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(401);
     });
 
-    test("should allow both admin and operator to read buildings", async () => {
+    test("allows both admin and operator to read buildings", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Test Auth",
         address: "Via Auth 1",
@@ -1218,7 +1234,7 @@ describe("Buildings Routes - Integration Tests", () => {
       });
 
       // Admin should have access
-      const adminRes = await client.api.buildings[":id"].$get(
+      const adminRes = await client.api.v1.buildings[":id"].$get(
         {
           param: { id: building._id.toString() },
         },
@@ -1229,7 +1245,7 @@ describe("Buildings Routes - Integration Tests", () => {
       expect(adminRes.status).toBe(200);
 
       // Operator should also have access
-      const operatorRes = await client.api.buildings[":id"].$get(
+      const operatorRes = await client.api.v1.buildings[":id"].$get(
         {
           param: { id: building._id.toString() },
         },

@@ -8,11 +8,17 @@
  *  - GET  /api/settings
  *  - PATCH /api/settings
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { Sensor } from "../../models/Sensor";
 import { Alert } from "../../models/Alert";
@@ -31,16 +37,9 @@ const client = testClient(app);
 
 let adminToken: string;
 
-beforeAll(async () => {
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   const hash = await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 });
   await User.create({
@@ -50,10 +49,8 @@ beforeEach(async () => {
     passwordHash: hash,
   });
 
-  const loginRes = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "admin@test.com", password: "admin123" }),
+  const loginRes = await client.api.v1.auth.local.login.$post({
+    json: { email: "admin@test.com", password: "admin123" },
   });
 
   const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
@@ -61,9 +58,9 @@ beforeEach(async () => {
   adminToken = tokenMatch[1]!;
 });
 
-describe("Health", () => {
+describe("GET /api/v1/health", () => {
   test("GET /api/health returns ok", async () => {
-    const res = await client.api.health.$get();
+    const res = await client.api.v1.health.$get();
 
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -72,7 +69,7 @@ describe("Health", () => {
   });
 });
 
-describe("Dashboard", () => {
+describe("dashboard api", () => {
   test("GET /api/dashboard/stats returns aggregated counters", async () => {
     const admin = await User.findOne({ email: "admin@test.com" });
     await Sensor.create([
@@ -83,14 +80,14 @@ describe("Dashboard", () => {
     await Alert.create({
       buildingId: "507f1f77bcf86cd799439011",
       buildingName: "Test",
-      type: "sensor_offline",
+      type: "efficiency_below_threshold",
       severity: "medium",
       sensorType: "energy_meter",
       location: "Quadro",
       status: "active",
     });
 
-    const res = await client.api.dashboard.stats.$get(undefined, {
+    const res = await client.api.v1.dashboard.stats.$get(undefined, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
@@ -112,7 +109,7 @@ describe("Dashboard", () => {
     const startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = now.toISOString();
 
-    const res = await client.api.dashboard.history.$get(
+    const res = await client.api.v1.dashboard.history.$get(
       {
         query: { startDate, endDate, interval: "day" },
       },
@@ -132,7 +129,7 @@ describe("Dashboard", () => {
   });
 
   test("GET /api/dashboard/history rejects invalid date range", async () => {
-    const res = await client.api.dashboard.history.$get(
+    const res = await client.api.v1.dashboard.history.$get(
       {
         query: { startDate: "2026-01-02T00:00:00.000Z", endDate: "2026-01-01T00:00:00.000Z" },
       },
@@ -145,9 +142,9 @@ describe("Dashboard", () => {
   });
 });
 
-describe("Settings", () => {
+describe("settings api", () => {
   test("GET /api/settings returns the system config", async () => {
-    const res = await client.api.settings.$get(undefined, {
+    const res = await client.api.v1.settings.$get(undefined, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
@@ -163,7 +160,7 @@ describe("Settings", () => {
   });
 
   test("PATCH /api/settings updates the config", async () => {
-    const res = await client.api.settings.$patch(
+    const res = await client.api.v1.settings.$patch(
       {
         json: { polling: { intervalSeconds: 60 } },
       },
@@ -190,19 +187,18 @@ describe("Settings", () => {
       passwordHash: await Bun.password.hash("operator123", { algorithm: "bcrypt", cost: 10 }),
     });
 
-    const loginRes = await app.request("/api/auth/local/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "operator@test.com", password: "operator123" }),
+    const loginRes = await client.api.v1.auth.local.login.$post({
+      json: { email: "operator@test.com", password: "operator123" },
     });
 
     const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
     const operatorToken = tokenMatch![1]!;
 
-    const res = await client.api.settings.$get(undefined, {
+    const res = await client.api.v1.settings.$get(undefined, {
       headers: { Authorization: `Bearer ${operatorToken}` },
     });
 
+    // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
     expect(res.status as number).toBe(403);
   });
 });

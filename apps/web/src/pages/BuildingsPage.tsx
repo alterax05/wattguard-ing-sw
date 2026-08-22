@@ -18,14 +18,14 @@ export function BuildingsPage() {
             {t("buildings.searchSubtitle")}
           </p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)}>
+        <Button onClick={() => { setShowAddDialog(true) }}>
           <Plus className="mr-2 h-4 w-4" />
           {t("buildings.add")}
         </Button>
       </div>
       <BuildingSearch />
       {showAddDialog && (
-        <AddBuildingDialog onClose={() => setShowAddDialog(false)} />
+        <AddBuildingDialog onClose={() => { setShowAddDialog(false) }} />
       )}
     </div>
   )

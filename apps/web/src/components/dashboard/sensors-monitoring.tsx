@@ -157,7 +157,7 @@ function SensorTableRow({
       tabIndex={0}
       role="button"
       aria-label={t("sensors.openDetails", { location: sensor.location })}
-      onClick={() => onSelect(sensor)}
+      onClick={() => { onSelect(sensor) }}
       onKeyDown={handleKeyDown}
     >
       <TableCell>
@@ -437,7 +437,7 @@ export function SensorsMonitoring() {
               <Input
                 placeholder={t("sensors.searchPlaceholderMonitoring")}
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onChange={(event) => { setSearchQuery(event.target.value) }}
                 className="pl-9"
                 aria-label={t("sensors.searchAria")}
               />
@@ -457,7 +457,10 @@ export function SensorsMonitoring() {
             </Select>
             <Select
               value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+              onValueChange={(value) => {
+                // SAFETY: the Select only offers the monitoring statuses plus "all".
+                setStatusFilter(value as StatusFilter)
+              }}
             >
               <SelectTrigger aria-label={t("sensors.filterByStatus")}>
                 <SelectValue placeholder={t("sensors.operationalStatus")} />
@@ -476,7 +479,10 @@ export function SensorsMonitoring() {
 
       <Tabs
         value={sensorGroup}
-        onValueChange={(value) => setSensorGroup(value as SensorGroup)}
+        onValueChange={(value) => {
+          // SAFETY: the Tabs only render the three sensor groups defined in SENSOR_GROUPS.
+          setSensorGroup(value as SensorGroup)
+        }}
         className="w-full"
       >
         <TabsList className="grid h-auto w-full grid-cols-3">

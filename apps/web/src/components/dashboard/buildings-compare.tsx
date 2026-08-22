@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom"
 import { toIsoDate } from "@/lib/dates"
 import { useQueries } from "@tanstack/react-query"
 import { client } from "@/lib/api"
-import { errorMessage } from "@/lib/errors"
+import { errorMessageFromResponse } from "@/lib/errors"
 import { DateRangePicker } from "./date-range-picker"
 import {
   BUILDINGS_QUERY_KEY,
@@ -41,6 +41,16 @@ interface WeatherData {
   weatherCode: number
 }
 
+/** Shape of the open-meteo `current` payload for the fields requested below. */
+interface OpenMeteoCurrentWeather {
+  current: {
+    temperature_2m: number
+    relative_humidity_2m: number
+    wind_speed_10m: number
+    weather_code: number
+  }
+}
+
 function getWeatherIcon(code: number) {
   if (code === 0 || code === 1)
     return <Sun className="h-5 w-5 text-amber-500" />
@@ -69,7 +79,7 @@ function getWeatherLabel(code: number, t: TFunction) {
 }
 
 function getBuildingTypeName(bt: BuildingDetail["buildingType"]): string {
-  if (typeof bt === "string") return bt
+  if (!(bt instanceof Object)) return bt
   return bt.name
 }
 
@@ -103,15 +113,13 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
     queries: buildingIds.map((id) => ({
       queryKey: [...BUILDINGS_QUERY_KEY, "detail", id],
       queryFn: async () => {
-        const res = await client.api.buildings[":id"].$get({
+        const res = await client.api.v1.buildings[":id"].$get({
           param: { id },
         })
         if (!res.ok) {
-          const data = await res.json()
-          throw new Error(errorMessage(data, "Building not found"))
+          throw new Error(await errorMessageFromResponse(res, "Building not found"))
         }
-        const data = await res.json()
-        return data as { building: BuildingDetail }
+        return res.json()
       },
       staleTime: 2 * 60 * 1000,
     })),
@@ -122,7 +130,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
     queries: buildingIds.map((id) => ({
         queryKey: [...BUILDINGS_QUERY_KEY, "efficiency", id, efficiencyParams],
         queryFn: async () => {
-          const res = await client.api.buildings[":id"].efficiency.$get({
+          const res = await client.api.v1.buildings[":id"].efficiency.$get({
             param: { id },
             query: {
               startDate: efficiencyParams!.startDate,
@@ -130,11 +138,9 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
             },
           })
         if (!res.ok) {
-          const data = await res.json()
-          throw new Error(errorMessage(data, "Efficiency error"))
+          throw new Error(await errorMessageFromResponse(res, "Efficiency error"))
         }
-        const data = await res.json()
-        return data as EfficiencyMetrics
+        return res.json()
       },
       staleTime: 5 * 60 * 1000,
       enabled: !!efficiencyParams,
@@ -142,6 +148,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
   })
 
   // Combine loaded buildings
+  // SAFETY: the map above yields null only for missing detail queries; filter(Boolean) drops them.
   const buildings = buildingQueries
     .map((q, i) => {
       if (!q.data) return null
@@ -163,7 +170,8 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
         const res = await fetch(
           "https://api.open-meteo.com/v1/forecast?latitude=46.0664&longitude=11.1257&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Europe/Rome"
         )
-        const data = await res.json()
+        // SAFETY: open-meteo returns exactly these `current` fields for the query requested above.
+        const data = (await res.json()) as OpenMeteoCurrentWeather
         setWeather({
           temperature: data.current.temperature_2m,
           humidity: data.current.relative_humidity_2m,
@@ -174,7 +182,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
         setWeather(null)
       }
     }
-    fetchWeather()
+    void fetchWeather()
   }, [])
 
   if (isLoading) {
@@ -212,7 +220,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
         <Button
           variant="outline"
           className="mt-4 bg-transparent"
-          onClick={() => navigate("/dashboard/buildings")}
+          onClick={() => { void navigate("/dashboard/buildings") }}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           {t("buildings.backToSearch")}
@@ -228,7 +236,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/dashboard/buildings")}
+          onClick={() => { void navigate("/dashboard/buildings") }}
         >
           <ArrowLeft className="h-5 w-5" />
           <span className="sr-only">{t("common.back")}</span>
@@ -270,7 +278,7 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
           <Card
             key={building.id}
             className="cursor-pointer transition-all hover:shadow-md hover:ring-1 hover:ring-border"
-            onClick={() => navigate(`/dashboard/buildings/${building.id}`)}
+            onClick={() => { void navigate(`/dashboard/buildings/${building.id}`) }}
           >
             <CardContent className="pt-6">
               <div className="space-y-4">

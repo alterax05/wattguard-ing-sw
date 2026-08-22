@@ -66,5 +66,5 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 
 /** Type guard so route handlers can type error bodies against the contract. */
 export function isErrorCode(value: string): value is ErrorCode {
-  return (ERROR_CODES as readonly string[]).includes(value);
+  return ERROR_CODES.some((code) => code === value);
 }

@@ -5,6 +5,11 @@ import { BuildingType } from "../models/BuildingType";
 import { User } from "../models/User";
 import { SensorReading } from "../models/SensorReading";
 import { SIM_TIME_SCALE, debugPrint } from "../config/variables";
+import {
+  GAS_LHV_KWH_PER_M3,
+  classifyHeatingSystem,
+  roomHeatCapacity,
+} from "../lib/energy";
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -55,14 +60,8 @@ export type SimulatorHandle = {
 const FRESH_TICK_THRESHOLD_SEC = 0.5;
 // Cap real elapsed time at 35 s to handle restarts, then scale to simulated seconds.
 const MAX_REAL_ELAPSED_SEC = 35;
-// Italy standard lower heating value of natural gas (kWh/m³).
-const GAS_LHV_KWH_PER_M3 = 10.55;
 // How often the simulator re-queries the DB for new sensors while running.
 const DEFAULT_DISCOVERY_INTERVAL_MS = 60_000;
-
-// ── Physics constants ─────────────────────────────────────────────────────────
-const AIR_DENSITY = 1.225; // kg/m³
-const SPECIFIC_HEAT = 1005; // J/(kg·K)
 
 // ── Heating system profiles ───────────────────────────────────────────────────
 // Nominal heating power (kW) and natural-cooling coefficient H (W/K) per system type.
@@ -86,61 +85,61 @@ export type HeatingProfile = {
 };
 
 export function getHeatingProfile(heatingSystemType: string): HeatingProfile {
-  const t = heatingSystemType.toLowerCase();
+  const { kind, energySensorType } = classifyHeatingSystem(heatingSystemType);
 
-  if (t.includes("pompa") || t.includes("heat pump") || t.includes("calore")) {
-    // Heat pump: efficient, lower power density, wider hysteresis for multi-minute cycles
-    return {
-      nominalPowerW_per_m2: 30,
-      standbyPowerKW: 0.0,
-      setpointLow: 18.5,
-      setpointHigh: 21.5,
-      heatLossW_per_K_per_m2: 1.2,
-      label: "Heat Pump",
-      combustionEfficiency: 3.5, // seasonal COP — emits electrical draw = thermal / 3.5
-      energySensorType: "energy_meter",
-    };
+  switch (kind) {
+    case "heat_pump":
+      // Heat pump: efficient, lower power density, wider hysteresis for multi-minute cycles
+      return {
+        nominalPowerW_per_m2: 30,
+        standbyPowerKW: 0.0,
+        setpointLow: 18.5,
+        setpointHigh: 21.5,
+        heatLossW_per_K_per_m2: 1.2,
+        label: "Heat Pump",
+        combustionEfficiency: 3.5, // seasonal COP — emits electrical draw = thermal / 3.5
+        energySensorType,
+      };
+
+    case "district_heating":
+      // District heating: medium power density, wider hysteresis for multi-minute cycles
+      return {
+        nominalPowerW_per_m2: 40,
+        standbyPowerKW: 0.0,
+        setpointLow: 18.5,
+        setpointHigh: 21.5,
+        heatLossW_per_K_per_m2: 1.5,
+        label: "District Heating",
+        combustionEfficiency: 1.0, // COP suppressed in API; efficiency irrelevant here
+        energySensorType,
+      };
+
+    case "gas_boiler":
+      // Gas boiler: higher power density, wider hysteresis for multi-minute cycles
+      return {
+        nominalPowerW_per_m2: 50,
+        standbyPowerKW: 0.0,
+        setpointLow: 18.5,
+        setpointHigh: 21.5,
+        heatLossW_per_K_per_m2: 2.0,
+        label: "Gas Boiler",
+        combustionEfficiency: 0.9, // combustion efficiency — emits cumulative m³
+        energySensorType,
+      };
+
+    default:
+      // Generic fallback
+      return {
+        nominalPowerW_per_m2: 40,
+        standbyPowerKW: 0.0,
+        setpointLow: 18.5,
+        setpointHigh: 21.5,
+        heatLossW_per_K_per_m2: 1.5,
+        label: "Generic",
+        combustionEfficiency: 1.0,
+        energySensorType,
+      };
   }
-
-  if (t.includes("teleriscaldamento") || t.includes("district")) {
-    // District heating: medium power density, wider hysteresis for multi-minute cycles
-    return {
-      nominalPowerW_per_m2: 40,
-      standbyPowerKW: 0.0,
-      setpointLow: 18.5,
-      setpointHigh: 21.5,
-      heatLossW_per_K_per_m2: 1.5,
-      label: "District Heating",
-      combustionEfficiency: 1.0, // COP suppressed in API; efficiency irrelevant here
-      energySensorType: "energy_meter",
-    };
-  }
-
-  if (t.includes("caldaia") || t.includes("gas") || t.includes("centralizzato")) {
-    // Gas boiler: higher power density, wider hysteresis for multi-minute cycles
-    return {
-      nominalPowerW_per_m2: 50,
-      standbyPowerKW: 0.0,
-      setpointLow: 18.5,
-      setpointHigh: 21.5,
-      heatLossW_per_K_per_m2: 2.0,
-      label: "Gas Boiler",
-      combustionEfficiency: 0.9, // combustion efficiency — emits cumulative m³
-      energySensorType: "gas_meter",
-    };
-  }
-
-  // Generic fallback
-  return {
-    nominalPowerW_per_m2: 40,
-    standbyPowerKW: 0.0,
-    setpointLow: 18.5,
-    setpointHigh: 21.5,
-    heatLossW_per_K_per_m2: 1.5,
-    label: "Generic",
-    combustionEfficiency: 1.0,
-    energySensorType: "energy_meter",
-  };
 }
 
 // ── Per-building thermostat state ─────────────────────────────────────────────
@@ -165,9 +164,9 @@ function getOrInitState(
 ): BuildingState {
   let state = buildingStates.get(buildingId);
   if (!state) {
-    const surface = building.surface || 250;
+    const surface = building.surface;
     const ceilingHeight = building.ceilingHeight || 3.0;
-    const C = surface * ceilingHeight * AIR_DENSITY * SPECIFIC_HEAT;
+    const C = roomHeatCapacity(surface, ceilingHeight);
 
     state = {
       heaterOn: true,
@@ -411,7 +410,7 @@ async function bootstrapGasOdometer(
     })
       .sort({ timestamp: -1 })
       .lean<{ value: number }>();
-    if (last && typeof last.value === "number") {
+    if (last && Number.isFinite(last.value)) {
       state.cumulativeGasM3 = Math.max(state.cumulativeGasM3, last.value);
     }
   } catch {
@@ -537,7 +536,9 @@ export async function startSimulator(opts: SimulatorOptions): Promise<SimulatorH
     // Immediate first reading
     await send();
 
-    const timer = setInterval(send, intervalMs);
+    const timer = setInterval(() => {
+      void send();
+    }, intervalMs);
     running.set(sensorId, timer);
   };
 

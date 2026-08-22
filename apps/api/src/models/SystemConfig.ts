@@ -27,7 +27,9 @@ type SystemConfigDocument = InferSchemaType<typeof systemConfigSchema>;
  * does not yet exist.
  */
 systemConfigSchema.statics.getOrCreate =
-  async function (): Promise<SystemConfigDocument> {
+  async function (
+    this: mongoose.Model<SystemConfigDocument>,
+  ): Promise<SystemConfigDocument> {
     const doc = await this.findOneAndUpdate(
       {},
       { $setOnInsert: {} },

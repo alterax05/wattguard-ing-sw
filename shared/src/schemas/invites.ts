@@ -1,18 +1,18 @@
 /**
  * Invite validation schemas
  * 
- * Routes: /api/invites/validate
+ * Routes: /api/v1/invites/validate
  */
 import { z } from "zod";
-import { UserRoleSchema, TokenQuerySchema, ErrorSchema } from "./common";
+import { UserRoleSchema, TokenQuerySchema } from "./common";
 
 /**
- * GET /api/invites/validate - Validate invite token (query parameter)
+ * GET /api/v1/invites/validate - Validate invite token (query parameter)
  */
 export const ValidateInviteQuerySchema = TokenQuerySchema;
 
 /**
- * GET /api/invites/validate - Success response
+ * GET /api/v1/invites/validate - Success response
  */
 export const ValidateInviteResponseSchema = z.object({
   valid: z.literal(true),
@@ -22,6 +22,3 @@ export const ValidateInviteResponseSchema = z.object({
 });
 
 export type ValidateInviteResponse = z.infer<typeof ValidateInviteResponseSchema>;
-
-// Re-export for convenience
-export { ErrorSchema };

@@ -16,14 +16,14 @@ export function toIsoDate(date: Date | undefined): string | undefined {
  * code: the date-fns `Locale` for date formatting and the BCP-47 tag for
  * `Intl`-based formatting (`toLocaleString`, `toLocaleTimeString`, ...).
  */
-const LOCALE_TABLE: Record<string, { dateFns: Locale; intl: string }> = {
+const LOCALE_TABLE = {
   it: { dateFns: it, intl: "it-IT" },
   de: { dateFns: de, intl: "de-DE" },
   en: { dateFns: enGB, intl: "en-GB" },
-};
+} satisfies Record<string, { dateFns: Locale; intl: string }>;
 
 function resolveLocales() {
-  return LOCALE_TABLE[getRequestLocale()] ?? LOCALE_TABLE.en!;
+  return LOCALE_TABLE[getRequestLocale()] ?? LOCALE_TABLE.en
 }
 
 /**

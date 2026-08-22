@@ -10,11 +10,18 @@
  * - POST /api/sensors/:id/readings - Create reading
  * - GET /api/sensors/:id/readings - Get readings history
  */
-import { describe, test, expect, beforeAll, afterAll, beforeEach, expectTypeOf } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeEach,
+  expectTypeOf,
+} from "bun:test";
+
 import { testClient } from "hono/testing";
 import { z } from "zod";
 import { app } from "../../index";
-import { connectTestDB, disconnectTestDB, clearTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
 import { ErrorSchema } from "@wattguard/shared";
 import type {
   CreateSensorResponse,
@@ -37,28 +44,16 @@ import { Alert } from "../../models/Alert";
 import { Types } from "mongoose";
 
 // Suppress console logs during tests
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
 
 let adminToken: string;
 let operatorToken: string;
 let adminUserId: string;
 let buildingId: string;
 
-beforeAll(async () => {
-//  console.log = () => {};
-//  console.error = () => {};
-  await connectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
-afterAll(async () => {
-  console.log = originalConsoleLog;
-  console.error = originalConsoleError;
-  await disconnectTestDB();
-});
 
 beforeEach(async () => {
-  await clearTestDB();
 
   // Create test users
   const adminPasswordHash = await Bun.password.hash("admin123", {
@@ -85,26 +80,22 @@ beforeEach(async () => {
   });
 
   // Login to get tokens
-  const adminLoginRes = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const adminLoginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "admin@test.com",
       password: "admin123",
-    }),
+    },
   });
   
   const adminCookie = adminLoginRes.headers.get("set-cookie");
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
   adminToken = adminTokenMatch![1]!;
 
-  const operatorLoginRes = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const operatorLoginRes = await client.api.v1.auth.local.login.$post({
+    json: {
       email: "operator@test.com",
       password: "operator123",
-    }),
+    },
   });
   
   const operatorCookie = operatorLoginRes.headers.get("set-cookie");
@@ -131,13 +122,13 @@ beforeEach(async () => {
   buildingId = building._id.toString();
 });
 
-describe("Sensors Routes - Integration Tests", () => {
+describe("sensors api", () => {
   // ============================================================================
   // POST /api/sensors - Create Sensor
   // ============================================================================
 
-  describe("POST /api/sensors", () => {
-    test("should create a new sensor (admin)", async () => {
+  describe("POST /api/v1/sensors", () => {
+    test("creates a new sensor (admin)", async () => {
       const sensorData = {
         buildingId,
         sensorType: "internal_temp" as const,
@@ -146,7 +137,7 @@ describe("Sensors Routes - Integration Tests", () => {
         transmissionInterval: 90,
       };
 
-      const res = await client.api.sensors.$post(
+      const res = await client.api.v1.sensors.$post(
         {
           json: sensorData,
         },
@@ -175,14 +166,14 @@ describe("Sensors Routes - Integration Tests", () => {
       
     });
 
-    test("should create sensor with operator role", async () => {
+    test("creates sensor with operator role", async () => {
       const sensorData = {
         buildingId,
         sensorType: "external_temp" as const,
         location: "Facciata Nord",
       };
 
-      const res = await client.api.sensors.$post(
+      const res = await client.api.v1.sensors.$post(
         {
           json: sensorData,
         },
@@ -196,7 +187,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(201);
     });
 
-    test("should reject duplicate serial number", async () => {
+    test("rejects duplicate serial number", async () => {
       await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
@@ -208,7 +199,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$post(
+      const res = await client.api.v1.sensors.$post(
         {
           json: {
             buildingId,
@@ -232,8 +223,8 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(json.error).toContain("already exists");
     });
 
-    test("should reject invalid building ID", async () => {
-      const res = await client.api.sensors.$post(
+    test("rejects invalid building ID", async () => {
+      const res = await client.api.v1.sensors.$post(
         {
           json: {
             buildingId: "507f1f77bcf86cd799439011",
@@ -251,8 +242,8 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(404);
     });
 
-    test("should reject invalid data", async () => {
-      const res = await client.api.sensors.$post(
+    test("rejects invalid data", async () => {
+      const res = await client.api.v1.sensors.$post(
         {
           json: {
             buildingId,
@@ -276,8 +267,8 @@ describe("Sensors Routes - Integration Tests", () => {
   // GET /api/sensors/:id - Get Sensor Details
   // ============================================================================
 
-  describe("GET /api/sensors/:id", () => {
-    test("should return sensor details", async () => {
+  describe("GET /api/v1/sensors/:id", () => {
+    test("returns sensor details", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
@@ -295,7 +286,7 @@ describe("Sensors Routes - Integration Tests", () => {
         },
       });
 
-      const res = await client.api.sensors[":id"].$get(
+      const res = await client.api.v1.sensors[":id"].$get(
         {
           param: { id: sensor._id.toString() },
         },
@@ -318,10 +309,10 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(json.sensor.isOffline).toBe(false);
     });
 
-    test("should return 404 for non-existent sensor", async () => {
+    test("returns 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api.sensors[":id"].$get(
+      const res = await client.api.v1.sensors[":id"].$get(
         {
           param: { id: fakeId },
         },
@@ -338,8 +329,8 @@ describe("Sensors Routes - Integration Tests", () => {
   // PATCH /api/sensors/:id - Update Sensor
   // ============================================================================
 
-  describe("PATCH /api/sensors/:id", () => {
-    test("should update sensor", async () => {
+  describe("PATCH /api/v1/sensors/:id", () => {
+    test("updates sensor", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
@@ -356,7 +347,7 @@ describe("Sensors Routes - Integration Tests", () => {
         status: "inactive" as const,
       };
 
-      const res = await client.api.sensors[":id"].$patch(
+      const res = await client.api.v1.sensors[":id"].$patch(
         {
           param: { id: sensor._id.toString() },
           json: updateData,
@@ -381,10 +372,10 @@ describe("Sensors Routes - Integration Tests", () => {
       
     });
 
-    test("should return 404 for non-existent sensor", async () => {
+    test("returns 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api.sensors[":id"].$patch(
+      const res = await client.api.v1.sensors[":id"].$patch(
         {
           param: { id: fakeId },
           json: {
@@ -401,7 +392,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(res.status).toBe(404);
     });
 
-    test("should delete alerts for a removed threshold without deleting alerts for the other threshold", async () => {
+    test("deletes alerts for a removed threshold without deleting alerts for the other threshold", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
@@ -460,14 +451,14 @@ describe("Sensors Routes - Integration Tests", () => {
         buildingId,
         buildingName: "Test Building",
         sensorId: sensor._id,
-        type: "sensor_offline",
+        type: "efficiency_below_threshold",
         severity: "medium",
         sensorType: "energy_meter",
         location: "Quadro",
         status: "active",
       });
 
-      const res = await client.api.sensors[":id"].$patch(
+      const res = await client.api.v1.sensors[":id"].$patch(
         {
           param: { id: sensor._id.toString() },
           json: { maxThreshold: null },
@@ -492,8 +483,8 @@ describe("Sensors Routes - Integration Tests", () => {
   // DELETE /api/sensors/:id - Delete Sensor
   // ============================================================================
 
-  describe("DELETE /api/sensors/:id", () => {
-    test("should delete sensor and cascade delete readings", async () => {
+  describe("DELETE /api/v1/sensors/:id", () => {
+    test("deletes sensor and cascade delete readings", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
@@ -531,7 +522,7 @@ describe("Sensors Routes - Integration Tests", () => {
         status: "active",
       });
 
-      const res = await client.api.sensors[":id"].$delete(
+      const res = await client.api.v1.sensors[":id"].$delete(
         {
           param: { id: sensor._id.toString() },
         },
@@ -566,10 +557,10 @@ describe("Sensors Routes - Integration Tests", () => {
       
     });
 
-    test("should return 404 for non-existent sensor", async () => {
+    test("returns 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api.sensors[":id"].$delete(
+      const res = await client.api.v1.sensors[":id"].$delete(
         {
           param: { id: fakeId },
         },
@@ -588,8 +579,8 @@ describe("Sensors Routes - Integration Tests", () => {
   // GET /api/sensors - Automatic inactivity detection
   // ============================================================================
 
-  describe("GET /api/sensors - inactivity detection", () => {
-    test("should mark an active sensor as inactive when it exceeds 2× transmissionInterval", async () => {
+  describe("inactivity detection", () => {
+    test("marks an active sensor as inactive when it exceeds 2× transmissionInterval", async () => {
       const transmissionInterval = 60; // 60 s
       // lastReading is 200 s ago → exceeds 2 × 60 = 120 s
       const staleTimestamp = new Date(Date.now() - 200_000);
@@ -606,7 +597,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$get(
+      const res = await client.api.v1.sensors.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -627,7 +618,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(dbSensor!.status).toBe("inactive");
     });
 
-    test("should not mark an active sensor as inactive when reading is within 2× transmissionInterval", async () => {
+    test("does not mark an active sensor as inactive when reading is within 2× transmissionInterval", async () => {
       const transmissionInterval = 300; // 300 s
       // lastReading is 100 s ago → within 2 × 300 = 600 s
       const freshTimestamp = new Date(Date.now() - 100_000);
@@ -644,7 +635,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$get(
+      const res = await client.api.v1.sensors.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -660,7 +651,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(found!.isOffline).toBe(false);
     });
 
-    test("should not change status of sensors in maintenance or error when they have stale readings", async () => {
+    test("does not change status of sensors in maintenance or error when they have stale readings", async () => {
       const staleTimestamp = new Date(Date.now() - 600_000); // 10 min ago
 
       const maintenanceSensor = await Sensor.create({
@@ -687,7 +678,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$get(
+      const res = await client.api.v1.sensors.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -707,7 +698,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(e!.isOffline).toBe(false);
     });
 
-    test("should mark active sensor with no lastReading as inactive", async () => {
+    test("marks active sensor with no lastReading as inactive", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "energy_meter",
@@ -719,7 +710,7 @@ describe("Sensors Routes - Integration Tests", () => {
         updatedBy: adminUserId,
       });
 
-      const res = await client.api.sensors.$get(
+      const res = await client.api.v1.sensors.$get(
         { query: {} },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -738,8 +729,8 @@ describe("Sensors Routes - Integration Tests", () => {
   // GET /api/sensors/:id/readings - Get Readings History
   // ============================================================================
 
-  describe("GET /api/sensors/:id/readings", () => {
-    test("should return sensor readings history", async () => {
+  describe("GET /api/v1/sensors/:id/readings", () => {
+    test("returns sensor readings history", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
@@ -785,7 +776,7 @@ describe("Sensors Routes - Integration Tests", () => {
         },
       ]);
 
-      const res = await client.api.sensors[":id"].readings.$get(
+      const res = await client.api.v1.sensors[":id"].readings.$get(
         {
           param: { id: sensor._id.toString() },
           query: {},
@@ -806,7 +797,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(json.readings[2]!.value).toBe(21.0); // Oldest last
     });
 
-    test("should support date range filtering", async () => {
+    test("supports date range filtering", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
@@ -843,7 +834,7 @@ describe("Sensors Routes - Integration Tests", () => {
 
       const startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(); // 2 days ago
 
-      const res = await client.api.sensors[":id"].readings.$get(
+      const res = await client.api.v1.sensors[":id"].readings.$get(
         {
           param: { id: sensor._id.toString() },
           query: { startDate },
@@ -862,7 +853,7 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(json.readings[0]!.value).toBe(22.0);
     });
 
-    test("should support pagination", async () => {
+    test("supports pagination", async () => {
       const sensor = await Sensor.create({
         buildingId,
         sensorType: "internal_temp",
@@ -886,7 +877,7 @@ describe("Sensors Routes - Integration Tests", () => {
       }));
       await SensorReading.create(readings);
 
-      const res = await client.api.sensors[":id"].readings.$get(
+      const res = await client.api.v1.sensors[":id"].readings.$get(
         {
           param: { id: sensor._id.toString() },
           query: { limit: "2", offset: "0" },
@@ -907,10 +898,10 @@ describe("Sensors Routes - Integration Tests", () => {
       expect(json.pagination.offset).toBe(0);
     });
 
-    test("should return 404 for non-existent sensor", async () => {
+    test("returns 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
 
-      const res = await client.api.sensors[":id"].readings.$get(
+      const res = await client.api.v1.sensors[":id"].readings.$get(
         {
           param: { id: fakeId },
           query: {},

@@ -1,23 +1,24 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { Types } from "mongoose";
 import ExcelJS from "exceljs";
+import { testClient } from "hono/testing";
 import { app } from "../../index";
 import { Building } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
 import { User } from "../../models/User";
-import { clearTestDB, connectTestDB, disconnectTestDB } from "../helpers/db";
+import { setupIntegrationTests } from "../helpers/db";
+
+const client = testClient(app);
 
 let adminToken: string;
 let operatorToken: string;
 let buildingId: string;
 
 async function login(email: string, password: string): Promise<string> {
-  const response = await app.request("/api/auth/local/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+  const response = await client.api.v1.auth.local.login.$post({
+    json: { email, password },
   });
   const cookie = response.headers.get("set-cookie");
   const token = cookie?.match(/access_token=([^;]+)/)?.[1];
@@ -26,16 +27,9 @@ async function login(email: string, password: string): Promise<string> {
   return token;
 }
 
-beforeAll(async () => {
-  await connectTestDB();
-});
-
-afterAll(async () => {
-  await disconnectTestDB();
-});
+setupIntegrationTests(import.meta.path);
 
 beforeEach(async () => {
-  await clearTestDB();
 
   const passwordHash = await Bun.password.hash("admin123", {
     algorithm: "bcrypt",
@@ -119,18 +113,30 @@ beforeEach(async () => {
   });
 });
 
-describe("Admin report export API", () => {
+describe("GET /api/v1/export/report", () => {
   test("requires authentication", async () => {
-    const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
-    );
+    const response = await client.api.v1.export.report.$get({
+      query: {
+        buildingIds: buildingId,
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
+        format: "pdf",
+      },
+    });
 
     expect(response.status).toBe(401);
   });
 
   test("allows only administrators", async () => {
-    const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
+    const response = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+          format: "pdf",
+        },
+      },
       { headers: { Cookie: `access_token=${operatorToken}` } },
     );
 
@@ -138,22 +144,43 @@ describe("Admin report export API", () => {
   });
 
   test("rejects missing and reversed date ranges", async () => {
-    const missingDateResponse = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01`,
+    const missingDateResponse = await client.api.v1.export.report.$get(
+      {
+        // @ts-expect-error intentionally missing endDate
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     expect(missingDateResponse.status).toBe(400);
 
-    const reversedDateResponse = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-02-01&endDate=2026-01-01&format=pdf`,
+    const reversedDateResponse = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-02-01",
+          endDate: "2026-01-01",
+          format: "pdf",
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     expect(reversedDateResponse.status).toBe(400);
   });
 
   test("rejects an invalid format", async () => {
-    const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=csv`,
+    // SAFETY: "csv" deliberately violates the format enum so the server must reject it; `never` bypasses the client's query type.
+    const response = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+          format: "csv" as never,
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
 
@@ -161,8 +188,15 @@ describe("Admin report export API", () => {
   });
 
   test("returns 404 when a selected building does not exist", async () => {
-    const response = await app.request(
-      `/api/export/report?buildingIds=${new Types.ObjectId()}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
+    const response = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: new Types.ObjectId().toString(),
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+          format: "pdf",
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
 
@@ -170,8 +204,14 @@ describe("Admin report export API", () => {
   });
 
   test("defaults to PDF when format is omitted", async () => {
-    const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31`,
+    const response = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
 
@@ -180,8 +220,15 @@ describe("Admin report export API", () => {
   });
 
   test("returns a valid PDF file", async () => {
-    const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=pdf`,
+    const response = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+          format: "pdf",
+        },
+      },
       { headers: { Cookie: `access_token=${adminToken}` } },
     );
     const body = await response.arrayBuffer();
@@ -197,8 +244,15 @@ describe("Admin report export API", () => {
   });
 
   test("returns a valid Excel file with the aggregated data", async () => {
-    const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
+    const response = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+          format: "xlsx",
+        },
+      },
       {
         headers: {
           Cookie: `access_token=${adminToken}`,
@@ -224,10 +278,13 @@ describe("Admin report export API", () => {
 
     const summary = workbook.getWorksheet("Riepilogo");
     expect(summary).toBeDefined();
+    // SAFETY: ExcelJS stores row cells in an array-like object and these rows contain only scalar cells.
     const summaryRows = summary!.getRows(1, 2);
+    // SAFETY: ExcelJS row values behave as an array of scalar cells for these rows.
     const header = summaryRows![0]!.values as unknown[];
     expect(header).toContain("Consumo totale (kWh)");
 
+    // SAFETY: ExcelJS row values behave as an array of scalar cells for these rows.
     const row = summaryRows![1]!.values as unknown[];
     expect(row).toContain("Edificio Report");
     expect(row).toContain(48); // 2 kW × 24 h
@@ -236,8 +293,10 @@ describe("Admin report export API", () => {
     expect(daily).toBeDefined();
     const dailyRows = daily!.getRows(1, 3) ?? [];
     expect(dailyRows).toHaveLength(3); // header + 2 days
+    // SAFETY: ExcelJS row values behave as an array of scalar cells for these rows.
     const firstDay = dailyRows[1]!.values as unknown[];
     expect(firstDay).toContain(48);
+    // SAFETY: ExcelJS row values behave as an array of scalar cells for these rows.
     const secondDay = dailyRows[2]!.values as unknown[];
     expect(secondDay).toContain(48);
   });
@@ -292,8 +351,15 @@ describe("Admin report export API", () => {
       },
     ]);
 
-    const response = await app.request(
-      `/api/export/report?buildingIds=${gasBuilding._id}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
+    const response = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: gasBuilding._id.toString(),
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+          format: "xlsx",
+        },
+      },
       {
         headers: {
           Cookie: `access_token=${adminToken}`,
@@ -309,22 +375,32 @@ describe("Admin report export API", () => {
     await workbook.xlsx.load(body);
 
     const summary = workbook.getWorksheet("Riepilogo")!;
+    // SAFETY: ExcelJS stores row cells in an array-like object and these rows contain only scalar cells.
     const row = summary.getRow(2).values as unknown[];
     expect(row).toContain("Edificio Gas");
     expect(row).toContain(52.75); // 5 m³ × 10.55 kWh/m³
 
     const daily = workbook.getWorksheet("Consumo giornaliero")!;
     const gasRows = (daily.getRows(1, daily.rowCount) ?? []).filter((r) => {
+      // SAFETY: ExcelJS row values behave as an array of scalar cells for these data rows.
       const values = r.values as unknown[];
       return values.includes("Edificio Gas");
     });
     expect(gasRows).toHaveLength(1); // only the gas delta day, no energy_meter day
+    // SAFETY: the filter above guarantees exactly one matching row whose cells are array-like.
     expect(gasRows[0]!.values as unknown[]).toContain(52.75);
   });
 
   test("localizes report labels for the requested language", async () => {
-    const response = await app.request(
-      `/api/export/report?buildingIds=${buildingId}&startDate=2026-01-01&endDate=2026-01-31&format=xlsx`,
+    const response = await client.api.v1.export.report.$get(
+      {
+        query: {
+          buildingIds: buildingId,
+          startDate: "2026-01-01",
+          endDate: "2026-01-31",
+          format: "xlsx",
+        },
+      },
       {
         headers: {
           Cookie: `access_token=${adminToken}`,
@@ -341,12 +417,14 @@ describe("Admin report export API", () => {
 
     const summary = workbook.getWorksheet("Zusammenfassung");
     expect(summary).toBeDefined();
+    // SAFETY: ExcelJS stores row cells in an array-like object and these header rows contain only scalar cells.
     const header = summary!.getRow(1).values as unknown[];
     expect(header).toContain("Gesamtverbrauch (kWh)");
     expect(header).toContain("Gebäude");
 
     const daily = workbook.getWorksheet("Tagesverbrauch");
     expect(daily).toBeDefined();
+    // SAFETY: ExcelJS stores row cells in an array-like object and this header row contains only scalar cells.
     const dailyHeader = daily!.getRow(1).values as unknown[];
     expect(dailyHeader).toContain("Gebäude");
   });

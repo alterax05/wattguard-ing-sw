@@ -1,16 +1,22 @@
 import { z } from "zod";
-import { ObjectIdSchema, PaginationQuerySchema, SortOrderSchema } from "./common";
+import { ObjectIdSchema, PaginationQuerySchema, PaginationResponseSchema, SortOrderSchema } from "./common";
 
 export const AlertSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
 export const AlertStatusSchema = z.enum(["active", "acknowledged", "resolved"]);
 export const AlertThresholdTypeSchema = z.enum(["min", "max"]);
+
+export const THRESHOLD_ALERT_TYPE = "threshold_exceeded";
+export const EFFICIENCY_ALERT_TYPE = "efficiency_below_threshold";
+export const ALERT_TYPES = [THRESHOLD_ALERT_TYPE, EFFICIENCY_ALERT_TYPE] as const;
+export type AlertType = (typeof ALERT_TYPES)[number];
+export const AlertTypeSchema = z.enum(ALERT_TYPES);
 
 export const AlertSchema = z.object({
   id: ObjectIdSchema.describe("Unique alert identifier"),
   buildingId: ObjectIdSchema.describe("Building identifier this alert belongs to"),
   buildingName: z.string().describe("Name of the building"),
   sensorId: ObjectIdSchema.optional().describe("Optional sensor identifier this alert relates to"),
-  type: z.string().describe("Type of the alert (e.g., temperature_anomaly)"),
+  type: AlertTypeSchema.describe("Type of the alert"),
   thresholdType: AlertThresholdTypeSchema.optional().describe("Threshold direction for threshold alerts"),
   severity: AlertSeveritySchema.describe("Severity level"),
   sensorType: z.string().optional().describe("Sensor type the alert relates to"),
@@ -20,11 +26,11 @@ export const AlertSchema = z.object({
   limit: z.number().optional().describe("Threshold limit that was exceeded"),
   status: AlertStatusSchema.describe("Current status"),
   acknowledgedBy: z.string().optional().describe("Name of the user who acknowledged"),
-  acknowledgedAt: z.string().datetime().optional().describe("When it was acknowledged"),
+  acknowledgedAt: z.iso.datetime().optional().describe("When it was acknowledged"),
   resolvedBy: z.string().optional().describe("Name of the user who resolved"),
-  resolvedAt: z.string().datetime().optional().describe("When it was resolved"),
-  createdAt: z.string().datetime().describe("Creation timestamp"),
-  updatedAt: z.string().datetime().describe("Last update timestamp"),
+  resolvedAt: z.iso.datetime().optional().describe("When it was resolved"),
+  createdAt: z.iso.datetime().describe("Creation timestamp"),
+  updatedAt: z.iso.datetime().describe("Last update timestamp"),
 });
 
 /**
@@ -46,11 +52,7 @@ export const ListAlertsQuerySchema = PaginationQuerySchema.extend({
  */
 export const ListAlertsResponseSchema = z.object({
   alerts: z.array(AlertSchema).describe("List of alerts"),
-  pagination: z.object({
-    limit: z.number(),
-    offset: z.number(),
-    total: z.number(),
-  }).describe("Pagination information"),
+  pagination: PaginationResponseSchema,
 });
 
 export type ListAlertsResponse = z.infer<typeof ListAlertsResponseSchema>;

@@ -50,33 +50,34 @@ import { DateRangePicker } from "./date-range-picker"
 
 type ExportFormat = "csv" | "xlsx" | "pdf"
 
-const EXPORT_ACTIONS: Record<
+const EXPORT_ACTIONS = {
+  csv: {
+    url: "/api/export/consumption",
+    formatParam: undefined,
+    filename: (start: string, end: string) => `wattguard-consumption-${start}-${end}.csv`,
+  },
+  xlsx: {
+    url: "/api/export/report",
+    formatParam: "xlsx",
+    filename: (start: string, end: string) => `wattguard-report-${start}-${end}.xlsx`,
+  },
+  pdf: {
+    url: "/api/export/report",
+    formatParam: "pdf",
+    filename: (start: string, end: string) => `wattguard-report-${start}-${end}.pdf`,
+  },
+} satisfies Record<
   ExportFormat,
   {
     url: string
     formatParam?: string
     filename: (start: string, end: string) => string
   }
-> = {
-  csv: {
-    url: "/api/export/consumption",
-    filename: (start, end) => `wattguard-consumption-${start}-${end}.csv`,
-  },
-  xlsx: {
-    url: "/api/export/report",
-    formatParam: "xlsx",
-    filename: (start, end) => `wattguard-report-${start}-${end}.xlsx`,
-  },
-  pdf: {
-    url: "/api/export/report",
-    formatParam: "pdf",
-    filename: (start, end) => `wattguard-report-${start}-${end}.pdf`,
-  },
-}
+>
 
 /** Extract the building type display name from a summary */
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
-  if (typeof bt === "string") return bt
+  if (!(bt instanceof Object)) return bt
   return bt.name
 }
 
@@ -110,7 +111,7 @@ export function BuildingSearch() {
         b.address.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesType =
         typeFilter === "all" ||
-        (typeof b.buildingType === "object"
+        (b.buildingType instanceof Object
           ? b.buildingType.id === typeFilter
           : b.buildingType === typeFilter)
       return matchesSearch && matchesType
@@ -173,7 +174,7 @@ export function BuildingSearch() {
   }
 
   const handleBuildingClick = (id: string) => {
-    navigate(`/dashboard/buildings/${id}`)
+    void navigate(`/dashboard/buildings/${id}`)
   }
 
   return (
@@ -188,7 +189,7 @@ export function BuildingSearch() {
                 <Input
                   placeholder={t("buildings.searchPlaceholder")}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value) }}
                   className="pl-9"
                 />
               </div>
@@ -207,7 +208,10 @@ export function BuildingSearch() {
               </Select>
               <Select
                 value={statusFilter}
-                onValueChange={(value) => setStatusFilter(value as BuildingStatus | "all")}
+                onValueChange={(value) => {
+                  // SAFETY: the Select only offers the three building statuses plus "all".
+                  setStatusFilter(value as BuildingStatus | "all")
+                }}
               >
                 <SelectTrigger className="w-full md:w-36">
                   <SelectValue placeholder={t("common.status")} />
@@ -250,7 +254,7 @@ export function BuildingSearch() {
                       variant="default"
                       onClick={() => {
                         const ids = selectedIds.join(",")
-                        navigate(`/dashboard/buildings/compare?ids=${ids}`)
+                        void navigate(`/dashboard/buildings/compare?ids=${ids}`)
                       }}
                     >
                       <Eye className="mr-2 h-4 w-4" />
@@ -280,21 +284,21 @@ export function BuildingSearch() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => handleExport("csv")}
+                          onClick={() => { void handleExport("csv") }}
                           disabled={isExporting}
                         >
                           <FileText className="mr-2 h-4 w-4" />
                           {t("buildings.export.csv")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleExport("xlsx")}
+                          onClick={() => { void handleExport("xlsx") }}
                           disabled={isExporting}
                         >
                           <FileSpreadsheet className="mr-2 h-4 w-4" />
                           {t("buildings.export.xlsx")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleExport("pdf")}
+                          onClick={() => { void handleExport("pdf") }}
                           disabled={isExporting}
                         >
                           <FileType className="mr-2 h-4 w-4" />
