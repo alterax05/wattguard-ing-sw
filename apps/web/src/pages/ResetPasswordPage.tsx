@@ -23,7 +23,7 @@ export function ResetPasswordPage() {
   const tokenQuery = useValidateResetToken(token);
   const resetPassword = useResetPassword();
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
+  const handleSubmit = (e: React.SubmitEvent) => {
     e.preventDefault();
     setValidationError(null);
 
@@ -42,7 +42,9 @@ export function ResetPasswordPage() {
       {
         onSuccess: () => {
           // Redirect to login after 2 seconds
-          setTimeout(() => navigate("/login"), 2000);
+          setTimeout(() => {
+              navigate("/login");
+          }, 2000);
         },
       },
     );
@@ -133,7 +135,7 @@ export function ResetPasswordPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value) }}
                 placeholder={t("auth.passwordMinLength")}
                 required
               />
@@ -144,7 +146,7 @@ export function ResetPasswordPage() {
                 id="passwordConfirm"
                 type="password"
                 value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
+                onChange={(e) => { setPasswordConfirm(e.target.value) }}
                 placeholder={t("auth.confirmPasswordPlaceholder")}
                 required
               />

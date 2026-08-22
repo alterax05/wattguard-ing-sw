@@ -16,5 +16,5 @@ export const DEFAULT_LOCALE: LocaleCode = "en";
 export const LOCALE_STORAGE_KEY = "wattguard-language";
 
 export function isSupportedLocale(value: string | null | undefined): value is LocaleCode {
-  return value != null && (SUPPORTED_LOCALES as readonly string[]).includes(value);
+  return value != null && SUPPORTED_LOCALES.some((lng) => lng === value);
 }

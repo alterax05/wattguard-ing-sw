@@ -198,6 +198,7 @@ describe("settings api", () => {
       headers: { Authorization: `Bearer ${operatorToken}` },
     });
 
+    // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
     expect(res.status as number).toBe(403);
   });
 });

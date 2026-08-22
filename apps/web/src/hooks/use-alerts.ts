@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/api";
-import { errorMessage } from "@/lib/errors";
+import { errorMessageFromResponse } from "@/lib/errors";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -45,10 +45,10 @@ export function useAlerts(params?: { status?: string; buildingId?: string }) {
 
       const res = await client.api.v1.alerts.$get({ query });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
-      return await res.json() as ListAlertsResponse;
+      const data: ListAlertsResponse = await res.json();
+      return data;
     },
   });
 }
@@ -63,14 +63,13 @@ export function useAcknowledgeAlert() {
         param: { id: alertId }
       });
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(errorMessage(error));
+        throw new Error(await errorMessageFromResponse(res));
       }
       return res.json();
     },
     onSuccess: () => {
       toast.success(t("alerts.acknowledgedToast"));
-      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      void queryClient.invalidateQueries({ queryKey: ["alerts"] });
     },
     onError: (error) => {
       toast.error(t("errors.prefix", { message: error.message }));
@@ -88,14 +87,13 @@ export function useResolveAlert() {
         param: { id: alertId }
       });
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(errorMessage(error));
+        throw new Error(await errorMessageFromResponse(res));
       }
       return res.json();
     },
     onSuccess: () => {
       toast.success(t("alerts.resolvedToast"));
-      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      void queryClient.invalidateQueries({ queryKey: ["alerts"] });
     },
     onError: (error) => {
       toast.error(t("errors.prefix", { message: error.message }));

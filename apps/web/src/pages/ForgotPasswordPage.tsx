@@ -18,7 +18,7 @@ export function ForgotPasswordPage() {
   const forgotPassword = useForgotPassword();
   const { t } = useTranslation();
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
+  const handleSubmit = (e: React.SubmitEvent) => {
     e.preventDefault();
     forgotPassword.mutate({ email });
   };
@@ -90,7 +90,7 @@ export function ForgotPasswordPage() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value) }}
                   required
                   placeholder={t("auth.emailPlaceholder")}
                 />

@@ -106,7 +106,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Apply sorting
       const sortBy = query.sortBy || "updatedAt";
       const sortOrder = query.sortOrder === "asc" ? 1 : -1;
-      const sort: Record<string, 1 | -1> = { [sortBy]: sortOrder };
+      const sort = { [sortBy]: sortOrder } satisfies Record<string, 1 | -1>;
 
       // Execute query with pagination
       const buildings = await Building.find(filter)
@@ -170,6 +170,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
             ceilingHeight: b.ceilingHeight,
             location: {
               type: b.location.type,
+              // SAFETY: the GeoJSON Point schema stores a fixed [lon, lat]
+              // pair of numbers.
               coordinates: b.location.coordinates as [number, number],
             },
             buildingType: (buildingType instanceof mongoose.Types.ObjectId)
@@ -273,6 +275,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           ceilingHeight: building.ceilingHeight,
           location: {
             type: building.location.type,
+            // SAFETY: the GeoJSON Point schema stores a fixed [lon, lat]
+            // pair of numbers.
             coordinates: building.location.coordinates as [number, number],
           },
           buildingType: {
@@ -381,6 +385,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           ceilingHeight: building.ceilingHeight,
           location: {
             type: building.location.type,
+            // SAFETY: the GeoJSON Point schema stores a fixed [lon, lat]
+            // pair of numbers.
             coordinates: building.location.coordinates as [number, number],
           },
           buildingType: {
@@ -520,7 +526,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         });
       }
 
-      building.updatedBy = userDoc._id as Types.ObjectId;
+      building.updatedBy = userDoc._id;
 
       await building.save();
 
@@ -555,6 +561,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           ceilingHeight: building.ceilingHeight,
           location: {
             type: building.location.type,
+            // SAFETY: the GeoJSON Point schema stores a fixed [lon, lat]
+            // pair of numbers.
             coordinates: building.location.coordinates as [number, number],
           },
           buildingType: {
@@ -824,8 +832,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           timestamp: r.timestamp.toISOString(),
           value: r.value,
           unit: r.unit,
-          sensorType: r.metadata!.sensorType as SensorType,
-          sensorId: r.metadata!.sensorId?.toString(),
+          // SAFETY: readings persist metadata.sensorType copied from
+          // Sensor.sensorType, which is constrained to the SensorType enum.
+          sensorType: r.metadata.sensorType as SensorType,
+          sensorId: r.metadata.sensorId?.toString(),
         })),
       } satisfies GetBuildingHistoryResponse);
     }

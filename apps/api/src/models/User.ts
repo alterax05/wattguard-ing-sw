@@ -49,7 +49,7 @@ const userSchema = new Schema(
   }
 );
 
-userSchema.pre('save', async function() {
+userSchema.pre('save', function() {
   if (this.isModified('password') && !this.isNew) {
     this.passwordUpdatedAt = new Date();
   }

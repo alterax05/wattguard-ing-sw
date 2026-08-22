@@ -43,6 +43,8 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
 
   // The building ref may fail to populate if the referenced document was
   // deleted; fall back to the raw ObjectId and an unknown-name placeholder.
+  // SAFETY: buildingId is a ref to Building populated above; when population
+  // fails (referenced doc deleted) mongoose keeps the raw ObjectId instead.
   const building = sensor.buildingId as BuildingDocument | mongoose.Types.ObjectId;
   const buildingId =
     building instanceof mongoose.Types.ObjectId ? building : building._id;

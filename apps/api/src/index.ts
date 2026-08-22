@@ -53,13 +53,13 @@ async function startServer() {
   // Warm up the translation catalogs (emails/reports) before serving traffic.
   await ensureI18nReady();
 
-  if (MQTT_ENABLED) connectAndSubscribe();
+  if (MQTT_ENABLED) void connectAndSubscribe();
 
   // Run the simulator in-process, feeding readings straight into the reading
   // service. Both flags are independent: MQTT and SIMULATOR_ENABLED may be on
   // at the same time. Auto-seeds demo data only in development.
   if (SIMULATOR_ENABLED) {
-    startSimulator({
+    void startSimulator({
       autoSeed: IS_DEVELOPMENT,
       onReading: (reading) => ingestReading(reading),
     }).then(() => {
@@ -74,7 +74,7 @@ async function startServer() {
         console.error("❌ Efficiency alert evaluation failed:", error);
       });
     };
-    run(); // valutazione immediata al boot
+    void run(); // valutazione immediata al boot
     try {
       Bun.cron(`*/${EFFICIENCY_ALERT_INTERVAL_MINUTES} * * * *`, run);
     } catch (error) {

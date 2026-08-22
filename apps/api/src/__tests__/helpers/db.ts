@@ -42,12 +42,13 @@ interface MongoTestCleanupRegistry {
  * isolation — so one set of exit listeners covers all directories.
  */
 function cleanupRegistry(): MongoTestCleanupRegistry {
-  const proc = process as unknown as Record<
-    symbol,
-    MongoTestCleanupRegistry | undefined
-  >;
+  // SAFETY: this module exclusively owns the CLEANUP_REGISTRY symbol key on the
+  // process object; no other module ever writes that key.
+  const proc = process as typeof process & {
+    [CLEANUP_REGISTRY]?: MongoTestCleanupRegistry;
+  };
   proc[CLEANUP_REGISTRY] ??= { dirs: new Set<string>(), installed: false };
-  return proc[CLEANUP_REGISTRY]!;
+  return proc[CLEANUP_REGISTRY];
 }
 
 function removeDataDirQuietly(dir: string): void {

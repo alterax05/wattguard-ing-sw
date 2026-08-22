@@ -45,11 +45,11 @@ import mongoose from "mongoose";
 //
 // `mockWeatherFn` is a variable that individual tests can overwrite to control
 // what the weather API "returns".  By default it returns a real-ish 5°C.
-let mockWeatherImpl: () => Promise<number | null> = async () => 5.0;
+let mockWeatherImpl: () => Promise<number | null> = () => Promise.resolve(5.0);
 
-mock.module("../../lib/weather", () => ({
+await mock.module("../../lib/weather", () => ({
   getAverageHistoricalTemperature: mock(() => mockWeatherImpl()),
-  getCoordinates: mock(async () => null),
+  getCoordinates: mock(() => Promise.resolve(null)),
 }));
 
 // ── App and test helpers (imported AFTER the module mock is registered) ──────
@@ -120,12 +120,12 @@ setupIntegrationTests(import.meta.path);
 beforeEach(async () => {
 
   // Reset weather mock to a sensible default before each test
-  mockWeatherImpl = async () => 5.0;
+  mockWeatherImpl = () => Promise.resolve(5.0);
 
   // Create admin user
   const hash = await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 });
   const admin = await User.create({ email: "admin@test.com", role: "admin", passwordHash: hash });
-  adminUserId = admin._id as mongoose.Types.ObjectId;
+  adminUserId = admin._id;
 
   // Log in
   const loginRes = await client.api.v1.auth.local.login.$post({
@@ -138,7 +138,7 @@ beforeEach(async () => {
 
   // Create a building type
   const bt = await BuildingType.create({ name: "TestType", description: "For testing" });
-  buildingTypeId = bt._id as mongoose.Types.ObjectId;
+  buildingTypeId = bt._id;
 });
 
 // ── factory: create a minimal active building ─────────────────────────────────
@@ -320,12 +320,12 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       await SensorReading.insertMany(readings);
 
       // External sensor present → weather API must NOT be called
-      mockWeatherImpl = async () => { throw new Error("weather API must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather API must not be called"));
 
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 9 * MIN));
 
       // restore
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) throw new Error("missing metrics");
@@ -357,7 +357,10 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       const WEATHER_TEMP = 3.0;
       let weatherCallCount = 0;
-      mockWeatherImpl = async () => { weatherCallCount++; return WEATHER_TEMP; };
+      mockWeatherImpl = () => {
+        weatherCallCount++;
+        return Promise.resolve(WEATHER_TEMP);
+      };
 
       const t0  = new Date("2025-01-15T12:00:00.000Z");
       const MIN = 60_000;
@@ -401,7 +404,10 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const bid = building._id.toString();
 
       let weatherCallCount = 0;
-      mockWeatherImpl = async () => { weatherCallCount++; return 4.0; };
+      mockWeatherImpl = () => {
+        weatherCallCount++;
+        return Promise.resolve(4.0);
+      };
 
       const iSensor = await createSensor(bid, "internal_temp");
       const t0  = new Date("2025-01-15T08:00:00.000Z");
@@ -499,9 +505,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 5 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) {
@@ -530,9 +536,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 4 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) {
@@ -567,9 +573,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 5 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) throw new Error("missing metrics");
@@ -625,7 +631,10 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       // Weather API must NOT be called when sensor data is available
       let weatherCallCount = 0;
-      mockWeatherImpl = async () => { weatherCallCount++; return 99.0; };
+      mockWeatherImpl = () => {
+        weatherCallCount++;
+        return Promise.resolve(99.0);
+      };
 
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 2 * MIN));
 
@@ -656,7 +665,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       ]);
 
       // Simulate API failure
-      mockWeatherImpl = async () => null;
+      mockWeatherImpl = () => Promise.resolve(null);
 
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 2 * MIN));
 
@@ -696,9 +705,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 6 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) throw new Error("missing metrics");
@@ -746,9 +755,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       }
       await SensorReading.insertMany(readings);
 
-      mockWeatherImpl = async () => { throw new Error("weather must not be called"); };
+      mockWeatherImpl = () => Promise.reject(new Error("weather must not be called"));
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 7 * MIN));
-      mockWeatherImpl = async () => 5.0;
+      mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
       if (!("metrics" in json)) throw new Error("missing metrics");
@@ -830,7 +839,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expect(json.period.startDate).toBeDefined();
       expect(json.period.endDate).toBeDefined();
       expect(json.metrics).toBeDefined();
-      expect(typeof json.metrics.totalEnergyConsumed).toBe("number");
+      expect(Number.isFinite(json.metrics.totalEnergyConsumed)).toBe(true);
       // All nullable metrics must be present as keys (even if null)
       expect("averageExternalTemperature"   in json.metrics).toBe(true);
       expect("estimatedHeatLossCoefficient" in json.metrics).toBe(true);

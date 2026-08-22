@@ -58,6 +58,9 @@ export function ensureI18nReady(): Promise<void> {
  * so it always returns a supported `LocaleCode`.
  */
 export function getRequestLocale(c: Context): LocaleCode {
+  // SAFETY: the languageDetector middleware is configured with
+  // supportedLanguages + fallbackLanguage from SUPPORTED_LOCALES, so the
+  // request variable always holds a supported LocaleCode.
   return c.get("language") as LocaleCode;
 }
 

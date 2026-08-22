@@ -49,7 +49,7 @@ export async function evaluateEfficiencyAlerts(): Promise<void> {
           minCop,
         });
         if (!result.ok) {
-          console.error(`Efficienza: errore nella creazione dell'alert per l'edificio ${building._id}`);
+          console.error(`Efficienza: errore nella creazione dell'alert per l'edificio ${String(building._id)}`);
         }
       } else {
         const result = await resolveEfficiencyForBuilding({
@@ -57,11 +57,11 @@ export async function evaluateEfficiencyAlerts(): Promise<void> {
           actor: SYSTEM_RESOLVER,
         });
         if (!result.ok) {
-          console.error(`Efficienza: errore nella risoluzione degli alert per l'edificio ${building._id}`);
+          console.error(`Efficienza: errore nella risoluzione degli alert per l'edificio ${String(building._id)}`);
         }
       }
     } catch (error) {
-      console.error(`Efficienza: errore nella valutazione per l'edificio ${building._id}`, error);
+      console.error(`Efficienza: errore nella valutazione per l'edificio ${String(building._id)}`, error);
     }
   }
 }

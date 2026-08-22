@@ -56,7 +56,7 @@ beforeEach(async () => {
     role: "admin",
     passwordHash: adminPasswordHash,
   });
-  adminUserId = admin._id as mongoose.Types.ObjectId;
+  adminUserId = admin._id;
 
   const operatorPasswordHash = await Bun.password.hash("operator123", {
     algorithm: "bcrypt",
@@ -80,6 +80,7 @@ beforeEach(async () => {
   const adminCookie = adminLoginRes.headers.get("set-cookie");
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
   if (!adminTokenMatch) throw new Error("Admin token not found");
+  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = adminTokenMatch[1] as string;
 
   console.log("Admin login status:", adminLoginRes.status);
@@ -95,6 +96,7 @@ beforeEach(async () => {
   const operatorCookie = operatorLoginRes.headers.get("set-cookie");
   const operatorTokenMatch = operatorCookie?.match(/access_token=([^;]+)/);
   if (!operatorTokenMatch) throw new Error("Operator token not found");
+  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   operatorToken = operatorTokenMatch[1] as string;
 
   // Create a test building type
@@ -102,12 +104,13 @@ beforeEach(async () => {
     name: "Scuola",
     description: "Edificio scolastico",
   });
-  buildingTypeId = buildingType._id as mongoose.Types.ObjectId;
+  buildingTypeId = buildingType._id;
 });
 
 describe("buildings api", () => {
   describe("POST /api/v1/buildings", () => {
     test("creates a new building with valid data (admin)", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Scuola Primaria Test",
         address: "Via Test 123, Milano",
@@ -147,12 +150,14 @@ describe("buildings api", () => {
       expect(json.building.status).toBe("active"); // Default value
 
       // Verify building was created in DB
+      // SAFETY: the create-building route echoes the created document, whose `id` is its ObjectId string.
       const building = await Building.findById((json as { building: { id: string } }).building.id);
       expect(building).toBeDefined();
       expect(building!.name).toBe(buildingData.name);
     });
 
     test("creates building with operator role", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Biblioteca Test",
         address: "Via Test 456, Milano",
@@ -197,10 +202,12 @@ describe("buildings api", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(400);
     });
 
     test("rejects invalid building type ID", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Test Building",
         address: "Via Test 123",
@@ -223,6 +230,7 @@ describe("buildings api", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(400);
     });
   });
@@ -230,6 +238,7 @@ describe("buildings api", () => {
   describe("PATCH /api/v1/buildings/:id", () => {
     test("updates building", async () => {
       // Create a building first
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -296,6 +305,7 @@ describe("buildings api", () => {
       // name, address, geographicZone, buildingType: buildingTypeId, surface,
       // constructionYear, heatingSystemType: "caldaia_gas",
       // location GeoJSON Point [11.1167, 46.0667], createdBy/updatedBy: adminUserId)
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -329,6 +339,7 @@ describe("buildings api", () => {
     });
 
     test("PATCH rejects enabled threshold without minCop", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -355,6 +366,7 @@ describe("buildings api", () => {
     });
 
     test("PATCH rejects efficiencyThresholds for district heating buildings", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -381,6 +393,7 @@ describe("buildings api", () => {
     });
 
     test("PATCH switching a building to district heating clears thresholds and resolves alerts", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -428,6 +441,7 @@ describe("buildings api", () => {
     });
 
     test("PATCH disabling efficiency thresholds resolves active efficiency alerts", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -474,6 +488,7 @@ describe("buildings api", () => {
   describe("DELETE /api/v1/buildings/:id", () => {
     test("deletes building with cascade delete of sensors and readings", async () => {
       // Create building with sensors and readings
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building to Delete",
         address: "Via Delete 1",
@@ -563,6 +578,7 @@ describe("buildings api", () => {
   describe("GET /api/v1/buildings", () => {
     beforeEach(async () => {
       // Create multiple buildings for search testing
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildings = [
         {
           name: "Scuola Primaria Centro",
@@ -790,6 +806,7 @@ describe("buildings api", () => {
 
   describe("GET /api/v1/buildings/:id", () => {
     test("returns complete building details", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Test Building Details",
         address: "Via Details 1, Milano",
@@ -828,6 +845,7 @@ describe("buildings api", () => {
 
   describe("GET /api/v1/buildings/:id/real-time", () => {
     test("returns real-time data for all sensor types", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Real-time",
         address: "Via Real-time 1",
@@ -908,6 +926,7 @@ describe("buildings api", () => {
     });
 
     test("handles missing sensors gracefully", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Partial Sensors",
         address: "Via Partial 1",
@@ -956,6 +975,7 @@ describe("buildings api", () => {
 
   describe("GET /api/v1/buildings/:id/history", () => {
     test("returns historical data with time aggregation", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building History",
         address: "Via History 1",
@@ -1030,6 +1050,7 @@ describe("buildings api", () => {
     });
 
     test("filters by date range", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Date Filter",
         address: "Via Date 1",
@@ -1107,6 +1128,7 @@ describe("buildings api", () => {
     });
 
     test("supports different interval types", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Intervals",
         address: "Via Intervals 1",
@@ -1178,6 +1200,7 @@ describe("buildings api", () => {
   describe("authorization", () => {
     test("denies access without token", async () => {
       const res = await client.api.v1.buildings.$get({ query: {} });
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(401);
     });
 
@@ -1191,10 +1214,12 @@ describe("buildings api", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(401);
     });
 
     test("allows both admin and operator to read buildings", async () => {
+      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Test Auth",
         address: "Via Auth 1",

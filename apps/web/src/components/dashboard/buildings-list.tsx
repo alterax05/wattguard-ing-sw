@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { BuildingStatusBadge } from "./building-status-badge"
 
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
-  if (typeof bt === "string") return bt
+  if (!(bt instanceof Object)) return bt
   return bt.name
 }
 

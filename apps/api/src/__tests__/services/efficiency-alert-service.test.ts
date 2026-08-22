@@ -23,11 +23,11 @@ import mongoose from "mongoose";
 // ── Weather mock — must be declared BEFORE the service import so the
 //    transitively imported lib/efficiency receives the mocked module when
 //    it is first evaluated.
-let mockWeatherImpl: () => Promise<number | null> = async () => 5.0;
+let mockWeatherImpl: () => Promise<number | null> = () => Promise.resolve(5.0);
 
-mock.module("../../lib/weather", () => ({
+await mock.module("../../lib/weather", () => ({
   getAverageHistoricalTemperature: mock(() => mockWeatherImpl()),
-  getCoordinates: mock(async () => null),
+  getCoordinates: mock(() => Promise.resolve(null)),
 }));
 
 // ── Imports (after the module mock is registered) ─────────────────────────────
@@ -68,16 +68,16 @@ setupIntegrationTests(import.meta.path);
 beforeEach(async () => {
 
   // Reset weather mock to a sensible default before each test
-  mockWeatherImpl = async () => 5.0;
+  mockWeatherImpl = () => Promise.resolve(5.0);
 
   // Create admin user (no login needed — the service is called directly)
   const hash = await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 });
   const admin = await User.create({ email: "admin@test.com", role: "admin", passwordHash: hash });
-  adminUserId = admin._id as mongoose.Types.ObjectId;
+  adminUserId = admin._id;
 
   // Create a building type
   const bt = await BuildingType.create({ name: "TestType", description: "For testing" });
-  buildingTypeId = bt._id as mongoose.Types.ObjectId;
+  buildingTypeId = bt._id;
 });
 
 // ── factory: create a minimal active building ─────────────────────────────────
@@ -87,7 +87,7 @@ async function createBuilding(overrides: Partial<{
   ceilingHeight: number;
   efficiencyThresholds: { enabled: boolean; minCop: number | null };
 }> = {}) {
-  return Building.create({
+  const base = {
     name: "Test Building",
     address: "Via Test 1, Milano",
     geographicZone: "Centro",
@@ -96,14 +96,18 @@ async function createBuilding(overrides: Partial<{
     ceilingHeight: overrides.ceilingHeight ?? 3.0,
     constructionYear: 2000,
     heatingSystemType: overrides.heatingSystemType ?? "pompa_calore",
-    location: { type: "Point", coordinates: [11.1167, 46.0667] },
-    status: "active",
+    location: { type: "Point" as const, coordinates: [11.1167, 46.0667] },
+    status: "active" as const,
     createdBy: adminUserId,
     updatedBy: adminUserId,
-    ...(overrides.efficiencyThresholds !== undefined
-      ? { efficiencyThresholds: overrides.efficiencyThresholds }
-      : {}),
-  });
+  };
+  if (overrides.efficiencyThresholds !== undefined) {
+    return Building.create({
+      ...base,
+      efficiencyThresholds: overrides.efficiencyThresholds,
+    });
+  }
+  return Building.create(base);
 }
 
 /** Create a sensor attached to `buildingId`. */

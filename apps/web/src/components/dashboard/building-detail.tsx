@@ -95,7 +95,7 @@ interface BuildingDetailProps {
 }
 
 function getBuildingTypeName(bt: BuildingDetailType["buildingType"]): string {
-  if (typeof bt === "string") return bt;
+  if (!(bt instanceof Object)) return bt;
   return bt.name;
 }
 
@@ -127,15 +127,7 @@ function getDefaultDateRange(): DateRange {
 
 type SensorTypeKey = HistoryParams["sensorType"] & string;
 
-const SENSOR_TYPE_CONFIG: Record<
-  SensorTypeKey,
-  {
-    labelKey: string;
-    unit: string;
-    color: string;
-    icon: typeof Zap;
-  }
-> = {
+const SENSOR_TYPE_CONFIG = {
   energy_meter: {
     labelKey: "sensors.type.energy_meter",
     unit: "kWh",
@@ -160,7 +152,15 @@ const SENSOR_TYPE_CONFIG: Record<
     color: "var(--chart-4)",
     icon: Flame,
   },
-};
+} satisfies Record<
+  SensorTypeKey,
+  {
+    labelKey: string;
+    unit: string;
+    color: string;
+    icon: typeof Zap;
+  }
+>;
 
 const SENSORS_PAGE_SIZE = 4;
 
@@ -371,7 +371,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
     deleteBuilding.mutate(buildingId, {
       onSuccess: () => {
         toast.success(t("buildings.deleted"));
-        navigate("/dashboard/buildings");
+        void navigate("/dashboard/buildings");
       },
       onError: (error) => {
         toast.error(error.message || t("buildings.deleteError"));
@@ -435,7 +435,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
         <Button
           variant="outline"
           className="mt-4 bg-transparent"
-          onClick={() => navigate("/dashboard/buildings")}
+          onClick={() => { void navigate("/dashboard/buildings") }}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           {t("buildings.backToSearch")}
@@ -451,7 +451,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/dashboard/buildings")}
+          onClick={() => { void navigate("/dashboard/buildings") }}
         >
           <ArrowLeft className="h-5 w-5" />
           <span className="sr-only">{t("common.back")}</span>
@@ -463,7 +463,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => setIsEditingBuilding(true)}
+              onClick={() => { setIsEditingBuilding(true) }}
             >
               <Pencil className="h-4 w-4" />
               <span className="sr-only">{t("buildings.edit")}</span>
@@ -473,7 +473,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => setConfirmDeleteBuildingOpen(true)}
+                onClick={() => { setConfirmDeleteBuildingOpen(true) }}
               >
                 <Trash2 className="h-4 w-4" />
                 <span className="sr-only">{t("buildings.delete")}</span>
@@ -554,10 +554,14 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
             <CardTitle className="text-base">{t("buildings.historicalData")}</CardTitle>
             <Tabs
               value={selectedSensorType}
-              onValueChange={(v) => setSelectedSensorType(v as SensorTypeKey)}
+              onValueChange={(v) => {
+                // SAFETY: the Tabs only render the four sensor types defined in SENSOR_TYPE_CONFIG.
+                setSelectedSensorType(v as SensorTypeKey)
+              }}
             >
               <TabsList className="h-8">
                 {(
+                  // SAFETY: Object.entries widens the keys; SENSOR_TYPE_CONFIG declares exactly the SensorTypeKey entries.
                   Object.entries(SENSOR_TYPE_CONFIG) as [
                     SensorTypeKey,
                     (typeof SENSOR_TYPE_CONFIG)[SensorTypeKey],
@@ -622,7 +626,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                   content={
                     <ChartTooltipContent
                       formatter={(value) =>
-                        `${value} ${SENSOR_TYPE_CONFIG[selectedSensorType].unit}`
+                        `${String(value)} ${SENSOR_TYPE_CONFIG[selectedSensorType].unit}`
                       }
                     />
                   }
@@ -783,7 +787,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
               <Activity className="h-4 w-4" />
               {t("buildings.installedSensors", { count: totalSensors })}
             </CardTitle>
-            <Button size="sm" onClick={() => setAddSensorOpen(true)}>
+            <Button size="sm" onClick={() => { setAddSensorOpen(true) }}>
               <Plus className="mr-1 h-4 w-4" />
               {t("common.add")}
             </Button>
@@ -815,7 +819,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                   variant="outline"
                   size="sm"
                   className="mt-3"
-                  onClick={() => setAddSensorOpen(true)}
+                  onClick={() => { setAddSensorOpen(true) }}
                 >
                   <Plus className="mr-1 h-4 w-4" />
                   {t("buildings.addFirstSensor")}
@@ -876,14 +880,14 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => setManuallyEditingSensorId(sensor.id)}
+                              onClick={() => { setManuallyEditingSensorId(sensor.id) }}
                             >
                               <Pencil className="mr-2 h-4 w-4" />
                               {t("common.edit")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
-                              onClick={() => setDeletingSensor(sensor)}
+                              onClick={() => { setDeletingSensor(sensor) }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               {t("common.delete")}
@@ -1004,7 +1008,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       {isEditingBuilding && (
         <EditBuildingDialog
           building={building}
-          onClose={() => setIsEditingBuilding(false)}
+          onClose={() => { setIsEditingBuilding(false) }}
         />
       )}
       <AddSensorDialog

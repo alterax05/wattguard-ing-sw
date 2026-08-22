@@ -54,6 +54,7 @@ beforeEach(async () => {
   const cookie = loginRes.headers.get("set-cookie");
   const tokenMatch = cookie?.match(/access_token=([^;]+)/);
   if (!tokenMatch) throw new Error("Admin token not found, response status: " + loginRes.status);
+  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = tokenMatch[1] as string;
 
   // Create building type and building
@@ -173,6 +174,7 @@ describe("alerts api", () => {
       throw new Error("Expected response to contain 'error'");
     }
     expect(body.error).toBe("Only active alerts can be acknowledged");
+    // SAFETY: the API error contract pairs the message with an ErrorCode in `code`.
     expect((body as { error: string; code?: string }).code).toBe("alert_not_active");
   });
 

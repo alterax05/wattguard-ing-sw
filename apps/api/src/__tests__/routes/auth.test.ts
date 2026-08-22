@@ -38,7 +38,7 @@ type ErrorResponse = z.infer<typeof ErrorSchema>;
 const client = testClient(app);
 
 // Mock email functions to avoid email requirements in tests
-mock.module("../../email/mailer", () => ({
+await mock.module("../../email/mailer", () => ({
   sendInviteEmail: mock(async () => Promise.resolve()),
   sendPasswordResetEmail: mock(async () => Promise.resolve()),
   sendEmail: mock(async () => Promise.resolve()),

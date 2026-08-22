@@ -1,6 +1,7 @@
 import mongoose, {
   Schema,
   type InferSchemaType,
+  type HydratedDocument,
 } from "mongoose";
 import { Building } from "./Building";
 import { User } from "./User";
@@ -96,14 +97,17 @@ const sensorSchema = new Schema(
 
 sensorSchema.index({ buildingId: 1, sensorType: 1 });
 
-sensorSchema.methods.isActive = function (): boolean {
+sensorSchema.methods.isActive = function (this: HydratedDocument<SensorDocument>): boolean {
   if (!this.lastReading?.timestamp) return false;
   const elapsedSeconds =
     (Date.now() - this.lastReading.timestamp.getTime()) / 1000;
   return elapsedSeconds <= 2 * this.transmissionInterval;
 };
 
-sensorSchema.methods.updateStatus = async function (newStatus?: SensorStatus) {
+sensorSchema.methods.updateStatus = async function (
+  this: HydratedDocument<SensorDocument> & { isActive(): boolean },
+  newStatus?: SensorStatus,
+) {
   if (newStatus !== undefined) {
     this.status = newStatus;
   } else if (this.status === "active" || this.status === "inactive") {

@@ -29,7 +29,7 @@ type ErrorResponse = z.infer<typeof ErrorSchema>;
 const client = testClient(app);
 
 // Mock email functions
-mock.module("../../email/mailer", () => ({
+await mock.module("../../email/mailer", () => ({
   sendInviteEmail: mock(async () => Promise.resolve()),
   sendPasswordResetEmail: mock(async () => Promise.resolve()),
   sendEmail: mock(async () => Promise.resolve()),
@@ -268,6 +268,7 @@ describe("admin api", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(403);
     });
 
@@ -279,6 +280,7 @@ describe("admin api", () => {
         },
       });
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(401);
     });
   });
@@ -452,7 +454,7 @@ describe("admin api", () => {
       // Try to revoke with operator token
       const res = await client.api.v1.admin.invites[":id"].revoke.$post(
         {
-          param: { id: inviteId! },
+          param: { id: inviteId },
         },
         {
           headers: { Authorization: `Bearer ${operatorToken}` },

@@ -5,7 +5,7 @@ import type { IngestReadingInput } from "../../services/reading-service";
 
 const ingestReadingMock = mock<(input: IngestReadingInput) => Promise<void>>();
 
-mock.module("../../services/reading-service", () => ({
+await mock.module("../../services/reading-service", () => ({
   ingestReading: ingestReadingMock,
   SensorNotFoundError,
 }));
@@ -13,8 +13,9 @@ mock.module("../../services/reading-service", () => ({
 const { connectAndSubscribe } = await import("../../lib/mqtt");
 
 // Mock MQTT Client
-const mockOn = mock();
-const mockSubscribe = mock();
+type MqttEventCallback = (...args: unknown[]) => void;
+const mockOn = mock<(event: string, cb: MqttEventCallback) => void>();
+const mockSubscribe = mock<(...args: never[]) => void>();
 const mockMqttClient = {
   on: mockOn,
   subscribe: mockSubscribe,
@@ -25,12 +26,13 @@ const VALID_SENSOR_ID = "507f1f77bcf86cd799439011";
 function getMessageHandler() {
   const handler = mockOn.mock.calls.find((call) => call[0] === "message")?.[1];
   expect(handler).toBeDefined();
+  // SAFETY: connectAndSubscribe registers exactly one "message" listener whose handler is async and receives (topic, payload).
   return handler as (topic: string, message: Buffer) => Promise<void>;
 }
 
 describe("lib/mqtt", () => {
   let connectCallback: () => void;
-  let warnSpy: ReturnType<typeof spyOn>;
+  let warnSpy: ReturnType<typeof spyOn<typeof console, "warn">>;
 
   beforeEach(() => {
     ingestReadingMock.mockReset();
@@ -51,7 +53,7 @@ describe("lib/mqtt", () => {
     // exposes connectAsync as a read-only getter, so override it with a
     // writable value property on the shared module object.
     Object.defineProperty(mqtt, "connectAsync", {
-      value: mock(async () => mockMqttClient),
+      value: mock(() => Promise.resolve(mockMqttClient)),
       writable: true,
       configurable: true,
     });

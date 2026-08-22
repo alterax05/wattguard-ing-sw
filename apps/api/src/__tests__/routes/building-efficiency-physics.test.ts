@@ -49,7 +49,7 @@ beforeEach(async () => {
     role: "admin",
     passwordHash: adminPasswordHash,
   });
-  adminUserId = admin._id as mongoose.Types.ObjectId;
+  adminUserId = admin._id;
 
   // Login to get token
   const loginRes = await client.api.v1.auth.local.login.$post({
@@ -62,11 +62,12 @@ beforeEach(async () => {
   const cookie = loginRes.headers.get("set-cookie");
   const tokenMatch = cookie?.match(/access_token=([^;]+)/);
   if (!tokenMatch) throw new Error("Admin token not found");
+  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = tokenMatch[1] as string;
 
   // Create Fixtures
   const buildingType = await BuildingType.create({ name: "Residential" });
-  buildingTypeId = buildingType._id as mongoose.Types.ObjectId;
+  buildingTypeId = buildingType._id;
 
   const building = await Building.create({
     name: "Efficiency Test Building",

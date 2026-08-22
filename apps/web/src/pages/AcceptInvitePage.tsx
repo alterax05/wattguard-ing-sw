@@ -70,7 +70,7 @@ export function AcceptInvitePage() {
       { inviteToken: token!, password: data.password, name: data.name.trim() },
       {
         onSuccess: () => {
-          navigate("/dashboard");
+          void navigate("/dashboard");
         },
       },
     );
@@ -181,7 +181,7 @@ export function AcceptInvitePage() {
                 </div>
               </div>
 
-              <Button onClick={() => setMode("password")} className="w-full">
+              <Button onClick={() => { setMode("password") }} className="w-full">
                 {t("auth.createAccountWithPassword")}
               </Button>
             </FieldGroup>
@@ -190,7 +190,9 @@ export function AcceptInvitePage() {
           {mode === "password" && (
             <form
               id="accept-invite-form"
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={async (e) => {
+                await form.handleSubmit(onSubmit)(e);
+              }}
             >
               <FieldGroup>
                 <Controller

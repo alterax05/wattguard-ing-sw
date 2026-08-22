@@ -171,6 +171,7 @@ describe("GET /api/v1/export/report", () => {
   });
 
   test("rejects an invalid format", async () => {
+    // SAFETY: "csv" deliberately violates the format enum so the server must reject it; `never` bypasses the client's query type.
     const response = await client.api.v1.export.report.$get(
       {
         query: {
@@ -277,10 +278,13 @@ describe("GET /api/v1/export/report", () => {
 
     const summary = workbook.getWorksheet("Riepilogo");
     expect(summary).toBeDefined();
+    // SAFETY: ExcelJS stores row cells in an array-like object and these rows contain only scalar cells.
     const summaryRows = summary!.getRows(1, 2);
+    // SAFETY: ExcelJS row values behave as an array of scalar cells for these rows.
     const header = summaryRows![0]!.values as unknown[];
     expect(header).toContain("Consumo totale (kWh)");
 
+    // SAFETY: ExcelJS row values behave as an array of scalar cells for these rows.
     const row = summaryRows![1]!.values as unknown[];
     expect(row).toContain("Edificio Report");
     expect(row).toContain(48); // 2 kW × 24 h
@@ -289,8 +293,10 @@ describe("GET /api/v1/export/report", () => {
     expect(daily).toBeDefined();
     const dailyRows = daily!.getRows(1, 3) ?? [];
     expect(dailyRows).toHaveLength(3); // header + 2 days
+    // SAFETY: ExcelJS row values behave as an array of scalar cells for these rows.
     const firstDay = dailyRows[1]!.values as unknown[];
     expect(firstDay).toContain(48);
+    // SAFETY: ExcelJS row values behave as an array of scalar cells for these rows.
     const secondDay = dailyRows[2]!.values as unknown[];
     expect(secondDay).toContain(48);
   });
@@ -369,16 +375,19 @@ describe("GET /api/v1/export/report", () => {
     await workbook.xlsx.load(body);
 
     const summary = workbook.getWorksheet("Riepilogo")!;
+    // SAFETY: ExcelJS stores row cells in an array-like object and these rows contain only scalar cells.
     const row = summary.getRow(2).values as unknown[];
     expect(row).toContain("Edificio Gas");
     expect(row).toContain(52.75); // 5 m³ × 10.55 kWh/m³
 
     const daily = workbook.getWorksheet("Consumo giornaliero")!;
     const gasRows = (daily.getRows(1, daily.rowCount) ?? []).filter((r) => {
+      // SAFETY: ExcelJS row values behave as an array of scalar cells for these data rows.
       const values = r.values as unknown[];
       return values.includes("Edificio Gas");
     });
     expect(gasRows).toHaveLength(1); // only the gas delta day, no energy_meter day
+    // SAFETY: the filter above guarantees exactly one matching row whose cells are array-like.
     expect(gasRows[0]!.values as unknown[]).toContain(52.75);
   });
 
@@ -408,12 +417,14 @@ describe("GET /api/v1/export/report", () => {
 
     const summary = workbook.getWorksheet("Zusammenfassung");
     expect(summary).toBeDefined();
+    // SAFETY: ExcelJS stores row cells in an array-like object and these header rows contain only scalar cells.
     const header = summary!.getRow(1).values as unknown[];
     expect(header).toContain("Gesamtverbrauch (kWh)");
     expect(header).toContain("Gebäude");
 
     const daily = workbook.getWorksheet("Tagesverbrauch");
     expect(daily).toBeDefined();
+    // SAFETY: ExcelJS stores row cells in an array-like object and this header row contains only scalar cells.
     const dailyHeader = daily!.getRow(1).values as unknown[];
     expect(dailyHeader).toContain("Gebäude");
   });

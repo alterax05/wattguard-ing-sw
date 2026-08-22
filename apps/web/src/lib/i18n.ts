@@ -6,6 +6,7 @@ import {
   LOCALE_STORAGE_KEY,
   SUPPORTED_LOCALES,
   isSupportedLocale,
+  type LocaleCode,
 } from "@wattguard/shared";
 import en from "@wattguard/shared/locales/en/translation.json";
 import it from "@wattguard/shared/locales/it/translation.json";
@@ -44,7 +45,7 @@ document.documentElement.lang = i18n.language;
  * Falls back to the default locale when i18next has not resolved a supported
  * language yet (e.g. during early module evaluation).
  */
-export function getRequestLocale(): string {
+export function getRequestLocale(): LocaleCode {
   const lng = i18n.language ?? i18n.resolvedLanguage;
   return isSupportedLocale(lng) ? lng : DEFAULT_LOCALE;
 }

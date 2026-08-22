@@ -13,41 +13,47 @@ export const client = testClient(app);
  */
 export async function expectValidationError(response: Response, fieldName?: string) {
   expect(response.status).toBe(400);
-  const data = await response.json();
+  // SAFETY: the API returns a JSON body with its message under `error` on 400 responses.
+  const data = (await response.json()) as { error?: string };
   expect(data.error).toBeDefined();
   
   if (fieldName) {
-    expect(data.error.toLowerCase()).toContain(fieldName.toLowerCase());
+    expect(data.error?.toLowerCase()).toContain(fieldName.toLowerCase());
   }
 }
 
 /**
  * Asserts that a response is unauthorized (401)
  */
-export async function expectUnauthorized(response: Response) {
+export function expectUnauthorized(response: Response) {
   expect(response.status).toBe(401);
 }
 
 /**
  * Asserts that a response is forbidden (403)
  */
-export async function expectForbidden(response: Response) {
+export function expectForbidden(response: Response) {
   expect(response.status).toBe(403);
 }
 
 /**
  * Asserts that a response is not found (404)
  */
-export async function expectNotFound(response: Response) {
+export function expectNotFound(response: Response) {
   expect(response.status).toBe(404);
 }
 
 /**
  * Asserts that a response is successful with expected data
  */
-export async function expectSuccess(response: Response, status = 200) {
+/**
+ * Asserts that a response is successful and returns its JSON payload. The
+ * expected payload shape is supplied by the caller via the type parameter.
+ */
+export async function expectSuccess<T>(response: Response, status = 200): Promise<T> {
   expect(response.status).toBe(status);
-  const data = await response.json();
+  // SAFETY: callers supply the documented response schema of the endpoint under test.
+  const data = (await response.json()) as T;
   return data;
 }
 
@@ -109,19 +115,28 @@ export async function authenticatedRequest(
 }
 
 /**
+ * JSON-serializable payload sent through raw-transport helpers like
+ * `postJSON`; mirrors what `JSON.stringify` can encode.
+ */
+export type JsonTestPayload =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonTestPayload[]
+  | { [key: string]: JsonTestPayload };
+
+/**
  * Runs a typed JSON POST request, optionally with a Bearer token
  */
 export async function postJSON(
   request: TypedRequest,
-  body: unknown,
+  body: JsonTestPayload,
   token?: string
 ): Promise<Response> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
+  const headers = new Headers({ "Content-Type": "application/json" });
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   return request({
@@ -176,7 +191,8 @@ export const assertions = {
    * Checks if response has error field
    */
   async hasError(response: Response): Promise<boolean> {
-    const data = await response.json();
+    // SAFETY: API error responses are JSON objects carrying their message under `error`.
+    const data = (await response.json()) as { error?: unknown };
     return !!data.error;
   },
 
@@ -184,7 +200,8 @@ export const assertions = {
    * Checks if response has success field
    */
   async hasSuccess(response: Response): Promise<boolean> {
-    const data = await response.json();
+    // SAFETY: success responses are JSON objects carrying their flag under `success`.
+    const data = (await response.json()) as { success?: boolean };
     return data.success === true;
   },
 
@@ -192,7 +209,8 @@ export const assertions = {
    * Gets error message from response
    */
   async getErrorMessage(response: Response): Promise<string> {
-    const data = await response.json();
+    // SAFETY: API error responses are JSON objects carrying their message under `error`.
+    const data = (await response.json()) as { error?: string };
     return data.error || "";
   },
 

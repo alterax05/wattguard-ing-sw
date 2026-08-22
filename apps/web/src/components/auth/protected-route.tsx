@@ -22,7 +22,7 @@ function AuthLoading() {
  * - If authenticated, renders child routes via `<Outlet />`.
  */
 export function ProtectedRoute() {
-  const { user, isLoading } = useContext(AuthContext)!;
+  const { user, isLoading } = useContext(AuthContext);
 
   if (isLoading) {
     return <AuthLoading />;
@@ -43,7 +43,7 @@ export function ProtectedRoute() {
  * - If not authenticated, renders child routes via `<Outlet />`.
  */
 export function GuestRoute() {
-  const { user, isLoading } = useContext(AuthContext)!;
+  const { user, isLoading } = useContext(AuthContext);
 
   if (isLoading) {
     return <AuthLoading />;

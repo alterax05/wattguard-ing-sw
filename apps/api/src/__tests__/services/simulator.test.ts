@@ -360,8 +360,8 @@ setupIntegrationTests(import.meta.path);
     expect(readings).toHaveLength(4);
     for (const reading of readings) {
       expect(reading.sensorId).toBeTruthy();
-      expect(typeof reading.value).toBe("number");
-      expect(typeof reading.unit).toBe("string");
+      expect(Number.isFinite(reading.value)).toBe(true);
+      expect(reading.unit.length).toBeGreaterThan(0);
       expect(reading.timestamp).toBeInstanceOf(Date);
     }
   });

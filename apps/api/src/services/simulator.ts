@@ -410,7 +410,7 @@ async function bootstrapGasOdometer(
     })
       .sort({ timestamp: -1 })
       .lean<{ value: number }>();
-    if (last && typeof last.value === "number") {
+    if (last && Number.isFinite(last.value)) {
       state.cumulativeGasM3 = Math.max(state.cumulativeGasM3, last.value);
     }
   } catch {
@@ -536,7 +536,9 @@ export async function startSimulator(opts: SimulatorOptions): Promise<SimulatorH
     // Immediate first reading
     await send();
 
-    const timer = setInterval(send, intervalMs);
+    const timer = setInterval(() => {
+      void send();
+    }, intervalMs);
     running.set(sensorId, timer);
   };
 

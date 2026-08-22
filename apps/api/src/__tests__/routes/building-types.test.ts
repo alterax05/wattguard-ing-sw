@@ -42,7 +42,6 @@ let adminUserId: string;
 
 setupIntegrationTests(import.meta.path);
 
-
 beforeEach(async () => {
 
   // Create test users (admin and operator)
@@ -159,6 +158,7 @@ describe("building-types api", () => {
     test("rejects request without token (401)", async () => {
       const res = await client.api.v1["building-types"].$get();
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(401);
     });
 
@@ -284,6 +284,7 @@ describe("building-types api", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(403);
     });
   });
@@ -462,6 +463,7 @@ describe("building-types api", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(403);
     });
   });
@@ -579,6 +581,7 @@ describe("building-types api", () => {
         }
       );
 
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
       expect(res.status as number).toBe(403);
     });
   });

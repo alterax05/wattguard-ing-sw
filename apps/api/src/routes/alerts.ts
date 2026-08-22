@@ -86,7 +86,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (severity) filter.severity = severity;
 
       const sortDir = sortOrder === "asc" ? 1 : -1;
-      const sortConfig: Record<string, 1 | -1> = { [sortBy]: sortDir };
+      const sortConfig = { [sortBy]: sortDir } satisfies Record<string, 1 | -1>;
 
       try {
         const [alerts, total] = await Promise.all([
@@ -145,6 +145,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       return c.json({
         success: true as const,
+        // SAFETY: result.alert comes back from findOneAndUpdate({ new: true })
+        // on the Alert collection, so it is a full document with _id and
+        // timestamps as required by AlertDTOInput.
         alert: toAlertDTO(result.alert as AlertDTOInput, { locale: getRequestLocale(c) }),
       } satisfies UpdateAlertStatusResponse);
     }
@@ -182,6 +185,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       return c.json({
         success: true as const,
+        // SAFETY: result.alert comes back from findOneAndUpdate({ new: true })
+        // on the Alert collection, so it is a full document with _id and
+        // timestamps as required by AlertDTOInput.
         alert: toAlertDTO(result.alert as AlertDTOInput, { locale: getRequestLocale(c) }),
       } satisfies UpdateAlertStatusResponse);
     }

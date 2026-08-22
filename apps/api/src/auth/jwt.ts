@@ -33,7 +33,7 @@ export async function signAccessToken(
   const now = Math.floor(Date.now() / 1000);
   const exp = now + JWT_EXPIRATION_HOURS * 60 * 60;
 
-  return await sign(
+  return sign(
     {
       sub: payload.userId,
       email: payload.email,

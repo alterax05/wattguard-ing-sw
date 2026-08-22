@@ -30,7 +30,7 @@ import { Invite } from "../../models/Invite";
 import { randomToken, hashTokenSha256 } from "../../utils/crypto";
 
 // Mock email functions
-mock.module("../../email/mailer", () => ({
+await mock.module("../../email/mailer", () => ({
   sendInviteEmail: mock(async () => Promise.resolve()),
   sendPasswordResetEmail: mock(async () => Promise.resolve()),
   sendEmail: mock(async () => Promise.resolve()),
@@ -274,6 +274,7 @@ describe("request body validation", () => {
     ];
 
     for (const body of malformedBodies) {
+      // SAFETY: the body is deliberately non-JSON so the transport must reject it; `never` bypasses the client's payload type.
       const res = await client.api.v1.auth.local.login.$post({
         json: body as never,
       });
@@ -283,6 +284,7 @@ describe("request body validation", () => {
   });
 
   test("rejects empty request body", async () => {
+    // SAFETY: the empty payload is deliberate; `never` bypasses the client's typed-args check so the raw body is sent.
     const res = await client.api.v1.auth.local.login.$post(
       {} as never,
       {
@@ -297,6 +299,7 @@ describe("request body validation", () => {
   });
 
   test("rejects requests with wrong content type", async () => {
+    // SAFETY: the empty payload is deliberate; `never` bypasses the client's typed-args check so the raw body is sent.
     const res = await client.api.v1.auth.local.login.$post(
       {} as never,
       {
@@ -481,6 +484,7 @@ describe("role validation", () => {
     const invalidRoles = ["user", "superadmin", "guest", "", "admin123"];
 
     for (const role of invalidRoles) {
+      // SAFETY: the role value deliberately violates the invite-role enum so the server must reject it; `never` bypasses the client's payload type.
       const res = await client.api.v1.admin.invites.$post(
         {
           json: {

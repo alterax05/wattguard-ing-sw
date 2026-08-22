@@ -110,7 +110,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const body = c.req.valid("json");
 
       // Build a MongoDB $set object with only the provided fields
-      const $set: Record<string, unknown> = {};
+      const $set: Record<string, string | number | boolean> = {};
 
       if (body.polling) {
         if (body.polling.intervalSeconds !== undefined)

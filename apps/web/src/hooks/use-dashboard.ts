@@ -68,7 +68,7 @@ export function useDashboardStats() {
       if (!res.ok) {
         throw new Error("Failed to fetch dashboard stats");
       }
-      return (await res.json()) as DashboardStats;
+      return res.json();
     },
     staleTime: 60 * 1000,
     refetchInterval: intervalMs,
@@ -83,17 +83,18 @@ export function useDashboardHistory(params: DashboardHistoryParams) {
   return useQuery({
     queryKey: [...DASHBOARD_QUERY_KEY, "history", params],
     queryFn: async () => {
-      const res = await client.api.v1.dashboard.history.$get({
-        query: {
-          startDate: params.startDate,
-          endDate: params.endDate,
-          ...(params.interval ? { interval: params.interval } : {}),
-        },
-      });
+      const query: DashboardHistoryParams = {
+        startDate: params.startDate,
+        endDate: params.endDate,
+      };
+      if (params.interval) {
+        query.interval = params.interval;
+      }
+      const res = await client.api.v1.dashboard.history.$get({ query });
       if (!res.ok) {
         throw new Error("Failed to fetch dashboard history");
       }
-      return (await res.json()) as DashboardHistory;
+      return res.json();
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!params.startDate && !!params.endDate,

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { client } from "@/lib/api";
-import { errorMessage } from "@/lib/errors";
+import { errorMessageFromResponse } from "@/lib/errors";
 import { UserSchema } from "@wattguard/shared";
 import { z } from "zod";
 
@@ -62,13 +62,11 @@ export function useValidateInvite(token: string | null) {
         query: { token: token! },
       });
 
-      const data = await res.json();
-
-      if (!res.ok || 'error' in data) {
-        throw new Error(errorMessage(data));
+      if (!res.ok) {
+        throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      return res.json();
     },
     enabled: !!token,
     retry: false,
@@ -89,7 +87,7 @@ export function useValidateResetToken(token: string | null) {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
@@ -117,13 +115,13 @@ export function useLogin() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
     },
   });
 }
@@ -153,7 +151,7 @@ export function useLogout() {
       // Clear all other cached data so nothing stale remains.
       queryClient.clear();
       // Navigate as a safety net (ProtectedRoute will also redirect reactively).
-      navigate("/login");
+      void navigate("/login");
     },
   });
 }
@@ -178,13 +176,13 @@ export function useSetup() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
     },
   });
 }
@@ -203,7 +201,7 @@ export function useForgotPassword() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
@@ -224,7 +222,7 @@ export function useResetPassword() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
@@ -247,8 +245,7 @@ export function useUsers() {
       const res = await client.api.v1.admin.users.$get();
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       const data = await res.json();
@@ -282,13 +279,13 @@ export function useUpdateUser() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     },
   });
 }
@@ -309,13 +306,13 @@ export function useDeleteUser() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     },
   });
 }
@@ -334,7 +331,7 @@ export function useCreateInvite() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(errorMessage(data));
+        throw new Error(await errorMessageFromResponse(res));
       }
 
       return data;

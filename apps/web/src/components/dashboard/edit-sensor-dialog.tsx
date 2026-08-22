@@ -47,6 +47,17 @@ interface EditSensorDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+interface UpdateSensorPayload {
+  id: string
+  sensorType: SensorType
+  location: string
+  status: SensorStatus
+  serialNumber?: string
+  transmissionInterval: number
+  minThreshold?: number | null
+  maxThreshold?: number | null
+}
+
 export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialogProps) {
   const updateSensor = useUpdateSensor()
   const { t } = useTranslation()
@@ -75,17 +86,21 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
       return
     }
 
+    const payload: UpdateSensorPayload = {
+      id: sensor.id,
+      sensorType,
+      location: location.trim(),
+      status,
+      transmissionInterval: interval,
+    }
+    if (serialNumber.trim()) {
+      payload.serialNumber = serialNumber.trim()
+    }
+    payload.minThreshold = minThreshold.trim() ? parseFloat(minThreshold) : null
+    payload.maxThreshold = maxThreshold.trim() ? parseFloat(maxThreshold) : null
+
     updateSensor.mutate(
-      {
-        id: sensor.id,
-        sensorType,
-        location: location.trim(),
-        ...(serialNumber.trim() ? { serialNumber: serialNumber.trim() } : {}),
-        status,
-        transmissionInterval: interval,
-        ...(minThreshold.trim() ? { minThreshold: parseFloat(minThreshold) } : { minThreshold: null }),
-        ...(maxThreshold.trim() ? { maxThreshold: parseFloat(maxThreshold) } : { maxThreshold: null }),
-      },
+      payload,
       {
         onSuccess: () => {
           toast.success(t("sensors.updated"))
@@ -112,7 +127,10 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="edit-sensorType">{t("sensors.typeLabel")}</Label>
-              <Select value={sensorType} onValueChange={(v) => setSensorType(v as SensorType)}>
+              <Select value={sensorType} onValueChange={(v) => {
+                // SAFETY: the Select only offers the four known sensor types.
+                setSensorType(v as SensorType)
+              }}>
                 <SelectTrigger id="edit-sensorType">
                   <SelectValue />
                 </SelectTrigger>
@@ -132,7 +150,7 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
                 id="edit-location"
                 placeholder={t("sensors.locationPlaceholder")}
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(e) => { setLocation(e.target.value) }}
               />
             </div>
 
@@ -142,13 +160,16 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
                 id="edit-serialNumber"
                 placeholder={t("sensors.serialNumberPlaceholder")}
                 value={serialNumber}
-                onChange={(e) => setSerialNumber(e.target.value)}
+                onChange={(e) => { setSerialNumber(e.target.value) }}
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="edit-status">{t("common.status")}</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as SensorStatus)}>
+              <Select value={status} onValueChange={(v) => {
+                // SAFETY: the Select only offers the four known sensor statuses.
+                setStatus(v as SensorStatus)
+              }}>
                 <SelectTrigger id="edit-status">
                   <SelectValue />
                 </SelectTrigger>
@@ -170,7 +191,7 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
                 min={10}
                 max={3600}
                 value={transmissionInterval}
-                onChange={(e) => setTransmissionInterval(e.target.value)}
+                onChange={(e) => { setTransmissionInterval(e.target.value) }}
               />
               <p className="text-xs text-muted-foreground">{t("sensors.intervalHintShort")}</p>
             </div>
@@ -184,7 +205,7 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
                   step="0.01"
                   placeholder={t("sensors.thresholdPlaceholder")}
                   value={minThreshold}
-                  onChange={(e) => setMinThreshold(e.target.value)}
+                  onChange={(e) => { setMinThreshold(e.target.value) }}
                 />
               </div>
               <div className="grid gap-2">
@@ -195,13 +216,13 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
                   step="0.01"
                   placeholder={t("sensors.thresholdPlaceholder")}
                   value={maxThreshold}
-                  onChange={(e) => setMaxThreshold(e.target.value)}
+                  onChange={(e) => { setMaxThreshold(e.target.value) }}
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => { onOpenChange(false) }}>
               {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={updateSensor.isPending}>

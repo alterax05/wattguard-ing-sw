@@ -164,14 +164,18 @@ describe("readingService", () => {
   });
 
   test("throws SensorNotFoundError for unknown sensors", async () => {
-    await expect(
-      ingestReading({
+    let caught: unknown;
+    try {
+      await ingestReading({
         sensorId: new Types.ObjectId().toString(),
         value: 22,
         unit: "°C",
         timestamp: new Date(),
-      }),
-    ).rejects.toBeInstanceOf(SensorNotFoundError);
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(SensorNotFoundError);
   });
 
   test("does not persist anything when the reading insert fails", async () => {
@@ -180,14 +184,20 @@ describe("readingService", () => {
       new Error("db down"),
     );
 
-    await expect(
-      ingestReading({
+    let rejectionMessage = "";
+    try {
+      await ingestReading({
         sensorId: sensor._id.toString(),
         value: 5,
         unit: "°C",
         timestamp: new Date(),
-      }),
-    ).rejects.toThrow("db down");
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        rejectionMessage = error.message;
+      }
+    }
+    expect(rejectionMessage).toContain("db down");
 
     readingCreateSpy.mockRestore();
 
@@ -205,14 +215,20 @@ describe("readingService", () => {
       new Error("db down"),
     );
 
-    await expect(
-      ingestReading({
+    let rejectionMessage = "";
+    try {
+      await ingestReading({
         sensorId: sensor._id.toString(),
         value: 35,
         unit: "°C",
         timestamp: new Date(),
-      }),
-    ).rejects.toThrow("Failed to create threshold alert");
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        rejectionMessage = error.message;
+      }
+    }
+    expect(rejectionMessage).toContain("Failed to create threshold alert");
 
     alertCreateSpy.mockRestore();
 

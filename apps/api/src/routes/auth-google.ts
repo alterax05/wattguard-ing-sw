@@ -67,6 +67,8 @@ async function exchangeCodeForUser(code: string) {
     return null;
   }
 
+  // SAFETY: on a 200 response Google's token endpoint returns a JSON body
+  // containing at least the access_token field.
   const tokens = (await tokenResponse.json()) as { access_token: string };
 
   const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -78,6 +80,8 @@ async function exchangeCodeForUser(code: string) {
     return null;
   }
 
+  // SAFETY: the userinfo endpoint returns the profile of the user bound to
+  // the bearer access token (id, email, optional name, verified_email).
   const info = (await userInfoResponse.json()) as {
     id: string;
     email: string;
@@ -151,7 +155,7 @@ const app = new Hono()
   })
 
   /* ── Login flow (new) ───────────────────────────────────────────────── */
-  .get("/login", async (c) => {
+  .get("/login", (c) => {
     const state = randomToken(32);
     const opts = tempCookieOptions();
 

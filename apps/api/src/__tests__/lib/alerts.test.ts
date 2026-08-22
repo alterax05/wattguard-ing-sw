@@ -36,7 +36,7 @@ describe("lib/alerts", () => {
   let buildingId: Types.ObjectId;
   let sensorId: Types.ObjectId;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     buildingId = new Types.ObjectId();
     sensorId = new Types.ObjectId();
   });
@@ -450,8 +450,8 @@ describe("lib/alerts", () => {
     expect(dto.acknowledgedAt).toBe("2024-06-01T12:00:00.000Z");
     expect(dto.resolvedBy).toBeUndefined();
     expect(dto.resolvedAt).toBeUndefined();
-    expect(dto.createdAt).toBe(alert.createdAt!.toISOString());
-    expect(dto.updatedAt).toBe(alert.updatedAt!.toISOString());
+    expect(dto.createdAt).toBe(alert.createdAt.toISOString());
+    expect(dto.updatedAt).toBe(alert.updatedAt.toISOString());
   });
 
   test("toAlertDTO localizes the system resolver and passes user names through", async () => {

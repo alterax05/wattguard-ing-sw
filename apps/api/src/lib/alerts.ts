@@ -310,6 +310,8 @@ export function toAlertDTO(
     buildingId: alert.buildingId.toString(),
     buildingName: alert.buildingName,
     sensorId: alert.sensorId?.toString(),
+    // SAFETY: alerts are only created through raiseThreshold/raiseEfficiency,
+    // so the stored type string is always one of the two AlertType values.
     type: alert.type as AlertType,
     thresholdType: alert.thresholdType ?? undefined,
     severity: alert.severity,
@@ -323,7 +325,7 @@ export function toAlertDTO(
     acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? undefined,
     resolvedBy: resolveActor(alert.resolvedBy, opts),
     resolvedAt: alert.resolvedAt?.toISOString() ?? undefined,
-    createdAt: alert.createdAt!.toISOString(),
-    updatedAt: alert.updatedAt!.toISOString(),
+    createdAt: alert.createdAt.toISOString(),
+    updatedAt: alert.updatedAt.toISOString(),
   };
 }

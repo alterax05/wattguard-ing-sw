@@ -87,7 +87,9 @@ export async function calculateBuildingEfficiency(
         }
 
         // External temperature average for gas buildings
-        const [extResult] = await SensorReading.aggregate([
+        const [extResult] = await SensorReading.aggregate<{
+          avg: number | null;
+        }>([
           {
             $match: {
               "metadata.buildingId": building._id,
@@ -100,7 +102,10 @@ export async function calculateBuildingEfficiency(
         avgExternalTempFromBasic = extResult?.avg ?? null;
 
       } else {
-        const [basicResult] = await SensorReading.aggregate([
+        const [basicResult] = await SensorReading.aggregate<{
+          totalEnergyConsumed: number | null;
+          avgExternalTemp: number | null;
+        }>([
           { $match: sensorMatch },
           {
             $group: {
@@ -234,7 +239,12 @@ export async function calculateBuildingEfficiency(
       if (tempBuckets.length >= 2) {
         const C = ROOM_HEAT_CAPACITY;
         const hEstimates: number[] = [];
-        const copValues: number[] = [];
+        const copValues: {
+          C: number;
+          tempChangeRate: number;
+          tempDiff: number;
+          powerWatts: number;
+        }[] = [];
 
         for (let i = 1; i < tempBuckets.length; i++) {
           const prev = tempBuckets[i - 1]!;
@@ -271,7 +281,7 @@ export async function calculateBuildingEfficiency(
           ) {
             // avgH may not be computed yet — use best estimate so far (or 0 if none)
             // We'll do a second pass after avgH is determined
-            copValues.push({ C, tempChangeRate, tempDiff, powerWatts } as unknown as number);
+            copValues.push({ C, tempChangeRate, tempDiff, powerWatts });
           }
         }
 
@@ -281,10 +291,10 @@ export async function calculateBuildingEfficiency(
 
         // Second pass for COP now that avgH is known
         if (avgH !== null && copValues.length > 0) {
-          const cops = (copValues as unknown as { C: number; tempChangeRate: number; tempDiff: number; powerWatts: number }[])
-            .map(({ C: c, tempChangeRate, tempDiff, powerWatts }) =>
+          const cops = copValues.map(
+            ({ C: c, tempChangeRate, tempDiff, powerWatts }) =>
               (c * tempChangeRate + avgH! * tempDiff) / powerWatts
-            );
+          );
           averageCop = cops.reduce((a, b) => a + b, 0) / cops.length;
         }
       }

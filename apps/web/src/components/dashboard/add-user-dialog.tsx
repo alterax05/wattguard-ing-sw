@@ -18,12 +18,15 @@ interface AddUserDialogProps {
 export function AddUserDialog({ onClose }: AddUserDialogProps) {
   const createInvite = useCreateInvite()
   const { t } = useTranslation()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    email: string
+    role: "admin" | "operator"
+  }>({
     email: "",
-    role: "operator" as "admin" | "operator",
+    role: "operator",
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     createInvite.mutate(
@@ -65,7 +68,7 @@ export function AddUserDialog({ onClose }: AddUserDialogProps) {
                 placeholder={t("users.emailPlaceholder")}
                 className="pl-9"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => { setFormData({ ...formData, email: e.target.value }) }}
                 disabled={createInvite.isPending}
                 required
               />
@@ -76,7 +79,7 @@ export function AddUserDialog({ onClose }: AddUserDialogProps) {
             <Label htmlFor="role">{t("users.roleLabel")}</Label>
             <Select
               value={formData.role}
-              onValueChange={(value: "admin" | "operator") => setFormData({ ...formData, role: value })}
+              onValueChange={(value: "admin" | "operator") => { setFormData({ ...formData, role: value }) }}
               disabled={createInvite.isPending}
             >
               <SelectTrigger>

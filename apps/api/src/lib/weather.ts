@@ -1,11 +1,28 @@
 /**
  * Weather Service Utilities
  */
+import { z } from "zod";
 
 interface Coordinates {
   lat: number;
   lon: number;
 }
+
+// Nominatim /search returns a JSON array of place results; lat/lon are strings.
+const NominatimSearchResultSchema = z
+  .object({
+    lat: z.string(),
+    lon: z.string(),
+  })
+  .array()
+  .min(1);
+
+// Open-Meteo archive payload: hourly temperature series (null = missing value).
+const OpenMeteoArchiveSchema = z.object({
+  hourly: z.object({
+    temperature_2m: z.array(z.number().nullable()),
+  }),
+});
 
 /**
  * Geocode an address to coordinates using Nominatim (OpenStreetMap)
@@ -27,15 +44,20 @@ export async function getCoordinates(address: string): Promise<Coordinates | nul
       return null;
     }
 
-    const data = await response.json();
-    if (Array.isArray(data) && data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lon: parseFloat(data[0].lon),
-      };
+    const parsed = NominatimSearchResultSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      return null;
     }
-    
-    return null;
+
+    const first = parsed.data[0];
+    if (!first) {
+      return null;
+    }
+
+    return {
+      lat: parseFloat(first.lat),
+      lon: parseFloat(first.lon),
+    };
   } catch (error) {
     console.error("Error fetching coordinates:", error);
     return null;
@@ -64,18 +86,18 @@ export async function getAverageHistoricalTemperature(
       return null;
     }
 
-    const data = await response.json();
-    if (data.hourly && data.hourly.temperature_2m) {
-      const temps: number[] = data.hourly.temperature_2m;
-      // Filter out nulls
-      const validTemps = temps.filter((t) => t !== null);
-      if (validTemps.length === 0) return null;
-
-      const sum = validTemps.reduce((acc, curr) => acc + curr, 0);
-      return sum / validTemps.length;
+    const parsed = OpenMeteoArchiveSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      return null;
     }
 
-    return null;
+    const temps: (number | null)[] = parsed.data.hourly.temperature_2m;
+    // Filter out nulls
+    const validTemps = temps.filter((t) => t !== null);
+    if (validTemps.length === 0) return null;
+
+    const sum = validTemps.reduce((acc, curr) => acc + curr, 0);
+    return sum / validTemps.length;
   } catch (error) {
     console.error("Error fetching weather data:", error);
     return null;

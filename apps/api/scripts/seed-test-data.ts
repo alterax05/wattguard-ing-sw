@@ -265,4 +265,4 @@ async function seedTestData() {
 }
 
 // Run the seed function
-seedTestData();
+await seedTestData();
