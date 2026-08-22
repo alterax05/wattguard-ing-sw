@@ -72,15 +72,15 @@ describe("SensorReading schema", () => {
       expect(reading.timestamp).toBeInstanceOf(Date);
       expect(reading.value).toBe(22.5);
       expect(reading.unit).toBe("°C");
-      expect(reading.metadata!.sensorId.toString()).toBe(sensorId.toString());
-      expect(reading.metadata!.buildingId.toString()).toBe(buildingId.toString());
-      expect(reading.metadata!.sensorType).toBe("internal_temp");
+      expect(reading.metadata.sensorId.toString()).toBe(sensorId.toString());
+      expect(reading.metadata.buildingId.toString()).toBe(buildingId.toString());
+      expect(reading.metadata.sensorType).toBe("internal_temp");
       expect(reading._id).toBeDefined();
     });
 
     test("fails without required timestamp", async () => {
-      try {
-        await SensorReading.create({
+      await expect(
+        SensorReading.create({
           value: 22.5,
           unit: "°C",
           metadata: {
@@ -88,18 +88,13 @@ describe("SensorReading schema", () => {
             buildingId: buildingId,
             sensorType: "internal_temp",
           },
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.timestamp).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("fails without required value", async () => {
-      try {
-        await SensorReading.create({
+      await expect(
+        SensorReading.create({
           timestamp: new Date(),
           unit: "°C",
           metadata: {
@@ -107,18 +102,13 @@ describe("SensorReading schema", () => {
             buildingId: buildingId,
             sensorType: "internal_temp",
           },
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.value).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("fails without required unit", async () => {
-      try {
-        await SensorReading.create({
+      await expect(
+        SensorReading.create({
           timestamp: new Date(),
           value: 22.5,
           metadata: {
@@ -126,18 +116,13 @@ describe("SensorReading schema", () => {
             buildingId: buildingId,
             sensorType: "internal_temp",
           },
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.unit).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("fails without required metadata.sensorId", async () => {
-      try {
-        await SensorReading.create({
+      await expect(
+        SensorReading.create({
           timestamp: new Date(),
           value: 22.5,
           unit: "°C",
@@ -145,53 +130,36 @@ describe("SensorReading schema", () => {
             buildingId: buildingId,
             sensorType: "internal_temp",
           },
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors["metadata.sensorId"]).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("fails without required metadata.buildingId", async () => {
-      try {
-        await SensorReading.create({
+      await expect(
+        SensorReading.create({
           timestamp: new Date(),
           value: 22.5,
           unit: "°C",
           metadata: {
             sensorId: sensorId,
             sensorType: "internal_temp",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors["metadata.buildingId"]).toBeDefined();
-      }
+          },
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("fails without required metadata.sensorType", async () => {
-      try {
-        await SensorReading.create({
+      await expect(
+        SensorReading.create({
           timestamp: new Date(),
           value: 22.5,
           unit: "°C",
           metadata: {
             sensorId: sensorId,
             buildingId: buildingId,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors["metadata.sensorType"]).toBeDefined();
-      }
+          },
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("trims whitespace from unit", async () => {

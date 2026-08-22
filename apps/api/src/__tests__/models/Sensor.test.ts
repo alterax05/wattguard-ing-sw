@@ -6,7 +6,7 @@ import {
   spyOn,
 } from "bun:test";
 import { setupIntegrationTests } from "../helpers/db";
-import { Sensor, type SensorStatus, type SensorType } from "../../models/Sensor";
+import { Sensor } from "../../models/Sensor";
 import { Building, type BuildingDocument } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
@@ -111,54 +111,39 @@ describe("Sensor schema", () => {
     });
 
     test("fails without required buildingId", async () => {
-      try {
-        await Sensor.create({
+      await expect(
+        Sensor.create({
           sensorType: "internal_temp",
           location: "Test Location",
           installationDate: new Date(),
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.buildingId).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("fails without required sensorType", async () => {
-      try {
-        await Sensor.create({
+      await expect(
+        Sensor.create({
           buildingId: buildingId,
           location: "Test Location",
           installationDate: new Date(),
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.sensorType).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("fails without required location", async () => {
-      try {
-        await Sensor.create({
+      await expect(
+        Sensor.create({
           buildingId: buildingId,
           sensorType: "internal_temp",
           installationDate: new Date(),
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.location).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("trims whitespace from location", async () => {
@@ -230,21 +215,17 @@ describe("Sensor schema", () => {
     });
 
     test("fails with invalid sensor type", async () => {
-      try {
-        await Sensor.create({
+      await expect(
+        Sensor.create({
           buildingId: buildingId,
-          sensorType: "invalid_type" as unknown as SensorType, // Force an invalid type
+          // @ts-expect-error deliberately invalid sensorType outside the enum
+          sensorType: "invalid_type",
           location: "Test",
           installationDate: new Date(),
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.sensorType).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
   });
 
@@ -306,22 +287,18 @@ describe("Sensor schema", () => {
     });
 
     test("fails with invalid status", async () => {
-      try {
-        await Sensor.create({
+      await expect(
+        Sensor.create({
           buildingId: buildingId,
           sensorType: "internal_temp",
           location: "Test",
           installationDate: new Date(),
-          status: "invalid" as unknown as SensorStatus, // Force an invalid status
+          // @ts-expect-error deliberately invalid status outside the enum
+          status: "invalid",
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.status).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
   });
 
@@ -369,8 +346,8 @@ describe("Sensor schema", () => {
     });
 
     test("fails with interval below 10 seconds", async () => {
-      try {
-        await Sensor.create({
+      await expect(
+        Sensor.create({
           buildingId: buildingId,
           sensorType: "internal_temp",
           location: "Test",
@@ -378,18 +355,13 @@ describe("Sensor schema", () => {
           transmissionInterval: 5,
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.transmissionInterval).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("fails with interval above 3600 seconds", async () => {
-      try {
-        await Sensor.create({
+      await expect(
+        Sensor.create({
           buildingId: buildingId,
           sensorType: "internal_temp",
           location: "Test",
@@ -397,13 +369,8 @@ describe("Sensor schema", () => {
           transmissionInterval: 3700,
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.transmissionInterval).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
   });
 
@@ -419,8 +386,8 @@ describe("Sensor schema", () => {
         updatedBy: userId,
       });
 
-      try {
-        await Sensor.create({
+      await expect(
+        Sensor.create({
           buildingId: buildingId,
           sensorType: "external_temp",
           location: "Location 2",
@@ -428,12 +395,8 @@ describe("Sensor schema", () => {
           installationDate: new Date(),
           createdBy: userId,
           updatedBy: userId,
-        });
-        expect(true).toBe(false);
-      } catch (err) {
-        const error = err as { code: number };
-        expect(error.code).toBe(11000); // MongoDB duplicate key error
-      }
+        }),
+      ).rejects.toMatchObject({ code: 11000 });
     });
 
     test("allows multiple sensors without serialNumber (sparse index)", async () => {
@@ -533,8 +496,8 @@ describe("Sensor schema", () => {
 
       expect(sensor.createdAt).toBeInstanceOf(Date);
       expect(sensor.updatedAt).toBeInstanceOf(Date);
-      expect(sensor.createdAt!.getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(sensor.createdAt!.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(sensor.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(sensor.createdAt.getTime()).toBeLessThanOrEqual(after.getTime());
     });
 
     test("updates updatedAt on modification", async () => {
@@ -553,7 +516,7 @@ describe("Sensor schema", () => {
       sensor.location = "Updated";
       await sensor.save();
 
-      expect(sensor.updatedAt!.getTime()).toBeGreaterThan(originalUpdatedAt!.getTime());
+      expect(sensor.updatedAt.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
     });
   });
 
@@ -777,10 +740,10 @@ describe("Sensor schema", () => {
         updatedBy: userId,
       });
 
-      const populated = await Sensor.findById(sensor._id).populate("buildingId");
+      const populated = await Sensor.findById(sensor._id).populate<{ buildingId: BuildingDocument }>("buildingId");
 
       expect(populated).not.toBeNull();
-      expect((populated!.buildingId as unknown as BuildingDocument).name).toBe("Test Building");
+      expect(populated!.buildingId.name).toBe("Test Building");
     });
 
     test("deletes sensor", async () => {

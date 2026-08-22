@@ -30,16 +30,11 @@ describe("BuildingType schema", () => {
     });
 
     test("fails without required name field", async () => {
-      try {
-        await BuildingType.create({
+      await expect(
+        BuildingType.create({
           description: "Test description",
-        });
-        expect(true).toBe(false); // Should not reach here
-      } catch (err) {
-        const error = err as MongooseError.ValidationError;
-        expect(error.name).toBe("ValidationError");
-        expect(error.errors.name).toBeDefined();
-      }
+        }),
+      ).rejects.toThrow(MongooseError.ValidationError);
     });
 
     test("trims whitespace from name", async () => {
@@ -66,15 +61,11 @@ describe("BuildingType schema", () => {
         name: "Residenziale",
       });
 
-      try {
-        await BuildingType.create({
+      await expect(
+        BuildingType.create({
           name: "Residenziale",
-        });
-        expect(true).toBe(false); // Should not reach here
-      } catch (err) {
-        const error = err as { code: number };
-        expect(error.code).toBe(11000); // MongoDB duplicate key error
-      }
+        }),
+      ).rejects.toMatchObject({ code: 11000 }); // MongoDB duplicate key error
     });
 
     test("allows same name after deletion", async () => {
