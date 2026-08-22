@@ -14,6 +14,7 @@ import {
   LogoutResponseSchema,
   TestEmailRequestSchema,
   TestEmailResponseSchema,
+  UpdateLanguageRequestSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
@@ -21,6 +22,7 @@ import type {
   MeResponse,
   TestEmailResponse,
 } from "@wattguard/shared";
+import { User } from "../models/User";
 
 /**
  * GET /api/auth/me - Get current user (protected, middleware applied globally)
@@ -64,6 +66,52 @@ const app = new Hono<{ Variables: AuthVariables }>()
           name: userDoc.name ?? undefined,
           role: payload.role,
           isDisabled: userDoc.isDisabled ?? false,
+          language: userDoc.language ?? undefined,
+          lastLoginAt: userDoc.lastLoginAt?.toISOString() ?? undefined,
+        },
+      } satisfies MeResponse);
+    }
+  )
+  .patch(
+    "/me/language",
+    describeRoute({
+      description: "Update the current user's preferred language (used for alert emails)",
+      tags: ["Authentication"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Updated current user information",
+          content: {
+            "application/json": {
+              schema: resolver(MeResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("json", UpdateLanguageRequestSchema),
+    async (c) => {
+      const { language } = c.req.valid("json");
+      const userDoc = c.get("userDoc");
+
+      await User.findByIdAndUpdate(userDoc._id, { $set: { language } });
+
+      return c.json({
+        user: {
+          id: userDoc._id?.toString() ?? undefined,
+          email: c.get("jwtPayload").email,
+          name: userDoc.name ?? undefined,
+          role: userDoc.role,
+          isDisabled: userDoc.isDisabled ?? false,
+          language,
           lastLoginAt: userDoc.lastLoginAt?.toISOString() ?? undefined,
         },
       } satisfies MeResponse);

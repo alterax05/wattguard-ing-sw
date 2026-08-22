@@ -34,6 +34,7 @@ await mock.module("../../email/mailer", () => ({
   sendPasswordResetEmail: mock(async () => Promise.resolve()),
   sendEmail: mock(async () => Promise.resolve()),
   sendTestEmail: mock(async () => Promise.resolve()),
+  sendAlertEmail: mock(async () => Promise.resolve()),
 }));
 
 // Suppress console logs during tests

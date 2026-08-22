@@ -30,6 +30,16 @@ await mock.module("../../lib/weather", () => ({
   getCoordinates: mock(() => Promise.resolve(null)),
 }));
 
+// ── Mailer mock — the evaluator fires alert notification emails when alerts
+//    are created or auto-resolved; keep tests hermetic.
+await mock.module("../../email/mailer", () => ({
+  sendInviteEmail: mock(async () => Promise.resolve()),
+  sendPasswordResetEmail: mock(async () => Promise.resolve()),
+  sendEmail: mock(async () => Promise.resolve()),
+  sendTestEmail: mock(async () => Promise.resolve()),
+  sendAlertEmail: mock(async () => Promise.resolve()),
+}));
+
 // ── Imports (after the module mock is registered) ─────────────────────────────
 import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
@@ -38,7 +48,7 @@ import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
-import { EFFICIENCY_ALERT_TYPE } from "../../lib/alerts";
+import { EFFICIENCY_ALERT_TYPE, computeDeviationSeverity } from "../../lib/alerts";
 import { evaluateEfficiencyAlerts } from "../../services/efficiency-alert-service";
 
 // ── silence console noise during tests ──────────────────────────────────────
@@ -196,7 +206,11 @@ describe("evaluateEfficiencyAlerts", () => {
     expect(alerts[0]!.buildingId.toString()).toBe(bid);
     expect(alerts[0]!.status).toBe("active");
     expect(alerts[0]!.thresholdType).toBe("min");
-    expect(alerts[0]!.severity).toBe("high");
+    // Severity is now derived from the deviation between value and limit
+    // instead of being hardcoded.
+    expect(alerts[0]!.severity).toBe(
+      computeDeviationSeverity(alerts[0]!.value, alerts[0]!.limit),
+    );
     expect(alerts[0]!.value).toBeGreaterThan(0);
     expect(alerts[0]!.value).toBeLessThan(10);
     expect(alerts[0]!.limit).toBe(10);

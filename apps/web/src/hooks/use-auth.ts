@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { client } from "@/lib/api";
 import { errorMessageFromResponse } from "@/lib/errors";
-import { UserSchema } from "@wattguard/shared";
+import i18n from "@/lib/i18n";
+import { UserSchema, isSupportedLocale, type LocaleCode } from "@wattguard/shared";
 import { z } from "zod";
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;
@@ -13,6 +14,7 @@ export interface AuthUser {
   name?: string;
   role: "admin" | "operator";
   isDisabled?: boolean;
+  language?: LocaleCode;
   lastLoginAt?: string;
 }
 
@@ -40,11 +42,20 @@ export function useCurrentUser() {
       }
 
       const data = await res.json();
-      return {
+      const user: AuthUser = {
         ...data.user,
         name: data.user.name ?? undefined,
+        language: isSupportedLocale(data.user.language) ? data.user.language : undefined,
         lastLoginAt: data.user.lastLoginAt ?? undefined,
+      };
+
+      // Server-side preference wins at session start so alert emails match
+      // what the user sees in the UI.
+      if (user.language && i18n.language !== user.language) {
+        void i18n.changeLanguage(user.language);
       }
+
+      return user;
     },
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes

@@ -46,6 +46,11 @@ const app = new Hono()
     loadUserDoc(),
   )
   .use(
+    "/auth/me/language",
+    jwt({ secret: JWT_SECRET, cookie: "access_token", alg: "HS256" }),
+    loadUserDoc(),
+  )
+  .use(
     "/auth/admin/*",
     jwt({ secret: JWT_SECRET, cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),

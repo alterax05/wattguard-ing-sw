@@ -215,6 +215,27 @@
       "subject": "Test email da WattGuard",
       "text": "Questa è una email di test per verificare la configurazione email.",
       "html": "<p>Questa è una email di test per verificare la configurazione email.</p>"
+    },
+    "alert": {
+      "created": {
+        "subject": "[WattGuard] {{type}} - {{building}}",
+        "text": "È stato generato un nuovo alert.\n\n{{details}}\n\nApri la pagina Alert:\n{{alertsUrl}}",
+        "htmlTitle": "Nuovo alert generato",
+        "htmlIntro": "Un nuovo alert <strong>{{type}}</strong> è stato generato per <strong>{{building}}</strong>."
+      },
+      "resolved": {
+        "subject": "[WattGuard] Alert risolto - {{building}}",
+        "text": "L'alert è stato risolto automaticamente.\n\n{{details}}\n\nApri la pagina Alert:\n{{alertsUrl}}",
+        "htmlTitle": "Alert risolto",
+        "htmlIntro": "L'alert <strong>{{type}}</strong> per <strong>{{building}}</strong> è stato risolto automaticamente."
+      },
+      "fieldBuilding": "Edificio",
+      "fieldSensor": "Sensore",
+      "fieldValue": "Valore attuale",
+      "fieldLimit": "Limite",
+      "fieldSeverity": "Severità",
+      "htmlCta": "Apri la pagina Alert",
+      "htmlFallbackUrl": "Oppure copia questo link nel tuo browser:"
     }
   },
   "reports": {

@@ -215,6 +215,27 @@
       "subject": "Test-E-Mail von WattGuard",
       "text": "Dies ist eine Test-E-Mail zur Überprüfung der E-Mail-Konfiguration.",
       "html": "<p>Dies ist eine Test-E-Mail zur Überprüfung der E-Mail-Konfiguration.</p>"
+    },
+    "alert": {
+      "created": {
+        "subject": "[WattGuard] {{type}} - {{building}}",
+        "text": "Ein neuer Alarm wurde ausgelöst.\n\n{{details}}\n\nAlarmseite öffnen:\n{{alertsUrl}}",
+        "htmlTitle": "Neuer Alarm ausgelöst",
+        "htmlIntro": "Ein neuer Alarm <strong>{{type}}</strong> wurde für <strong>{{building}}</strong> ausgelöst."
+      },
+      "resolved": {
+        "subject": "[WattGuard] Alarm behoben - {{building}}",
+        "text": "Der Alarm wurde automatisch behoben.\n\n{{details}}\n\nAlarmseite öffnen:\n{{alertsUrl}}",
+        "htmlTitle": "Alarm behoben",
+        "htmlIntro": "Der Alarm <strong>{{type}}</strong> für <strong>{{building}}</strong> wurde automatisch behoben."
+      },
+      "fieldBuilding": "Gebäude",
+      "fieldSensor": "Sensor",
+      "fieldValue": "Aktueller Wert",
+      "fieldLimit": "Grenzwert",
+      "fieldSeverity": "Schweregrad",
+      "htmlCta": "Alarmseite öffnen",
+      "htmlFallbackUrl": "Oder kopieren Sie diesen Link in Ihren Browser:"
     }
   },
   "reports": {

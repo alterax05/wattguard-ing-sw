@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 import { Sensor } from "../models/Sensor";
 import { SensorReading } from "../models/SensorReading";
 import type { BuildingDocument } from "../models/Building";
-import { raiseThreshold } from "../lib/alerts";
+import { raiseThreshold, THRESHOLD_ALERT_TYPE, computeDeviationSeverity } from "../lib/alerts";
+import { queueAlertNotification } from "./notification-service";
 
 export type IngestReadingInput = {
   sensorId: string;
@@ -69,6 +70,8 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
 
   const session = await mongoose.startSession();
 
+  let alertNotification: Parameters<typeof queueAlertNotification>[1] | null = null;
+
   try {
     await session.withTransaction(async () => {
       const current = await Sensor.findById(input.sensorId).session(session);
@@ -106,6 +109,18 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
           // the denormalized lastReading are rolled back together.
           throw new Error("Failed to create threshold alert");
         }
+        if (result.created) {
+          alertNotification = {
+            type: THRESHOLD_ALERT_TYPE,
+            buildingName,
+            sensorType: current.sensorType,
+            location: current.location,
+            value: input.value,
+            unit: input.unit,
+            limit: limit ?? null,
+            severity: computeDeviationSeverity(input.value, limit),
+          };
+        }
       }
 
       // Update the sensor's last reading (denormalization for UI)
@@ -122,5 +137,11 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
     });
   } finally {
     await session.endSession();
+  }
+
+  // Dispatched after the transaction commits so a rollback can never email
+  // about an alert that was not persisted.
+  if (alertNotification) {
+    queueAlertNotification("created", alertNotification);
   }
 }
