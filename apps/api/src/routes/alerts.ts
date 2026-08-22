@@ -145,7 +145,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       return c.json({
         success: true as const,
-        // SAFETY: result.alert comes back from findOneAndUpdate({ new: true })
+        // SAFETY: result.alert comes back from findOneAndUpdate({ returnDocument: "after" })
         // on the Alert collection, so it is a full document with _id and
         // timestamps as required by AlertDTOInput.
         alert: toAlertDTO(result.alert as AlertDTOInput, { locale: getRequestLocale(c) }),
@@ -185,7 +185,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       return c.json({
         success: true as const,
-        // SAFETY: result.alert comes back from findOneAndUpdate({ new: true })
+        // SAFETY: result.alert comes back from findOneAndUpdate({ returnDocument: "after" })
         // on the Alert collection, so it is a full document with _id and
         // timestamps as required by AlertDTOInput.
         alert: toAlertDTO(result.alert as AlertDTOInput, { locale: getRequestLocale(c) }),

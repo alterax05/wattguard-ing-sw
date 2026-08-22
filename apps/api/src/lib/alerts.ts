@@ -159,7 +159,7 @@ export async function acknowledge(
           acknowledgedAt: input.now ?? new Date(),
         },
       },
-      { new: true },
+      { returnDocument: "after" },
     );
 
     if (updated) return { ok: true, alert: updated };
@@ -190,7 +190,7 @@ export async function resolveManually(
           resolvedAt: input.now ?? new Date(),
         },
       },
-      { new: true },
+      { returnDocument: "after" },
     );
 
     if (updated) return { ok: true, alert: updated };
