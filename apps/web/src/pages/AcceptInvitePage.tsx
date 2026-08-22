@@ -190,8 +190,8 @@ export function AcceptInvitePage() {
           {mode === "password" && (
             <form
               id="accept-invite-form"
-              onSubmit={async (e) => {
-                await form.handleSubmit(onSubmit)(e);
+              onSubmit={(e) => {
+                void form.handleSubmit(onSubmit)(e);
               }}
             >
               <FieldGroup>
