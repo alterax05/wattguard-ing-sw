@@ -25,10 +25,12 @@ export const debugPrint = (message: string, ...args: unknown[]) => {
 
 export const MONGO_URI = ((): string => {
   const uri = process.env.MONGO_URI;
-  if (!uri) {
-    throw new Error("MONGO_URI environment variable is not set");
+  if (!uri && IS_PRODUCTION) {
+    throw new Error("MONGO_URI environment variable must be set in production");
   }
-  return uri;
+  // Tests never use this value (they connect to an in-memory MongoDB), and
+  // dev falls back to the local default from `.env.example`.
+  return uri ?? "mongodb://localhost:27017/wattguard";
 })();
 
 // ── MQTT ─────────────────────────────────────────────────────────────────────
@@ -97,11 +99,13 @@ export const GOOGLE_REDIRECT_URI =
 // ── Email (Resend) ───────────────────────────────────────────────────────────
 
 export const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
-export const RESEND_API = (() => {
-  if (!process.env.RESEND_API) {
-    throw new Error("RESEND_API environment variable is not set");
+export const RESEND_API = ((): string => {
+  if (!process.env.RESEND_API && IS_PRODUCTION) {
+    throw new Error("RESEND_API environment variable must be set in production");
   }
-  return process.env.RESEND_API;
+  // The Resend client is built lazily on first send, and tests mock the
+  // mailer — an empty key is fine outside production.
+  return process.env.RESEND_API ?? "";
 })();
 
 // ── Admin bootstrap script ───────────────────────────────────────────────────
