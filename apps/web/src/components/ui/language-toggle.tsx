@@ -7,15 +7,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { client } from "@/lib/api";
+import type { LocaleCode } from "@wattguard/shared";
 
-const LANGUAGES = [
+const LANGUAGES: ReadonlyArray<{ code: LocaleCode; label: string }> = [
   { code: "en", label: "English" },
   { code: "it", label: "Italiano" },
   { code: "de", label: "Deutsch" },
-] as const;
+];
 
 export function LanguageToggle() {
   const { t, i18n } = useTranslation();
+
+  const changeLanguage = (code: LocaleCode) => {
+    void i18n.changeLanguage(code);
+
+    // Best-effort persistence of the preference for alert emails; silently
+    // ignored when unauthenticated (login pages) or the request fails.
+    void client.api.v1.auth.me.language
+      .$patch({ json: { language: code } })
+      .catch(() => undefined);
+  };
 
   return (
     <DropdownMenu>
@@ -30,7 +42,7 @@ export function LanguageToggle() {
           <DropdownMenuItem
             key={code}
             disabled={i18n.language === code}
-            onClick={() => i18n.changeLanguage(code)}
+            onClick={() => changeLanguage(code)}
           >
             {label}
           </DropdownMenuItem>

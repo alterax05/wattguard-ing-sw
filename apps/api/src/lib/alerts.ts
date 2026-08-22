@@ -15,8 +15,10 @@ import {
   type AlertSeverity,
 } from "../models/Alert";
 import { getTranslator } from "./i18n";
+import { computeDeviationSeverity } from "./alert-severity";
 
 export { THRESHOLD_ALERT_TYPE, EFFICIENCY_ALERT_TYPE };
+export { computeDeviationSeverity } from "./alert-severity";
 
 export const SYSTEM_RESOLVER = "system";
 const LEGACY_SYSTEM_RESOLVER = "Sistema";
@@ -75,7 +77,7 @@ export async function raiseThreshold(
           sensorId: input.sensorId,
           type: THRESHOLD_ALERT_TYPE,
           thresholdType: input.thresholdType,
-          severity: input.severity ?? "high",
+          severity: input.severity ?? computeDeviationSeverity(input.value, input.limit),
           sensorType: input.sensorType,
           location: input.location,
           value: input.value,
@@ -119,7 +121,7 @@ export async function raiseEfficiency(
       buildingName: input.buildingName,
       type: EFFICIENCY_ALERT_TYPE,
       thresholdType: "min",
-      severity: "high",
+      severity: computeDeviationSeverity(input.cop, input.minCop),
       value: Number(input.cop.toFixed(2)),
       unit: "COP",
       limit: input.minCop,

@@ -43,6 +43,7 @@ await mock.module("../../email/mailer", () => ({
   sendPasswordResetEmail: mock(async () => Promise.resolve()),
   sendEmail: mock(async () => Promise.resolve()),
   sendTestEmail: mock(async () => Promise.resolve()),
+  sendAlertEmail: mock(async () => Promise.resolve()),
 }));
 
 // Suppress console logs during tests
@@ -309,6 +310,50 @@ describe("auth api", () => {
     test("rejects access without token", async () => {
       const res = await client.api.v1.auth.me.$get();
       expect(res.status).toBe(401);
+    });
+
+    test("updates the preferred language via PATCH /auth/me/language", async () => {
+      await User.create({
+        email: "lang@test.com",
+        role: "operator",
+        passwordHash: await Bun.password.hash("password123", {
+          algorithm: "bcrypt",
+          cost: 10,
+        }),
+      });
+
+      const loginRes = await client.api.v1.auth.local.login.$post({
+        json: { email: "lang@test.com", password: "password123" },
+      });
+      const setCookieHeader = loginRes.headers.get("set-cookie");
+      const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
+      const token = tokenMatch![1];
+      const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
+
+      const meBefore = await client.api.v1.auth.me.$get(undefined, authHeaders);
+      const beforeData = await meBefore.json();
+      expect(beforeData.user.language).toBeUndefined();
+
+      const res = await client.api.v1.auth.me.language.$patch(
+        { json: { language: "it" } },
+        authHeaders,
+      );
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      if (!("user" in data)) {
+        throw new Error("Expected response to contain 'user'");
+      }
+      expect(data.user.language).toBe("it");
+
+      const persisted = await User.findOne({ email: "lang@test.com" });
+      expect(persisted!.language).toBe("it");
+
+      const invalid = await client.api.v1.auth.me.language.$patch(
+        // @ts-expect-error unsupported locale must be rejected by validation
+        { json: { language: "fr" } },
+        authHeaders,
+      );
+      expect(invalid.status).toBe(400);
     });
 
     test("rejects operator from admin routes", async () => {

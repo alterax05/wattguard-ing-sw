@@ -34,6 +34,8 @@ await mock.module("../../email/mailer", () => ({
   sendInviteEmail: mock(async () => Promise.resolve()),
   sendPasswordResetEmail: mock(async () => Promise.resolve()),
   sendEmail: mock(async () => Promise.resolve()),
+  sendTestEmail: mock(async () => Promise.resolve()),
+  sendAlertEmail: mock(async () => Promise.resolve()),
 }));
 
 setupIntegrationTests(import.meta.path);

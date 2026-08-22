@@ -1,4 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
+import { SUPPORTED_LOCALES } from "@wattguard/shared";
 
 const userSchema = new Schema(
   {
@@ -24,6 +25,11 @@ const userSchema = new Schema(
     isDisabled: {
       type: Boolean,
       default: false,
+    },
+    language: {
+      type: String,
+      enum: [...SUPPORTED_LOCALES],
+      required: false,
     },
     passwordHash: {
       type: String,

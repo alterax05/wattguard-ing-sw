@@ -70,7 +70,8 @@ describe("lib/alerts", () => {
     expect(alert).not.toBeNull();
     expect(alert!.type).toBe(THRESHOLD_ALERT_TYPE);
     expect(alert!.thresholdType).toBe("max");
-    expect(alert!.severity).toBe("high");
+    // 35 over a limit of 30 = 16.7% deviation -> medium band
+    expect(alert!.severity).toBe("medium");
     expect(alert!.limit).toBe(30);
     expect(alert!.status).toBe("active");
     expect(alert!.buildingName).toBe("Test Building");
@@ -139,7 +140,8 @@ describe("lib/alerts", () => {
     expect(alert!.value).toBe(2.57);
     expect(alert!.unit).toBe("COP");
     expect(alert!.thresholdType).toBe("min");
-    expect(alert!.severity).toBe("high");
+    // 2.567 against a 2.5 limit = 2.7% deviation -> low band
+    expect(alert!.severity).toBe("low");
     expect(alert!.limit).toBe(2.5);
     expect(alert!.location).toBe("Test Building");
     expect(alert!.buildingName).toBe("Test Building");

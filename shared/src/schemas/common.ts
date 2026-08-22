@@ -5,6 +5,7 @@
  */
 
 import { z } from "zod";
+import { SUPPORTED_LOCALES } from "../i18n";
 
 /**
  * Standard error response schema
@@ -57,6 +58,13 @@ export const PasswordSchema = z
   .describe("User password (minimum 8 characters)");
 
 /**
+ * Supported UI locale enum (see shared/src/i18n.ts)
+ */
+export const LocaleSchema = z
+  .enum(SUPPORTED_LOCALES)
+  .describe("Supported UI locale");
+
+/**
  * User role enum
  */
 export const UserRoleSchema = z
@@ -87,6 +95,7 @@ export const UserSchema = z.object({
   name: z.string().optional().describe("User display name"),
   role: UserRoleSchema,
   isDisabled: z.boolean().optional().describe("Whether the user account is disabled"),
+  language: LocaleSchema.optional().describe("Preferred UI locale used for emails"),
   lastLoginAt: z.iso.datetime().optional().describe("Timestamp of last login"),
   createdAt: z.iso.datetime().optional().describe("Account creation timestamp"),
 });
@@ -99,7 +108,17 @@ export const PublicUserSchema = UserSchema.pick({
   email: true,
   name: true,
   role: true,
+  language: true,
 });
+
+/**
+ * Request body to update the current user's preferred language
+ */
+export const UpdateLanguageRequestSchema = z.object({
+  language: LocaleSchema.describe("New preferred locale"),
+});
+
+export type UpdateLanguageRequest = z.infer<typeof UpdateLanguageRequestSchema>;
 
 /**
  * Query token parameter schema

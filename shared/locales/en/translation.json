@@ -215,6 +215,27 @@
       "subject": "Test email from WattGuard",
       "text": "This is a test email to verify the email configuration.",
       "html": "<p>This is a test email to verify the email configuration.</p>"
+    },
+    "alert": {
+      "created": {
+        "subject": "[WattGuard] {{type}} - {{building}}",
+        "text": "A new alert was raised.\n\n{{details}}\n\nOpen the Alerts page:\n{{alertsUrl}}",
+        "htmlTitle": "New alert raised",
+        "htmlIntro": "A new <strong>{{type}}</strong> alert was raised for <strong>{{building}}</strong>."
+      },
+      "resolved": {
+        "subject": "[WattGuard] Alert resolved - {{building}}",
+        "text": "The alert was automatically resolved.\n\n{{details}}\n\nOpen the Alerts page:\n{{alertsUrl}}",
+        "htmlTitle": "Alert resolved",
+        "htmlIntro": "The <strong>{{type}}</strong> alert for <strong>{{building}}</strong> was automatically resolved."
+      },
+      "fieldBuilding": "Building",
+      "fieldSensor": "Sensor",
+      "fieldValue": "Current value",
+      "fieldLimit": "Limit",
+      "fieldSeverity": "Severity",
+      "htmlCta": "Open the Alerts page",
+      "htmlFallbackUrl": "Or copy this link into your browser:"
     }
   },
   "reports": {

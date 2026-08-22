@@ -4,6 +4,7 @@ import {
   expect,
   beforeEach,
   spyOn,
+  mock,
 } from "bun:test";
 import { Types } from "mongoose";
 import { setupIntegrationTests } from "../helpers/db";
@@ -14,6 +15,15 @@ import { Building } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
 import { User } from "../../models/User";
 import { ingestReading, SensorNotFoundError } from "../../services/reading-service";
+
+// Silence the fire-and-forget alert email dispatch triggered by ingestion.
+await mock.module("../../email/mailer", () => ({
+  sendInviteEmail: mock(async () => Promise.resolve()),
+  sendPasswordResetEmail: mock(async () => Promise.resolve()),
+  sendEmail: mock(async () => Promise.resolve()),
+  sendTestEmail: mock(async () => Promise.resolve()),
+  sendAlertEmail: mock(async () => Promise.resolve()),
+}));
 
 setupIntegrationTests(import.meta.path);
 
@@ -137,7 +147,8 @@ describe("readingService", () => {
     const alerts = await Alert.find({ sensorId: sensor._id });
     expect(alerts).toHaveLength(1);
     expect(alerts[0]!.thresholdType).toBe("max");
-    expect(alerts[0]!.severity).toBe("high");
+    // 35 over a limit of 30 = 16.7% deviation -> medium band
+    expect(alerts[0]!.severity).toBe("medium");
     expect(alerts[0]!.status).toBe("active");
     expect(alerts[0]!.buildingName).toBe("Test Building");
     expect(alerts[0]!.sensorType).toBe("internal_temp");
