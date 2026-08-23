@@ -244,7 +244,7 @@ describe("startSimulator", () => {
   let hpEnergyId: string;
   let gasMeterId: string;
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
   beforeEach(async () => {
     readings.length = 0;

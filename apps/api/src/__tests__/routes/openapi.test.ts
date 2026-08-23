@@ -10,9 +10,7 @@ import {
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 
-// Suppress console logs during tests
-
-setupIntegrationTests(import.meta.path, { clearBetweenTests: false });
+setupIntegrationTests(false);
 
 /** Single documented operation inside the generated OpenAPI document. */
 interface OpenApiOperation {

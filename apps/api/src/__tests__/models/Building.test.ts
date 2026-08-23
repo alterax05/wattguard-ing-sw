@@ -5,7 +5,7 @@ import { BuildingType, type BuildingTypeDocument } from "../../models/BuildingTy
 import { User } from "../../models/User";
 import { Types, Error as MongooseError } from "mongoose";
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 describe("Building schema", () => {
   let userId: Types.ObjectId;

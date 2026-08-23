@@ -27,7 +27,7 @@ async function login(email: string, password: string): Promise<string> {
   return token;
 }
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 beforeEach(async () => {
 

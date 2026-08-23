@@ -26,7 +26,7 @@ import {
   SYSTEM_RESOLVER,
 } from "../../lib/alerts";
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 beforeAll(async () => {
   await ensureI18nReady();

@@ -115,7 +115,7 @@ async function getEfficiency(
 
 // ── lifecycle ────────────────────────────────────────────────────────────────
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 beforeEach(async () => {
 

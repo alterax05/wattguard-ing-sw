@@ -40,7 +40,7 @@ let operatorToken: string;
 let adminUserId: mongoose.Types.ObjectId;
 let buildingTypeId: mongoose.Types.ObjectId;
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 
 beforeEach(async () => {

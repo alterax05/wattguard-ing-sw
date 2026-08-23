@@ -43,7 +43,7 @@ export function ResetPasswordPage() {
         onSuccess: () => {
           // Redirect to login after 2 seconds
           setTimeout(() => {
-              navigate("/login");
+              void navigate("/login");
           }, 2000);
         },
       },

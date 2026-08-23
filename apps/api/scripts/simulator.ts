@@ -58,7 +58,7 @@ process.on("SIGINT", () => {
   console.log("\n🛑 Shutting down simulator...");
   handle.stop();
   mqttClient.end();
-  mongoose.disconnect().then(() => {
+  void mongoose.disconnect().finally(() => {
     process.exit(0);
   });
 });

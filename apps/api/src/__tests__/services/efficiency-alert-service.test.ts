@@ -73,7 +73,7 @@ function mkReading(
 
 // ── lifecycle ────────────────────────────────────────────────────────────────
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 beforeEach(async () => {
 
@@ -209,7 +209,7 @@ describe("evaluateEfficiencyAlerts", () => {
     // Severity is now derived from the deviation between value and limit
     // instead of being hardcoded.
     expect(alerts[0]!.severity).toBe(
-      computeDeviationSeverity(alerts[0]!.value, alerts[0]!.limit),
+      computeDeviationSeverity(alerts[0]!.value!, alerts[0]!.limit),
     );
     expect(alerts[0]!.value).toBeGreaterThan(0);
     expect(alerts[0]!.value).toBeLessThan(10);

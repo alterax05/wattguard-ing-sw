@@ -50,7 +50,7 @@ let operatorToken: string;
 let adminUserId: string;
 let buildingId: string;
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 
 beforeEach(async () => {

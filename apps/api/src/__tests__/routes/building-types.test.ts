@@ -40,7 +40,7 @@ let adminToken: string;
 let operatorToken: string;
 let adminUserId: string;
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 beforeEach(async () => {
 
