@@ -24,7 +24,7 @@ let adminToken: string;
 
 let buildingId: string;
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 beforeEach(async () => {
 

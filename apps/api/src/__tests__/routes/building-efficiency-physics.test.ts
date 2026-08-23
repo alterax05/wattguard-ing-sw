@@ -33,7 +33,7 @@ let energySensor;
 let tempSensor;
 let extSensor;
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 
 beforeEach(async () => {

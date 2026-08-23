@@ -15,7 +15,7 @@ import {
   queueAlertNotification,
 } from "../../services/notification-service";
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 type SentAlertEmail = {
   email: string;
@@ -45,8 +45,6 @@ await mock.module("../../email/mailer", () => ({
     },
   ),
 }));
-
-setupIntegrationTests(import.meta.path);
 
 const PAYLOAD = {
   type: "threshold_exceeded",

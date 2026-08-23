@@ -73,7 +73,7 @@ function mkReading(
 
 // ── lifecycle ────────────────────────────────────────────────────────────────
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 beforeEach(async () => {
 

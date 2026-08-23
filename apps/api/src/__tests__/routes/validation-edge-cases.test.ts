@@ -38,7 +38,7 @@ await mock.module("../../email/mailer", () => ({
   sendAlertEmail: mock(async () => Promise.resolve()),
 }));
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 describe("email validation", () => {
   test("accepts valid email formats", async () => {

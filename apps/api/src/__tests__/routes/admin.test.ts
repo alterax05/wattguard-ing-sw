@@ -39,7 +39,7 @@ await mock.module("../../email/mailer", () => ({
 
 // Suppress console logs during tests
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 
 beforeEach(async () => {

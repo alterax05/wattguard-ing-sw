@@ -3,7 +3,7 @@ import { setupIntegrationTests } from "../helpers/db";
 import { BuildingType } from "../../models/BuildingType";
 import { Error as MongooseError } from "mongoose";
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 describe("BuildingType schema", () => {
   describe("schema validation", () => {

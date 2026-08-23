@@ -37,7 +37,7 @@ const client = testClient(app);
 
 let adminToken: string;
 
-setupIntegrationTests(import.meta.path);
+setupIntegrationTests();
 
 beforeEach(async () => {
 
