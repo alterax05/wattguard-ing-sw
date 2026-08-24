@@ -52,7 +52,7 @@ export function DashboardLayout() {
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
       <aside className="flex w-16 lg:w-64 flex-col border-r bg-card">
-        <div className="flex h-16 items-center justify-center gap-2 border-b px-3 lg:justify-start lg:px-6">
+        <div className="flex h-16 items-center justify-center gap-2 border-b px-2 lg:justify-start lg:px-6">
           <img
             src={theme === "dark" ? logoBlack : logo}
             alt="WattGuard"
@@ -111,33 +111,33 @@ export function DashboardLayout() {
           )}
         </nav>
 
-        <div className="space-y-3 border-t p-2 lg:p-4">
-          <div className="flex items-center justify-center gap-3 rounded-lg bg-muted px-3 py-2 lg:justify-start">
+        <div className="flex flex-col items-center gap-3 border-t p-2 lg:items-stretch lg:p-4">
+          <div className="flex items-center justify-center gap-3 rounded-lg bg-muted px-2 py-2 lg:justify-start lg:px-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               {displayName.charAt(0).toUpperCase()}
             </div>
-            <div className="hidden flex-1 overflow-hidden lg:block">
+            <div className="hidden min-w-0 flex-1 flex-col lg:flex">
               <p className="truncate text-sm font-medium">{displayName}</p>
               <p className="truncate text-xs text-muted-foreground capitalize">
                 {user?.role === "admin" ? t("users.role.admin") : t("users.role.operator")}
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-2 lg:flex-row">
+          <div className="flex flex-col items-center gap-2 lg:flex-row lg:gap-2">
             <Button
               variant="outline"
-              className="flex-1 bg-transparent"
-              size="sm"
+              className="bg-transparent lg:h-8 lg:w-auto lg:flex-1 lg:px-3"
+              size="icon"
               onClick={handleLogout}
               disabled={logout.isPending}
               title={t("nav.logout")}
             >
-              <LogOut className="h-4 w-4 shrink-0 lg:mr-2" />
+              <LogOut className="h-4 w-4 shrink-0" />
               <span className="hidden lg:inline">
                 {logout.isPending ? t("nav.loggingOut") : t("nav.logout")}
               </span>
             </Button>
-            <div className="flex justify-center gap-2 lg:justify-start">
+            <div className="flex flex-col items-center gap-2 lg:flex-row lg:gap-2">
               <ModeToggle />
               <LanguageToggle />
             </div>
@@ -146,7 +146,7 @@ export function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="relative flex-1 overflow-auto">
         <Outlet />
       </main>
     </div>
