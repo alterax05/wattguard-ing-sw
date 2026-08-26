@@ -6,13 +6,12 @@ import { LayoutDashboard, MapPin, Building2, Bell, Radio, Settings, LogOut, User
 import { ModeToggle } from "@/components/ui/mode-toggle"
 import { LanguageToggle } from "@/components/ui/language-toggle"
 import { useTheme } from "next-themes"
-import { useContext } from "react"
-import { AuthContext } from "@/lib/auth"
+import { useAuth } from "@/lib/auth"
 import logo from "@wattguard/shared/assets/logo.png"
 import logoBlack from "@wattguard/shared/assets/logo-black.png"
 
 export function DashboardLayout() {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const { theme } = useTheme()
   const logout = useLogout()
   const location = useLocation()

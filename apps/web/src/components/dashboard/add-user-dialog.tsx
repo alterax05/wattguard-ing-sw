@@ -2,7 +2,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogCloseButton, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -50,6 +50,7 @@ export function AddUserDialog({ onClose }: AddUserDialogProps) {
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
+        <DialogCloseButton />
         <DialogHeader>
           <DialogTitle>{t("users.inviteTitle")}</DialogTitle>
           <DialogDescription>

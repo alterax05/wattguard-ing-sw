@@ -1,4 +1,3 @@
-import { useContext } from "react"
 import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -7,7 +6,7 @@ import { EnergyChart } from "./energy-chart"
 import { BuildingsList } from "./buildings-list"
 import { AlertsList } from "./alerts-list"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { AuthContext } from "@/lib/auth"
+import { useAuth } from "@/lib/auth"
 import { useDashboardStats } from "@/hooks/use-dashboard"
 
 function StatCardSkeleton() {
@@ -25,7 +24,7 @@ function StatCardSkeleton() {
 }
 
 export function DashboardOverview() {
-  const { user } = useContext(AuthContext)
+  const { user } = useAuth()
   const { data: stats, isLoading } = useDashboardStats()
   const { t } = useTranslation()
 

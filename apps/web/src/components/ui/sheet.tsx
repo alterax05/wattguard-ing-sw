@@ -21,6 +21,26 @@ function SheetClose({
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
 }
 
+function SheetCloseButton({
+  className,
+  ...props
+}: React.ComponentProps<typeof SheetPrimitive.Close>) {
+  const { t } = useTranslation()
+  return (
+    <SheetPrimitive.Close
+      data-slot="sheet-close"
+      className={cn(
+        "ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none",
+        className
+      )}
+      {...props}
+    >
+      <XIcon className="size-4" />
+      <span className="sr-only">{t("ui.close")}</span>
+    </SheetPrimitive.Close>
+  )
+}
+
 function SheetPortal({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Portal>) {
@@ -47,13 +67,10 @@ function SheetContent({
   className,
   children,
   side = "right",
-  showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
-  showCloseButton?: boolean
 }) {
-  const { t } = useTranslation()
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -74,12 +91,6 @@ function SheetContent({
         {...props}
       >
         {children}
-        {showCloseButton && (
-          <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
-            <XIcon className="size-4" />
-            <span className="sr-only">{t("ui.close")}</span>
-          </SheetPrimitive.Close>
-        )}
       </SheetPrimitive.Content>
     </SheetPortal>
   )
@@ -135,6 +146,7 @@ export {
   Sheet,
   SheetTrigger,
   SheetClose,
+  SheetCloseButton,
   SheetContent,
   SheetHeader,
   SheetFooter,

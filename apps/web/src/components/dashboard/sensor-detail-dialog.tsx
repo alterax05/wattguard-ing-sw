@@ -1,7 +1,7 @@
 import { useMemo, type KeyboardEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogCloseButton, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -113,6 +113,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogCloseButton />
         {sensorLoading || !sensor ? (
           <div className="space-y-4 py-6">
             <Skeleton className="h-6 w-48" />

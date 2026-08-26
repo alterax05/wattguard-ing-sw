@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
   Dialog,
+  DialogCloseButton,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -116,6 +117,7 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
+        <DialogCloseButton />
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{t("sensors.editTitle")}</DialogTitle>

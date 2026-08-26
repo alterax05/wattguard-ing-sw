@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { endOfDay } from "date-fns";
 import { useTranslation } from "react-i18next";
 import type { DateRange } from "react-day-picker";
@@ -14,7 +14,7 @@ import {
   type BuildingDetail as BuildingDetailType,
   type HistoryParams,
 } from "@/hooks/use-buildings";
-import { AuthContext } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import {
   useAllSensors,
   useDeleteSensor,
@@ -182,7 +182,7 @@ function getPaginationItems(
 }
 
 export function BuildingDetail({ buildingId }: BuildingDetailProps) {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -929,7 +929,9 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                         <PaginationItem key={item}>
                           <PaginationLink
                             href="#"
-                            isActive={item === currentPage}
+                            variant={item === currentPage ? "outline" : "ghost"}
+                            aria-current={item === currentPage ? "page" : undefined}
+                            data-active={item === currentPage}
                             onClick={(e) => {
                               e.preventDefault();
                               setCurrentPage(item);

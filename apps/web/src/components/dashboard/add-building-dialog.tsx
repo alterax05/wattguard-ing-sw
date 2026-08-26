@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import {
   Dialog,
+  DialogCloseButton,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -229,6 +230,7 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogCloseButton />
         <DialogHeader>
           <DialogTitle>{t("buildings.addTitle")}</DialogTitle>
           <DialogDescription>

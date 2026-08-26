@@ -1,4 +1,4 @@
-import { useContext, useState, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { format } from "date-fns"
 import { useTranslation } from "react-i18next"
 import type { DateRange } from "react-day-picker"
@@ -32,7 +32,7 @@ import {
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { AuthContext } from "@/lib/auth"
+import { useAuth } from "@/lib/auth"
 import { MAX_COMPARE_BUILDINGS } from "@/lib/constants"
 import { downloadFromEndpoint } from "@/lib/download"
 import {
@@ -82,7 +82,7 @@ function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
 }
 
 export function BuildingSearch() {
-  const { user } = useContext(AuthContext)
+  const { user } = useAuth()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [searchQuery, setSearchQuery] = useState("")

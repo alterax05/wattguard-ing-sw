@@ -1,8 +1,8 @@
-import { useState, useContext } from "react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 import { useUsers, useUpdateUser, useDeleteUser } from "@/hooks/use-auth"
-import { AuthContext } from "@/lib/auth"
+import { useAuth } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -51,7 +51,7 @@ export function UsersManagement() {
   const { data: users, isLoading, error } = useUsers()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
-  const { user: currentUser } = useContext(AuthContext)
+  const { user: currentUser } = useAuth()
   const { t } = useTranslation()
 
   const getRoleBadge = (role: string) => {
