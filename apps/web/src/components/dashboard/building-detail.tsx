@@ -18,30 +18,10 @@ import {
   type SensorWithBuilding,
 } from "@/hooks/use-sensors";
 import { keepPreviousData } from "@tanstack/react-query";
-import {
-  getMonitoringStatus,
-  getMonitoringStatusPresentation,
-} from "@/lib/sensor-status";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { getMonitoringStatus } from "@/lib/sensor-status";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,40 +32,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  ArrowLeft,
-  Building2,
-  Activity,
-  AlertCircle,
-  Plus,
-  MoreVertical,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { ArrowLeft, Building2 } from "lucide-react";
 import { AddSensorDialog } from "./add-sensor-dialog";
 import { EditSensorDialog } from "./edit-sensor-dialog";
 import { EditBuildingDialog } from "./edit-building-dialog";
-import { BuildingStatusBadge } from "./building-status-badge";
-import { DateRangePicker } from "./date-range-picker";
 import { toast } from "sonner";
 
 import {
   getDefaultDateRange,
-  getPaginationItems,
-  getSensorIcon,
   SENSORS_PAGE_SIZE,
-  SENSOR_TYPE_CONFIG,
   type SensorTypeKey,
 } from "./building-detail/helpers"
 import { BuildingHeader } from "./building-detail/BuildingHeader"
 import { StatsGrid } from "./building-detail/StatsGrid"
 import { EfficiencySection } from "./building-detail/EfficiencySection"
+import { HistorySection } from "./building-detail/HistorySection"
+import { SensorsSection } from "./building-detail/SensorsSection"
+import { BuildingDetailsCard } from "./building-detail/BuildingDetailsCard"
 
 interface BuildingDetailProps {
   buildingId: string;
@@ -296,344 +259,31 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
         totalSensors={totalSensors}
       />
 
-      {/* Date range picker */}
-      <Card>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium">{t("buildings.analysisPeriod")}</span>
-            <DateRangePicker value={range} onChange={setRange} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Main Grid: History Chart + Weather */}
-      {/* Historical Data Chart with Tabs */}
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-base">{t("buildings.historicalData")}</CardTitle>
-            <Tabs
-              value={selectedSensorType}
-              onValueChange={(v) => {
-                // SAFETY: the Tabs only render the four sensor types defined in SENSOR_TYPE_CONFIG.
-                setSelectedSensorType(v as SensorTypeKey)
-              }}
-            >
-              <TabsList className="h-8">
-                {(
-                  // SAFETY: Object.entries widens the keys; SENSOR_TYPE_CONFIG declares exactly the SensorTypeKey entries.
-                  Object.entries(SENSOR_TYPE_CONFIG) as [
-                    SensorTypeKey,
-                    (typeof SENSOR_TYPE_CONFIG)[SensorTypeKey],
-                  ][]
-                ).map(([key, cfg]) => {
-                  const Icon = cfg.icon;
-                  return (
-                    <TabsTrigger
-                      key={key}
-                      value={key}
-                      className="gap-1 text-xs px-2.5"
-                    >
-                      <Icon className="h-3 w-3" />
-                      {t(cfg.labelKey)}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {historyLoading ? (
-            <div className="flex h-64 items-center justify-center">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            </div>
-          ) : chartData.length === 0 ? (
-            <div className="flex h-64 flex-col items-center justify-center text-sm text-muted-foreground">
-              <AlertCircle className="mb-2 h-8 w-8" />
-              {t("buildings.noDataForPeriod", {
-                label: t(SENSOR_TYPE_CONFIG[selectedSensorType].labelKey),
-              })}
-            </div>
-          ) : (
-            <ChartContainer
-              config={{
-                value: {
-                  label: `${t(SENSOR_TYPE_CONFIG[selectedSensorType].labelKey)} (${SENSOR_TYPE_CONFIG[selectedSensorType].unit})`,
-                  color: SENSOR_TYPE_CONFIG[selectedSensorType].color,
-                },
-              }}
-              className="h-72 w-full aspect-auto"
-            >
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="timestamp"
-                  tickLine={false}
-                  axisLine={false}
-                  className="text-xs"
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  className="text-xs"
-                  tickFormatter={(v) =>
-                    `${v} ${SENSOR_TYPE_CONFIG[selectedSensorType].unit}`
-                  }
-                />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value) =>
-                        `${String(value)} ${SENSOR_TYPE_CONFIG[selectedSensorType].unit}`
-                      }
-                    />
-                  }
-                />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke={SENSOR_TYPE_CONFIG[selectedSensorType].color}
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ChartContainer>
-          )}
-        </CardContent>
-      </Card>
+      <HistorySection
+        range={range}
+        onRangeChange={setRange}
+        selectedSensorType={selectedSensorType}
+        onSelectedSensorTypeChange={setSelectedSensorType}
+        historyLoading={historyLoading}
+        chartData={chartData}
+      />
 
       <EfficiencySection building={building} range={range} />
 
-      {/* Sensors & Building Details */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Sensors */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Activity className="h-4 w-4" />
-              {t("buildings.installedSensors", { count: totalSensors })}
-            </CardTitle>
-            <Button size="sm" onClick={() => { setAddSensorOpen(true) }}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("common.add")}
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {sensorsLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                      <div className="space-y-1.5">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-20" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-5 w-16" />
-                  </div>
-                ))}
-              </div>
-            ) : sensors.length === 0 ? (
-              <div className="flex h-32 flex-col items-center justify-center text-sm text-muted-foreground">
-                <Activity className="mb-2 h-8 w-8" />
-                <p>{t("buildings.noSensors")}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => { setAddSensorOpen(true) }}
-                >
-                  <Plus className="mr-1 h-4 w-4" />
-                  {t("buildings.addFirstSensor")}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sensors.map((sensor) => {
-                  const statusPresentation = getMonitoringStatusPresentation(
-                    getMonitoringStatus(sensor),
-                    t,
-                  );
-                  const StatusIcon = statusPresentation.icon;
-                  return (
-                    <div
-                      key={sensor.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-md bg-primary/10 p-2 text-primary">
-                          {getSensorIcon(sensor.sensorType)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{sensor.location}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {t(`sensors.type.${sensor.sensorType}`, { defaultValue: sensor.sensorType })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {sensor.lastReading && (
-                          <div className="text-right">
-                            <p className="text-sm font-semibold tabular-nums">
-                              {sensor.lastReading.value}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {sensor.lastReading.unit}
-                            </p>
-                          </div>
-                        )}
-                        <Badge
-                          variant="secondary"
-                          className={`gap-1 ${statusPresentation.className}`}
-                        >
-                          <StatusIcon className="h-3 w-3" />
-                          {statusPresentation.label}
-                        </Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                              <span className="sr-only">{t("sensors.actions")}</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => { setManuallyEditingSensorId(sensor.id) }}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              {t("common.edit")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => { setDeletingSensor(sensor) }}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {t("common.delete")}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {totalPages > 1 && (
-              <Pagination className="mt-4">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      aria-disabled={displayPage <= 1}
-                      tabIndex={displayPage <= 1 ? -1 : undefined}
-                      className={
-                        displayPage <= 1
-                          ? "pointer-events-none opacity-50"
-                          : undefined
-                      }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (displayPage > 1) setCurrentPage(displayPage - 1);
-                      }}
-                    />
-                  </PaginationItem>
-                  {getPaginationItems(displayPage, totalPages).map(
-                    (item, i) =>
-                      item === "ellipsis" ? (
-                        <PaginationItem key={`ellipsis-${i}`}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      ) : (
-                        <PaginationItem key={item}>
-                          <PaginationLink
-                            href="#"
-                            variant={item === displayPage ? "outline" : "ghost"}
-                            aria-current={item === displayPage ? "page" : undefined}
-                            data-active={item === displayPage}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setCurrentPage(item);
-                            }}
-                          >
-                            {item}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ),
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      aria-disabled={displayPage >= totalPages}
-                      tabIndex={displayPage >= totalPages ? -1 : undefined}
-                      className={
-                        displayPage >= totalPages
-                          ? "pointer-events-none opacity-50"
-                          : undefined
-                      }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (displayPage < totalPages)
-                          setCurrentPage(displayPage + 1);
-                      }}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Building Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Building2 className="h-4 w-4" />
-              {t("buildings.details")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">
-                  {t("buildings.constructionYear")}
-                </p>
-                <p className="mt-1 text-lg font-semibold">
-                  {building.constructionYear ?? t("common.na")}
-                </p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">
-                  {t("buildings.heatingSystem")}
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  {building.heatingSystemType}
-                </p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">{t("buildings.geographicZone")}</p>
-                <p className="mt-1 text-sm font-semibold">
-                  {building.geographicZone}
-                </p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">{t("common.status")}</p>
-                <p className="mt-1"><BuildingStatusBadge status={building.status} className="text-sm" /></p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <SensorsSection
+          sensors={sensors}
+          sensorsLoading={sensorsLoading}
+          totalSensors={totalSensors}
+          totalPages={totalPages}
+          displayPage={displayPage}
+          onPageChange={setCurrentPage}
+          onAddSensor={() => { setAddSensorOpen(true) }}
+          onEditSensor={(id) => { setManuallyEditingSensorId(id) }}
+          onDeleteSensor={(sensor) => { setDeletingSensor(sensor) }}
+        />
+        <BuildingDetailsCard building={building} />
       </div>
-
       {/* Sensor Dialogs */}
       {isEditingBuilding && (
         <EditBuildingDialog
