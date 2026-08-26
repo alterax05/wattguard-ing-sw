@@ -3,12 +3,11 @@ import { format } from "date-fns"
 import { useTranslation } from "react-i18next"
 import type { DateRange } from "react-day-picker"
 import { useNavigate } from "react-router-dom"
-import { useBuildings, useBuildingTypes, type BuildingSummary } from "@/hooks/use-buildings"
+import { useBuildings, useBuildingTypes } from "@/hooks/use-buildings"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
@@ -20,12 +19,9 @@ import {
 import {
   Search,
   Building2,
-  MapPin,
   Download,
   Eye,
   AlertCircle,
-  Zap,
-  Radio,
   FileText,
   FileSpreadsheet,
   FileType,
@@ -39,7 +35,7 @@ import {
   getBuildingStatusLabel,
   type BuildingStatus,
 } from "@/lib/building-status"
-import { BuildingStatusBadge } from "./building-status-badge"
+import { BuildingCard } from "./building-search/BuildingCard"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,11 +71,6 @@ const EXPORT_ACTIONS = {
   }
 >
 
-/** Extract the building type display name from a summary */
-function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
-  if (!(bt instanceof Object)) return bt
-  return bt.name
-}
 
 export function BuildingSearch() {
   const { user } = useAuth()
@@ -370,87 +361,17 @@ export function BuildingSearch() {
               </p>
             </div>
           ) : (
-            filteredBuildings.map((building) => {
-              const isSelected = selectedIds.includes(building.id)
-              return (
-                <Card
-                  key={building.id}
-                  className={`group cursor-pointer transition-all hover:shadow-md ${
-                    isSelected
-                      ? "ring-2 ring-primary"
-                      : "hover:ring-1 hover:ring-border"
-                  }`}
-                  onClick={() => {
-                    handleBuildingClick(building.id)
-                  }}
-                >
-                  <CardContent>
-                    <div className="flex items-start gap-3">
-                      {/* Admin checkbox */}
-                      {isAdmin && (
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (!isSelected && selectedIds.length >= MAX_COMPARE_BUILDINGS) return
-                            toggleSelect(building.id)
-                          }}
-                        >
-                          <Checkbox
-                            checked={isSelected}
-                            disabled={!isSelected && selectedIds.length >= MAX_COMPARE_BUILDINGS}
-                          />
-                        </div>
-                      )}
-
-                      <div className="flex-1 space-y-3">
-                        {/* Header */}
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
-                              {building.name}
-                            </h3>
-                            <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
-                              {building.address}
-                            </div>
-                          </div>
-                          <Badge variant="secondary" className="shrink-0 text-xs">
-                            {getBuildingTypeName(building.buildingType)}
-                          </Badge>
-                        </div>
-
-                        {/* Stats row */}
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                          <div className="flex items-center gap-1.5">
-                            <BuildingStatusBadge status={building.status} />
-                          </div>
-                          <Separator orientation="vertical" className="h-4" />
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground" title={t("buildings.activeSensors")}>
-                            <Radio className="h-3.5 w-3.5" />
-                            <span className="font-medium text-foreground">{building.activeSensors}</span>
-                          </div>
-                          {building.currentConsumption !== null && (
-                            <>
-                              <Separator orientation="vertical" className="h-4" />
-                              <div className="flex items-center gap-1 text-xs" title={t("buildings.currentConsumption")}>
-                                <Zap className="h-3.5 w-3.5 text-chart-1" />
-                                <span className="font-medium text-chart-1">
-                                  {building.currentConsumption.toFixed(1)} {t("common.kwh")}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                          <Separator orientation="vertical" className="h-4" />
-                          <div className="text-xs text-muted-foreground">
-                            {building.surface} {t("common.squareMeters")}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })
+            filteredBuildings.map((building) => (
+              <BuildingCard
+                key={building.id}
+                building={building}
+                isSelected={selectedIds.includes(building.id)}
+                isAdmin={isAdmin}
+                selectedCount={selectedIds.length}
+                onToggleSelect={toggleSelect}
+                onBuildingClick={handleBuildingClick}
+              />
+            ))
           )}
         </div>
       )}
