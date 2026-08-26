@@ -8,11 +8,7 @@ import {
   useBuilding,
   useBuildingRealTime,
   useBuildingHistory,
-  useBuildingEfficiency,
   useDeleteBuilding,
-  useUpdateBuilding,
-  type BuildingDetail as BuildingDetailType,
-  type HistoryParams,
 } from "@/hooks/use-buildings";
 import { useAuth } from "@/lib/auth";
 import {
@@ -29,10 +25,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -62,16 +55,8 @@ import {
 import {
   ArrowLeft,
   Building2,
-  MapPin,
-  Zap,
-  Thermometer,
   Activity,
-  Wind,
-  Gauge,
-  Loader2,
-  TrendingDown,
   AlertCircle,
-  Flame,
   Plus,
   MoreVertical,
   Pencil,
@@ -90,95 +75,20 @@ import { BuildingStatusBadge } from "./building-status-badge";
 import { DateRangePicker } from "./date-range-picker";
 import { toast } from "sonner";
 
+import {
+  getDefaultDateRange,
+  getPaginationItems,
+  getSensorIcon,
+  SENSORS_PAGE_SIZE,
+  SENSOR_TYPE_CONFIG,
+  type SensorTypeKey,
+} from "./building-detail/helpers"
+import { BuildingHeader } from "./building-detail/BuildingHeader"
+import { StatsGrid } from "./building-detail/StatsGrid"
+import { EfficiencySection } from "./building-detail/EfficiencySection"
+
 interface BuildingDetailProps {
   buildingId: string;
-}
-
-function getBuildingTypeName(bt: BuildingDetailType["buildingType"]): string {
-  if (!(bt instanceof Object)) return bt;
-  return bt.name;
-}
-
-function isDistrictHeating(heatingSystemType: string): boolean {
-  const t = heatingSystemType.toLowerCase();
-  return t.includes("teleriscaldamento") || t.includes("district");
-}
-
-function getSensorIcon(sensorType: SensorWithBuilding["sensorType"]) {
-  switch (sensorType) {
-    case "internal_temp":
-      return <Thermometer className="h-4 w-4" />;
-    case "external_temp":
-      return <Wind className="h-4 w-4" />;
-    case "energy_meter":
-      return <Zap className="h-4 w-4" />;
-    case "gas_meter":
-      return <Flame className="h-4 w-4" />;
-  }
-}
-
-/** Default date range: last 30 days */
-function getDefaultDateRange(): DateRange {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 30);
-  return { from: start, to: end };
-}
-
-type SensorTypeKey = HistoryParams["sensorType"] & string;
-
-const SENSOR_TYPE_CONFIG = {
-  energy_meter: {
-    labelKey: "sensors.type.energy_meter",
-    unit: "kWh",
-    color: "var(--chart-1)",
-    icon: Zap,
-  },
-  internal_temp: {
-    labelKey: "sensors.type.internal_temp",
-    unit: "°C",
-    color: "var(--chart-2)",
-    icon: Thermometer,
-  },
-  external_temp: {
-    labelKey: "sensors.type.external_temp",
-    unit: "°C",
-    color: "var(--chart-3)",
-    icon: Thermometer,
-  },
-  gas_meter: {
-    labelKey: "sensors.type.gas_meter",
-    unit: "m³",
-    color: "var(--chart-4)",
-    icon: Flame,
-  },
-} satisfies Record<
-  SensorTypeKey,
-  {
-    labelKey: string;
-    unit: string;
-    color: string;
-    icon: typeof Zap;
-  }
->;
-
-const SENSORS_PAGE_SIZE = 4;
-
-function getPaginationItems(
-  current: number,
-  total: number,
-): (number | "ellipsis")[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-  const items: (number | "ellipsis")[] = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-  if (start > 2) items.push("ellipsis");
-  for (let p = start; p <= end; p++) items.push(p);
-  if (end < total - 1) items.push("ellipsis");
-  items.push(total);
-  return items;
 }
 
 export function BuildingDetail({ buildingId }: BuildingDetailProps) {
@@ -207,43 +117,19 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
     };
   }, [range, selectedSensorType]);
 
-  const efficiencyParams = useMemo(() => {
-    const startDate = toIsoDate(range?.from);
-    const endDate = toIsoDate(range?.to ? endOfDay(range.to) : undefined);
-    if (!startDate || !endDate) return undefined;
-    return { startDate, endDate };
-  }, [range]);
-
   // API hooks
   const {
     data: buildingData,
     isLoading: buildingLoading,
     isError: buildingError,
   } = useBuilding(buildingId);
+  const building = buildingData?.building;
+
   const { data: realTimeData } = useBuildingRealTime(buildingId);
-  const { data: sensorsData, isLoading: sensorsLoading } = useSensors(
-    {
-      buildingId,
-      limit: String(SENSORS_PAGE_SIZE),
-      offset: String((currentPage - 1) * SENSORS_PAGE_SIZE),
-    },
-    { refetchInterval: 60 * 1000, placeholderData: keepPreviousData },
-  );
   const { data: allSensorsData } = useAllSensors(
     { buildingId },
     { refetchInterval: 60 * 1000 },
   );
-  const { data: historyData, isLoading: historyLoading } = useBuildingHistory(
-    buildingId,
-    historyParams,
-  );
-  const { data: efficiencyData, isLoading: efficiencyLoading } =
-    useBuildingEfficiency(buildingId, efficiencyParams);
-
-  const building = buildingData?.building;
-  const sensors = sensorsData?.sensors ?? [];
-  const totalSensors = sensorsData?.pagination.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalSensors / SENSORS_PAGE_SIZE));
   const allSensors = allSensorsData?.sensors ?? [];
   const activeSensors = allSensors.filter(
     (s) => getMonitoringStatus(s) === "active",
@@ -260,78 +146,11 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   const [confirmDeleteBuildingOpen, setConfirmDeleteBuildingOpen] = useState(false);
   const deleteBuilding = useDeleteBuilding();
 
-  // Allarme efficienza — configurazione soglia COP
-  const updateBuilding = useUpdateBuilding();
-  const [effEnabled, setEffEnabled] = useState(false);
-  const [effMinCop, setEffMinCop] = useState("");
-  const [effDirty, setEffDirty] = useState(false);
-
-  // Sync the threshold form with the building data. The lint config forbids
-  // setState in effects (react-hooks/set-state-in-effect), so this uses the
-  // guarded "adjust state during render" pattern (same as the sensor deep-link
-  // sync above): the form only resets when the server-side values change, so
-  // in-progress edits are never clobbered by re-renders.
-  const effServerEnabled = building?.efficiencyThresholds?.enabled ?? false;
-  const effServerMinCop =
-    building?.efficiencyThresholds?.minCop != null
-      ? String(building.efficiencyThresholds.minCop)
-      : "";
-  const [effSyncedKey, setEffSyncedKey] = useState("");
-  const effKey = building
-    ? `${building.id}:${effServerEnabled}:${effServerMinCop}`
-    : "";
-  if (effKey !== effSyncedKey) {
-    setEffSyncedKey(effKey);
-    setEffEnabled(effServerEnabled);
-    setEffMinCop(effServerMinCop);
-    setEffDirty(false);
-  }
-
-  const handleSaveThreshold = () => {
-    const parsed = effMinCop.trim() === "" ? null : Number(effMinCop);
-    if (
-      effEnabled &&
-      (parsed === null || Number.isNaN(parsed) || parsed < 0 || parsed > 10)
-    ) {
-      toast.error(t("buildings.invalidMinCop"));
-      return;
-    }
-    updateBuilding.mutate(
-      {
-        id: buildingId,
-        efficiencyThresholds: { enabled: effEnabled, minCop: parsed },
-      },
-      {
-        onSuccess: () => {
-          setEffDirty(false);
-          toast.success(t("buildings.efficiencyThresholdSaved"));
-        },
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : t("buildings.efficiencyThresholdSaveError"),
-          );
-        },
-      },
-    );
-  };
-
-  // The edit dialog can be opened manually (from the sensor actions menu) or
-  // through a deep link (?sensorId=<id>). The target sensor is first looked up
-  // in the current page, then in the background index (used to resolve deep
-  // links pointing to sensors on other pages). Deriving (instead of effecting)
-  // keeps URL and state in sync without effects.
+  // Deep-link sensor handling — derived without effects, avoids setState-in-effect.
   const sensorIdToEdit = searchParams.get("sensorId");
   const editingSensorId = manuallyEditingSensorId ?? sensorIdToEdit;
-  const editingSensor =
-    sensors.find((s) => s.id === editingSensorId) ??
-    allSensors.find((s) => s.id === editingSensorId) ??
-    null;
+  const editingSensor = allSensors.find((s) => s.id === editingSensorId) ?? null;
 
-  // When a deep link points to a sensor on another page, jump to its page.
-  // Uses the "adjust state during render" pattern (guarded) — no effect needed,
-  // lint-safe (the rule forbids setState in effects, not in render).
   const sensorIndex = editingSensor
     ? allSensors.findIndex((s) => s.id === editingSensor.id)
     : -1;
@@ -339,9 +158,25 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
     sensorIndex >= 0
       ? Math.floor(sensorIndex / SENSORS_PAGE_SIZE) + 1
       : null;
-  if (sensorPage && sensorPage !== currentPage) setCurrentPage(sensorPage);
-  // Clamp currentPage when the page count shrinks (e.g. after a deletion).
-  if (currentPage > totalPages) setCurrentPage(totalPages);
+  const fetchPage = sensorPage ?? currentPage;
+
+  const { data: sensorsData, isLoading: sensorsLoading } = useSensors(
+    {
+      buildingId,
+      limit: String(SENSORS_PAGE_SIZE),
+      offset: String((fetchPage - 1) * SENSORS_PAGE_SIZE),
+    },
+    { refetchInterval: 60 * 1000, placeholderData: keepPreviousData },
+  );
+  const { data: historyData, isLoading: historyLoading } = useBuildingHistory(
+    buildingId,
+    historyParams,
+  );
+
+  const sensors = sensorsData?.sensors ?? [];
+  const totalSensors = sensorsData?.pagination.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalSensors / SENSORS_PAGE_SIZE));
+  const displayPage = Math.min(fetchPage, totalPages);
 
   const handleCloseEditDialog = () => {
     setManuallyEditingSensorId(null);
@@ -446,95 +281,20 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
 
   return (
     <div className="space-y-6">
-      {/* Back + Title */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => { void navigate("/dashboard/buildings") }}
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="sr-only">{t("common.back")}</span>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight text-balance flex items-center gap-2">
-            {building.name}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => { setIsEditingBuilding(true) }}
-            >
-              <Pencil className="h-4 w-4" />
-              <span className="sr-only">{t("buildings.edit")}</span>
-            </Button>
-            {isAdmin && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => { setConfirmDeleteBuildingOpen(true) }}
-              >
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">{t("buildings.delete")}</span>
-              </Button>
-            )}
-          </h1>
-          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" />
-            {building.address}
-            <Separator orientation="vertical" className="h-3.5" />
-            <span>{getBuildingTypeName(building.buildingType)}</span>
-          </div>
-        </div>
-        <BuildingStatusBadge status={building.status} className="text-sm" />
-      </div>
+      <BuildingHeader
+        building={building}
+        isAdmin={isAdmin}
+        onBack={() => { void navigate("/dashboard/buildings") }}
+        onEdit={() => { setIsEditingBuilding(true) }}
+        onDelete={() => { setConfirmDeleteBuildingOpen(true) }}
+      />
 
-      {/* Info Cards Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
-            <Zap className="mb-2 h-5 w-5 text-chart-1" />
-            <p className="text-2xl font-bold">
-              {realTimeData?.data.energyConsumption.value != null
-                ? `${realTimeData.data.energyConsumption.value}`
-                : "—"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {t("buildings.currentPower", {
-                unit: realTimeData?.data.energyConsumption.unit ?? "W",
-              })}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
-            <Thermometer className="mb-2 h-5 w-5 text-chart-5" />
-            <p className="text-2xl font-bold">
-              {realTimeData?.data.internalTemperature.value != null
-                ? `${realTimeData.data.internalTemperature.value}°`
-                : "—"}
-            </p>
-            <p className="text-xs text-muted-foreground">{t("sensors.type.internal_temp")}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
-            <Activity className="mb-2 h-5 w-5 text-chart-3" />
-            <p className="text-2xl font-bold">{activeSensors}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("buildings.activeSensorsOf", { total: totalSensors })}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
-            <Building2 className="mb-2 h-5 w-5 text-chart-2" />
-            <p className="text-2xl font-bold">{building.surface}</p>
-            <p className="text-xs text-muted-foreground">{t("buildings.surfaceLabel")}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsGrid
+        building={building}
+        realTimeData={realTimeData}
+        activeSensors={activeSensors}
+        totalSensors={totalSensors}
+      />
 
       {/* Date range picker */}
       <Card>
@@ -644,139 +404,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
         </CardContent>
       </Card>
 
-      {/* Efficiency Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Gauge className="h-4 w-4" />
-            {t("buildings.energyEfficiency")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {efficiencyLoading ? (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="rounded-lg border p-3">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="mt-2 h-6 w-16" />
-                </div>
-              ))}
-            </div>
-          ) : efficiencyData ? (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">
-                  {t("buildings.efficiencyCop")}
-                </p>
-                <p className="mt-1 text-lg font-semibold tabular-nums">
-                  {efficiencyData.metrics.averageCop != null
-                    ? efficiencyData.metrics.averageCop.toFixed(2)
-                    : t("common.na")}
-                </p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <TrendingDown className="h-3 w-3" />
-                    {t("buildings.efficiencyInsulation")}
-                  </span>
-                </p>
-                <p className="mt-1 text-lg font-semibold tabular-nums">
-                  {efficiencyData.metrics.insulationQuality != null
-                    ? `${efficiencyData.metrics.insulationQuality.toFixed(2)}`
-                    : t("common.na")}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  W/(m²·K) -{" "}
-                  {efficiencyData.metrics.estimatedHeatLossCoefficient != null
-                    ? t("buildings.efficiencyHeatLoss", {
-                        value: efficiencyData.metrics.estimatedHeatLossCoefficient.toFixed(0),
-                      })
-                    : ""}
-                </p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">{t("buildings.totalConsumption")}</p>
-                <p className="mt-1 text-lg font-semibold tabular-nums">
-                  {efficiencyData.metrics.totalEnergyConsumed.toFixed(1)} {t("common.kwh")}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {efficiencyData.metrics.averageExternalTemperature != null
-                    ? t("buildings.efficiencyAvgTemp", {
-                        value: efficiencyData.metrics.averageExternalTemperature.toFixed(1),
-                      })
-                    : ""}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-              <AlertCircle className="mr-2 h-4 w-4" />
-              {t("buildings.efficiencyUnavailable")}
-            </div>
-          )}
-          <div className="mt-4 border-t pt-4">
-            {building && isDistrictHeating(building.heatingSystemType) ? (
-              <p className="text-sm text-muted-foreground">
-                {t("buildings.efficiencyUnavailableDistrict")}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium">{t("buildings.efficiencyAlertTitle")}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("buildings.efficiencyAlertDescription")}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={effEnabled}
-                    onCheckedChange={(checked) => {
-                      setEffEnabled(checked);
-                      setEffDirty(true);
-                    }}
-                  />
-                </div>
-                <div className="flex items-end gap-3">
-                  <div className="flex-1 space-y-1">
-                    <label
-                      className="text-xs text-muted-foreground"
-                      htmlFor="eff-min-cop"
-                    >
-                      {t("buildings.minCop")}
-                    </label>
-                    <Input
-                      id="eff-min-cop"
-                      type="number"
-                      min={0}
-                      max={10}
-                      step={0.1}
-                      value={effMinCop}
-                      disabled={!effEnabled}
-                      placeholder={t("buildings.minCopPlaceholder")}
-                      onChange={(e) => {
-                        setEffMinCop(e.target.value);
-                        setEffDirty(true);
-                      }}
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveThreshold}
-                    disabled={!effDirty || updateBuilding.isPending}
-                  >
-                    {updateBuilding.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      t("common.save")
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <EfficiencySection building={building} range={range} />
 
       {/* Sensors & Building Details */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -906,20 +534,20 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                   <PaginationItem>
                     <PaginationPrevious
                       href="#"
-                      aria-disabled={currentPage <= 1}
-                      tabIndex={currentPage <= 1 ? -1 : undefined}
+                      aria-disabled={displayPage <= 1}
+                      tabIndex={displayPage <= 1 ? -1 : undefined}
                       className={
-                        currentPage <= 1
+                        displayPage <= 1
                           ? "pointer-events-none opacity-50"
                           : undefined
                       }
                       onClick={(e) => {
                         e.preventDefault();
-                        if (currentPage > 1) setCurrentPage(currentPage - 1);
+                        if (displayPage > 1) setCurrentPage(displayPage - 1);
                       }}
                     />
                   </PaginationItem>
-                  {getPaginationItems(currentPage, totalPages).map(
+                  {getPaginationItems(displayPage, totalPages).map(
                     (item, i) =>
                       item === "ellipsis" ? (
                         <PaginationItem key={`ellipsis-${i}`}>
@@ -929,9 +557,9 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                         <PaginationItem key={item}>
                           <PaginationLink
                             href="#"
-                            variant={item === currentPage ? "outline" : "ghost"}
-                            aria-current={item === currentPage ? "page" : undefined}
-                            data-active={item === currentPage}
+                            variant={item === displayPage ? "outline" : "ghost"}
+                            aria-current={item === displayPage ? "page" : undefined}
+                            data-active={item === displayPage}
                             onClick={(e) => {
                               e.preventDefault();
                               setCurrentPage(item);
@@ -945,17 +573,17 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
                   <PaginationItem>
                     <PaginationNext
                       href="#"
-                      aria-disabled={currentPage >= totalPages}
-                      tabIndex={currentPage >= totalPages ? -1 : undefined}
+                      aria-disabled={displayPage >= totalPages}
+                      tabIndex={displayPage >= totalPages ? -1 : undefined}
                       className={
-                        currentPage >= totalPages
+                        displayPage >= totalPages
                           ? "pointer-events-none opacity-50"
                           : undefined
                       }
                       onClick={(e) => {
                         e.preventDefault();
-                        if (currentPage < totalPages)
-                          setCurrentPage(currentPage + 1);
+                        if (displayPage < totalPages)
+                          setCurrentPage(displayPage + 1);
                       }}
                     />
                   </PaginationItem>

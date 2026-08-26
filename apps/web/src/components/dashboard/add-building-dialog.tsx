@@ -1,6 +1,6 @@
 import type React from "react"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import {
   Dialog,
@@ -23,83 +23,12 @@ import {
 import { toast } from "sonner"
 import { useCreateBuilding, useBuildingTypes } from "@/hooks/use-buildings"
 import { Loader2, Search, MapPin } from "lucide-react"
-import L from "leaflet"
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet"
-
-const TRENTO_CENTER: [number, number] = [46.0667, 11.1167]
-const DEFAULT_ZOOM = 14
+import { BuildingMap } from "./building-form/BuildingMap"
+import { geocodeAddress, TRENTO_CENTER } from "./building-form/geocode"
 
 interface AddBuildingDialogProps {
   onClose: () => void
 }
-
-// ── Nominatim geocoding ────────────────────────────────────────────────────
-
-async function geocodeAddress(
-  address: string
-): Promise<{ lat: number; lon: number } | null> {
-  const params = new URLSearchParams({
-    q: address,
-    format: "json",
-    limit: "1",
-  })
-
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?${params}`,
-    {
-      headers: { "User-Agent": "WattGuard/1.0" },
-    }
-  )
-
-  if (!res.ok) return null
-
-  // SAFETY: the Nominatim search endpoint returns a JSON array of places with lat/lon strings on 200.
-  const results = (await res.json()) as { lat: string; lon: string }[]
-  const first = results[0]
-  if (!first) return null
-
-  return {
-    lat: parseFloat(first.lat),
-    lon: parseFloat(first.lon),
-  }
-}
-
-// ── Map helper components ──────────────────────────────────────────────────
-
-function MapPanTo({ center }: { center: [number, number] | null }) {
-  const map = useMap()
-
-  useEffect(() => {
-    if (center) {
-      map.setView(center, Math.max(map.getZoom(), 16))
-    }
-  }, [center, map])
-
-  return null
-}
-
-function MapClickHandler({
-  onClick,
-}: {
-  onClick: (lat: number, lng: number) => void
-}) {
-  useMapEvents({
-    click(e) {
-      onClick(e.latlng.lat, e.latlng.lng)
-    },
-  })
-  return null
-}
-
-const markerIcon = L.divIcon({
-  html: `<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="16" cy="16" r="12" fill="#0F5132" stroke="white" stroke-width="2"/>
-    <circle cx="16" cy="16" r="4" fill="white"/>
-  </svg>`,
-  className: "",
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-})
 
 // ── Dialog component ───────────────────────────────────────────────────────
 
@@ -432,32 +361,14 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
             </p>
           </div>
 
-          {/* Interactive Map */}
+          {/* Interactive Map — composed via BuildingMap */}
           <div className="space-y-2">
-            <div className="overflow-hidden rounded-md border">
-              <link
-                rel="stylesheet"
-                href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                crossOrigin=""
-              />
-              <MapContainer
-                center={TRENTO_CENTER}
-                zoom={DEFAULT_ZOOM}
-                zoomControl={true}
-                className="h-64 w-full"
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  maxZoom={19}
-                />
-                <MapPanTo center={mapCenter} />
-                <MapClickHandler onClick={handleMapClick} />
-                {markerPosition && (
-                  <Marker position={markerPosition} icon={markerIcon} />
-                )}
-              </MapContainer>
-            </div>
+            <BuildingMap
+              position={markerPosition}
+              center={mapCenter}
+              defaultCenter={TRENTO_CENTER}
+              onPositionChange={handleMapClick}
+            />
           </div>
 
           {/* Actions */}
