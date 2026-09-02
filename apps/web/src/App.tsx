@@ -42,14 +42,14 @@ export function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/dashboard/map" element={<MapPage />} />
-              <Route path="/dashboard/buildings" element={<BuildingsPage />} />
-              <Route path="/dashboard/buildings/compare" element={<BuildingsComparePage />} />
-              <Route path="/dashboard/buildings/:id" element={<BuildingDetailPage />} />
-              <Route path="/dashboard/sensors" element={<SensorsPage />} />
-              <Route path="/dashboard/alerts" element={<AlertsPage />} />
-              <Route path="/dashboard/users" element={<UsersPage />} />
-              <Route path="/dashboard/settings" element={<SettingsPage />} />
+              <Route path="/map" element={<MapPage />} />
+              <Route path="/buildings" element={<BuildingsPage />} />
+              <Route path="/buildings/compare" element={<BuildingsComparePage />} />
+              <Route path="/buildings/:id" element={<BuildingDetailPage />} />
+              <Route path="/sensors" element={<SensorsPage />} />
+              <Route path="/alerts" element={<AlertsPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>
 

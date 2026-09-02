@@ -455,7 +455,16 @@
       "addressNotFound": "Indirizzo non trovato",
       "addressNotFoundHint": "Prova a inserire un indirizzo più specifico o posiziona il marker sulla mappa",
       "geocodeError": "Errore nella ricerca delle coordinate",
-      "geocodeNoAddress": "Inserisci un indirizzo prima di cercare le coordinate"
+      "geocodeNoAddress": "Inserisci un indirizzo prima di cercare le coordinate",
+      "nameRequired": "Il nome è obbligatorio",
+      "addressRequired": "L'indirizzo è obbligatorio",
+      "surfaceRequired": "La superficie è obbligatoria",
+      "ceilingHeightRequired": "L'altezza soffitto è obbligatoria",
+      "typeRequired": "Il tipo edificio è obbligatorio",
+      "heatingSystemRequired": "Il tipo riscaldamento è obbligatorio",
+      "geographicZoneRequired": "La zona geografica è obbligatoria",
+      "coordinatesRequired": "Le coordinate sono obbligatorie",
+      "constructionYearInvalid": "Anno di costruzione non valido"
     },
     "efficiencyAlertTitle": "Allarme efficienza",
     "efficiencyAlertDescription": "Avvisa quando il COP medio (24h) scende sotto la soglia",
