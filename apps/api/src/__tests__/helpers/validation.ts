@@ -105,12 +105,11 @@ export async function authenticatedRequest(
   token: string,
   options: RequestInit = {}
 ): Promise<Response> {
+  const headers = new Headers(options.headers);
+  headers.set("Authorization", `Bearer ${token}`);
   return request({
     ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
   });
 }
 

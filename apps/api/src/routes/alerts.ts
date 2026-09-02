@@ -32,7 +32,10 @@ function alertErrorResponse(c: AlertRouteContext, code: AlertErrorCode) {
     case "alert_not_found":
       return c.json({ error: "Alert not found", code }, 404);
     case "alert_not_active":
-      return c.json({ error: "Only active alerts can be acknowledged", code }, 400);
+      return c.json(
+        { error: "Only active alerts can be acknowledged", code },
+        400,
+      );
     case "alert_already_resolved":
       return c.json({ error: "Alert is already resolved", code }, 400);
     case "internal_server_error":
@@ -65,20 +68,26 @@ const app = new Hono<{ Variables: AuthVariables }>()
     validator("query", ListAlertsQuerySchema),
     async (c) => {
       const query = c.req.valid("query");
-      const { 
-        limit = 50, 
-        offset = 0, 
-        buildingId, 
-        status, 
-        severity, 
-        sortBy = "createdAt", 
-        sortOrder = "desc" 
+      const {
+        limit,
+        offset,
+        buildingId,
+        status,
+        severity,
+        sortBy = "createdAt",
+        sortOrder = "desc",
       } = query;
 
       const filter: QueryFilter<AlertDocument> = {};
       if (buildingId) {
         if (!Types.ObjectId.isValid(buildingId)) {
-          return c.json({ error: "Invalid building ID format", code: "invalid_building_id" }, 400);
+          return c.json(
+            {
+              error: "Invalid building ID format",
+              code: "invalid_building_id",
+            },
+            400,
+          );
         }
         filter.buildingId = buildingId;
       }
@@ -88,29 +97,26 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const sortDir = sortOrder === "asc" ? 1 : -1;
       const sortConfig = { [sortBy]: sortDir } satisfies Record<string, 1 | -1>;
 
-      try {
-        const [alerts, total] = await Promise.all([
-          AlertModel.find(filter)
-            .sort(sortConfig)
-            .skip(offset)
-            .limit(limit)
-            .lean(),
-          AlertModel.countDocuments(filter),
-        ]);
+      const [alerts, total] = await Promise.all([
+        AlertModel.find(filter)
+          .sort(sortConfig)
+          .skip(offset)
+          .limit(limit)
+          .lean(),
+        AlertModel.countDocuments(filter),
+      ]);
 
-        return c.json({
-          alerts: alerts.map((a) => toAlertDTO(a, { locale: getRequestLocale(c) })),
-          pagination: {
-            limit,
-            offset,
-            total,
-          },
-        } satisfies ListAlertsResponse);
-      } catch (error) {
-        console.error("Error fetching alerts:", error);
-        return c.json({ error: "Internal server error", code: "internal_server_error" }, 500);
-      }
-    }
+      return c.json({
+        alerts: alerts.map((a) =>
+          toAlertDTO(a, { locale: getRequestLocale(c) }),
+        ),
+        pagination: {
+          limit,
+          offset,
+          total,
+        },
+      } satisfies ListAlertsResponse);
+    },
   )
   .patch(
     "/:id/acknowledge",
@@ -121,7 +127,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
       responses: {
         200: {
           description: "Alert acknowledged successfully",
-          content: { "application/json": { schema: resolver(UpdateAlertStatusResponseSchema) } },
+          content: {
+            "application/json": {
+              schema: resolver(UpdateAlertStatusResponseSchema),
+            },
+          },
         },
         400: {
           description: "Invalid ID format or alert not active",
@@ -148,9 +158,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         // SAFETY: result.alert comes back from findOneAndUpdate({ returnDocument: "after" })
         // on the Alert collection, so it is a full document with _id and
         // timestamps as required by AlertDTOInput.
-        alert: toAlertDTO(result.alert as AlertDTOInput, { locale: getRequestLocale(c) }),
+        alert: toAlertDTO(result.alert as AlertDTOInput, {
+          locale: getRequestLocale(c),
+        }),
       } satisfies UpdateAlertStatusResponse);
-    }
+    },
   )
   .patch(
     "/:id/resolve",
@@ -161,7 +173,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
       responses: {
         200: {
           description: "Alert resolved successfully",
-          content: { "application/json": { schema: resolver(UpdateAlertStatusResponseSchema) } },
+          content: {
+            "application/json": {
+              schema: resolver(UpdateAlertStatusResponseSchema),
+            },
+          },
         },
         400: {
           description: "Invalid ID format",
@@ -178,7 +194,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const { id } = c.req.valid("param");
       const user = c.get("userDoc");
 
-      const result = await resolveManually({ id, actor: user.name || user.email });
+      const result = await resolveManually({
+        id,
+        actor: user.name || user.email,
+      });
       if (!result.ok) {
         return alertErrorResponse(c, result.code);
       }
@@ -188,9 +207,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         // SAFETY: result.alert comes back from findOneAndUpdate({ returnDocument: "after" })
         // on the Alert collection, so it is a full document with _id and
         // timestamps as required by AlertDTOInput.
-        alert: toAlertDTO(result.alert as AlertDTOInput, { locale: getRequestLocale(c) }),
+        alert: toAlertDTO(result.alert as AlertDTOInput, {
+          locale: getRequestLocale(c),
+        }),
       } satisfies UpdateAlertStatusResponse);
-    }
+    },
   );
 
 export default app;
