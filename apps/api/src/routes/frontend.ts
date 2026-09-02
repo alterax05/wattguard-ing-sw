@@ -4,16 +4,16 @@ import { serveStatic } from "hono/bun";
 
 const app = new Hono();
 
-const staticRoot = path.resolve(import.meta.dir, "../../web/dist");
+const staticRoot = path.resolve(import.meta.dir, "web");
 
-app.use("*", async (c, next) => {
+app.use("*", (c, next) => {
   const pathname = c.req.path;
   if (pathname.startsWith("/assets/")) {
     c.header("Cache-Control", "public, max-age=31536000, immutable");
   } else if (!pathname.startsWith("/api/")) {
     c.header("Cache-Control", "no-cache");
   }
-  await next();
+  return next();
 });
 
 app.use("*", serveStatic({ root: staticRoot }));

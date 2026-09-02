@@ -32,7 +32,7 @@ import {
 const app = new Hono().route("/api/v1", routes);
 
 if (IS_PRODUCTION) {
-  app.route("*", frontend);
+  app.route("/", frontend);
 }
 
 // Export app and type for RPC client
