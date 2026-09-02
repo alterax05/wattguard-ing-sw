@@ -18,9 +18,14 @@
     "check": "bun run --cwd apps/web check && bun run --cwd apps/api check && bun run --cwd shared check",
     "lint": "oxlint"
   },
+  "dependencies": {
+    "hono": "^4.13.5",
+    "i18next": "^26.4.1",
+    "zod": "^4.5.4"
+  },
   "devDependencies": {
     "@oxlint/plugins": "1.79.0",
-    "oxlint": "^1.79.0",
+    "oxlint": "^1.81.0",
     "oxlint-tsgolint": "^7.0.2001",
     "typescript": "^7.0.2"
   },
