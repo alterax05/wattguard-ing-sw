@@ -8,7 +8,7 @@
     "typeAware": true
   },
   "categories": {
-    "correctness": "off"
+    "correctness": "error"
   },
   "env": {
     "builtin": true

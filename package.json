@@ -11,7 +11,7 @@
     "dev:backend": "bun run --cwd apps/api dev",
     "simulate": "bun run --cwd apps/api simulate",
     "start": "bun run --cwd apps/api start",
-    "build": "bun run --cwd apps/web build && bun run --cwd apps/api build",
+    "build": "bun run --cwd apps/web build && bun run --cwd apps/api build && cp -r apps/web/dist apps/api/dist/web",
     "test": "bun run --cwd apps/api test",
     "test:watch": "bun run --cwd apps/api test:watch",
     "clean": "rm -rf apps/web/dist apps/api/dist",
