@@ -27,17 +27,17 @@ export function DashboardLayout() {
 
   const navItems = [
     { id: "dashboard", label: t("nav.dashboard"), icon: LayoutDashboard, href: "/dashboard" },
-    { id: "map", label: t("nav.map"), icon: MapPin, href: "/dashboard/map" },
-    { id: "buildings", label: t("nav.buildings"), icon: Building2, href: "/dashboard/buildings" },
-    { id: "sensors", label: t("nav.sensors"), icon: Radio, href: "/dashboard/sensors" },
-    { id: "alerts", label: t("nav.alerts"), icon: Bell, href: "/dashboard/alerts" },
+    { id: "map", label: t("nav.map"), icon: MapPin, href: "/map" },
+    { id: "buildings", label: t("nav.buildings"), icon: Building2, href: "/buildings" },
+    { id: "sensors", label: t("nav.sensors"), icon: Radio, href: "/sensors" },
+    { id: "alerts", label: t("nav.alerts"), icon: Bell, href: "/alerts" },
   ]
 
   const adminNavItems =
     user?.role === "admin"
       ? [
-          { id: "users", label: t("nav.users"), icon: Users, href: "/dashboard/users" },
-          { id: "settings", label: t("nav.settings"), icon: Settings, href: "/dashboard/settings" },
+          { id: "users", label: t("nav.users"), icon: Users, href: "/users" },
+          { id: "settings", label: t("nav.settings"), icon: Settings, href: "/settings" },
         ]
       : []
 
