@@ -8,7 +8,7 @@
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM, PUBLIC_APP_URL, RESEND_API } from "../config/variables";
 import { ensureI18nReady, getTranslator } from "../lib/i18n";
-import { DEFAULT_LOCALE, type LocaleCode } from "@wattguard/shared";
+import { DEFAULT_LOCALE, type LocaleCode, type AlertSeverity, type UserRole } from "@wattguard/shared";
 
 let resend: Resend | null = null;
 
@@ -52,7 +52,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 export async function sendInviteEmail(
   email: string,
   token: string,
-  role: "admin" | "operator",
+  role: UserRole,
   lang: LocaleCode = DEFAULT_LOCALE,
 ): Promise<void> {
   await ensureI18nReady();
@@ -131,7 +131,7 @@ export interface AlertEmailPayload {
   value?: number;
   unit?: string;
   limit?: number | null;
-  severity?: "low" | "medium" | "high" | "critical";
+  severity?: AlertSeverity;
 }
 
 const SENSOR_TYPE_LABEL_KEYS = {
@@ -173,7 +173,7 @@ export async function sendAlertEmail(
     payload.type === "threshold_exceeded"
       ? t("alerts.type.threshold_exceeded")
       : t("alerts.type.efficiency_below_threshold");
-  const severityLabels: Partial<Record<"low" | "medium" | "high" | "critical", string>> = {};
+  const severityLabels: Partial<Record<AlertSeverity, string>> = {};
   if (payload.severity) {
     const keys = {
       low: "alerts.severity.low",

@@ -7,123 +7,36 @@ import { errorMessageFromResponse } from "@/lib/errors";
 export const BUILDINGS_QUERY_KEY = ["buildings"] as const;
 export const BUILDING_TYPES_QUERY_KEY = ["building-types"] as const;
 
-// ── Types ───────────────────────────────────────────────────────────────────
+import type {
+  BuildingSummary,
+  BuildingDetail,
+  BuildingType,
+  RealTimeData,
+  HistoricalDataPoint,
+  EfficiencyMetrics,
+  SearchBuildingsQuery,
+  GetBuildingHistoryQuery,
+  GetBuildingEfficiencyQuery,
+  CreateBuildingRequest,
+  UpdateBuildingRequest,
+} from "@wattguard/shared";
 
-export interface BuildingSummary {
-  id: string;
-  name: string;
-  address: string;
-  surface: number;
-  ceilingHeight: number;
-  location: { type: "Point"; coordinates: [number, number] };
-  buildingType: string | { id: string; name: string; description?: string };
-  heatingSystemType: string;
-  status: "active" | "inactive" | "decommissioned";
-  geographicZone: string;
-  activeSensors: number;
-  currentConsumption: number | null;
-  updatedAt: string;
-}
+// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
 
-export interface BuildingDetail extends BuildingSummary {
-  constructionYear?: number;
-  createdBy?: string;
-  updatedBy?: string;
-  createdAt?: string;
-  efficiencyThresholds?: { enabled: boolean; minCop: number | null };
-}
+export type {
+  BuildingSummary,
+  BuildingDetail,
+  BuildingType,
+  RealTimeData,
+  HistoricalDataPoint,
+  EfficiencyMetrics,
+  CreateBuildingRequest,
+  UpdateBuildingRequest,
+};
 
-export interface BuildingType {
-  id: string;
-  name: string;
-  description?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface RealTimeData {
-  buildingId: string;
-  buildingName: string;
-  timestamp: string;
-  data: {
-    internalTemperature: {
-      value: number | null;
-      unit: string;
-      timestamp: string | null;
-      sensorId: string | null;
-    };
-    externalTemperature: {
-      value: number | null;
-      unit: string;
-      timestamp: string | null;
-      sensorId: string | null;
-    };
-    energyConsumption: {
-      value: number | null;
-      unit: string;
-      timestamp: string | null;
-      sensorId: string | null;
-    };
-  };
-}
-
-export interface HistoricalDataPoint {
-  timestamp: string;
-  value: number;
-  unit: string;
-  sensorType: string;
-  sensorId?: string;
-}
-
-export interface EfficiencyMetrics {
-  buildingId: string;
-  buildingName: string;
-  period: {
-    startDate: string;
-    endDate: string;
-  };
-  metrics: {
-    totalEnergyConsumed: number;
-    averageExternalTemperature: number | null;
-    estimatedHeatLossCoefficient: number | null;
-    insulationQuality: number | null;
-    averageCop: number | null;
-  };
-}
-
-// ── Search params ───────────────────────────────────────────────────────────
-
-export interface SearchBuildingsParams {
-  name?: string;
-  address?: string;
-  zone?: string;
-  buildingType?: string;
-  status?: "active" | "inactive" | "decommissioned";
-  sortBy?: "name" | "createdAt" | "updatedAt";
-  sortOrder?: "asc" | "desc";
-  limit?: string;
-  offset?: string;
-}
-
-export interface HistoryParams {
-  startDate: string;
-  endDate: string;
-  sensorType?: "internal_temp" | "external_temp" | "energy_meter" | "gas_meter";
-  interval?: "minute" | "hour" | "day";
-}
-
-export interface EfficiencyParams {
-  startDate: string;
-  endDate: string;
-}
-
-/** Query contract for GET /api/buildings/:id/history. */
-interface BuildingHistoryQuery {
-  startDate: string;
-  endDate: string;
-  sensorType?: HistoryParams["sensorType"];
-  interval?: HistoryParams["interval"];
-}
+export type SearchBuildingsParams = SearchBuildingsQuery;
+export type HistoryParams = GetBuildingHistoryQuery;
+export type EfficiencyParams = GetBuildingEfficiencyQuery;
 
 // ── Queries ─────────────────────────────────────────────────────────────────
 
@@ -233,7 +146,7 @@ export function useBuildingHistory(id: string | undefined, params: HistoryParams
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "history", id, params],
     queryFn: async () => {
-      const query: BuildingHistoryQuery = {
+      const query: HistoryParams = {
         startDate: params!.startDate,
         endDate: params!.endDate,
       };
@@ -293,17 +206,7 @@ export function useCreateBuilding() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: {
-      name: string;
-      address: string;
-      surface: number;
-      ceilingHeight: number;
-      location: { type: "Point"; coordinates: [number, number] };
-      buildingType: string;
-      heatingSystemType: string;
-      constructionYear?: number;
-      geographicZone: string;
-    }) => {
+    mutationFn: async (input: CreateBuildingRequest) => {
       const res = await client.api.v1.buildings.$post({
         json: input,
       });
@@ -328,20 +231,7 @@ export function useUpdateBuilding() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      name?: string;
-      address?: string;
-      surface?: number;
-      ceilingHeight?: number;
-      location?: { type: "Point"; coordinates: [number, number] };
-      buildingType?: string;
-      heatingSystemType?: string;
-      constructionYear?: number;
-      geographicZone?: string;
-      status?: "active" | "inactive" | "decommissioned";
-      efficiencyThresholds?: { enabled: boolean; minCop: number | null };
-    }) => {
+    mutationFn: async (input: UpdateBuildingRequest & { id: string }) => {
       const { id, ...body } = input;
       const res = await client.api.v1.buildings[":id"].$patch({
         param: { id },

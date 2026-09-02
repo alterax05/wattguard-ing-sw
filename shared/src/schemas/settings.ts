@@ -19,11 +19,13 @@ export const PollingConfigSchema = z.object({
     .describe("Whether automatic polling is enabled"),
 });
 
-
+export type PollingConfig = z.infer<typeof PollingConfigSchema>;
 
 export const NotificationsConfigSchema = z.object({
   emailEnabled: z.boolean().describe("Whether email notifications are enabled"),
 });
+
+export type NotificationsConfig = z.infer<typeof NotificationsConfigSchema>;
 
 export const DatabaseConfigSchema = z.object({
   dataRetentionDays: z
@@ -33,6 +35,8 @@ export const DatabaseConfigSchema = z.object({
     .describe("Number of days to retain historical sensor readings"),
 });
 
+export type DatabaseConfig = z.infer<typeof DatabaseConfigSchema>;
+
 // ── Full config schema (used for GET response) ───────────────────────────────
 
 export const SystemConfigSchema = z.object({
@@ -40,6 +44,8 @@ export const SystemConfigSchema = z.object({
   notifications: NotificationsConfigSchema,
   database: DatabaseConfigSchema,
 });
+
+export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 
 export const GetSettingsResponseSchema = z.object({
   config: SystemConfigSchema,
@@ -62,6 +68,8 @@ export const UpdateSettingsRequestSchema = z
       ),
     { message: "At least one setting must be provided" },
   );
+
+export type UpdateSettingsRequest = z.infer<typeof UpdateSettingsRequestSchema>;
 
 export const UpdateSettingsResponseSchema = z.object({
   success: z.literal(true),

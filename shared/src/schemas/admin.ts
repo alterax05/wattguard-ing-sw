@@ -10,6 +10,7 @@ import { EmailSchema, UserRoleSchema, UserSchema } from "./common";
  * Invite status enum
  */
 export const InviteStatusSchema = z.enum(["pending", "accepted", "revoked", "expired"]);
+export type InviteStatus = z.infer<typeof InviteStatusSchema>;
 
 /**
  * Invite object schema (for responses)
@@ -28,6 +29,8 @@ export const InviteSchema = z.object({
   ]).optional().describe("User who created the invite"),
 });
 
+export type Invite = z.infer<typeof InviteSchema>;
+
 /**
  * GET /api/v1/admin/invites - List all invites response
  */
@@ -44,6 +47,8 @@ export const CreateInviteRequestSchema = z.object({
   email: EmailSchema,
   role: UserRoleSchema,
 });
+
+export type CreateInviteRequest = z.infer<typeof CreateInviteRequestSchema>;
 
 /**
  * POST /api/v1/admin/invites - Create invite response
@@ -102,6 +107,8 @@ export const UpdateUserRequestSchema = UserSchema.pick({ role: true, isDisabled:
   .refine((data) => data.role !== undefined || data.isDisabled !== undefined, {
     message: "At least one field (role or isDisabled) must be provided",
   });
+
+export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
 
 /**
  * PATCH /api/v1/admin/users/:id - Update user response

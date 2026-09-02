@@ -14,81 +14,36 @@ import { DASHBOARD_QUERY_KEY } from "./use-dashboard";
 export const SENSORS_QUERY_KEY = ["sensors"] as const;
 const SENSOR_PAGE_SIZE = 100;
 
-// ── Types ───────────────────────────────────────────────────────────────────
+import type {
+  SensorType,
+  SensorStatus,
+  SensorWithBuilding,
+  SensorReading,
+  ListSensorsQuery,
+  ListSensorsResponse,
+  GetSensorReadingsQuery,
+  CreateSensorRequest,
+  UpdateSensorRequest,
+} from "@wattguard/shared";
 
-export type SensorType = "internal_temp" | "external_temp" | "energy_meter" | "gas_meter";
-export type SensorStatus = "active" | "inactive" | "maintenance" | "error";
+// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
 
-export interface SensorWithBuilding {
-  id: string;
-  buildingId: string;
-  sensorType: SensorType;
-  location: string;
-  serialNumber?: string;
-  installationDate: string;
-  status: SensorStatus;
-  isOffline?: boolean;
-  lastReading?: {
-    value: number;
-    timestamp: string;
-    unit: string;
-  };
-  transmissionInterval: number;
-  minThreshold?: number;
-  maxThreshold?: number;
-  building?: {
-    id: string;
-    name: string;
-    address: string;
-  };
-  createdBy?: string;
-  updatedBy?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+export type {
+  SensorType,
+  SensorStatus,
+  SensorWithBuilding,
+  SensorReading,
+  CreateSensorRequest,
+  UpdateSensorRequest,
+};
 
-export interface SensorReading {
-  id?: string;
-  timestamp: string;
-  value: number;
-  unit: string;
-  metadata?: {
-    sensorId: string;
-    buildingId: string;
-    sensorType: SensorType;
-  };
-}
-
-export interface ListSensorsParams {
-  buildingId?: string;
-  sensorType?: SensorType;
-  status?: SensorStatus;
-  sortBy?: "createdAt" | "updatedAt" | "sensorType" | "status";
-  sortOrder?: "asc" | "desc";
-  limit?: string;
-  offset?: string;
-}
+export type ListSensorsParams = ListSensorsQuery;
+export type SensorReadingsParams = GetSensorReadingsQuery;
+export type SensorListData = ListSensorsResponse;
 
 export interface UseSensorsOptions {
   refetchInterval?: number | false;
   placeholderData?: PlaceholderDataFunction<SensorListData> | SensorListData;
-}
-
-interface SensorListData {
-  sensors: SensorWithBuilding[];
-  pagination: {
-    limit: number;
-    offset: number;
-    total: number;
-  };
-}
-
-export interface SensorReadingsParams {
-  startDate?: string;
-  endDate?: string;
-  sortOrder?: "asc" | "desc";
-  limit?: string;
-  offset?: string;
 }
 
 // ── Queries ─────────────────────────────────────────────────────────────────
@@ -230,16 +185,7 @@ export function useCreateSensor() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: {
-      buildingId: string;
-      sensorType: SensorType;
-      location: string;
-      serialNumber?: string;
-      installationDate?: string;
-      transmissionInterval?: number;
-      minThreshold?: number;
-      maxThreshold?: number;
-    }) => {
+    mutationFn: async (input: CreateSensorRequest) => {
       const res = await client.api.v1.sensors.$post({
         json: input,
       });
@@ -265,16 +211,7 @@ export function useUpdateSensor() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      sensorType?: SensorType;
-      location?: string;
-      serialNumber?: string;
-      status?: SensorStatus;
-      transmissionInterval?: number;
-      minThreshold?: number | null;
-      maxThreshold?: number | null;
-    }) => {
+    mutationFn: async (input: UpdateSensorRequest & { id: string }) => {
       const { id, ...body } = input;
       const res = await client.api.v1.sensors[":id"].$patch({
         param: { id },

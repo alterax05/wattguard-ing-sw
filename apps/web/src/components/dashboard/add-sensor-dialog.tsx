@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useCreateSensor, type SensorType } from "@/hooks/use-sensors"
+import { useCreateSensor, type SensorType, type CreateSensorRequest } from "@/hooks/use-sensors"
 
 const SENSOR_TYPES: SensorType[] = [
   "internal_temp",
@@ -35,16 +35,6 @@ interface AddSensorDialogProps {
   buildingName: string
   open: boolean
   onOpenChange: (open: boolean) => void
-}
-
-interface CreateSensorPayload {
-  buildingId: string
-  sensorType: SensorType
-  location: string
-  serialNumber?: string
-  transmissionInterval?: number
-  minThreshold?: number
-  maxThreshold?: number
 }
 
 export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }: AddSensorDialogProps) {
@@ -85,7 +75,7 @@ export function AddSensorDialog({ buildingId, buildingName, open, onOpenChange }
       return
     }
 
-    const payload: CreateSensorPayload = {
+    const payload: CreateSensorRequest = {
       buildingId,
       sensorType,
       location: location.trim(),

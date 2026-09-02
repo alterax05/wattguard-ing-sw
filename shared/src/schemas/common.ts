@@ -24,6 +24,7 @@ export const HealthResponseSchema = z.object({
 });
 
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
+export type ErrorResponse = z.infer<typeof ErrorSchema>;
 
 /**
  * Standard success response schema
@@ -33,6 +34,8 @@ export const SuccessSchema = z.object({
   message: z.string().optional().describe("Optional success message"),
 });
 
+export type SuccessResponse = z.infer<typeof SuccessSchema>;
+
 /**
  * Standard delete response schema
  */
@@ -40,6 +43,8 @@ export const DeleteResponseSchema = z.object({
   success: z.literal(true),
   message: z.string().describe("Confirmation message"),
 });
+
+export type DeleteResponse = z.infer<typeof DeleteResponseSchema>;
 
 /**
  * Email validation schema with normalization
@@ -71,6 +76,8 @@ export const UserRoleSchema = z
   .enum(["admin", "operator"])
   .describe("User role in the system");
 
+export type UserRole = z.infer<typeof UserRoleSchema>;
+
 /**
  * MongoDB ObjectId validation schema
  */
@@ -100,6 +107,8 @@ export const UserSchema = z.object({
   createdAt: z.iso.datetime().optional().describe("Account creation timestamp"),
 });
 
+export type User = z.infer<typeof UserSchema>;
+
 /**
  * Public user projection (no audit/timestamps) — used in auth responses
  */
@@ -110,6 +119,8 @@ export const PublicUserSchema = UserSchema.pick({
   role: true,
   language: true,
 });
+
+export type PublicUser = z.infer<typeof PublicUserSchema>;
 
 /**
  * Request body to update the current user's preferred language
@@ -134,6 +145,8 @@ export const BuildingStatusSchema = z
   .enum(["active", "inactive", "decommissioned"])
   .describe("Building operational status");
 
+export type BuildingStatus = z.infer<typeof BuildingStatusSchema>;
+
 /**
  * Sensor type enum
  */
@@ -141,12 +154,16 @@ export const SensorTypeSchema = z
   .enum(["internal_temp", "external_temp", "energy_meter", "gas_meter"])
   .describe("Type of sensor (internal temperature, external temperature, energy meter, or gas meter)");
 
+export type SensorType = z.infer<typeof SensorTypeSchema>;
+
 /**
  * Sensor status enum
  */
 export const SensorStatusSchema = z
   .enum(["active", "inactive", "maintenance", "error"])
   .describe("Sensor operational status");
+
+export type SensorStatus = z.infer<typeof SensorStatusSchema>;
 
 /**
  * Heating system type
@@ -171,12 +188,16 @@ export const PaginationQuerySchema = z.object({
     .describe("Number of results to skip (default: 0)"),
 });
 
+export type PaginationQuery = z.input<typeof PaginationQuerySchema>;
+
 /**
  * Sort order enum
  */
 export const SortOrderSchema = z
   .enum(["asc", "desc"])
   .describe("Sort order (ascending or descending)");
+
+export type SortOrder = z.infer<typeof SortOrderSchema>;
 
 /**
  * Pagination metadata included in list responses
@@ -187,6 +208,8 @@ export const PaginationResponseSchema = z.object({
   total: z.number(),
 }).describe("Pagination information");
 
+export type PaginationResponse = z.infer<typeof PaginationResponseSchema>;
+
 /**
  * Inclusive date range used in period-based responses
  */
@@ -194,3 +217,5 @@ export const PeriodSchema = z.object({
   startDate: z.iso.datetime(),
   endDate: z.iso.datetime(),
 });
+
+export type Period = z.infer<typeof PeriodSchema>;

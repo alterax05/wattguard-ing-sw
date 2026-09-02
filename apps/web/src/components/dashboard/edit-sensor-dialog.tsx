@@ -23,9 +23,10 @@ import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import {
   useUpdateSensor,
+  type SensorWithBuilding,
   type SensorType,
   type SensorStatus,
-  type SensorWithBuilding,
+  type UpdateSensorRequest,
 } from "@/hooks/use-sensors"
 
 const SENSOR_TYPES: SensorType[] = [
@@ -48,15 +49,8 @@ interface EditSensorDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-interface UpdateSensorPayload {
+type UpdateSensorPayload = UpdateSensorRequest & {
   id: string
-  sensorType: SensorType
-  location: string
-  status: SensorStatus
-  serialNumber?: string
-  transmissionInterval: number
-  minThreshold?: number | null
-  maxThreshold?: number | null
 }
 
 export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialogProps) {

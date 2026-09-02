@@ -6,42 +6,21 @@ import { useSettings } from "./use-settings";
 
 export const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
 
-// ── Types ────────────────────────────────────────────────────────────────────
+import type {
+  DashboardStats,
+  DashboardHistoryDataPoint,
+  DashboardHistory,
+  DashboardHistoryQuery as DashboardHistoryParams,
+} from "@wattguard/shared";
 
-export interface DashboardStats {
-  sensors: {
-    active: number;
-    total: number;
-  };
-  alerts: {
-    active: number;
-  };
-  consumption: {
-    electricity: number | null;
-    gas: number | null;
-  };
-}
+// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
 
-export interface DashboardHistoryDataPoint {
-  date: string;
-  electricity: number | null;
-  gas: number | null;
-}
-
-export interface DashboardHistory {
-  period: {
-    startDate: string;
-    endDate: string;
-    interval: "hour" | "day" | "week";
-  };
-  data: DashboardHistoryDataPoint[];
-}
-
-export interface DashboardHistoryParams {
-  startDate: string;
-  endDate: string;
-  interval?: "hour" | "day" | "week";
-}
+export type {
+  DashboardStats,
+  DashboardHistoryDataPoint,
+  DashboardHistory,
+  DashboardHistoryParams,
+};
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 

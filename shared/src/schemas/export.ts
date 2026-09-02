@@ -29,6 +29,7 @@ const DateRangeQuerySchema = z
  * both boundaries, which matches the values submitted by an HTML date input.
  */
 export const ExportConsumptionQuerySchema = DateRangeQuerySchema;
+export type ExportConsumptionQuery = z.input<typeof ExportConsumptionQuerySchema>;
 
 /**
  * GET /api/v1/export/report - Aggregated admin report query parameters
@@ -42,3 +43,5 @@ export const ExportReportQuerySchema = DateRangeQuerySchema.extend({
     .default("pdf")
     .describe("Report file format (pdf or xlsx)"),
 });
+
+export type ExportReportQuery = z.input<typeof ExportReportQuerySchema>;

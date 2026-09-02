@@ -31,6 +31,8 @@ export const TestEmailRequestSchema = z.object({
   to: EmailSchema.describe("Email address to send test email to"),
 });
 
+export type TestEmailRequest = z.infer<typeof TestEmailRequestSchema>;
+
 /**
  * POST /api/v1/auth/admin/test-email - Test email success response
  */

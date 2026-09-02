@@ -23,6 +23,8 @@ export const GeoJSONPointSchema = z.object({
   ]).describe("GeoJSON coordinates [longitude, latitude]"),
 });
 
+export type GeoJSONPoint = z.infer<typeof GeoJSONPointSchema>;
+
 /**
  * Building response schema
  */
@@ -49,6 +51,8 @@ export const BuildingSummarySchema = z.object({
   updatedAt: z.iso.datetime().describe("Last update timestamp"),
 });
 
+export type BuildingSummary = z.infer<typeof BuildingSummarySchema>;
+
 /**
  * Efficiency alert thresholds — alert when average COP drops below minCop
  */
@@ -61,6 +65,8 @@ export const EfficiencyThresholdsSchema = z.object({
   }
 });
 
+export type EfficiencyThresholds = z.infer<typeof EfficiencyThresholdsSchema>;
+
 /**
  * Building response schema
  */
@@ -71,6 +77,8 @@ export const BuildingDetailSchema = BuildingSummarySchema.extend({
   updatedBy: z.string().optional().describe("User who last updated this building"),
   createdAt: z.iso.datetime().optional().describe("Creation timestamp"),
 });
+
+export type BuildingDetail = z.infer<typeof BuildingDetailSchema>;
 
 /**
  * GET /api/v1/buildings 
@@ -84,6 +92,8 @@ export const SearchBuildingsQuerySchema = PaginationQuerySchema.extend({
   sortBy: z.enum(["name", "createdAt", "updatedAt"]).optional().describe("Sort field (default: updatedAt)"),
   sortOrder: SortOrderSchema.optional().describe("Sort order (default: desc)"),
 });
+
+export type SearchBuildingsQuery = z.input<typeof SearchBuildingsQuerySchema>;
 
 /**
  * GET /api/v1/buildings
@@ -110,6 +120,8 @@ export const CreateBuildingRequestSchema = z.object({
   constructionYear: z.number().min(1000).max(new Date().getFullYear() + 10).optional().describe("Year of construction"),
   geographicZone: z.string().min(1, "Geographic zone is required").trim().describe("Geographic zone"),
 });
+
+export type CreateBuildingRequest = z.infer<typeof CreateBuildingRequestSchema>;
 
 /**
  * POST /api/v1/buildings - Create building response
@@ -149,6 +161,8 @@ export const UpdateBuildingRequestSchema = CreateBuildingRequestSchema.partial()
   efficiencyThresholds: EfficiencyThresholdsSchema.optional(),
 });
 
+export type UpdateBuildingRequest = z.infer<typeof UpdateBuildingRequestSchema>;
+
 /**
  * PATCH /api/v1/buildings/:id - Update building response
  */
@@ -181,11 +195,15 @@ export const MetricReadingSchema = z.object({
   sensorId: ObjectIdSchema.nullable(),
 }).describe("A single metric reading with its unit and timestamp");
 
+export type MetricReading = z.infer<typeof MetricReadingSchema>;
+
 export const RealTimeDataSchema = z.object({
   internalTemperature: MetricReadingSchema.describe("Current internal temperature"),
   externalTemperature: MetricReadingSchema.describe("Current external temperature"),
   energyConsumption: MetricReadingSchema.describe("Current instantaneous energy consumption"),
 });
+
+export type RealTimeDataSnapshot = z.infer<typeof RealTimeDataSchema>;
 
 /**
  * GET /api/v1/buildings/:id/real-time - Get building real-time data response
@@ -198,6 +216,7 @@ export const GetBuildingRealTimeResponseSchema = z.object({
 });
 
 export type GetBuildingRealTimeResponse = z.infer<typeof GetBuildingRealTimeResponseSchema>;
+export type RealTimeData = GetBuildingRealTimeResponse;
 
 /**
  * GET /api/v1/buildings/:id/history - Get building historical data query parameters
@@ -209,6 +228,8 @@ export const GetBuildingHistoryQuerySchema = z.object({
   interval: z.enum(["minute", "hour", "day"]).optional().describe("Data aggregation interval (default: hour)"),
 });
 
+export type GetBuildingHistoryQuery = z.input<typeof GetBuildingHistoryQuerySchema>;
+
 /**
  * Historical data point schema
  */
@@ -219,6 +240,8 @@ export const HistoricalDataPointSchema = z.object({
   sensorType: SensorTypeSchema,
   sensorId: z.string().optional(),
 });
+
+export type HistoricalDataPoint = z.infer<typeof HistoricalDataPointSchema>;
 
 /**
  * GET /api/v1/buildings/:id/history - Get building historical data response
@@ -240,6 +263,8 @@ export const GetBuildingEfficiencyQuerySchema = z.object({
   endDate: z.iso.datetime().describe("End date for efficiency calculation"),
 });
 
+export type GetBuildingEfficiencyQuery = z.input<typeof GetBuildingEfficiencyQuerySchema>;
+
 /**
  * GET /api/v1/buildings/:id/efficiency - Efficiency response
  */
@@ -257,3 +282,5 @@ export const GetBuildingEfficiencyResponseSchema = z.object({
 });
 
 export type GetBuildingEfficiencyResponse = z.infer<typeof GetBuildingEfficiencyResponseSchema>;
+export type EfficiencyMetrics = GetBuildingEfficiencyResponse;
+export type BuildingEfficiencyMetrics = GetBuildingEfficiencyResponse["metrics"];

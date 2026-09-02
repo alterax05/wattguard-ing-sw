@@ -9,7 +9,7 @@ import { SensorReading } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
 import fullLogoUrl from "../../../../shared/assets/full-logo.png";
 import { ensureI18nReady, getTranslator } from "./i18n";
-import { DEFAULT_LOCALE, type LocaleCode } from "@wattguard/shared";
+import { DEFAULT_LOCALE, type LocaleCode, type SensorType } from "@wattguard/shared";
 import {
   aggregateConsumptionForBuildings,
   aggregateDailyConsumptionForBuildings,
@@ -20,12 +20,7 @@ import {
   type PeriodConsumptionSummary,
 } from "./energy";
 
-export type SensorTypeCounts = {
-  internal_temp: number;
-  external_temp: number;
-  energy_meter: number;
-  gas_meter: number;
-};
+export type SensorTypeCounts = Record<SensorType, number>;
 
 export type BuildingReport = {
   id: string;
@@ -55,8 +50,13 @@ export type ReportData = {
   buildings: BuildingReport[];
 };
 
-function emptySensorCounts(): SensorTypeCounts {
-  return { internal_temp: 0, external_temp: 0, energy_meter: 0, gas_meter: 0 };
+function emptySensorCounts() {
+  return {
+    internal_temp: 0,
+    external_temp: 0,
+    energy_meter: 0,
+    gas_meter: 0,
+  } satisfies SensorTypeCounts;
 }
 
 /**

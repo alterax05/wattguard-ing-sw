@@ -4,36 +4,9 @@ import { errorMessageFromResponse } from "@/lib/errors";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-export interface Alert {
-  id: string;
-  buildingId: string;
-  buildingName: string;
-  sensorId?: string;
-  type: string;
-  thresholdType?: "min" | "max";
-  severity: "low" | "medium" | "high" | "critical";
-  sensorType?: string;
-  location?: string;
-  value?: number;
-  unit?: string;
-  limit?: number;
-  status: "active" | "acknowledged" | "resolved";
-  acknowledgedBy?: string;
-  acknowledgedAt?: string;
-  resolvedBy?: string;
-  resolvedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { Alert, ListAlertsResponse } from "@wattguard/shared";
 
-interface ListAlertsResponse {
-  alerts: Alert[];
-  pagination: {
-    limit: number;
-    offset: number;
-    total: number;
-  };
-}
+export type { Alert, ListAlertsResponse };
 
 export function useAlerts(params?: { status?: string; buildingId?: string }) {
   return useQuery({

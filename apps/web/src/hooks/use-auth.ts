@@ -3,20 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { client } from "@/lib/api";
 import { errorMessageFromResponse } from "@/lib/errors";
 import i18n from "@/lib/i18n";
-import { UserSchema, isSupportedLocale, type LocaleCode } from "@wattguard/shared";
-import { z } from "zod";
+import {
+  isSupportedLocale,
+  type User,
+  type LoginRequest,
+  type SetupRequest,
+  type ForgotPasswordRequest,
+  type ResetPasswordRequest,
+  type CreateInviteRequest,
+  type UpdateUserRequest,
+} from "@wattguard/shared";
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const;
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  name?: string;
-  role: "admin" | "operator";
-  isDisabled?: boolean;
-  language?: LocaleCode;
-  lastLoginAt?: string;
-}
+export type AuthUser = User;
 
 /**
  * Fetch the current authenticated user via GET /api/auth/me.
@@ -118,7 +118,7 @@ export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: { email: string; password: string }) => {
+    mutationFn: async (input: LoginRequest) => {
       const res = await client.api.v1.auth.local.login.$post({
         json: input,
       });
@@ -175,11 +175,7 @@ export function useSetup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: {
-      inviteToken: string;
-      password: string;
-      name: string;
-    }) => {
+    mutationFn: async (input: SetupRequest) => {
       const res = await client.api.v1.auth.local.setup.$post({
         json: input,
       });
@@ -204,7 +200,7 @@ export function useSetup() {
  */
 export function useForgotPassword() {
   return useMutation({
-    mutationFn: async (input: { email: string }) => {
+    mutationFn: async (input: ForgotPasswordRequest) => {
       const res = await client.api.v1.auth.local["forgot-password"].$post({
         json: input,
       });
@@ -225,7 +221,7 @@ export function useForgotPassword() {
  */
 export function useResetPassword() {
   return useMutation({
-    mutationFn: async (input: { token: string; password: string }) => {
+    mutationFn: async (input: ResetPasswordRequest) => {
       const res = await client.api.v1.auth.local["reset-password"].$post({
         json: input,
       });
@@ -244,7 +240,7 @@ export function useResetPassword() {
 
 export const USERS_QUERY_KEY = ["admin", "users"] as const;
 
-export type AdminUser = z.infer<typeof UserSchema>;
+export type AdminUser = User;
 
 /**
  * Fetch all users via GET /api/admin/users (admin only).
@@ -274,17 +270,11 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      role?: "admin" | "operator";
-      isDisabled?: boolean;
-    }) => {
+    mutationFn: async (input: UpdateUserRequest & { id: string }) => {
+      const { id, ...body } = input;
       const res = await client.api.v1.admin.users[":id"].$patch({
-        param: { id: input.id },
-        json: {
-          role: input.role,
-          isDisabled: input.isDisabled,
-        },
+        param: { id },
+        json: body,
       });
 
       const data = await res.json();
@@ -334,7 +324,7 @@ export function useDeleteUser() {
  */
 export function useCreateInvite() {
   return useMutation({
-    mutationFn: async (input: { email: string; role: "admin" | "operator" }) => {
+    mutationFn: async (input: CreateInviteRequest) => {
       const res = await client.api.v1.admin.invites.$post({
         json: input,
       });

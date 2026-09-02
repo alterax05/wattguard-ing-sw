@@ -2,8 +2,13 @@ import { z } from "zod";
 import { ObjectIdSchema, PaginationQuerySchema, PaginationResponseSchema, SortOrderSchema } from "./common";
 
 export const AlertSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
+export type AlertSeverity = z.infer<typeof AlertSeveritySchema>;
+
 export const AlertStatusSchema = z.enum(["active", "acknowledged", "resolved"]);
+export type AlertStatus = z.infer<typeof AlertStatusSchema>;
+
 export const AlertThresholdTypeSchema = z.enum(["min", "max"]);
+export type AlertThresholdType = z.infer<typeof AlertThresholdTypeSchema>;
 
 export const THRESHOLD_ALERT_TYPE = "threshold_exceeded";
 export const EFFICIENCY_ALERT_TYPE = "efficiency_below_threshold";
@@ -33,6 +38,8 @@ export const AlertSchema = z.object({
   updatedAt: z.iso.datetime().describe("Last update timestamp"),
 });
 
+export type Alert = z.infer<typeof AlertSchema>;
+
 /**
  * GET /api/alerts - List alerts query parameters
  */
@@ -46,6 +53,8 @@ export const ListAlertsQuerySchema = PaginationQuerySchema.extend({
     .describe("Field to sort by (default: createdAt)"),
   sortOrder: SortOrderSchema.optional().describe("Sort order (default: desc)"),
 });
+
+export type ListAlertsQuery = z.input<typeof ListAlertsQuerySchema>;
 
 /**
  * GET /api/alerts - List alerts response

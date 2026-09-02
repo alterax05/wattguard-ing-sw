@@ -21,6 +21,8 @@ export const DashboardHistoryQuerySchema = z.object({
     .describe("Bucket interval for aggregation (default: day)"),
 });
 
+export type DashboardHistoryQuery = z.input<typeof DashboardHistoryQuerySchema>;
+
 // ── Response Schemas ─────────────────────────────────────────────────────────
 
 /**
@@ -41,6 +43,7 @@ export const DashboardStatsResponseSchema = z.object({
 });
 
 export type DashboardStatsResponse = z.infer<typeof DashboardStatsResponseSchema>;
+export type DashboardStats = DashboardStatsResponse;
 
 /**
  * A single data point in the history response
@@ -50,6 +53,8 @@ export const DashboardHistoryDataPointSchema = z.object({
   electricity: z.number().nullable().describe("Average energy_meter reading for the bucket (kWh)"),
   gas: z.number().nullable().describe("Average gas_meter reading for the bucket (m³)"),
 });
+
+export type DashboardHistoryDataPoint = z.infer<typeof DashboardHistoryDataPointSchema>;
 
 /**
  * Response for GET /api/v1/dashboard/history
@@ -64,3 +69,4 @@ export const DashboardHistoryResponseSchema = z.object({
 });
 
 export type DashboardHistoryResponse = z.infer<typeof DashboardHistoryResponseSchema>;
+export type DashboardHistory = DashboardHistoryResponse;

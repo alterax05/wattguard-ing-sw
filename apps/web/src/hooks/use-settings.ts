@@ -6,26 +6,14 @@ import { errorMessageFromResponse } from "@/lib/errors";
 
 export const SETTINGS_QUERY_KEY = ["settings"] as const;
 
-// ── Types ────────────────────────────────────────────────────────────────────
+import type {
+  SystemConfig,
+  UpdateSettingsRequest as UpdateSettingsInput,
+} from "@wattguard/shared";
 
-export interface SystemConfig {
-  polling: {
-    intervalSeconds: number;
-    autoPollingEnabled: boolean;
-  };
-  notifications: {
-    emailEnabled: boolean;
-  };
-  database: {
-    dataRetentionDays: number;
-  };
-}
+// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
 
-export type UpdateSettingsInput = {
-  polling?: Partial<SystemConfig["polling"]>;
-  notifications?: Partial<SystemConfig["notifications"]>;
-  database?: Partial<SystemConfig["database"]>;
-};
+export type { SystemConfig, UpdateSettingsInput };
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 

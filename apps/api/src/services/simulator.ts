@@ -11,14 +11,11 @@ import {
   roomHeatCapacity,
 } from "../lib/energy";
 
+import type { IngestReadingInput } from "./reading-service";
+
 // ── Public types ─────────────────────────────────────────────────────────────
 
-export type SimulatorReading = {
-  sensorId: string;
-  value: number;
-  unit: string;
-  timestamp: Date;
-};
+export type SimulatorReading = IngestReadingInput;
 
 export type SimulatorOptions = {
   /** Called for every produced reading. May be async. */
