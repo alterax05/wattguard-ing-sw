@@ -10,8 +10,9 @@
  * POST /api/settings/backup  - Download a full database backup as JSON
  */
 import { Hono } from "hono";
+import mongoose from "mongoose";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import type { AuthVariables } from "../middleware/auth";
+import { requireRole, type AuthVariables } from "../middleware/auth";
 import { SystemConfig } from "../models/SystemConfig";
 import { SensorReading } from "../models/SensorReading";
 import { Building } from "../models/Building";
@@ -24,10 +25,15 @@ import {
   UpdateSettingsResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
-import type { GetSettingsResponse, UpdateSettingsResponse } from "@wattguard/shared";
+import type {
+  GetSettingsResponse,
+  UpdateSettingsResponse,
+} from "@wattguard/shared";
 
 /** Serialize a SystemConfig document to a plain object for API responses. */
-function serializeConfig(doc: Awaited<ReturnType<typeof SystemConfig.getOrCreate>>) {
+function serializeConfig(
+  doc: Awaited<ReturnType<typeof SystemConfig.getOrCreate>>,
+) {
   return {
     polling: {
       intervalSeconds: doc.polling!.intervalSeconds,
@@ -47,7 +53,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      description: "Get the current system configuration (admin only)",
+      description: "Get the current system configuration",
       tags: ["Settings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -64,20 +70,23 @@ const app = new Hono<{ Variables: AuthVariables }>()
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
         403: {
-          description: "Forbidden – requires admin role",
+          description: "Forbidden – requires admin or operator role",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
       },
     }),
     async (c) => {
       const config = await SystemConfig.getOrCreate();
-      return c.json({ config: serializeConfig(config) } satisfies GetSettingsResponse);
+      return c.json({
+        config: serializeConfig(config),
+      } satisfies GetSettingsResponse);
     },
   )
 
   // ── PATCH /api/settings ────────────────────────────────────────────────────
   .patch(
     "/",
+    requireRole("admin"),
     describeRoute({
       description: "Update the system configuration (admin only)",
       tags: ["Settings"],
@@ -100,7 +109,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
         403: {
-          description: "Forbidden – requires admin role",
+          description: "Forbidden - requires admin role",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
       },
@@ -136,19 +145,50 @@ const app = new Hono<{ Variables: AuthVariables }>()
       );
 
       if (!updated) {
-        return c.json({ error: "Failed to update configuration", code: "settings_update_failed" }, 500);
+        return c.json(
+          {
+            error: "Failed to update configuration",
+            code: "settings_update_failed",
+          },
+          500,
+        );
       }
 
-      return c.json({ success: true as const, config: serializeConfig(updated) } satisfies UpdateSettingsResponse);
+      // Update MongoDB TTL on time-series sensorreadings collection directly
+      if (body.database?.dataRetentionDays !== undefined) {
+        const seconds = body.database.dataRetentionDays * 86400;
+        const db = mongoose.connection.db;
+        if (db) {
+          try {
+            await db.command({
+              collMod: "sensorreadings",
+              expireAfterSeconds: seconds,
+            });
+          } catch (_) {
+            return c.json(
+              {
+                error: "Failed to update sensorreadings TTL",
+                code: "ttl_update_failed",
+              },
+              500,
+            );
+          }
+        }
+
+        return c.json({
+          success: true as const,
+          config: serializeConfig(updated),
+        } satisfies UpdateSettingsResponse);
+      }
     },
   )
 
   // ── GET /api/settings/export ───────────────────────────────────────────────
   .get(
     "/export",
+    requireRole("admin"),
     describeRoute({
-      description:
-        "Download all sensor readings as a JSON file (admin only)",
+      description: "Download all sensor readings as a JSON file (admin only)",
       tags: ["Settings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -198,6 +238,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
   // ── POST /api/settings/backup ──────────────────────────────────────────────
   .post(
     "/backup",
+    requireRole("admin"),
     describeRoute({
       description:
         "Download a full database backup as a JSON file (admin only)",

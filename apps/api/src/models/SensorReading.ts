@@ -45,13 +45,13 @@ const sensorReadingSchema = new Schema(
     },
   },
   {
-    // Time-series collection configuration
-    // Mongoose will automatically create the collection with these options
+    // Time-series collection configuration with native TTL
     timeseries: {
       timeField: "timestamp",
       metaField: "metadata",
-      granularity: "minutes", // Data every ~90 seconds fits "minutes" granularity
+      granularity: "minutes", // Data every ~90 seconds
     },
+    expireAfterSeconds: 365 * 24 * 60 * 60, // 365 days default retention
   }
 );
 
