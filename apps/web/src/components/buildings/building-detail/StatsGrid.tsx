@@ -2,23 +2,22 @@ import { useTranslation } from "react-i18next"
 import { Activity, Building2, Thermometer, Zap } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import type { BuildingDetail, RealTimeData } from "@/hooks/use-buildings"
-import { useOptionalBuildingDetailContext } from "./BuildingDetailContext"
 
 export interface StatsGridProps {
-  building?: BuildingDetail
+  building: BuildingDetail
   realTimeData?: RealTimeData
-  activeSensors?: number
-  totalSensors?: number
+  activeSensors: number
+  totalSensors: number
 }
 
-export function StatsGrid(props: StatsGridProps = {}) {
+export function StatsGrid({
+  building,
+  realTimeData,
+  activeSensors,
+  totalSensors,
+}: StatsGridProps) {
   const { t } = useTranslation()
-  const ctx = useOptionalBuildingDetailContext()
-
-  const building = props.building ?? ctx?.state.building
-  const rt = props.realTimeData ?? ctx?.state.realTimeData
-  const activeSensors = props.activeSensors ?? ctx?.state.activeSensors ?? 0
-  const totalSensors = props.totalSensors ?? ctx?.state.totalSensors ?? 0
+  const rt = realTimeData
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

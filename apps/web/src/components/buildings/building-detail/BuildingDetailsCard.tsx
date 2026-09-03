@@ -3,18 +3,13 @@ import { Building2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BuildingStatusBadge } from "../building-status-badge"
 import type { BuildingDetail } from "@/hooks/use-buildings"
-import { useOptionalBuildingDetailContext } from "./BuildingDetailContext"
 
 export interface BuildingDetailsCardProps {
-  building?: BuildingDetail
+  building: BuildingDetail
 }
 
-export function BuildingDetailsCard(props: BuildingDetailsCardProps = {}) {
+export function BuildingDetailsCard({ building }: BuildingDetailsCardProps) {
   const { t } = useTranslation()
-  const ctx = useOptionalBuildingDetailContext()
-  const building = props.building ?? ctx?.state.building
-
-  if (!building) return null
 
   return (
     <Card>

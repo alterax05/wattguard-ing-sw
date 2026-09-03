@@ -8,31 +8,25 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty"
 import { DateRangePicker } from "@/components/shared"
 import { SENSOR_TYPE_CONFIG, type SensorTypeKey } from "./helpers"
-import { useOptionalBuildingDetailContext } from "./BuildingDetailContext"
 
 export interface HistorySectionProps {
-  range?: DateRange | undefined
-  onRangeChange?: (range: DateRange | undefined) => void
-  selectedSensorType?: SensorTypeKey
-  onSelectedSensorTypeChange?: (type: SensorTypeKey) => void
-  historyLoading?: boolean
-  chartData?: { timestamp: string; value: number; sensorType: string; unit: string }[]
+  range: DateRange | undefined
+  onRangeChange: (range: DateRange | undefined) => void
+  selectedSensorType: SensorTypeKey
+  onSelectedSensorTypeChange: (type: SensorTypeKey) => void
+  historyLoading: boolean
+  chartData: { timestamp: string; value: number; sensorType: string; unit: string }[]
 }
 
-export function HistorySection(props: HistorySectionProps = {}) {
+export function HistorySection({
+  range,
+  onRangeChange,
+  selectedSensorType,
+  onSelectedSensorTypeChange,
+  historyLoading,
+  chartData,
+}: HistorySectionProps) {
   const { t } = useTranslation()
-  const ctx = useOptionalBuildingDetailContext()
-
-  const range = props.range ?? ctx?.state.range
-  const onRangeChange = props.onRangeChange ?? ctx?.actions.setRange ?? (() => {})
-  const selectedSensorType =
-    props.selectedSensorType ?? ctx?.state.selectedSensorType ?? "energy_meter"
-  const onSelectedSensorTypeChange =
-    props.onSelectedSensorTypeChange ??
-    ctx?.actions.setSelectedSensorType ??
-    (() => {})
-  const historyLoading = props.historyLoading ?? ctx?.meta.historyLoading ?? false
-  const chartData = props.chartData ?? ctx?.state.chartData ?? []
 
   return (
     <>

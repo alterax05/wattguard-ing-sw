@@ -24,7 +24,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { BuildingDetailContext } from "./building-detail/BuildingDetailContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -250,51 +249,47 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   }
 
   return (
-    <BuildingDetailContext
-      value={{
-        state: {
-          buildingId,
-          building,
-          realTimeData,
-          sensors,
-          allSensors,
-          activeSensors,
-          totalSensors,
-          totalPages,
-          displayPage,
-          range,
-          selectedSensorType,
-          chartData,
-          isAdmin,
-        },
-        actions: {
-          setRange,
-          setSelectedSensorType,
-          setPage: setCurrentPage,
-          openAddSensor: () => { setAddSensorOpen(true) },
-          openEditSensor: (id) => { setManuallyEditingSensorId(id) },
-          openDeleteSensor: (sensor) => { setDeletingSensor(sensor) },
-          openEditBuilding: () => { setIsEditingBuilding(true) },
-          openDeleteBuilding: () => { setConfirmDeleteBuildingOpen(true) },
-          goBack: () => { void navigate("/dashboard/buildings") },
-        },
-        meta: {
-          buildingLoading,
-          sensorsLoading,
-          historyLoading,
-        },
-      }}
-    >
-      <div className="space-y-6">
-        <BuildingHeader />
-        <StatsGrid />
-        <HistorySection />
-        <EfficiencySection />
+    <div className="space-y-6">
+      <BuildingHeader
+        building={building}
+        isAdmin={isAdmin}
+        onBack={() => { void navigate("/dashboard/buildings") }}
+        onEdit={() => { setIsEditingBuilding(true) }}
+        onDelete={() => { setConfirmDeleteBuildingOpen(true) }}
+      />
+      <StatsGrid
+        building={building}
+        realTimeData={realTimeData}
+        activeSensors={activeSensors}
+        totalSensors={totalSensors}
+      />
+      <HistorySection
+        range={range}
+        onRangeChange={setRange}
+        selectedSensorType={selectedSensorType}
+        onSelectedSensorTypeChange={setSelectedSensorType}
+        historyLoading={historyLoading}
+        chartData={chartData}
+      />
+      <EfficiencySection
+        building={building}
+        range={range}
+      />
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SensorsSection />
-          <BuildingDetailsCard />
-        </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SensorsSection
+          sensors={sensors}
+          sensorsLoading={sensorsLoading}
+          totalSensors={totalSensors}
+          totalPages={totalPages}
+          displayPage={displayPage}
+          onPageChange={setCurrentPage}
+          onAddSensor={() => { setAddSensorOpen(true) }}
+          onEditSensor={(id) => { setManuallyEditingSensorId(id) }}
+          onDeleteSensor={(sensor) => { setDeletingSensor(sensor) }}
+        />
+        <BuildingDetailsCard building={building} />
+      </div>
       {/* Sensor Dialogs */}
       {isEditingBuilding && (
         <EditBuildingDialog
@@ -372,6 +367,5 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    </BuildingDetailContext>
   );
 }

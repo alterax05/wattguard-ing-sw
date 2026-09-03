@@ -23,33 +23,31 @@ import {
 import { getMonitoringStatus, getMonitoringStatusPresentation } from "@/lib/sensor-status"
 import { getSensorIcon, getPaginationItems } from "./helpers"
 import type { SensorWithBuilding } from "@/hooks/use-sensors"
-import { useOptionalBuildingDetailContext } from "./BuildingDetailContext"
 
 export interface SensorsSectionProps {
-  sensors?: SensorWithBuilding[]
-  sensorsLoading?: boolean
-  totalSensors?: number
-  totalPages?: number
-  displayPage?: number
-  onPageChange?: (page: number) => void
-  onAddSensor?: () => void
-  onEditSensor?: (id: string) => void
-  onDeleteSensor?: (sensor: SensorWithBuilding) => void
+  sensors: SensorWithBuilding[]
+  sensorsLoading: boolean
+  totalSensors: number
+  totalPages: number
+  displayPage: number
+  onPageChange: (page: number) => void
+  onAddSensor: () => void
+  onEditSensor: (id: string) => void
+  onDeleteSensor: (sensor: SensorWithBuilding) => void
 }
 
-export function SensorsSection(props: SensorsSectionProps = {}) {
+export function SensorsSection({
+  sensors,
+  sensorsLoading,
+  totalSensors,
+  totalPages,
+  displayPage,
+  onPageChange,
+  onAddSensor,
+  onEditSensor,
+  onDeleteSensor,
+}: SensorsSectionProps) {
   const { t } = useTranslation()
-  const ctx = useOptionalBuildingDetailContext()
-
-  const sensors = props.sensors ?? ctx?.state.sensors ?? []
-  const sensorsLoading = props.sensorsLoading ?? ctx?.meta.sensorsLoading ?? false
-  const totalSensors = props.totalSensors ?? ctx?.state.totalSensors ?? 0
-  const totalPages = props.totalPages ?? ctx?.state.totalPages ?? 1
-  const displayPage = props.displayPage ?? ctx?.state.displayPage ?? 1
-  const onPageChange = props.onPageChange ?? ctx?.actions.setPage ?? (() => {})
-  const onAddSensor = props.onAddSensor ?? ctx?.actions.openAddSensor ?? (() => {})
-  const onEditSensor = props.onEditSensor ?? ctx?.actions.openEditSensor ?? (() => {})
-  const onDeleteSensor = props.onDeleteSensor ?? ctx?.actions.openDeleteSensor ?? (() => {})
 
   return (
     <Card>

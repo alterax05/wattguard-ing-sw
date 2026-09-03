@@ -14,18 +14,13 @@ import { toIsoDate } from "@/lib/dates"
 import { endOfDay } from "date-fns"
 import { toast } from "sonner"
 import { useMemo } from "react"
-import { useOptionalBuildingDetailContext } from "./BuildingDetailContext"
 
 export interface EfficiencySectionProps {
-  building?: BuildingDetail
+  building: BuildingDetail
   range?: DateRange | undefined
 }
 
-export function EfficiencySection(props: EfficiencySectionProps = {}) {
-  const ctx = useOptionalBuildingDetailContext()
-  const building = props.building ?? ctx?.state.building
-  const range = props.range ?? ctx?.state.range
-
+export function EfficiencySection({ building, range }: EfficiencySectionProps) {
   const efficiencyParams = useMemo(() => {
     const startDate = toIsoDate(range?.from)
     const endDate = toIsoDate(range?.to ? endOfDay(range.to) : undefined)
@@ -34,9 +29,7 @@ export function EfficiencySection(props: EfficiencySectionProps = {}) {
   }, [range])
 
   const { data: efficiencyData, isLoading: efficiencyLoading } =
-    useBuildingEfficiency(building?.id, efficiencyParams)
-
-  if (!building) return null
+    useBuildingEfficiency(building.id, efficiencyParams)
 
   // Use key to reset form when building changes, instead of syncing via effect
   return (
