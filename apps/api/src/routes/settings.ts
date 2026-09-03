@@ -164,7 +164,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
               collMod: "sensorreadings",
               expireAfterSeconds: seconds,
             });
-          } catch (_) {
+          } catch {
             return c.json(
               {
                 error: "Failed to update sensorreadings TTL",
@@ -174,12 +174,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
             );
           }
         }
-
-        return c.json({
-          success: true as const,
-          config: serializeConfig(updated),
-        } satisfies UpdateSettingsResponse);
       }
+
+      return c.json({
+        success: true as const,
+        config: serializeConfig(updated),
+      } satisfies UpdateSettingsResponse);
     },
   )
 
