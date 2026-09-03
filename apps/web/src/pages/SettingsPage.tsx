@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next"
-import { SettingsPanel } from "@/components/dashboard/settings-panel"
+import { SettingsPanel } from "@/components/settings"
 
 export function SettingsPage() {
   const { t } = useTranslation()

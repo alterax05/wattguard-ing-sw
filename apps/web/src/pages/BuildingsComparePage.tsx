@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom"
-import { BuildingsCompare } from "@/components/dashboard/buildings-compare"
+import { BuildingsCompare } from "@/components/buildings"
 import { MAX_COMPARE_BUILDINGS } from "@/lib/constants"
 
 export function BuildingsComparePage() {

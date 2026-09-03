@@ -1,47 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
 import { client } from "@/lib/api";
-import { useSettings } from "./use-settings";
+import { usePollingInterval } from "./use-settings";
 
 // ── Query Keys ───────────────────────────────────────────────────────────────
 
 export const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
 
-// ── Types ────────────────────────────────────────────────────────────────────
+import type {
+  DashboardStats,
+  DashboardHistoryDataPoint,
+  DashboardHistory,
+  DashboardHistoryQuery as DashboardHistoryParams,
+} from "@wattguard/shared";
 
-export interface DashboardStats {
-  sensors: {
-    active: number;
-    total: number;
-  };
-  alerts: {
-    active: number;
-  };
-  consumption: {
-    electricity: number | null;
-    gas: number | null;
-  };
-}
+// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
 
-export interface DashboardHistoryDataPoint {
-  date: string;
-  electricity: number | null;
-  gas: number | null;
-}
-
-export interface DashboardHistory {
-  period: {
-    startDate: string;
-    endDate: string;
-    interval: "hour" | "day" | "week";
-  };
-  data: DashboardHistoryDataPoint[];
-}
-
-export interface DashboardHistoryParams {
-  startDate: string;
-  endDate: string;
-  interval?: "hour" | "day" | "week";
-}
+export type {
+  DashboardStats,
+  DashboardHistoryDataPoint,
+  DashboardHistory,
+  DashboardHistoryParams,
+};
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
@@ -53,13 +32,7 @@ export interface DashboardHistoryParams {
  * Falls back to 2 minutes if settings have not yet loaded.
  */
 export function useDashboardStats() {
-  const { data: settings } = useSettings();
-
-  const intervalMs: number | false = settings
-    ? settings.polling.autoPollingEnabled
-      ? settings.polling.intervalSeconds * 1000
-      : false
-    : 2 * 60 * 1000; // default while settings load
+  const intervalMs = usePollingInterval(2 * 60 * 1000);
 
   return useQuery({
     queryKey: [...DASHBOARD_QUERY_KEY, "stats"],

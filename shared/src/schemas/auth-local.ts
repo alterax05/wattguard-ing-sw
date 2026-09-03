@@ -17,6 +17,8 @@ export const SetupRequestSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long").describe("User display name"),
 });
 
+export type SetupRequest = z.infer<typeof SetupRequestSchema>;
+
 export const SetupResponseSchema = z.object({
   success: z.literal(true),
   user: PublicUserSchema,
@@ -32,6 +34,8 @@ export const LoginRequestSchema = z.object({
   password: PasswordSchema,
 });
 
+export type LoginRequest = z.infer<typeof LoginRequestSchema>;
+
 export const LoginResponseSchema = z.object({
   success: z.literal(true),
   user: PublicUserSchema,
@@ -45,6 +49,8 @@ export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 export const ForgotPasswordRequestSchema = z.object({
   email: EmailSchema,
 });
+
+export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequestSchema>;
 
 export const ForgotPasswordResponseSchema = z.object({
   success: z.literal(true),
@@ -71,6 +77,8 @@ export const ResetPasswordRequestSchema = z.object({
   token: z.string().min(1, "Reset token is required").describe("Password reset token"),
   password: PasswordSchema,
 });
+
+export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>;
 
 export const ResetPasswordResponseSchema = z.object({
   success: z.literal(true),

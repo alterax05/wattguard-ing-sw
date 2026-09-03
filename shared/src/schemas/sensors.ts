@@ -19,6 +19,8 @@ export const LastReadingSchema = z.object({
   unit: z.string().describe("Unit of measurement (e.g., °C, W, kWh)"),
 });
 
+export type LastReading = z.infer<typeof LastReadingSchema>;
+
 /**
  * Sensor response schema
  */
@@ -40,6 +42,8 @@ export const SensorSchema = z.object({
   updatedAt: z.iso.datetime().optional().describe("Last update timestamp"),
 });
 
+export type Sensor = z.infer<typeof SensorSchema>;
+
 /**
  * Sensor with building details (populated)
  */
@@ -51,6 +55,8 @@ export const SensorWithBuildingSchema = SensorSchema.extend({
     address: z.string(),
   }).optional().describe("Building details (if populated)"),
 });
+
+export type SensorWithBuilding = z.infer<typeof SensorWithBuildingSchema>;
 
 /**
  * POST /api/v1/sensors - Create sensor request
@@ -65,6 +71,8 @@ export const CreateSensorRequestSchema = z.object({
   minThreshold: z.number().optional().describe("Minimum threshold for alerts"),
   maxThreshold: z.number().optional().describe("Maximum threshold for alerts"),
 });
+
+export type CreateSensorRequest = z.infer<typeof CreateSensorRequestSchema>;
 
 /**
  * POST /api/v1/sensors - Create sensor response
@@ -107,6 +115,8 @@ export const UpdateSensorRequestSchema = CreateSensorRequestSchema.omit({
   status: SensorStatusSchema.optional(),
 });
 
+export type UpdateSensorRequest = z.infer<typeof UpdateSensorRequestSchema>;
+
 /**
  * PATCH /api/v1/sensors/:id - Update sensor response
  */
@@ -144,6 +154,8 @@ export const SensorReadingSchema = z.object({
   }).optional(),
 });
 
+export type SensorReading = z.infer<typeof SensorReadingSchema>;
+
 /**
  * POST /api/v1/sensors/:id/readings - Create reading request (for testing/simulation)
  */
@@ -152,6 +164,8 @@ export const CreateReadingRequestSchema = z.object({
   unit: z.string().min(1).trim().describe("Unit of measurement (e.g., °C, W, kWh)"),
   timestamp: z.iso.datetime().optional().describe("Reading timestamp (defaults to now)"),
 });
+
+export type CreateReadingRequest = z.infer<typeof CreateReadingRequestSchema>;
 
 /**
  * POST /api/v1/sensors/:id/readings - Create reading response
@@ -171,6 +185,8 @@ export const GetSensorReadingsQuerySchema = PaginationQuerySchema.extend({
   endDate: z.iso.datetime().optional().describe("End date for filtering readings (ISO 8601)"),
   sortOrder: SortOrderSchema.optional().describe("Sort order by timestamp (default: desc)"),
 });
+
+export type GetSensorReadingsQuery = z.input<typeof GetSensorReadingsQuerySchema>;
 
 /**
  * GET /api/v1/sensors/:id/readings - Get sensor readings response
@@ -195,6 +211,8 @@ export const ListSensorsQuerySchema = PaginationQuerySchema.extend({
     .describe("Field to sort by (default: createdAt)"),
   sortOrder: SortOrderSchema.optional().describe("Sort order (default: desc)"),
 });
+
+export type ListSensorsQuery = z.input<typeof ListSensorsQuerySchema>;
 
 /**
  * GET /api/v1/sensors - List sensors response

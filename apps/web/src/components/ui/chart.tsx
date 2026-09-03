@@ -24,7 +24,7 @@ type ChartContextProps = {
 const ChartContext = React.createContext<ChartContextProps | null>(null)
 
 function useChart() {
-  const context = React.useContext(ChartContext)
+  const context = React.use(ChartContext)
 
   if (!context) {
     throw new Error("useChart must be used within a <ChartContainer />")
@@ -108,8 +108,6 @@ function ChartTooltipContent({
   payload,
   className,
   indicator = "dot",
-  hideLabel = false,
-  hideIndicator = false,
   label,
   labelFormatter,
   labelClassName,
@@ -119,16 +117,14 @@ function ChartTooltipContent({
   labelKey,
 }: React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
   React.ComponentProps<"div"> & {
-    hideLabel?: boolean
-    hideIndicator?: boolean
-    indicator?: "line" | "dot" | "dashed"
+    indicator?: "line" | "dot" | "dashed" | "hidden"
     nameKey?: string
     labelKey?: string
   }) {
   const { config } = useChart()
 
   const tooltipLabel = React.useMemo(() => {
-    if (hideLabel || !payload?.length) {
+    if (!payload?.length) {
       return null
     }
 
@@ -157,7 +153,6 @@ function ChartTooltipContent({
     label,
     labelFormatter,
     payload,
-    hideLabel,
     labelClassName,
     config,
     labelKey,
@@ -200,7 +195,7 @@ function ChartTooltipContent({
                     {itemConfig?.icon ? (
                       <itemConfig.icon />
                     ) : (
-                      !hideIndicator && (
+                      indicator !== "hidden" && (
                         <div
                           className={cn(
                             "shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)",
@@ -253,13 +248,11 @@ const ChartLegend = RechartsPrimitive.Legend
 
 function ChartLegendContent({
   className,
-  hideIcon = false,
   payload,
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> &
   Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-    hideIcon?: boolean
     nameKey?: string
   }) {
   const { config } = useChart()
@@ -289,7 +282,7 @@ function ChartLegendContent({
                 "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
               )}
             >
-              {itemConfig?.icon && !hideIcon ? (
+              {itemConfig?.icon ? (
                 <itemConfig.icon />
               ) : (
                 <div

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next"
-import { BuildingsMap } from "@/components/dashboard/buildings-map"
+import { BuildingsMap } from "@/components/buildings"
 
 export function MapPage() {
   const { t } = useTranslation()

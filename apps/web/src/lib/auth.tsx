@@ -1,4 +1,4 @@
-import { createContext } from "react";
+import { createContext, use } from "react";
 import { useCurrentUser, type AuthUser } from "@/hooks/use-auth";
 
 interface AuthContextValue {
@@ -8,6 +8,10 @@ interface AuthContextValue {
 }
 
 export const AuthContext = createContext<AuthContextValue>({user: null, isLoading: false, isAuthenticated: false});
+
+export function useAuth(): AuthContextValue {
+  return use(AuthContext);
+}
 
 /**
  * Wraps the application and provides auth state via React context.

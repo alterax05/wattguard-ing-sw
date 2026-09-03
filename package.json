@@ -11,16 +11,21 @@
     "dev:backend": "bun run --cwd apps/api dev",
     "simulate": "bun run --cwd apps/api simulate",
     "start": "bun run --cwd apps/api start",
-    "build": "bun run --cwd apps/web build && bun run --cwd apps/api build",
+    "build": "bun run --cwd apps/web build && bun run --cwd apps/api build && cp -r apps/web/dist apps/api/dist/web",
     "test": "bun run --cwd apps/api test",
     "test:watch": "bun run --cwd apps/api test:watch",
     "clean": "rm -rf apps/web/dist apps/api/dist",
     "check": "bun run --cwd apps/web check && bun run --cwd apps/api check && bun run --cwd shared check",
     "lint": "oxlint"
   },
+  "dependencies": {
+    "hono": "^4.13.5",
+    "i18next": "^26.4.1",
+    "zod": "^4.5.4"
+  },
   "devDependencies": {
     "@oxlint/plugins": "1.79.0",
-    "oxlint": "^1.79.0",
+    "oxlint": "^1.81.0",
     "oxlint-tsgolint": "^7.0.2001",
     "typescript": "^7.0.2"
   },

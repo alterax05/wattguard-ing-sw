@@ -1,7 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { AuthContext } from "@/lib/auth";
-import { useContext } from "react";
+import { useAuth } from "@/lib/auth";
 
 /**
  * Full-screen loading spinner shown while the auth state is being resolved.
@@ -22,7 +21,7 @@ function AuthLoading() {
  * - If authenticated, renders child routes via `<Outlet />`.
  */
 export function ProtectedRoute() {
-  const { user, isLoading } = useContext(AuthContext);
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return <AuthLoading />;
@@ -43,7 +42,7 @@ export function ProtectedRoute() {
  * - If not authenticated, renders child routes via `<Outlet />`.
  */
 export function GuestRoute() {
-  const { user, isLoading } = useContext(AuthContext);
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return <AuthLoading />;
@@ -55,3 +54,30 @@ export function GuestRoute() {
 
   return <Outlet />;
 }
+
+/**
+ * Route guard for admin-only routes (users, settings).
+ *
+ * - While the `/me` query is loading, shows a spinner.
+ * - If not authenticated, redirects to `/login`.
+ * - If authenticated but role is not admin, redirects to `/dashboard`.
+ * - If admin, renders child routes via `<Outlet />`.
+ */
+export function AdminRoute() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AuthLoading />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+}
+

@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom"
-import { BuildingDetail } from "@/components/dashboard/building-detail"
+import { BuildingDetail } from "@/components/buildings"
 
 export function BuildingDetailPage() {
   const { id } = useParams<{ id: string }>()

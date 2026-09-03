@@ -3,9 +3,9 @@ import path from "path";
 
 // This script builds the backend using Bun.
 
-console.log("\n🚀 Starting Backend build process...\n");
+console.log("🚀 Starting Backend build process...");
 
-const outdir = path.join(process.cwd(), "dist");
+const outdir = path.resolve(import.meta.dir, "dist");
 
 const start = performance.now();
 
@@ -16,7 +16,6 @@ const result = await Bun.build({
   minify: true,
   sourcemap: "linked",
   env: "disable",
-  external: ["mongoose"], // Externalize node modules that might cause issues if bundled for backend
   loader: { ".png": "file" },
   define: {
     "process.env.NODE_ENV": '"production"',

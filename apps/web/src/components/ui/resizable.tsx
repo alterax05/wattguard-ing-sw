@@ -24,12 +24,10 @@ function ResizablePanel({ ...props }: ResizablePrimitive.PanelProps) {
 }
 
 function ResizableHandle({
-  withHandle,
   className,
+  children,
   ...props
-}: ResizablePrimitive.SeparatorProps & {
-  withHandle?: boolean
-}) {
+}: ResizablePrimitive.SeparatorProps) {
   return (
     <ResizablePrimitive.Separator
       data-slot="resizable-handle"
@@ -39,13 +37,26 @@ function ResizableHandle({
       )}
       {...props}
     >
-      {withHandle && (
-        <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border">
-          <GripVerticalIcon className="size-2.5" />
-        </div>
-      )}
+      {children}
     </ResizablePrimitive.Separator>
   )
 }
 
-export { ResizableHandle, ResizablePanel, ResizablePanelGroup }
+function ResizableHandleGrip({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border",
+        className
+      )}
+      {...props}
+    >
+      <GripVerticalIcon className="size-2.5" />
+    </div>
+  )
+}
+
+export { ResizableHandle, ResizableHandleGrip, ResizablePanel, ResizablePanelGroup }

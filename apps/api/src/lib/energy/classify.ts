@@ -1,4 +1,6 @@
-export type EnergySensorType = "gas_meter" | "energy_meter";
+import type { SensorType } from "@wattguard/shared";
+
+export type EnergySensorType = Extract<SensorType, "gas_meter" | "energy_meter">;
 
 export type HeatingKind = "heat_pump" | "district_heating" | "gas_boiler" | "generic";
 

@@ -17,6 +17,8 @@ export const BuildingTypeSchema = z.object({
   updatedAt: z.iso.datetime().optional().describe("Last update timestamp"),
 });
 
+export type BuildingType = z.infer<typeof BuildingTypeSchema>;
+
 /**
  * GET /api/v1/building-types - List all building types response
  */
@@ -33,6 +35,8 @@ export const CreateBuildingTypeRequestSchema = z.object({
   name: z.string().min(1, "Name is required").trim().describe("Building type name"),
   description: z.string().trim().optional().describe("Optional description"),
 });
+
+export type CreateBuildingTypeRequest = z.infer<typeof CreateBuildingTypeRequestSchema>;
 
 /**
  * POST /api/v1/building-types - Create building type response
@@ -53,6 +57,8 @@ export const UpdateBuildingTypeParamsSchema = ObjectIdParamSchema;
  * PATCH /api/v1/building-types/:id - Update building type request
  */
 export const UpdateBuildingTypeRequestSchema = CreateBuildingTypeRequestSchema.partial();
+
+export type UpdateBuildingTypeRequest = z.infer<typeof UpdateBuildingTypeRequestSchema>;
 
 /**
  * PATCH /api/v1/building-types/:id - Update building type response
