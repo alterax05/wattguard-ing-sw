@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next"
-import { SensorsMonitoring } from "@/components/dashboard/sensors-monitoring"
+import { SensorsMonitoring } from "@/components/sensors"
 
 export function SensorsPage() {
   const { t } = useTranslation()

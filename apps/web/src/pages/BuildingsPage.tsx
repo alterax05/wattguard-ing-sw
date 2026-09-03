@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { BuildingSearch } from "@/components/dashboard/building-search"
-import { AddBuildingDialog } from "@/components/dashboard/add-building-dialog"
+import { BuildingSearch, AddBuildingDialog } from "@/components/buildings"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 

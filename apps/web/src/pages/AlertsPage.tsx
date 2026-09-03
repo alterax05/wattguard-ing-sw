@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next"
-import { AlertsManagement } from "@/components/dashboard/alerts-management"
+import { AlertsManagement } from "@/components/alerts"
 
 export function AlertsPage() {
   const { t } = useTranslation()

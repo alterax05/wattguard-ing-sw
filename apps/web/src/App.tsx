@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ProtectedRoute, GuestRoute } from "@/components/auth/protected-route";
-import { DashboardLayout } from "./components/dashboard/dashboard-layout";
+import { ProtectedRoute, GuestRoute, AdminRoute } from "@/components/auth/protected-route";
+import { DashboardLayout } from "@/components/layout";
 import { Spinner } from "./components/ui/spinner";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -48,8 +48,12 @@ export function App() {
               <Route path="/buildings/:id" element={<BuildingDetailPage />} />
               <Route path="/sensors" element={<SensorsPage />} />
               <Route path="/alerts" element={<AlertsPage />} />
-              <Route path="/users" element={<UsersPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+
+              {/* Admin-only routes */}
+              <Route element={<AdminRoute />}>
+                <Route path="/users" element={<UsersPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
             </Route>
           </Route>
 

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { client } from "@/lib/api";
-import { useSettings } from "./use-settings";
+import { usePollingInterval } from "./use-settings";
 
 // ── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -32,13 +32,7 @@ export type {
  * Falls back to 2 minutes if settings have not yet loaded.
  */
 export function useDashboardStats() {
-  const { data: settings } = useSettings();
-
-  const intervalMs: number | false = settings
-    ? settings.polling.autoPollingEnabled
-      ? settings.polling.intervalSeconds * 1000
-      : false
-    : 2 * 60 * 1000; // default while settings load
+  const intervalMs = usePollingInterval(2 * 60 * 1000);
 
   return useQuery({
     queryKey: [...DASHBOARD_QUERY_KEY, "stats"],

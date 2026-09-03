@@ -507,7 +507,7 @@
     "notFoundDescription": "Passen Sie die Filter an oder prüfen Sie, ob in den Gebäuden Sensoren installiert wurden.",
     "loadError": "Sensoren konnten nicht geladen werden",
     "genericLoadError": "Beim Laden ist ein Fehler aufgetreten.",
-    "lastUpdate": "Letzte Aktualisierung: {{date}}",
+    "lastUpdate": "Letzte Aktualisierung",
     "updatedAt": "Aktualisiert: {{date}}",
     "lastReading": "Letzter Messwert",
     "interval": "Intervall",

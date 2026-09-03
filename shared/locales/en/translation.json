@@ -507,7 +507,7 @@
     "notFoundDescription": "Adjust the filters or verify that sensors have been installed in the buildings.",
     "loadError": "Unable to load sensors",
     "genericLoadError": "An error occurred while loading.",
-    "lastUpdate": "Last update: {{date}}",
+    "lastUpdate": "Last update",
     "updatedAt": "Updated: {{date}}",
     "lastReading": "Last reading",
     "interval": "Interval",

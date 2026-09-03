@@ -507,7 +507,7 @@
     "notFoundDescription": "Modifica i filtri oppure verifica che siano stati installati sensori negli edifici.",
     "loadError": "Impossibile caricare i sensori",
     "genericLoadError": "Si è verificato un errore durante il caricamento.",
-    "lastUpdate": "Ultimo aggiornamento: {{date}}",
+    "lastUpdate": "Ultimo aggiornamento",
     "updatedAt": "Aggiornato: {{date}}",
     "lastReading": "Ultima lettura",
     "interval": "Intervallo",

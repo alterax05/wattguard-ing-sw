@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next"
-import { UsersManagement } from "@/components/dashboard/users-management"
+import { UsersManagement } from "@/components/users"
 
 export function UsersPage() {
   const { t } = useTranslation()

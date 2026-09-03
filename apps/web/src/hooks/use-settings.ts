@@ -35,7 +35,30 @@ export function useSettings() {
       return data.config;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
   });
+}
+
+/**
+ * Resolves the dynamic polling/refresh interval in milliseconds based on the
+ * system configuration.
+ *
+ * - Returns `intervalSeconds * 1000` when auto-polling is enabled.
+ * - Returns `false` when auto-polling is disabled (stops React Query background polling).
+ * - Falls back to `fallbackMs` (default 90s) while settings are loading or if unavailable.
+ */
+export function usePollingInterval(
+  fallbackMs: number = 90 * 1000,
+): number | false {
+  const { data: settings } = useSettings();
+
+  if (!settings) {
+    return fallbackMs;
+  }
+
+  return settings.polling.autoPollingEnabled
+    ? settings.polling.intervalSeconds * 1000
+    : false;
 }
 
 /**
@@ -55,7 +78,7 @@ export function useUpdateSettings() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data: { success: true; config: SystemConfig } = await res.json();
+      const data = await res.json();
       return data.config;
     },
     onSuccess: (updatedConfig) => {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client } from "@/lib/api";
 import { errorMessageFromResponse } from "@/lib/errors";
+import { usePollingInterval } from "./use-settings";
 
 // ── Query Keys ──────────────────────────────────────────────────────────────
 
@@ -119,6 +120,8 @@ export function useBuilding(id: string | undefined) {
  * GET /api/buildings/:id/real-time
  */
 export function useBuildingRealTime(id: string | undefined) {
+  const refetchInterval = usePollingInterval();
+
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "real-time", id],
     queryFn: async () => {
@@ -133,7 +136,7 @@ export function useBuildingRealTime(id: string | undefined) {
       return res.json();
     },
     enabled: !!id,
-    refetchInterval: 90 * 1000, // Refetch every 90 seconds (sensor transmission interval)
+    refetchInterval,
     staleTime: 30 * 1000,
   });
 }

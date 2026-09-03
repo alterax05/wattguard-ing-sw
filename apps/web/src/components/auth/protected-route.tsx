@@ -54,3 +54,30 @@ export function GuestRoute() {
 
   return <Outlet />;
 }
+
+/**
+ * Route guard for admin-only routes (users, settings).
+ *
+ * - While the `/me` query is loading, shows a spinner.
+ * - If not authenticated, redirects to `/login`.
+ * - If authenticated but role is not admin, redirects to `/dashboard`.
+ * - If admin, renders child routes via `<Outlet />`.
+ */
+export function AdminRoute() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AuthLoading />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+}
+
