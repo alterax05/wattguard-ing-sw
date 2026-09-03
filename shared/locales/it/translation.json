@@ -189,7 +189,8 @@
     "invalid_date_range": "Intervallo di date non valido: la data di inizio deve precedere quella di fine.",
     "settings_update_failed": "Aggiornamento della configurazione non riuscito.",
     "generic": "Si è verificato un errore. Riprova.",
-    "download_failed": "Download non riuscito. Riprova."
+    "download_failed": "Download non riuscito. Riprova.",
+    "ttl_update_failed": "Impossibile aggiornare la TTL delle letture dei sensori."
   },
   "emails": {
     "invite": {

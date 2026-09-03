@@ -90,7 +90,7 @@ const app = new Hono()
     "/settings/*",
     jwt({ secret: JWT_SECRET, cookie: "access_token", alg: "HS256" }),
     loadUserDoc(),
-    requireRole("admin"),
+    requireRole("admin", "operator"),
   )
   .use(
     "/export/*",

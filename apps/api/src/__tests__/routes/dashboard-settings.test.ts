@@ -17,10 +17,12 @@ import {
 } from "bun:test";
 import { testClient } from "hono/testing";
 import { z } from "zod";
+import mongoose from "mongoose";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { Sensor } from "../../models/Sensor";
+import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
 import { ErrorSchema } from "@wattguard/shared";
 import type {
@@ -179,7 +181,7 @@ describe("settings api", () => {
     expect(data.config.polling.intervalSeconds).toBe(60);
   });
 
-  test("GET /api/settings rejects non-admin roles", async () => {
+  test("GET /api/settings allows operator role", async () => {
     await User.create({
       email: "operator@test.com",
       role: "operator",
@@ -198,7 +200,66 @@ describe("settings api", () => {
       headers: { Authorization: `Bearer ${operatorToken}` },
     });
 
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    if (!("config" in data)) {
+      throw new Error("Expected response to contain 'config'");
+    }
+    expect(data.config.polling.intervalSeconds).toBeGreaterThan(0);
+  });
+
+  test("PATCH /api/settings rejects non-admin roles", async () => {
+    await User.create({
+      email: "operator-patch@test.com",
+      role: "operator",
+      isDisabled: false,
+      passwordHash: await Bun.password.hash("operator123", { algorithm: "bcrypt", cost: 10 }),
+    });
+
+    const loginRes = await client.api.v1.auth.local.login.$post({
+      json: { email: "operator-patch@test.com", password: "operator123" },
+    });
+
+    const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
+    const operatorToken = tokenMatch![1]!;
+
+    const res = await client.api.v1.settings.$patch(
+      {
+        json: { polling: { intervalSeconds: 60 } },
+      },
+      {
+        headers: { Authorization: `Bearer ${operatorToken}` },
+      }
+    );
+
     // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
     expect(res.status as number).toBe(403);
+  });
+
+  test("PATCH /api/settings updates retention and sets expireAfterSeconds via collMod", async () => {
+    await SensorReading.createCollection();
+
+    const res = await client.api.v1.settings.$patch(
+      {
+        json: { database: { dataRetentionDays: 30 } },
+      },
+      {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }
+    );
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    if (!("config" in data)) {
+      throw new Error("Expected response to contain 'config'");
+    }
+    expect(data.config.database.dataRetentionDays).toBe(30);
+
+    // Verify MongoDB collection options updated
+    const db = mongoose.connection.db;
+    const collections = await db!.listCollections({ name: "sensorreadings" }).toArray();
+    // SAFETY: collections[0] is the collection info object from MongoDB listCollections.
+    const collectionInfo = collections[0] as { options?: { expireAfterSeconds?: number } } | undefined;
+    expect(collectionInfo?.options?.expireAfterSeconds).toBe(30 * 86400);
   });
 });

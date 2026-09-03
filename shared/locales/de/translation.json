@@ -189,7 +189,8 @@
     "invalid_date_range": "Ungültiger Zeitraum: Das Startdatum muss vor dem Enddatum liegen.",
     "settings_update_failed": "Die Konfiguration konnte nicht aktualisiert werden.",
     "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
-    "download_failed": "Download fehlgeschlagen. Bitte versuchen Sie es erneut."
+    "download_failed": "Download fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "ttl_update_failed": "Die TTL der Sensorlesungen konnte nicht aktualisiert werden."
   },
   "emails": {
     "invite": {

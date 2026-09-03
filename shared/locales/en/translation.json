@@ -189,7 +189,8 @@
     "invalid_date_range": "Invalid date range: start date must be before end date.",
     "settings_update_failed": "Failed to update the configuration.",
     "generic": "Something went wrong. Please try again.",
-    "download_failed": "Download failed. Please try again."
+    "download_failed": "Download failed. Please try again.",
+    "ttl_update_failed": "Failed to update the TTL of sensor readings."
   },
   "emails": {
     "invite": {
