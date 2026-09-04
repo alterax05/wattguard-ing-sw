@@ -32,8 +32,9 @@ export function useAcknowledgeAlert() {
 
   return useMutation({
     mutationFn: async (alertId: string) => {
-      const res = await client.api.v1.alerts[":id"].acknowledge.$patch({
-        param: { id: alertId }
+      const res = await client.api.v1.alerts[":id"].$patch({
+        param: { id: alertId },
+        json: { status: "acknowledged" },
       });
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
@@ -56,8 +57,9 @@ export function useResolveAlert() {
 
   return useMutation({
     mutationFn: async (alertId: string) => {
-      const res = await client.api.v1.alerts[":id"].resolve.$patch({
-        param: { id: alertId }
+      const res = await client.api.v1.alerts[":id"].$patch({
+        param: { id: alertId },
+        json: { status: "resolved" },
       });
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
@@ -73,3 +75,4 @@ export function useResolveAlert() {
     },
   });
 }
+

@@ -114,7 +114,7 @@ export function SettingsPanel() {
     try {
       const date = new Date().toISOString().slice(0, 10)
       await downloadFromEndpoint(
-        "/api/settings/export",
+        "/api/v1/settings/export",
         `wattguard-readings-${date}.json`,
       )
       toast.success(t("settings.dataExported"), { id: toastId })
@@ -131,7 +131,7 @@ export function SettingsPanel() {
     try {
       const date = new Date().toISOString().slice(0, 10)
       const res = await fetch(
-        "/api/settings/backup",
+        "/api/v1/settings/backups",
         { method: "POST", credentials: "include" },
       )
       if (!res.ok) {

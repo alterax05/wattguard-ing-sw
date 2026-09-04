@@ -63,14 +63,14 @@ export function useCurrentUser() {
 }
 
 /**
- * Validate an invite token via GET /api/invites/validate?token=...
+ * Validate an invite token via GET /api/v1/invites/:token
  */
 export function useValidateInvite(token: string | null) {
   return useQuery({
     queryKey: ["invites", "validate", token],
     queryFn: async () => {
-      const res = await client.api.v1.invites.validate.$get({
-        query: { token: token! },
+      const res = await client.api.v1.invites[":token"].$get({
+        param: { token: token! },
       });
 
       if (!res.ok) {
@@ -84,15 +84,16 @@ export function useValidateInvite(token: string | null) {
   });
 }
 
+
 /**
- * Validate a password reset token via GET /api/auth/local/validate-reset-token?token=...
+ * Validate a password reset token via GET /api/v1/auth/local/reset-tokens/:token
  */
 export function useValidateResetToken(token: string | null) {
   return useQuery({
     queryKey: ["auth", "validate-reset-token", token],
     queryFn: async () => {
-      const res = await client.api.v1.auth.local["validate-reset-token"].$get({
-        query: { token: token! },
+      const res = await client.api.v1.auth.local["reset-tokens"][":token"].$get({
+        param: { token: token! },
       });
 
       const data = await res.json();
@@ -138,7 +139,7 @@ export function useLogin() {
 }
 
 /**
- * Logout via POST /api/auth/logout.
+ * Logout via DELETE /api/v1/auth/session.
  * Clears the entire query cache so no stale authenticated data remains.
  */
 export function useLogout() {
@@ -147,7 +148,7 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await client.api.v1.auth.logout.$post();
+      const res = await client.api.v1.auth.session.$delete();
 
       if (!res.ok) {
         throw new Error("Logout failed");
@@ -155,6 +156,7 @@ export function useLogout() {
 
       return res.json();
     },
+
     onSuccess: () => {
       // Set the auth user to null first — this triggers AuthProvider to
       // re-render with `user: null`, which causes ProtectedRoute to redirect.

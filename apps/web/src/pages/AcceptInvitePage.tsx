@@ -62,7 +62,7 @@ export function AcceptInvitePage() {
   });
 
   const handleGoogleLogin = () => {
-    window.location.href = `/api/auth/google/start?inviteToken=${token}`;
+    window.location.href = `/api/v1/auth/google/start?inviteToken=${token}`;
   };
 
   function onSubmit(data: PasswordFormValues) {

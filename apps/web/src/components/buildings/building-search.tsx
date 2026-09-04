@@ -49,17 +49,17 @@ type ExportFormat = "csv" | "xlsx" | "pdf"
 
 const EXPORT_ACTIONS = {
   csv: {
-    url: "/api/export/consumption",
+    url: "/api/v1/export/consumption",
     formatParam: undefined,
     filename: (start: string, end: string) => `wattguard-consumption-${start}-${end}.csv`,
   },
   xlsx: {
-    url: "/api/export/report",
+    url: "/api/v1/export/report",
     formatParam: "xlsx",
     filename: (start: string, end: string) => `wattguard-report-${start}-${end}.xlsx`,
   },
   pdf: {
-    url: "/api/export/report",
+    url: "/api/v1/export/report",
     formatParam: "pdf",
     filename: (start: string, end: string) => `wattguard-report-${start}-${end}.pdf`,
   },
