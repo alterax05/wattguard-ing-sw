@@ -7,9 +7,19 @@ import { z } from "zod";
 import { UserRoleSchema, TokenQuerySchema } from "./common";
 
 /**
- * GET /api/v1/invites/validate - Validate invite token (query parameter)
+ * GET /api/v1/invites/validate - Validate invite token (query parameter, legacy)
  */
 export const ValidateInviteQuerySchema = TokenQuerySchema;
+
+/**
+ * GET /api/v1/invites/:token - Get invite details by token
+ */
+export const GetInviteParamsSchema = z.object({
+  token: z.string().min(1, "Invite token is required").describe("Invitation token"),
+});
+
+export type GetInviteParams = z.infer<typeof GetInviteParamsSchema>;
+
 
 /**
  * GET /api/v1/invites/validate - Success response

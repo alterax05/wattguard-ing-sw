@@ -64,11 +64,18 @@ export type ForgotPasswordResponse = z.infer<typeof ForgotPasswordResponseSchema
  */
 export const ValidateResetTokenQuerySchema = TokenQuerySchema;
 
+export const ValidateResetTokenParamsSchema = z.object({
+  token: z.string().min(1, "Reset token is required").describe("Password reset token"),
+});
+
+export type ValidateResetTokenParams = z.infer<typeof ValidateResetTokenParamsSchema>;
+
 export const ValidateResetTokenResponseSchema = z.object({
   valid: z.literal(true),
 });
 
 export type ValidateResetTokenResponse = z.infer<typeof ValidateResetTokenResponseSchema>;
+
 
 /**
  * POST /api/v1/auth/local/reset-password - Reset password with token

@@ -74,9 +74,16 @@ export const AlertIdParamSchema = z.object({
   id: ObjectIdSchema.describe("Alert identifier"),
 });
 
+export const UpdateAlertStatusRequestSchema = z.object({
+  status: z.enum(["acknowledged", "resolved"]).describe("New status for the alert"),
+});
+
+export type UpdateAlertStatusRequest = z.infer<typeof UpdateAlertStatusRequestSchema>;
+
 export const UpdateAlertStatusResponseSchema = z.object({
   success: z.literal(true),
   alert: AlertSchema,
 });
 
 export type UpdateAlertStatusResponse = z.infer<typeof UpdateAlertStatusResponseSchema>;
+

@@ -73,6 +73,9 @@ export const RevokeInviteParamsSchema = z.object({
   id: z.string().min(1, "Invite ID is required").describe("Invite identifier"),
 });
 
+export const DeleteInviteParamsSchema = RevokeInviteParamsSchema;
+export type DeleteInviteParams = z.infer<typeof DeleteInviteParamsSchema>;
+
 /**
  * POST /api/v1/admin/invites/:id/revoke - Revoke invite response
  */
@@ -82,6 +85,9 @@ export const RevokeInviteResponseSchema = z.object({
 });
 
 export type RevokeInviteResponse = z.infer<typeof RevokeInviteResponseSchema>;
+export const DeleteInviteResponseSchema = RevokeInviteResponseSchema;
+export type DeleteInviteResponse = RevokeInviteResponse;
+
 
 /**
  * GET /api/v1/admin/users - List all users response
