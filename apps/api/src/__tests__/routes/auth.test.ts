@@ -141,7 +141,7 @@ describe("auth api", () => {
         createdBy: admin._id,
       });
 
-      // Validate invite
+      // Validate invite via query param and path param
       const res = await client.api.v1.invites.validate.$get({
         query: { token },
       });
@@ -153,7 +153,19 @@ describe("auth api", () => {
       }
       expect(data.valid).toBe(true);
       expect(data.email).toBe("user@test.com");
+
+      const resPath = await client.api.v1.invites[":token"].$get({
+        param: { token },
+      });
+      expect(resPath.status).toBe(200);
+      const dataPath = await resPath.json();
+      if (!("valid" in dataPath)) {
+        throw new Error("Expected response to contain 'valid'");
+      }
+      expect(dataPath.valid).toBe(true);
+      expect(dataPath.email).toBe("user@test.com");
     });
+
   });
 
   describe("local password auth", () => {
@@ -419,6 +431,23 @@ describe("auth api", () => {
       expect(setCookieHeader).toContain("access_token=");
     });
 
+    test("logs out via RESTful DELETE /auth/session", async () => {
+      const res = await client.api.v1.auth.session.$delete();
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<LogoutResponse | ErrorResponse>();
+      if (!("success" in data)) {
+        throw new Error("Expected response to contain 'success'");
+      }
+      expect(data.success).toBe(true);
+
+      const setCookieHeader = res.headers.get("set-cookie");
+      expect(setCookieHeader).toBeDefined();
+      expect(setCookieHeader).toContain("access_token=");
+    });
+
+
     test("sends test email as admin", async () => {
       await User.create({
         email: "admin@test.com",
@@ -513,13 +542,21 @@ describe("auth api", () => {
         expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
       });
 
-      // Validate token
+      // Validate token via query and path param
       const validateRes = await client.api.v1.auth.local["validate-reset-token"].$get({
         query: { token },
       });
       expect(validateRes.status).toBe(200);
       const validateData = await validateRes.json();
       expectTypeOf(validateData).toExtend<ValidateResetTokenResponse | ErrorResponse>();
+
+      const validatePathRes = await client.api.v1.auth.local["reset-tokens"][":token"].$get({
+        param: { token },
+      });
+      expect(validatePathRes.status).toBe(200);
+      const validatePathData = await validatePathRes.json();
+      expectTypeOf(validatePathData).toExtend<ValidateResetTokenResponse | ErrorResponse>();
+
 
       // Reset password
       const resetRes = await client.api.v1.auth.local["reset-password"].$post({

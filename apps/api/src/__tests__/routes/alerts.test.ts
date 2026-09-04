@@ -135,9 +135,10 @@ describe("alerts api", () => {
     const alert = await Alert.findOne({ status: "active" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.v1.alerts[":id"].acknowledge.$patch(
+    const res = await client.api.v1.alerts[":id"].$patch(
       {
         param: { id: alert!._id.toString() },
+        json: { status: "acknowledged" },
       },
       {
         headers: { Cookie: `access_token=${adminToken}` },
@@ -159,9 +160,10 @@ describe("alerts api", () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.v1.alerts[":id"].acknowledge.$patch(
+    const res = await client.api.v1.alerts[":id"].$patch(
       {
         param: { id: alert!._id.toString() },
+        json: { status: "acknowledged" },
       },
       {
         headers: { Cookie: `access_token=${adminToken}` },
@@ -182,9 +184,10 @@ describe("alerts api", () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.v1.alerts[":id"].resolve.$patch(
+    const res = await client.api.v1.alerts[":id"].$patch(
       {
         param: { id: alert!._id.toString() },
+        json: { status: "resolved" },
       },
       {
         headers: { Cookie: `access_token=${adminToken}` },
@@ -201,4 +204,5 @@ describe("alerts api", () => {
     expect(body.alert.status).toBe("resolved");
     expect(body.alert.resolvedBy).toBe("Admin User");
   });
+
 });

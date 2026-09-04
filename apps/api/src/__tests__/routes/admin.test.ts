@@ -118,11 +118,13 @@ describe("admin api", () => {
       if (!("invite" in data)) {
         throw new Error("Expected response to contain 'invite'");
       }
+      expect(res.headers.get("location")).toBe(`/api/v1/admin/invites/${data.invite.id}`);
       expect(data.success).toBe(true);
       expect(data.invite.email).toBe("newuser@test.com");
       expect(data.invite.role).toBe("operator");
       expect(data.invite.status).toBe("pending");
     });
+
 
     test("normalizes email on invite creation", async () => {
       const token = await getAdminToken();
@@ -473,6 +475,45 @@ describe("admin api", () => {
       expect(res.status).toBe(401);
     });
   });
+
+  describe("DELETE /api/v1/admin/invites/:id", () => {
+    test("revokes/deletes pending invite via RESTful DELETE", async () => {
+      const token = await getAdminToken();
+      const admin = await User.findOne({ email: "admin@test.com" });
+
+      const invite = await Invite.create({
+        email: "user-delete@test.com",
+        role: "operator",
+        tokenHash: "hash-delete-123",
+        status: "pending",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdBy: admin!._id,
+      });
+
+      const res = await client.api.v1.admin.invites[":id"].$delete(
+        {
+          param: { id: invite._id.toString() },
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<RevokeInviteResponse | ErrorResponse>();
+      if (!("invite" in data)) {
+        throw new Error("Expected response to contain 'invite'");
+      }
+      expect(data.success).toBe(true);
+      expect(data.invite.status).toBe("revoked");
+
+      // Verify in database
+      const revokedInvite = await Invite.findById(invite._id);
+      expect(revokedInvite!.status).toBe("revoked");
+    });
+  });
+
 
   describe("PATCH /api/v1/admin/users/:id", () => {
     test("updates user role", async () => {
