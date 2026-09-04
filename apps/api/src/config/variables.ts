@@ -93,8 +93,8 @@ export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 export const GOOGLE_REDIRECT_URI =
   process.env.GOOGLE_REDIRECT_URI ||
   (IS_PRODUCTION
-    ? `${PUBLIC_APP_URL}/api/auth/google/callback`
-    : "http://localhost:3000/api/auth/google/callback");
+    ? `${PUBLIC_APP_URL}/api/v1/auth/google/callback`
+    : "http://localhost:3000/api/v1/auth/google/callback");
 
 // ── Email (Resend) ───────────────────────────────────────────────────────────
 
