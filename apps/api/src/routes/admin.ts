@@ -397,6 +397,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json({ error: "Failed to send invite email. Check email configuration.", code: "invite_email_failed" }, 500);
       }
 
+      c.header("Location", `/api/v1/admin/invites/${invite._id.toString()}`);
+
       return c.json({
         success: true as const,
         invite: {
@@ -409,8 +411,89 @@ const app = new Hono<{ Variables: AuthVariables }>()
       } satisfies CreateInviteResponse, 201);
     }
   )
+  .delete(
+    "/invites/:id",
+    describeRoute({
+      description: "Revoke/delete a pending invitation (admin only)",
+      tags: ["Admin"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Invite revoked successfully",
+          content: {
+            "application/json": {
+              schema: resolver(RevokeInviteResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invite cannot be revoked (not pending)",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Invite not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", RevokeInviteParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+
+      const invite = await Invite.findById(id);
+      if (!invite) {
+        return c.json({ error: "Invite not found", code: "invite_not_found" }, 404);
+      }
+
+      if (invite.status !== "pending") {
+        return c.json({ error: "Can only revoke pending invites", code: "only_pending_invites_revocable" }, 400);
+      }
+
+      invite.status = "revoked";
+      await invite.save();
+
+      return c.json({
+        success: true as const,
+        invite: {
+          id: invite._id.toString(),
+          email: invite.email,
+          role: invite.role,
+          status: invite.status,
+          expiresAt: invite.expiresAt.toISOString(),
+          createdAt: invite.createdAt?.toISOString() ?? undefined,
+          acceptedAt: invite.acceptedAt?.toISOString() ?? undefined,
+          createdBy: invite.createdBy?.toString() ?? undefined,
+        },
+      } satisfies RevokeInviteResponse);
+    }
+  )
   .post(
     "/invites/:id/revoke",
+
     describeRoute({
       description: "Revoke a pending invitation (admin only)",
       tags: ["Admin"],

@@ -117,8 +117,34 @@ const app = new Hono<{ Variables: AuthVariables }>()
       } satisfies MeResponse);
     }
   )
+  .delete(
+    "/session",
+    describeRoute({
+      description: "Destroy current user session (logout)",
+      tags: ["Authentication"],
+      responses: {
+        200: {
+          description: "Session destroyed successfully",
+          content: {
+            "application/json": {
+              schema: resolver(LogoutResponseSchema),
+            },
+          },
+        },
+      },
+    }),
+    (c) => {
+      setCookie(c, "access_token", "", {
+        maxAge: 0,
+        path: "/",
+      });
+
+      return c.json({ success: true } satisfies LogoutResponse);
+    }
+  )
   .post(
     "/logout",
+
     describeRoute({
       description: "Logout current user by clearing authentication cookie",
       tags: ["Authentication"],

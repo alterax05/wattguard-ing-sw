@@ -9,7 +9,8 @@
  * GET  /api/settings/export  - Download all sensor readings as JSON
  * POST /api/settings/backup  - Download a full database backup as JSON
  */
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+
 import mongoose from "mongoose";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { requireRole, type AuthVariables } from "../middleware/auth";
@@ -46,6 +47,36 @@ function serializeConfig(
       dataRetentionDays: doc.database!.dataRetentionDays,
     },
   };
+}
+
+async function handleBackup(c: Context<{ Variables: AuthVariables }>) {
+  // Fetch all collections in parallel (exclude password hashes from users)
+  const [buildings, sensors, alerts, users, config] = await Promise.all([
+    Building.find().lean(),
+    Sensor.find().lean(),
+    Alert.find().lean(),
+    User.find().select("-passwordHash -googleSub").lean(),
+    SystemConfig.getOrCreate(),
+  ]);
+
+  const backup = {
+    backupAt: new Date().toISOString(),
+    version: "1.0",
+    collections: {
+      buildings,
+      sensors,
+      alerts,
+      users,
+      systemConfig: serializeConfig(config),
+    },
+  };
+
+  const filename = `wattguard-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
+  c.header("Content-Type", "application/json");
+  c.header("Content-Disposition", `attachment; filename="${filename}"`);
+
+  return c.body(JSON.stringify(backup, null, 2));
 }
 
 const app = new Hono<{ Variables: AuthVariables }>()
@@ -235,7 +266,34 @@ const app = new Hono<{ Variables: AuthVariables }>()
     },
   )
 
-  // ── POST /api/settings/backup ──────────────────────────────────────────────
+  // ── POST /api/settings/backups ─────────────────────────────────────────────
+  .post(
+    "/backups",
+    requireRole("admin"),
+    describeRoute({
+      description:
+        "Download a full database backup as a JSON file (admin only)",
+      tags: ["Settings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "JSON backup file download",
+          content: { "application/json": { schema: { type: "object" } } },
+        },
+        401: {
+          description: "Unauthorized",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        403: {
+          description: "Forbidden – requires admin role",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+      },
+    }),
+    handleBackup,
+  )
+
+  // ── POST /api/settings/backup (legacy) ──────────────────────────────────────
   .post(
     "/backup",
     requireRole("admin"),
@@ -259,36 +317,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    async (c) => {
-      // Fetch all collections in parallel (exclude password hashes from users)
-      const [buildings, sensors, alerts, users, config] = await Promise.all([
-        Building.find().lean(),
-        Sensor.find().lean(),
-        Alert.find().lean(),
-        User.find().select("-passwordHash -googleSub").lean(),
-        SystemConfig.getOrCreate(),
-      ]);
-
-      const backup = {
-        backupAt: new Date().toISOString(),
-        version: "1.0",
-        collections: {
-          buildings,
-          sensors,
-          alerts,
-          users,
-          systemConfig: serializeConfig(config),
-        },
-      };
-
-      const filename = `wattguard-backup-${new Date().toISOString().slice(0, 10)}.json`;
-
-      c.header("Content-Type", "application/json");
-      c.header("Content-Disposition", `attachment; filename="${filename}"`);
-
-      return c.body(JSON.stringify(backup, null, 2));
-    },
+    handleBackup,
   );
+
 
 export default app;
 export type AppType = typeof app;

@@ -21,7 +21,9 @@ import {
   ForgotPasswordRequestSchema,
   ForgotPasswordResponseSchema,
   ValidateResetTokenQuerySchema,
+  ValidateResetTokenParamsSchema,
   ValidateResetTokenResponseSchema,
+
   ResetPasswordRequestSchema,
   ResetPasswordResponseSchema,
   ErrorSchema,
@@ -286,6 +288,56 @@ const app = new Hono()
     }
   )
   .get(
+    "/reset-tokens/:token",
+    describeRoute({
+      description: "Validate password reset token by path parameter without consuming it",
+      tags: ["Authentication"],
+      responses: {
+        200: {
+          description: "Token is valid",
+          content: {
+            "application/json": {
+              schema: resolver(ValidateResetTokenResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Token has expired",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Token not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", ValidateResetTokenParamsSchema),
+    async (c) => {
+      const { token } = c.req.valid("param");
+
+      const tokenHash = hashTokenSha256(token);
+      const resetToken = await PasswordResetToken.findOne({ tokenHash });
+
+      if (!resetToken) {
+        return c.json({ error: "Invalid reset token", code: "invalid_reset_token" }, 404);
+      }
+
+      if (resetToken.expiresAt < new Date()) {
+        return c.json({ error: "Reset token has expired", code: "reset_token_expired" }, 400);
+      }
+
+      return c.json({ valid: true } satisfies ValidateResetTokenResponse);
+    }
+  )
+  .get(
     "/validate-reset-token",
     describeRoute({
       description: "Validate password reset token without consuming it",
@@ -329,13 +381,13 @@ const app = new Hono()
       }
 
       if (resetToken.expiresAt < new Date()) {
-        await PasswordResetToken.findByIdAndDelete(resetToken._id);
         return c.json({ error: "Reset token has expired", code: "reset_token_expired" }, 400);
       }
 
       return c.json({ valid: true } satisfies ValidateResetTokenResponse);
     }
   )
+
   .post(
     "/reset-password",
     describeRoute({

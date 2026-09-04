@@ -6,8 +6,10 @@ import {
   ListAlertsQuerySchema,
   ListAlertsResponseSchema,
   AlertIdParamSchema,
+  UpdateAlertStatusRequestSchema,
   UpdateAlertStatusResponseSchema,
 } from "@wattguard/shared";
+
 import type {
   ListAlertsResponse,
   UpdateAlertStatusResponse,
@@ -119,14 +121,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
     },
   )
   .patch(
-    "/:id/acknowledge",
+    "/:id",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Acknowledge an alert",
-      description: "Mark an active alert as acknowledged.",
+      summary: "Update alert status",
+      description: "Update an alert's status (acknowledge or resolve).",
       responses: {
         200: {
-          description: "Alert acknowledged successfully",
+          description: "Alert status updated successfully",
           content: {
             "application/json": {
               schema: resolver(UpdateAlertStatusResponseSchema),
@@ -134,7 +136,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
-          description: "Invalid ID format or alert not active",
+          description: "Invalid ID format, invalid status transition, or validation error",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
         404: {
@@ -144,75 +146,32 @@ const app = new Hono<{ Variables: AuthVariables }>()
       },
     }),
     validator("param", AlertIdParamSchema),
+    validator("json", UpdateAlertStatusRequestSchema),
     async (c) => {
       const { id } = c.req.valid("param");
+      const { status } = c.req.valid("json");
       const user = c.get("userDoc");
+      const actor = user.name || user.email;
 
-      const result = await acknowledge({ id, actor: user.name || user.email });
+      const result =
+        status === "acknowledged"
+          ? await acknowledge({ id, actor })
+          : await resolveManually({ id, actor });
+
       if (!result.ok) {
         return alertErrorResponse(c, result.code);
       }
 
       return c.json({
         success: true as const,
-        // SAFETY: result.alert comes back from findOneAndUpdate({ returnDocument: "after" })
-        // on the Alert collection, so it is a full document with _id and
-        // timestamps as required by AlertDTOInput.
-        alert: toAlertDTO(result.alert as AlertDTOInput, {
-          locale: getRequestLocale(c),
-        }),
-      } satisfies UpdateAlertStatusResponse);
-    },
-  )
-  .patch(
-    "/:id/resolve",
-    describeRoute({
-      tags: ["Alerts"],
-      summary: "Resolve an alert",
-      description: "Mark an alert as resolved.",
-      responses: {
-        200: {
-          description: "Alert resolved successfully",
-          content: {
-            "application/json": {
-              schema: resolver(UpdateAlertStatusResponseSchema),
-            },
-          },
-        },
-        400: {
-          description: "Invalid ID format",
-          content: { "application/json": { schema: resolver(ErrorSchema) } },
-        },
-        404: {
-          description: "Alert not found",
-          content: { "application/json": { schema: resolver(ErrorSchema) } },
-        },
-      },
-    }),
-    validator("param", AlertIdParamSchema),
-    async (c) => {
-      const { id } = c.req.valid("param");
-      const user = c.get("userDoc");
-
-      const result = await resolveManually({
-        id,
-        actor: user.name || user.email,
-      });
-      if (!result.ok) {
-        return alertErrorResponse(c, result.code);
-      }
-
-      return c.json({
-        success: true as const,
-        // SAFETY: result.alert comes back from findOneAndUpdate({ returnDocument: "after" })
-        // on the Alert collection, so it is a full document with _id and
-        // timestamps as required by AlertDTOInput.
+        // SAFETY: acknowledge and resolveManually return an AlertDocument with required ObjectId and timestamps.
         alert: toAlertDTO(result.alert as AlertDTOInput, {
           locale: getRequestLocale(c),
         }),
       } satisfies UpdateAlertStatusResponse);
     },
   );
+
 
 export default app;
 export type AppType = typeof app;

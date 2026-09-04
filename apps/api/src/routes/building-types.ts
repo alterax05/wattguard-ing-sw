@@ -150,9 +150,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
         description,
       });
 
+      c.header("Location", `/api/v1/building-types/${buildingType._id.toString()}`);
+
       return c.json(
         {
           success: true,
+
           buildingType: {
             id: buildingType._id.toString(),
             name: buildingType.name,

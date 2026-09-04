@@ -265,8 +265,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       await building.save();
 
+      c.header("Location", `/api/v1/buildings/${building._id.toString()}`);
+
       return c.json({
         success: true,
+
         building: {
           id: building._id.toString(),
           name: building.name,

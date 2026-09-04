@@ -77,18 +77,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
         .limit(query.limit)
         .skip(query.offset);
 
-      // Auto-mark sensors inactive when they exceed 2× their transmission interval
-      // without sending a reading. Only sensors currently "active" are affected;
-      // manually-set statuses (maintenance, error) are left untouched.
-      await Promise.all(
-        sensors.map(async (sensor) => sensor.updateStatus())
-      );
-
       return c.json({
         sensors: sensors.map((sensor) => {
           const buildingRef = sensor.buildingId;
           const building =
             buildingRef instanceof Types.ObjectId ? undefined : buildingRef;
+          const isOverdue = sensor.status === "active" && !sensor.isActive();
+          const effectiveStatus = isOverdue ? "inactive" : sensor.status;
           return {
             id: sensor._id.toString(),
             buildingId:
@@ -99,8 +94,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
             location: sensor.location,
             serialNumber: sensor.serialNumber ?? undefined,
             installationDate: sensor.installationDate.toISOString(),
-            status: sensor.status,
-            isOffline: sensor.status === "inactive",
+            status: effectiveStatus,
+            isOffline: effectiveStatus === "inactive",
+
             lastReading: sensor.lastReading
               ? {
                   value: sensor.lastReading.value,
@@ -197,9 +193,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         updatedBy: userDoc._id,
       });
 
+      c.header("Location", `/api/v1/sensors/${sensor._id.toString()}`);
       return c.json(
         {
           success: true,
+
           sensor: {
             id: sensor._id.toString(),
             buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
@@ -266,7 +264,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           ? buildingRef.toString()
           : buildingRef._id.toString();
 
-      await sensor.updateStatus();
+      const isOverdue = sensor.status === "active" && !sensor.isActive();
+      const effectiveStatus = isOverdue ? "inactive" : sensor.status;
 
       return c.json({
         sensor: {
@@ -276,9 +275,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           location: sensor.location,
           serialNumber: sensor.serialNumber ?? undefined,
           installationDate: sensor.installationDate.toISOString(),
-          status: sensor.status,
-          isOffline: sensor.status === "inactive",
+          status: effectiveStatus,
+          isOffline: effectiveStatus === "inactive",
           lastReading: sensor.lastReading
+
             ? {
                 value: sensor.lastReading.value,
                 timestamp: sensor.lastReading.timestamp.toISOString(),
