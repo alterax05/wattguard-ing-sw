@@ -11,7 +11,6 @@ import {
 } from "bun:test";
 
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
@@ -25,13 +24,12 @@ import type {
   SessionResponse,
   SessionUserResponse,
   DestroySessionResponse,
-  CreateResetTokenResponse,
-  ValidateResetTokenResponse,
-  ApplyPasswordResetResponse,
-  GoogleConfigResponse,
-} from "@wattguard/shared";
+  CreateRecoveryTokenResponse,
+  ValidateRecoveryTokenResponse,
+  ConfirmRecoveryResponse,
+  GoogleConfigResponse, ErrorResponse} from "@wattguard/shared";
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 interface MockGooglePayload {
   sub: string;
@@ -173,12 +171,13 @@ describe("auth api", () => {
         createdBy: admin._id,
       });
 
-      const res = await client.api.v1.invites[":token"].$get({
-        param: { token },
+      const res = await client.api.v1.invites.$get({
+        query: { token },
       });
 
       expect(res.status).toBe(200);
-      const data = await res.json();
+      // SAFETY: callers supply the documented response schema of the endpoint under test.
+      const data = (await res.json()) as ValidateInviteResponse | ErrorResponse;
       expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
@@ -189,7 +188,7 @@ describe("auth api", () => {
       expect(data.data.role).toBe("operator");
     });
 
-    test("completes local setup and activates user account via POST /invites/:token/acceptance", async () => {
+    test("completes local setup and activates user account via PATCH /invites/:id", async () => {
       const token = randomToken(32);
       const tokenHash = hashTokenSha256(token);
 
@@ -202,7 +201,7 @@ describe("auth api", () => {
         }),
       });
 
-      await Invite.create({
+      const invite = await Invite.create({
         email: "user@test.com",
         role: "operator",
         tokenHash,
@@ -212,9 +211,10 @@ describe("auth api", () => {
       });
 
       // Accept invite
-      const res = await client.api.v1.invites[":token"].acceptance.$post({
-        param: { token },
+      const res = await client.api.v1.invites[":id"].$patch({
+        param: { id: invite._id.toString() },
         json: {
+          token,
           password: "password123",
           name: "Test User",
         },
@@ -235,11 +235,11 @@ describe("auth api", () => {
       expect(user!.passwordHash).toBeDefined();
 
       // Verify invite was marked as accepted
-      const invite = await Invite.findOne({ tokenHash });
-      expect(invite!.status).toBe("accepted");
+      const acceptedInvite = await Invite.findOne({ tokenHash });
+      expect(acceptedInvite!.status).toBe("accepted");
     });
 
-    test("accepts invite via Google ID token via POST /invites/:token/acceptance", async () => {
+    test("accepts invite via Google ID token via PATCH /invites/:id", async () => {
       const token = randomToken(32);
       const tokenHash = hashTokenSha256(token);
 
@@ -252,7 +252,7 @@ describe("auth api", () => {
         }),
       });
 
-      await Invite.create({
+      const invite = await Invite.create({
         email: "googleuser@test.com",
         role: "operator",
         tokenHash,
@@ -261,9 +261,10 @@ describe("auth api", () => {
         createdBy: admin._id,
       });
 
-      const res = await client.api.v1.invites[":token"].acceptance.$post({
-        param: { token },
+      const res = await client.api.v1.invites[":id"].$patch({
+        param: { id: invite._id.toString() },
         json: {
+          token,
           idToken: "valid-mock-google-token",
         },
       });
@@ -279,8 +280,8 @@ describe("auth api", () => {
       expect(user).toBeDefined();
       expect(user!.googleSub).toBe("google-12345");
 
-      const invite = await Invite.findOne({ tokenHash });
-      expect(invite!.status).toBe("accepted");
+      const acceptedInvite = await Invite.findOne({ tokenHash });
+      expect(acceptedInvite!.status).toBe("accepted");
     });
   });
 
@@ -541,7 +542,9 @@ describe("auth api", () => {
       const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
       const token = tokenMatch![1];
 
-      const res = await client.api.v1.invites.$get(undefined, {
+      const res = await client.api.v1.invites.$get({
+        query: {},
+      }, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -552,8 +555,8 @@ describe("auth api", () => {
     });
   });
 
-  describe("password reset flow", () => {
-    test("requests password reset for existing user via POST /auth/reset-tokens", async () => {
+  describe("password recovery flow", () => {
+    test("requests password recovery for existing user via POST /auth/recovery-tokens", async () => {
       await User.create({
         email: "user@test.com",
         role: "operator",
@@ -563,13 +566,13 @@ describe("auth api", () => {
         }),
       });
 
-      const res = await client.api.v1.auth["reset-tokens"].$post({
+      const res = await client.api.v1.auth["recovery-tokens"].$post({
         json: { email: "user@test.com" },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<CreateResetTokenResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<CreateRecoveryTokenResponse | ErrorResponse>();
       expect(data.success).toBe(true);
 
       const user = await User.findOne({ email: "user@test.com" });
@@ -577,7 +580,7 @@ describe("auth api", () => {
       expect(resetToken).toBeDefined();
     });
 
-    test("completes full password reset flow", async () => {
+    test("completes full password recovery flow", async () => {
       const user = await User.create({
         email: "user@test.com",
         role: "operator",
@@ -596,17 +599,17 @@ describe("auth api", () => {
         expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
       });
 
-      // Validate token via GET /auth/reset-tokens/:token
-      const validateRes = await client.api.v1.auth["reset-tokens"][":token"].$get({
-        param: { token },
+      // Validate token via POST /auth/recovery-validations
+      const validateRes = await client.api.v1.auth["recovery-validations"].$post({
+        json: { token },
       });
       expect(validateRes.status).toBe(200);
       const validateData = await validateRes.json();
-      expectTypeOf(validateData).toExtend<ValidateResetTokenResponse | ErrorResponse>();
+      expectTypeOf(validateData).toExtend<ValidateRecoveryTokenResponse | ErrorResponse>();
       expect(validateData.success).toBe(true);
 
-      // Apply reset password via POST /auth/password-resets
-      const resetRes = await client.api.v1.auth["password-resets"].$post({
+      // Confirm recovery via POST /auth/recovery-confirmations
+      const resetRes = await client.api.v1.auth["recovery-confirmations"].$post({
         json: {
           token,
           password: "newpassword123",
@@ -615,7 +618,7 @@ describe("auth api", () => {
 
       expect(resetRes.status).toBe(200);
       const resetData = await resetRes.json();
-      expectTypeOf(resetData).toExtend<ApplyPasswordResetResponse | ErrorResponse>();
+      expectTypeOf(resetData).toExtend<ConfirmRecoveryResponse | ErrorResponse>();
       expect(resetData.success).toBe(true);
 
       // Verify token was deleted
@@ -643,7 +646,7 @@ describe("auth api", () => {
       expect(oldLoginRes.status).toBe(401);
     });
 
-    test("rejects expired reset token", async () => {
+    test("rejects expired recovery token", async () => {
       const user = await User.create({
         email: "user@test.com",
         role: "operator",
@@ -662,7 +665,7 @@ describe("auth api", () => {
         expiresAt: new Date(Date.now() - 1000), // Expired 1 second ago
       });
 
-      const res = await client.api.v1.auth["password-resets"].$post({
+      const res = await client.api.v1.auth["recovery-confirmations"].$post({
         json: {
           token,
           password: "newpassword123",

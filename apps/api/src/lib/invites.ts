@@ -6,16 +6,23 @@ import {
   type ErrorCode,
   type ValidateInviteData,
 } from "@wattguard/shared";
-import type { Document } from "mongoose";
 import { Invite, type HydratedInvite } from "../models/Invite";
 import { hashTokenSha256 } from "../utils/crypto";
 
-export const toInviteDto = (invite: Document | HydratedInvite): InviteDto => {
-  return InviteSchema.parse(invite.toObject());
+export const toInviteDto = (invite: HydratedInvite): InviteDto => {
+  const obj = invite.toObject();
+  return InviteSchema.parse({
+    ...obj,
+    self: `/api/v1/invites/${String(obj._id)}`,
+  });
 };
 
-export const toCreateInviteDto = (invite: Document | HydratedInvite): CreateInviteDto => {
-  return CreateInviteSchema.parse(invite.toObject());
+export const toCreateInviteDto = (invite: HydratedInvite): CreateInviteDto => {
+  const obj = invite.toObject();
+  return CreateInviteSchema.parse({
+    ...obj,
+    self: `/api/v1/invites/${String(obj._id)}`,
+  });
 };
 
 export type ValidateInviteResult =
@@ -69,7 +76,9 @@ export async function validateInviteToken(
   return {
     ok: true,
     data: {
-      valid: true,
+      valid: true as const,
+      _id: invite._id.toString(),
+      self: `/api/v1/invites/${invite._id.toString()}`,
       email: invite.email,
       role: invite.role,
       expiresAt: invite.expiresAt.toISOString(),

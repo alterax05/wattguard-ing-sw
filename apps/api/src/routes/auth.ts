@@ -1,7 +1,7 @@
 /**
  * Authentication & Session routes
  * 
- * RESTful session management, password resets, and client auth configuration.
+ * RESTful session management, password recovery, and client auth configuration.
  */
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
@@ -26,12 +26,12 @@ import {
   UpdateSessionRequestSchema,
   DestroySessionResponseSchema,
   GoogleConfigResponseSchema,
-  CreateResetTokenRequestSchema,
-  CreateResetTokenResponseSchema,
-  ValidateResetTokenParamsSchema,
-  ValidateResetTokenResponseSchema,
-  ApplyPasswordResetRequestSchema,
-  ApplyPasswordResetResponseSchema,
+  CreateRecoveryTokenRequestSchema,
+  CreateRecoveryTokenResponseSchema,
+  ValidateRecoveryTokenRequestSchema,
+  ValidateRecoveryTokenResponseSchema,
+  ConfirmRecoveryRequestSchema,
+  ConfirmRecoveryResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
@@ -39,9 +39,9 @@ import type {
   SessionUserResponse,
   DestroySessionResponse,
   GoogleConfigResponse,
-  CreateResetTokenResponse,
-  ValidateResetTokenResponse,
-  ApplyPasswordResetResponse,
+  CreateRecoveryTokenResponse,
+  ValidateRecoveryTokenResponse,
+  ConfirmRecoveryResponse,
   ErrorResponse,
 } from "@wattguard/shared";
 
@@ -364,31 +364,31 @@ const app = new Hono<{ Variables: AuthVariables }>()
     },
   )
 
-  /* ── 6. Request Password Reset Token ──────────────────────────────────── */
+  /* ── 6. Request Password Recovery Token ───────────────────────────────── */
   .post(
-    "/reset-tokens",
+    "/recovery-tokens",
     describeRoute({
-      summary: "Richiedi reset password",
-      description: "Crea il token di reset e invia l'email se l'account esiste",
+      summary: "Richiedi recupero password",
+      description: "Crea il token di recupero e invia l'email se l'account esiste",
       tags: ["Authentication"],
       responses: {
         200: {
           description: "Request processed",
           content: {
             "application/json": {
-              schema: resolver(CreateResetTokenResponseSchema),
+              schema: resolver(CreateRecoveryTokenResponseSchema),
             },
           },
         },
       },
     }),
     passwordResetRateLimiter,
-    validator("json", CreateResetTokenRequestSchema),
+    validator("json", CreateRecoveryTokenRequestSchema),
     async (c) => {
       const { email } = c.req.valid("json");
       const successResponse = apiSuccess({
         message: "Se l'email esiste, riceverai un link per reimpostare la password",
-      }) satisfies CreateResetTokenResponse;
+      }) satisfies CreateRecoveryTokenResponse;
 
       try {
         const user = await User.findOne({ email });
@@ -414,19 +414,20 @@ const app = new Hono<{ Variables: AuthVariables }>()
     },
   )
 
-  /* ── 7. Validate Password Reset Token ─────────────────────────────────── */
-  .get(
-    "/reset-tokens/:token",
+  /* ── 7. Validate Password Recovery Token ──────────────────────────────── */
+  .post(
+    "/recovery-validations",
     describeRoute({
-      summary: "Verifica token di reset",
-      description: "Controlla la validità del token di reset senza consumarlo",
+      summary: "Verifica token di recupero",
+      description:
+        "Controlla la validità del token di recupero senza consumarlo. Token nel body, mai in URL",
       tags: ["Authentication"],
       responses: {
         200: {
           description: "Token is valid",
           content: {
             "application/json": {
-              schema: resolver(ValidateResetTokenResponseSchema),
+              schema: resolver(ValidateRecoveryTokenResponseSchema),
             },
           },
         },
@@ -448,9 +449,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    validator("param", ValidateResetTokenParamsSchema),
+    validator("json", ValidateRecoveryTokenRequestSchema),
     async (c) => {
-      const { token } = c.req.valid("param");
+      const { token } = c.req.valid("json");
       const tokenHash = hashTokenSha256(token);
       const resetToken = await PasswordResetToken.findOne({ tokenHash });
 
@@ -469,24 +470,24 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }
 
       return c.json(
-        apiSuccess({ valid: true as const }) satisfies ValidateResetTokenResponse,
+        apiSuccess({ valid: true as const }) satisfies ValidateRecoveryTokenResponse,
       );
     },
   )
 
-  /* ── 8. Apply Password Reset ─────────────────────────────────────────── */
+  /* ── 8. Confirm Password Recovery ───────────────────────────────────────── */
   .post(
-    "/password-resets",
+    "/recovery-confirmations",
     describeRoute({
-      summary: "Reimposta password",
+      summary: "Conferma recupero password",
       description: "Reimposta la password con un token valido (uso singolo)",
       tags: ["Authentication"],
       responses: {
         200: {
-          description: "Password reset successful",
+          description: "Password recovery successful",
           content: {
             "application/json": {
-              schema: resolver(ApplyPasswordResetResponseSchema),
+              schema: resolver(ConfirmRecoveryResponseSchema),
             },
           },
         },
@@ -508,7 +509,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    validator("json", ApplyPasswordResetRequestSchema),
+    validator("json", ConfirmRecoveryRequestSchema),
     async (c) => {
       const { token, password } = c.req.valid("json");
       const tokenHash = hashTokenSha256(token);
@@ -551,7 +552,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       await PasswordResetToken.findByIdAndDelete(resetToken._id);
 
       return c.json(
-        apiSuccess({ message: "Password reset successfully" }) satisfies ApplyPasswordResetResponse,
+        apiSuccess({ message: "Password reset successfully" }) satisfies ConfirmRecoveryResponse,
       );
     },
   );
