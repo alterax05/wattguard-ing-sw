@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useTranslation } from "react-i18next"
@@ -191,18 +191,19 @@ export function useBuildingForm({ mode, building }: UseBuildingFormOptions) {
     }
   }, [building])
 
-  const address = form.watch("address")
+  // NOTE: useWatch (not form.watch) — render-time watch() reads are frozen
+  // by React Compiler memoization; useWatch subscribes and stays reactive.
+  const address = useWatch({ control: form.control, name: "address" })
+  const [latitude, longitude] = useWatch({ control: form.control, name: ["latitude", "longitude"] })
 
   const markerPosition = useMemo<[number, number] | null>(() => {
-    const lat = form.watch("latitude")
-    const lng = form.watch("longitude")
-    if (lat && lng) {
-      const la = parseFloat(lat)
-      const ln = parseFloat(lng)
+    if (latitude && longitude) {
+      const la = parseFloat(latitude)
+      const ln = parseFloat(longitude)
       if (!isNaN(la) && !isNaN(ln)) return [la, ln]
     }
     return null
-  }, [form])
+  }, [latitude, longitude])
 
   const handleGeocode = useCallback(async () => {
     const currentAddress = form.getValues("address")
