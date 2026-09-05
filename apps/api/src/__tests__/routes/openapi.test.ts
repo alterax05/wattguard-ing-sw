@@ -90,9 +90,12 @@ describe("openapi api", () => {
 
       // Check for key authentication endpoints
       expect(spec.paths["/auth/session"]).toBeDefined();
-      expect(spec.paths["/invites/{token}/acceptance"]).toBeDefined();
-      expect(spec.paths["/auth/reset-tokens"]).toBeDefined();
-      expect(spec.paths["/auth/password-resets"]).toBeDefined();
+      expect(spec.paths["/invites/{id}"]).toBeDefined();
+      expect(spec.paths["/auth/recovery-tokens"]).toBeDefined();
+      expect(spec.paths["/auth/recovery-validations"]).toBeDefined();
+      expect(spec.paths["/auth/recovery-confirmations"]).toBeDefined();
+      expect(spec.paths["/buildings/{id}/readings"]).toBeDefined();
+      expect(spec.paths["/metrics/timeseries"]).toBeDefined();
     });
 
     test("includes documented user routes", async () => {

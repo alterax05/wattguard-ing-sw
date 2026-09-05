@@ -16,18 +16,17 @@ import {
 } from "bun:test";
 
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
-import { ErrorSchema } from "@wattguard/shared";
+import { expectValidationError } from "../helpers/validation";
 import type {
   ListBuildingTypesResponse,
+  GetBuildingTypeResponse,
   CreateBuildingTypeResponse,
   UpdateBuildingTypeResponse,
-  DeleteBuildingTypeResponse,
-} from "@wattguard/shared";
+  DeleteBuildingTypeResponse, ErrorResponse} from "@wattguard/shared";
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 import { User } from "../../models/User";
@@ -161,8 +160,7 @@ describe("building-types api", () => {
     test("rejects request without token (401)", async () => {
       const res = await client.api.v1["building-types"].$get();
 
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(401);
+      expect(res.status).toBe(401);
     });
 
     test("returns building types sorted by name", async () => {
@@ -185,6 +183,62 @@ describe("building-types api", () => {
       expect(json.data[0]!.name).toBe("Ospedale");
       expect(json.data[1]!.name).toBe("Scuola");
       expect(json.data[2]!.name).toBe("Ufficio");
+    });
+  });
+
+  // ============================================================================
+  // GET /api/v1/building-types/:id - Get Single Building Type
+  // ============================================================================
+
+  describe("GET /api/v1/building-types/:id", () => {
+    test("returns building type by ID with self link", async () => {
+      const created = await BuildingType.create({
+        name: "Teatro",
+        description: "Edificio teatrale",
+      });
+
+      const res = await client.api.v1["building-types"][":id"].$get(
+        { param: { id: created._id.toString() } },
+        { headers: { Authorization: `Bearer ${operatorToken}` } }
+      );
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expectTypeOf(json).toExtend<GetBuildingTypeResponse | ErrorResponse>();
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        return expect.unreachable("Expected success");
+      }
+      expect(json.data.name).toBe("Teatro");
+      expect(json.data.self).toBe(`/api/v1/building-types/${created._id.toString()}`);
+    });
+
+    test("returns 404 for non-existent building type", async () => {
+      const res = await client.api.v1["building-types"][":id"].$get(
+        { param: { id: "507f1f77bcf86cd799439011" } },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+
+      expect(res.status).toBe(404);
+      const json = await res.json();
+      expect(json.success).toBe(false);
+    });
+
+    test("returns 400 for malformed ObjectId", async () => {
+      const res = await client.api.v1["building-types"][":id"].$get(
+        { param: { id: "not-an-id" } },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+
+      expect(res.status).toBe(400);
+    });
+
+    test("returns 401 when unauthenticated", async () => {
+      const res = await client.api.v1["building-types"][":id"].$get(
+        { param: { id: "507f1f77bcf86cd799439011" } }
+      );
+
+      expect(res.status).toBe(401);
     });
   });
 
@@ -247,7 +301,7 @@ describe("building-types api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
       const json = await res.json();
       expect(json.success).toBe(false);
       if (json.success) {
@@ -271,7 +325,7 @@ describe("building-types api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      await expectValidationError(res, "name");
     });
 
     test("rejects request from operator (403)", async () => {
@@ -289,8 +343,7 @@ describe("building-types api", () => {
         }
       );
 
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(403);
+      expect(Number(res.status)).toBe(403);
     });
   });
 
@@ -422,7 +475,7 @@ describe("building-types api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
       const json = await res.json();
       expect(json.success).toBe(false);
       if (json.success) {
@@ -471,8 +524,7 @@ describe("building-types api", () => {
         }
       );
 
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(403);
+      expect(res.status).toBe(403);
     });
   });
 
@@ -542,7 +594,7 @@ describe("building-types api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
       const json = await res.json();
       expect(json.success).toBe(false);
       if (json.success) {
@@ -590,8 +642,7 @@ describe("building-types api", () => {
         }
       );
 
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(403);
+      expect(res.status).toBe(403);
     });
   });
 });

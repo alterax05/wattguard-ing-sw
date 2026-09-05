@@ -1,7 +1,8 @@
-import { Hono } from "hono";
-import { setCookie } from "hono/cookie";
+import { Hono, type Context } from "hono";
+import { setCookie, getCookie } from "hono/cookie";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { OAuth2Client } from "google-auth-library";
+import { verify } from "hono/jwt";
 import { Invite } from "../models/Invite";
 import { User } from "../models/User";
 import { randomToken, hashTokenSha256 } from "../utils/crypto";
@@ -16,19 +17,22 @@ import { GOOGLE_CLIENT_ID, IS_PRODUCTION, JWT_SECRET } from "../config/variables
 import { loadUserDoc, requireRole, type AuthVariables } from "../middleware/auth";
 import { apiError, apiSuccess } from "../lib/api-response";
 import {
-  GetInviteParamsSchema,
-  ValidateInviteResponseSchema,
+  ListInvitesQuerySchema,
   ListInvitesResponseSchema,
+  GetInviteByIdParamsSchema,
+  GetInviteByIdResponseSchema,
   CreateInviteRequestSchema,
   CreateInviteResponseSchema,
   DeleteInviteParamsSchema,
   DeleteInviteResponseSchema,
+  AcceptInviteParamsSchema,
   AcceptInviteRequestSchema,
   AcceptInviteResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
   ListInvitesResponse,
+  GetInviteByIdResponse,
   CreateInviteResponse,
   DeleteInviteResponse,
   ValidateInviteResponse,
@@ -42,21 +46,77 @@ const requireAdmin = [
   requireRole("admin"),
 ] as const;
 
+/**
+ * Admin guard for the mixed GET / route. When `?token` is present the route
+ * is public (invite lookup). Otherwise the caller must be an admin.
+ * Returns the error response when auth fails, null when the caller is admin.
+ */
+async function ensureAdminForList(
+  c: Context<{ Variables: AuthVariables }>,
+): Promise<Response | null> {
+  const auth = c.req.header("Authorization") ?? "";
+  const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+  const cookieToken = getCookie(c, "access_token");
+  const token = bearer ?? cookieToken;
+  if (!token) {
+    return c.json(
+      apiError("unauthorized_invalid_token", "Unauthorized - Invalid or missing JWT token") satisfies ErrorResponse,
+      401,
+    );
+  }
+  try {
+    // SAFETY: access tokens are signed by signAccessToken with exactly sub/email/role claims.
+    const payload = (await verify(token, JWT_SECRET, "HS256")) as {
+      sub: string;
+      email: string;
+      role: "admin" | "operator";
+    };
+    const user = await User.findById(payload.sub);
+    if (!user || user.isDisabled) {
+      return c.json(
+        apiError("unauthorized_invalid_token", "Unauthorized - Invalid or missing JWT token") satisfies ErrorResponse,
+        401,
+      );
+    }
+    if (user.role !== "admin") {
+      return c.json(
+        apiError("forbidden_role", "Forbidden - Requires admin role") satisfies ErrorResponse,
+        403,
+      );
+    }
+    c.set("jwtPayload", payload);
+    c.set("userDoc", user);
+    return null;
+  } catch {
+    return c.json(
+      apiError("unauthorized_invalid_token", "Unauthorized - Invalid or missing JWT token") satisfies ErrorResponse,
+      401,
+    );
+  }
+}
+
 const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
-    ...requireAdmin,
     describeRoute({
-      summary: "Elenca inviti",
-      description: "Restituisce tutti gli inviti con stato e mittente (solo admin)",
+      summary: "Elenca inviti o verifica tramite token",
+      description:
+        "Senza query: lista tutti gli inviti (solo admin). Con ?token=: lookup pubblico del singolo invito per la registrazione",
       tags: ["Invites"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
-          description: "List of invites retrieved successfully",
+          description: "List of invites, or single invite lookup by token",
           content: {
             "application/json": {
               schema: resolver(ListInvitesResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invite is expired or already used",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -76,9 +136,33 @@ const app = new Hono<{ Variables: AuthVariables }>()
             },
           },
         },
+        404: {
+          description: "Invite token not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
       },
     }),
+    validator("query", ListInvitesQuerySchema),
     async (c) => {
+      const { token } = c.req.valid("query");
+
+      // Public lookup by token (registration flow, no auth)
+      if (token) {
+        const result = await validateInviteToken(token);
+        if (!result.ok) {
+          return c.json(apiError(result.code, result.error) satisfies ErrorResponse, result.status);
+        }
+        return c.json(apiSuccess(result.data) satisfies ValidateInviteResponse);
+      }
+
+      // Admin list
+      const authError = await ensureAdminForList(c);
+      if (authError) return authError;
+
       const invites = await Invite.find()
         .sort({ createdAt: -1 })
         .populate("createdBy", "email");
@@ -104,7 +188,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
-          description: "Invalid request - validation error or duplicate user/invite",
+          description: "Invalid request - validation error",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -121,6 +205,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
         403: {
           description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        409: {
+          description: "Conflict - User already exists or pending invite exists",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -146,7 +238,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return c.json(apiError("user_email_exists", "User with this email already exists") satisfies ErrorResponse, 400);
+        return c.json(apiError("user_email_exists", "User with this email already exists") satisfies ErrorResponse, 409);
       }
 
       // Check if there's already a pending invite
@@ -157,7 +249,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
 
       if (existingInvite) {
-        return c.json(apiError("invite_pending_exists", "A pending invite already exists for this email") satisfies ErrorResponse, 400);
+        return c.json(apiError("invite_pending_exists", "A pending invite already exists for this email") satisfies ErrorResponse, 409);
       }
 
       // Generate token
@@ -183,30 +275,30 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json(apiError("invite_email_failed", "Failed to send invite email. Check email configuration.") satisfies ErrorResponse, 500);
       }
 
-      c.header("Location", `${c.req.path}/${invite._id.toString()}`);
+      c.header("Location", `${c.req.path.replace(/\/+$/, "")}/${invite._id.toString()}`);
 
       return c.json(apiSuccess(toCreateInviteDto(invite)) satisfies CreateInviteResponse, 201);
     }
   )
-  .delete(
+  .get(
     "/:id",
     ...requireAdmin,
     describeRoute({
-      summary: "Revoca invito",
-      description: "Revoca un invito in stato pending (solo admin)",
+      summary: "Leggi invito per ID",
+      description: "Restituisce i dati completi di un invito tramite il suo ID canonico (solo admin)",
       tags: ["Invites"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
-          description: "Invite revoked successfully",
+          description: "Invite details retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(DeleteInviteResponseSchema),
+              schema: resolver(GetInviteByIdResponseSchema),
             },
           },
         },
         400: {
-          description: "Invite cannot be revoked (not pending)",
+          description: "Invalid ID parameter",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -239,6 +331,69 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
+    validator("param", GetInviteByIdParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+
+      const invite = await Invite.findById(id).populate("createdBy", "email");
+      if (!invite) {
+        return c.json(apiError("invite_not_found", "Invite not found") satisfies ErrorResponse, 404);
+      }
+
+      return c.json(apiSuccess(toInviteDto(invite)) satisfies GetInviteByIdResponse);
+    }
+  )
+  .delete(
+    "/:id",
+    ...requireAdmin,
+    describeRoute({
+      summary: "Revoca invito",
+      description: "Revoca un invito in stato pending (solo admin)",
+      tags: ["Invites"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Invite revoked successfully",
+          content: {
+            "application/json": {
+              schema: resolver(DeleteInviteResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Invite not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        409: {
+          description: "Invite cannot be revoked (not pending)",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
     validator("param", DeleteInviteParamsSchema),
     async (c) => {
       const { id } = c.req.valid("param");
@@ -249,7 +404,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }
 
       if (invite.status !== "pending") {
-        return c.json(apiError("only_pending_invites_revocable", "Can only revoke pending invites") satisfies ErrorResponse, 400);
+        return c.json(apiError("only_pending_invites_revocable", "Can only revoke pending invites") satisfies ErrorResponse, 409);
       }
 
       invite.status = "revoked";
@@ -258,54 +413,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(toInviteDto(invite)) satisfies DeleteInviteResponse);
     }
   )
-  .get(
-    "/:token",
-    describeRoute({
-      summary: "Verifica invito",
-      description: "Restituisce i dettagli pubblici di un invito dal token",
-      tags: ["Invites"],
-      responses: {
-        200: {
-          description: "Invite is valid and can be used",
-          content: {
-            "application/json": {
-              schema: resolver(ValidateInviteResponseSchema),
-            },
-          },
-        },
-        400: {
-          description: "Invite is expired or already used",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-        404: {
-          description: "Invite token not found",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-      },
-    }),
-    validator("param", GetInviteParamsSchema),
-    async (c) => {
-      const { token } = c.req.valid("param");
-      const result = await validateInviteToken(token);
-      if (!result.ok) {
-        return c.json(apiError(result.code, result.error) satisfies ErrorResponse, result.status);
-      }
-      return c.json(apiSuccess(result.data) satisfies ValidateInviteResponse);
-    }
-  )
-  .post(
-    "/:token/acceptance",
+  .patch(
+    "/:id",
     describeRoute({
       summary: "Accetta invito",
-      description: "Crea l'account (password o Google) e apre la sessione",
+      description:
+        "Transizione pending -> accepted sull'URI canonico. Token nel body (mai nel path). Crea l'account (password o Google) e apre la sessione",
       tags: ["Invites"],
       responses: {
         200: {
@@ -358,16 +471,23 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    validator("param", GetInviteParamsSchema),
+    validator("param", AcceptInviteParamsSchema),
     validator("json", AcceptInviteRequestSchema),
     async (c) => {
-      const { token } = c.req.valid("param");
+      const { id } = c.req.valid("param");
       const input = c.req.valid("json");
 
-      const tokenHash = hashTokenSha256(token);
-      const invite = await Invite.findOne({ tokenHash });
+      const invite = await Invite.findById(id);
 
       if (!invite) {
+        return c.json(
+          apiError("invite_not_found", "Invite not found") satisfies ErrorResponse,
+          404,
+        );
+      }
+
+      // Token binds the caller to this canonical invite id (never in the path)
+      if (hashTokenSha256(input.token) !== invite.tokenHash) {
         return c.json(
           apiError("invite_not_found", "Invite not found") satisfies ErrorResponse,
           404,

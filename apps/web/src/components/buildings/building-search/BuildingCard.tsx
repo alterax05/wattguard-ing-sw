@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { BuildingStatusBadge } from "../building-status-badge"
-import type { BuildingSummary } from "@/hooks/use-buildings"
+import type {BuildingSummary} from "@wattguard/shared"
 import { MAX_COMPARE_BUILDINGS } from "@/lib/constants"
 
 function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {

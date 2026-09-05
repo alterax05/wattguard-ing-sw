@@ -18,7 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { BuildingType } from "@/hooks/use-building-types";
+import type {BuildingType, CreateBuildingTypeRequest} from "@wattguard/shared";
 
 // ── Form shape ────────────────────────────────────────────────────────────────
 
@@ -38,10 +38,7 @@ function createSchema(t: TFunction) {
   });
 }
 
-export function toBuildingTypePayload(values: BuildingTypeFormValues): {
-  name: string;
-  description?: string;
-} {
+export function toBuildingTypePayload(values: BuildingTypeFormValues): CreateBuildingTypeRequest {
   const name = values.name.trim();
   const description = values.description.trim();
   return description ? { name, description } : { name };

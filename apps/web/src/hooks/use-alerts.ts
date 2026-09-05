@@ -4,10 +4,6 @@ import { errorMessageFromResponse } from "@/lib/errors";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-import type { Alert, ListAlertsResponse } from "@wattguard/shared";
-
-export type { Alert, ListAlertsResponse };
-
 export function useAlerts(params?: { status?: string; buildingId?: string }) {
   return useQuery({
     queryKey: ["alerts", params],

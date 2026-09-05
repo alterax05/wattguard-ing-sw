@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next"
 import type { TFunction } from "i18next"
 import { toast } from "sonner"
 import { geocodeAddress } from "@/components/buildings/building-form/geocode"
-import type { BuildingDetail } from "@/hooks/use-buildings"
+import type {BuildingDetail} from "@wattguard/shared"
 import type { BuildingStatus, CreateBuildingRequest } from "@wattguard/shared"
 import { BuildingStatusSchema } from "@wattguard/shared"
 
@@ -25,8 +25,6 @@ export type BuildingFormValues = {
   latitude: string
   longitude: string
 }
-
-export type BuildingFormMode = "create" | "edit"
 
 function createSchema(t: TFunction) {
   // Use t() for Zod messages so FormMessage is localized.
@@ -90,9 +88,7 @@ function createSchema(t: TFunction) {
   })
 }
 
-export type BuildingFormSchema = ReturnType<typeof createSchema>
-
-function toDefaultValues(building?: BuildingDetail, _mode: BuildingFormMode = "create"): BuildingFormValues {
+function toDefaultValues(building?: BuildingDetail): BuildingFormValues {
   if (building) {
     return {
       name: building.name,
@@ -124,16 +120,14 @@ function toDefaultValues(building?: BuildingDetail, _mode: BuildingFormMode = "c
   }
 }
 
-type BuildingPayload = CreateBuildingRequest & {
-  status?: BuildingStatus
-}
-
-export function toBuildingPayload(values: BuildingFormValues): BuildingPayload {
+export function toBuildingPayload(
+  values: BuildingFormValues
+): CreateBuildingRequest & { status?: BuildingStatus } {
   const surface = parseFloat(values.surface)
   const ceilingHeight = parseFloat(values.ceilingHeight)
   const lat = parseFloat(values.latitude)
   const lng = parseFloat(values.longitude)
-  const payload: BuildingPayload = {
+  const payload: CreateBuildingRequest & { status?: BuildingStatus } = {
     name: values.name.trim(),
     address: values.address.trim(),
     surface,
@@ -154,24 +148,23 @@ export function toBuildingPayload(values: BuildingFormValues): BuildingPayload {
 }
 
 interface UseBuildingFormOptions {
-  mode: BuildingFormMode
   building?: BuildingDetail
 }
 
-export function useBuildingForm({ mode, building }: UseBuildingFormOptions) {
+export function useBuildingForm({ building }: UseBuildingFormOptions) {
   const { t } = useTranslation()
   const schema = useMemo(() => createSchema(t), [t])
 
   const form = useForm<BuildingFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: toDefaultValues(building, mode),
+    defaultValues: toDefaultValues(building),
     mode: "onTouched",
   })
 
   // Re-hydrate when building changes (edit flow) — mirrors settings-panel reset pattern
   useEffect(() => {
     if (building) {
-      form.reset(toDefaultValues(building, mode))
+      form.reset(toDefaultValues(building))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps — form.reset stable, we want building change only
   }, [building?._id])

@@ -6,9 +6,8 @@ import type {
   BuildingType,
   CreateBuildingTypeRequest,
   UpdateBuildingTypeRequest,
+  WithId,
 } from "@wattguard/shared";
-
-export type { BuildingType, CreateBuildingTypeRequest, UpdateBuildingTypeRequest };
 
 export const BUILDING_TYPES_QUERY_KEY = ["building-types"] as const;
 
@@ -70,7 +69,7 @@ export function useUpdateBuildingType() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: UpdateBuildingTypeRequest & { id: string }): Promise<BuildingType> => {
+    mutationFn: async (input: WithId<UpdateBuildingTypeRequest>): Promise<BuildingType> => {
       const { id, ...body } = input;
       const res = await client.api.v1["building-types"][":id"].$patch({
         param: { id },

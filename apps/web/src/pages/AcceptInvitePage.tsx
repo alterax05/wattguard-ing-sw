@@ -64,7 +64,7 @@ export function AcceptInvitePage() {
 
   function onSubmit(data: PasswordFormValues) {
     setup.mutate(
-      { token: token!, password: data.password, name: data.name.trim() },
+      { id: inviteQuery.data!._id, token: token!, password: data.password, name: data.name.trim() },
       {
         onSuccess: () => {
           void navigate("/dashboard");
@@ -149,6 +149,7 @@ export function AcceptInvitePage() {
             <FieldGroup>
               <GoogleLoginButton
                 inviteToken={token}
+                inviteId={inviteData._id}
                 onSuccess={() => {
                   void navigate("/dashboard");
                 }}

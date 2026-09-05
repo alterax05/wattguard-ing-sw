@@ -12,23 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Bell, Clock, Database, Download, HardDrive } from "lucide-react"
 import { toast } from "sonner"
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings"
-import type { SystemConfig } from "@/hooks/use-settings"
+import type {SystemConfig} from "@wattguard/shared"
 import { downloadFromEndpoint } from "@/lib/download"
 
 // ── Form shape ────────────────────────────────────────────────────────────────
 
-type SettingsFormValues = {
-  polling: {
-    intervalSeconds: number
-    autoPollingEnabled: boolean
-  }
-  notifications: {
-    emailEnabled: boolean
-  }
-  database: {
-    dataRetentionDays: number
-  }
-}
+type SettingsFormValues = SystemConfig
 
 function toFormValues(config: SystemConfig): SettingsFormValues {
   return {

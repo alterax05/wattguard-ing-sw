@@ -6,12 +6,15 @@ import {
   ListAlertsQuerySchema,
   ListAlertsResponseSchema,
   AlertIdParamSchema,
+  GetAlertParamsSchema,
+  GetAlertResponseSchema,
   UpdateAlertStatusRequestSchema,
   UpdateAlertStatusResponseSchema,
 } from "@wattguard/shared";
 
 import type {
   ListAlertsResponse,
+  GetAlertResponse,
   UpdateAlertStatusResponse,
   ErrorResponse,
 } from "@wattguard/shared";
@@ -32,9 +35,9 @@ function getAlertError(code: ErrorCode) {
     case "alert_not_found":
       return { error: "Alert not found", status: 404 as const };
     case "alert_not_active":
-      return { error: "Only active alerts can be acknowledged", status: 400 as const };
+      return { error: "Only active alerts can be acknowledged", status: 409 as const };
     case "alert_already_resolved":
-      return { error: "Alert is already resolved", status: 400 as const };
+      return { error: "Alert is already resolved", status: 409 as const };
     default:
       return { error: "Internal server error", status: 500 as const };
   }
@@ -112,6 +115,53 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }) satisfies ListAlertsResponse);
     },
   )
+  .get(
+    "/:id",
+    describeRoute({
+      tags: ["Alerts"],
+      summary: "Leggi alert",
+      description: "Restituisce il dettaglio di un singolo alert per ID",
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Alert retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(GetAlertResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid alert ID format",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        401: {
+          description: "Unauthorized",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        403: {
+          description: "Forbidden",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        404: {
+          description: "Alert not found",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+      },
+    }),
+    validator("param", GetAlertParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      if (!Types.ObjectId.isValid(id)) {
+        return c.json(apiError("invalid_alert_id", "Invalid alert ID format") satisfies ErrorResponse, 400);
+      }
+      const alert = await AlertModel.findById(id);
+      if (!alert) {
+        return c.json(apiError("alert_not_found", "Alert not found") satisfies ErrorResponse, 404);
+      }
+      return c.json(apiSuccess(toAlertDTO(alert, { locale: getRequestLocale(c) })) satisfies GetAlertResponse);
+    },
+  )
   .patch(
     "/:id",
     describeRoute({
@@ -128,11 +178,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
-          description: "Invalid ID format, invalid status transition, or validation error",
+          description: "Invalid ID format or validation error",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
         404: {
           description: "Alert not found",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        409: {
+          description: "Invalid alert status transition (already resolved or not active)",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
       },

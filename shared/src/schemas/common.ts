@@ -34,12 +34,6 @@ export const ErrorSchema = z.object({
 
 export type ErrorResponse = z.infer<typeof ErrorSchema>;
 
-export const SuccessEnvelopeSchema = <T extends z.ZodType>(dataSchema: T) =>
-  z.object({
-    success: z.literal(true),
-    data: dataSchema,
-  });
-
 export type SuccessEnvelope<T> = {
   success: true;
   data: T;
@@ -55,45 +49,12 @@ export const HealthResponseSchema = z.object({
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 
 /**
- * Standard success response schema
- */
-export const SuccessSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    message: z.string().optional().describe("Optional success message"),
-  }),
-});
-
-export type SuccessResponse = z.infer<typeof SuccessSchema>;
-
-/**
- * Standard delete response schema
- */
-export const DeleteResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    id: z.string().optional().describe("Deleted resource identifier"),
-    message: z.string().optional().describe("Confirmation message"),
-  }),
-});
-
-export type DeleteResponse = z.infer<typeof DeleteResponseSchema>;
-
-/**
  * Email validation schema with normalization
  */
 export const EmailSchema = z
   .email("Invalid email format")
   .transform((email) => email.toLowerCase().trim())
   .describe("Email address");
-
-/**
- * Password validation schema
- */
-export const PasswordSchema = z
-  .string()
-  .min(8, "Password must be at least 8 characters")
-  .describe("User password (minimum 8 characters)");
 
 /**
  * Supported UI locale enum (see shared/src/i18n.ts)
@@ -112,12 +73,30 @@ export const UserRoleSchema = z
 export type UserRole = z.infer<typeof UserRoleSchema>;
 
 /**
+ * Canonical URI link to this resource
+ */
+export const SelfLinkSchema = z.string().describe("Canonical URI link to this resource");
+
+/**
  * MongoDB ObjectId validation schema
  */
 export const ObjectIdSchema = z
   .string()
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId format")
   .describe("MongoDB ObjectId");
+
+/**
+ * Accepts both a raw MongoDB ObjectId and a full resource URI (e.g. /api/v1/buildings/64...)
+ * extracting the trailing ID segment.
+ */
+export const ResourceIdOrUriSchema = z
+  .string()
+  .transform((val) => {
+    const parts = val.trim().split("/");
+    return parts[parts.length - 1];
+  })
+  .pipe(ObjectIdSchema)
+  .describe("MongoDB ObjectId or resource URI");
 
 /**
  * ISO 8601 DateTime schema
@@ -139,6 +118,7 @@ export const ObjectIdParamSchema = z.object({
  * User response schema
  */
 export const UserSchema = z.object({
+  self: SelfLinkSchema.optional(),
   _id: ObjectIdSchema.describe("Unique user identifier"),
   email: z.email().describe("User email address"),
   name: z.string().nullish().transform((v) => v ?? undefined).optional().describe("User display name"),
@@ -162,22 +142,6 @@ export const PublicUserSchema = UserSchema.omit({
 
 
 export type PublicUser = z.infer<typeof PublicUserSchema>;
-
-/**
- * Request body to update the current user's preferred language
- */
-export const UpdateLanguageRequestSchema = z.object({
-  language: LocaleSchema.describe("New preferred locale"),
-});
-
-export type UpdateLanguageRequest = z.infer<typeof UpdateLanguageRequestSchema>;
-
-/**
- * Query token parameter schema
- */
-export const TokenQuerySchema = z.object({
-  token: z.string().min(1, "Token is required").describe("Authentication or validation token"),
-});
 
 /**
  * Building status enum
@@ -260,3 +224,6 @@ export const PeriodSchema = z.object({
 });
 
 export type Period = z.infer<typeof PeriodSchema>;
+
+/** Adds a string `id` param to a request payload (e.g. update mutations). */
+export type WithId<T> = T & { id: string };

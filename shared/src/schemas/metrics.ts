@@ -1,7 +1,7 @@
 /**
  * System-wide metrics and KPIs schemas
  *
- * Routes: /api/v1/metrics, /api/v1/metrics/history
+ * Routes: /api/v1/metrics, /api/v1/metrics/timeseries
  */
 
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { z } from "zod";
 // ── Query Schemas ────────────────────────────────────────────────────────────
 
 /**
- * Query params for GET /api/v1/metrics/history
+ * Query params for GET /api/v1/metrics/timeseries
  */
 export const MetricsHistoryQuerySchema = z.object({
   startDate: z.iso.datetime({ offset: true }).or(z.string().date()).describe("Start of the time range (ISO 8601)"),
@@ -65,7 +65,7 @@ export const MetricsHistoryDataPointSchema = z.object({
 export type MetricsHistoryDataPoint = z.infer<typeof MetricsHistoryDataPointSchema>;
 
 /**
- * Data payload for GET /api/v1/metrics/history
+ * Data payload for GET /api/v1/metrics/timeseries
  */
 export const MetricsHistoryDataSchema = z.object({
   period: z.object({
@@ -79,7 +79,7 @@ export const MetricsHistoryDataSchema = z.object({
 export type MetricsHistoryData = z.infer<typeof MetricsHistoryDataSchema>;
 
 /**
- * Response for GET /api/v1/metrics/history
+ * Response for GET /api/v1/metrics/timeseries
  */
 export const MetricsHistoryResponseSchema = z.object({
   success: z.literal(true),
@@ -87,19 +87,3 @@ export const MetricsHistoryResponseSchema = z.object({
 });
 
 export type MetricsHistoryResponse = z.infer<typeof MetricsHistoryResponseSchema>;
-
-// ── Backward-compatibility Aliases ───────────────────────────────────────────
-
-export const DashboardStatsSchema = SystemMetricsSchema;
-export type DashboardStats = SystemMetrics;
-export const DashboardStatsResponseSchema = MetricsResponseSchema;
-export type DashboardStatsResponse = MetricsResponse;
-
-export const DashboardHistoryQuerySchema = MetricsHistoryQuerySchema;
-export type DashboardHistoryQuery = MetricsHistoryQuery;
-export const DashboardHistoryDataPointSchema = MetricsHistoryDataPointSchema;
-export type DashboardHistoryDataPoint = MetricsHistoryDataPoint;
-export const DashboardHistoryDataSchema = MetricsHistoryDataSchema;
-export type DashboardHistory = MetricsHistoryData;
-export const DashboardHistoryResponseSchema = MetricsHistoryResponseSchema;
-export type DashboardHistoryResponse = MetricsHistoryResponse;

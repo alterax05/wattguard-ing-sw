@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 import { Building2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BuildingStatusBadge } from "../building-status-badge"
-import type { BuildingDetail } from "@/hooks/use-buildings"
+import type {BuildingDetail} from "@wattguard/shared"
 
 export interface BuildingDetailsCardProps {
   building: BuildingDetail

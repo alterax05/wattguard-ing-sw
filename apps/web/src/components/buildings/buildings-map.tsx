@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import type {BuildingSummary} from "@wattguard/shared"
 import { useTranslation } from "react-i18next";
-import { useBuildings, type BuildingSummary } from "@/hooks/use-buildings";
+import { useBuildings } from "@/hooks/use-buildings";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Building2,

@@ -20,7 +20,7 @@ interface AddBuildingDialogProps {
 export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
   const createBuilding = useCreateBuilding()
   const { t } = useTranslation()
-  const buildingForm = useBuildingForm({ mode: "create" })
+  const buildingForm = useBuildingForm({})
   const { form } = buildingForm
 
   const isPending = createBuilding.isPending
@@ -29,9 +29,8 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
   const buildingType = useWatch({ control: form.control, name: "buildingType" })
 
   const onValid = (values: BuildingFormValues) => {
-    const { status: _status, ...rest } = toBuildingPayload(values)
-    // SAFETY: create endpoint does not accept status; payload without status is the correct CreateBuilding shape
-    const payload = rest as Omit<ReturnType<typeof toBuildingPayload>, "status">
+    const { status: _status, ...payload } = toBuildingPayload(values)
+    void _status
     createBuilding.mutate(
       {
         name: payload.name,

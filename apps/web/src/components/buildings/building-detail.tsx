@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type {Sensor} from "@wattguard/shared"
 import { endOfDay } from "date-fns";
 import { useTranslation } from "react-i18next";
 import type { DateRange } from "react-day-picker";
@@ -16,7 +17,6 @@ import {
   useAllSensors,
   useDeleteSensor,
   useSensors,
-  type Sensor,
 } from "@/hooks/use-sensors";
 import { keepPreviousData } from "@tanstack/react-query";
 import { getMonitoringStatus } from "@/lib/sensor-status";

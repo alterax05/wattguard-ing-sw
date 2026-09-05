@@ -124,6 +124,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
             },
           },
         },
+        409: {
+          description: "Sensor with this serial number already exists",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
       },
     }),
     validator("json", CreateSensorRequestSchema),
@@ -142,7 +150,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (data.serialNumber) {
         const existing = await Sensor.findOne({ serialNumber: data.serialNumber });
         if (existing) {
-          return c.json(apiError("sensor_serial_exists", "Sensor with this serial number already exists") satisfies ErrorResponse, 400);
+          return c.json(apiError("sensor_serial_exists", "Sensor with this serial number already exists") satisfies ErrorResponse, 409);
         }
       }
 
@@ -234,6 +242,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
             },
           },
         },
+        409: {
+          description: "Sensor with this serial number already exists",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
       },
     }),
     validator("param", UpdateSensorParamsSchema),
@@ -256,7 +272,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.serialNumber && updates.serialNumber !== sensor.serialNumber) {
         const existing = await Sensor.findOne({ serialNumber: updates.serialNumber });
         if (existing) {
-          return c.json(apiError("sensor_serial_exists", "Sensor with this serial number already exists") satisfies ErrorResponse, 400);
+          return c.json(apiError("sensor_serial_exists", "Sensor with this serial number already exists") satisfies ErrorResponse, 409);
         }
       }
 

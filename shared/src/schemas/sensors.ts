@@ -8,6 +8,8 @@ import {
   PaginationResponseSchema,
   ObjectIdParamSchema,
   SortOrderSchema,
+  SelfLinkSchema,
+  ResourceIdOrUriSchema,
 } from "./common";
 
 /**
@@ -25,6 +27,7 @@ export type LastReading = z.infer<typeof LastReadingSchema>;
  * Populated building summary inside sensor
  */
 export const PopulatedBuildingSchema = z.object({
+  self: SelfLinkSchema.optional(),
   _id: ObjectIdSchema.describe("Building identifier"),
   name: z.string().describe("Building name"),
   address: z.string().describe("Building address"),
@@ -36,6 +39,7 @@ export type PopulatedBuilding = z.infer<typeof PopulatedBuildingSchema>;
  * Sensor response schema
  */
 export const SensorSchema = z.object({
+  self: SelfLinkSchema.optional(),
   _id: ObjectIdSchema.describe("Unique sensor identifier"),
   building: z
     .union([
@@ -64,7 +68,7 @@ export type Sensor = z.infer<typeof SensorSchema>;
  * Base create sensor input schema
  */
 export const CreateSensorInputSchema = z.object({
-  building: ObjectIdSchema.describe("Building identifier"),
+  building: ResourceIdOrUriSchema.describe("Building identifier or URI"),
   sensorType: SensorTypeSchema,
   location: z.string().min(1, "Location is required").trim().describe("Physical location in the building"),
   serialNumber: z.string().trim().optional().describe("Optional sensor serial number"),
@@ -157,6 +161,7 @@ export type DeleteSensorResponse = z.infer<typeof DeleteSensorResponseSchema>;
  * SensorReading schema (for historical data)
  */
 export const SensorReadingSchema = z.object({
+  self: SelfLinkSchema.optional(),
   _id: ObjectIdSchema.optional().describe("Reading identifier"),
   timestamp: IsoDateTimeSchema.describe("Reading timestamp"),
   value: z.number().describe("Reading value"),

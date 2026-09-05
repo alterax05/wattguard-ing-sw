@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { z } from "zod"
 
 export interface WeatherData {
   temperature: number
@@ -7,14 +8,14 @@ export interface WeatherData {
   weatherCode: number
 }
 
-interface OpenMeteoCurrentWeather {
-  current: {
-    temperature_2m: number
-    relative_humidity_2m: number
-    wind_speed_10m: number
-    weather_code: number
-  }
-}
+const OpenMeteoCurrentWeatherSchema = z.object({
+  current: z.object({
+    temperature_2m: z.number(),
+    relative_humidity_2m: z.number(),
+    wind_speed_10m: z.number(),
+    weather_code: z.number(),
+  }),
+})
 
 const TRENTO_COORDS = { lat: 46.0664, lon: 11.1257 }
 
@@ -23,8 +24,9 @@ async function fetchWeather(): Promise<WeatherData | null> {
     `https://api.open-meteo.com/v1/forecast?latitude=${TRENTO_COORDS.lat}&longitude=${TRENTO_COORDS.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=Europe/Rome`
   )
   if (!res.ok) return null
-  // SAFETY: open-meteo returns exactly these `current` fields for the query requested above
-  const data = (await res.json()) as OpenMeteoCurrentWeather
+  const parsed = OpenMeteoCurrentWeatherSchema.safeParse(await res.json())
+  if (!parsed.success) return null
+  const data = parsed.data
   return {
     temperature: data.current.temperature_2m,
     humidity: data.current.relative_humidity_2m,

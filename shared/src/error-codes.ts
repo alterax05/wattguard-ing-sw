@@ -10,10 +10,3 @@ import en from "../locales/en/translation.json";
 
 export type ErrorCode = keyof typeof en.errors;
 
-/** Type guard so route handlers can type error bodies against the contract. */
-export function isErrorCode(value: string): value is ErrorCode {
-  return value in en.errors;
-}
-
-export const ERROR_CODES: ErrorCode[] = Object.keys(en.errors).filter(isErrorCode);
-

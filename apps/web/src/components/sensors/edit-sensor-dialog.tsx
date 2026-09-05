@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type {Sensor, UpdateSensorRequest, WithId} from "@wattguard/shared"
 import { useTranslation } from "react-i18next"
 import {
   Dialog,
@@ -11,8 +12,6 @@ import {
 import { toast } from "sonner"
 import {
   useUpdateSensor,
-  type Sensor,
-  type UpdateSensorRequest,
 } from "@/hooks/use-sensors"
 import { SensorForm, type SensorFormValues } from "./sensor-form/SensorForm"
 
@@ -22,9 +21,7 @@ interface EditSensorDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-type UpdateSensorPayload = UpdateSensorRequest & {
-  id: string
-}
+type UpdateSensorPayload = WithId<UpdateSensorRequest>
 
 export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialogProps) {
   const updateSensor = useUpdateSensor()

@@ -4,12 +4,13 @@
  * Routes: /api/v1/building-types (GET, POST), /api/v1/building-types/:id (PATCH, DELETE)
  */
 import { z } from "zod";
-import { ObjectIdSchema, IsoDateTimeSchema, ObjectIdParamSchema } from "./common";
+import { ObjectIdSchema, IsoDateTimeSchema, ObjectIdParamSchema, SelfLinkSchema } from "./common";
 
 /**
  * BuildingType response schema
  */
 export const BuildingTypeSchema = z.object({
+  self: SelfLinkSchema.optional(),
   _id: ObjectIdSchema.describe("Unique building type identifier"),
   name: z.string().describe("Building type name"),
   description: z.string().nullish().transform((v) => v ?? undefined).describe("Optional description of the building type"),
@@ -29,6 +30,23 @@ export const ListBuildingTypesResponseSchema = z.object({
 });
 
 export type ListBuildingTypesResponse = z.infer<typeof ListBuildingTypesResponseSchema>;
+
+/**
+ * GET /api/v1/building-types/:id - Get building type by ID parameter
+ */
+export const GetBuildingTypeParamsSchema = ObjectIdParamSchema;
+
+export type GetBuildingTypeParams = z.infer<typeof GetBuildingTypeParamsSchema>;
+
+/**
+ * GET /api/v1/building-types/:id - Get building type by ID response
+ */
+export const GetBuildingTypeResponseSchema = z.object({
+  success: z.literal(true),
+  data: BuildingTypeSchema,
+});
+
+export type GetBuildingTypeResponse = z.infer<typeof GetBuildingTypeResponseSchema>;
 
 /**
  * POST /api/v1/building-types - Create building type request

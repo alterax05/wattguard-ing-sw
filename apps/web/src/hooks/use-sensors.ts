@@ -15,30 +15,14 @@ export const SENSORS_QUERY_KEY = ["sensors"] as const;
 const SENSOR_PAGE_SIZE = 100;
 
 import type {
-  SensorType,
-  SensorStatus,
-  Sensor,
-  SensorReading,
   ListSensorsQuery,
   ListSensorsResponse,
   GetSensorReadingsQuery,
   CreateSensorRequest,
   UpdateSensorRequest,
+  WithId,
 } from "@wattguard/shared";
 
-// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
-
-export type {
-  SensorType,
-  SensorStatus,
-  Sensor,
-  SensorReading,
-  CreateSensorRequest,
-  UpdateSensorRequest,
-};
-
-export type ListSensorsParams = ListSensorsQuery;
-export type SensorReadingsParams = GetSensorReadingsQuery;
 export type SensorListData = ListSensorsResponse["data"];
 
 export interface UseSensorsOptions {
@@ -48,8 +32,8 @@ export interface UseSensorsOptions {
 
 // ── Queries ─────────────────────────────────────────────────────────────────
 
-async function fetchSensorPage(params?: ListSensorsParams): Promise<SensorListData> {
-  const query: ListSensorsParams = {};
+async function fetchSensorPage(params?: ListSensorsQuery): Promise<SensorListData> {
+  const query: ListSensorsQuery = {};
   if (params?.building) query.building = params.building;
   if (params?.sensorType) query.sensorType = params.sensorType;
   if (params?.status) query.status = params.status;
@@ -72,7 +56,7 @@ async function fetchSensorPage(params?: ListSensorsParams): Promise<SensorListDa
  * Fetch all sensors with optional filters.
  * GET /api/sensors
  */
-export function useSensors(params?: ListSensorsParams, options?: UseSensorsOptions) {
+export function useSensors(params?: ListSensorsQuery, options?: UseSensorsOptions) {
   return useQuery({
     queryKey: [...SENSORS_QUERY_KEY, "list", params ?? {}],
     queryFn: () => fetchSensorPage(params),
@@ -87,7 +71,7 @@ export function useSensors(params?: ListSensorsParams, options?: UseSensorsOptio
  * optionally filtered by the provided params (e.g. buildingId).
  * GET /api/sensors
  */
-export function useAllSensors(params?: ListSensorsParams, options?: UseSensorsOptions) {
+export function useAllSensors(params?: ListSensorsQuery, options?: UseSensorsOptions) {
   return useQuery({
     queryKey: [...SENSORS_QUERY_KEY, "all", params ?? {}],
     queryFn: async () => {
@@ -148,11 +132,11 @@ export function useSensor(id: string | undefined) {
  * Fetch readings for a sensor.
  * GET /api/sensors/:id/readings
  */
-export function useSensorReadings(id: string | undefined, params?: SensorReadingsParams) {
+export function useSensorReadings(id: string | undefined, params?: GetSensorReadingsQuery) {
   return useQuery({
     queryKey: [...SENSORS_QUERY_KEY, "readings", id, params ?? {}],
     queryFn: async () => {
-      const query: SensorReadingsParams = {};
+      const query: GetSensorReadingsQuery = {};
       if (params?.startDate) query.startDate = params.startDate;
       if (params?.endDate) query.endDate = params.endDate;
       if (params?.sortOrder) query.sortOrder = params.sortOrder;
@@ -213,7 +197,7 @@ export function useUpdateSensor() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: UpdateSensorRequest & { id: string }) => {
+    mutationFn: async (input: WithId<UpdateSensorRequest>) => {
       const { id, ...body } = input;
       const res = await client.api.v1.sensors[":id"].$patch({
         param: { id },

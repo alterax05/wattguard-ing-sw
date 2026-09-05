@@ -106,9 +106,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
     },
   )
   .get(
-    "/history",
+    "/timeseries",
     describeRoute({
-      summary: "Leggi storico metriche",
+      summary: "Leggi serie temporale metriche",
       description: "Restituisce energia e gas aggregati per intervallo (ora/giorno/settimana)",
       tags: ["Metrics"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],

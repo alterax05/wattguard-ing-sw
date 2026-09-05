@@ -17,6 +17,25 @@ export const ListUsersResponseSchema = z.object({
 export type ListUsersResponse = z.infer<typeof ListUsersResponseSchema>;
 
 /**
+ * GET /api/v1/users/:id - Get user by ID parameter
+ */
+export const GetUserParamsSchema = z.object({
+  id: z.string().min(1, "User ID is required").describe("User identifier"),
+});
+
+export type GetUserParams = z.infer<typeof GetUserParamsSchema>;
+
+/**
+ * GET /api/v1/users/:id - Get user by ID response
+ */
+export const GetUserResponseSchema = z.object({
+  success: z.literal(true),
+  data: UserSchema,
+});
+
+export type GetUserResponse = z.infer<typeof GetUserResponseSchema>;
+
+/**
  * PATCH /api/v1/users/:id - Update user path parameter
  */
 export const UpdateUserParamsSchema = z.object({

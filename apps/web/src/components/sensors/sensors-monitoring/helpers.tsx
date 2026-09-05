@@ -1,7 +1,7 @@
 import { Flame, Thermometer, Wind, Zap } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getDateFnsLocale, getIntlLocale } from "@/lib/dates"
-import type { SensorType, Sensor } from "@/hooks/use-sensors"
+import type { SensorType, Sensor } from "@wattguard/shared"
 import type { MonitoringStatus } from "@/lib/sensor-status"
 
 export type SensorGroup = "all" | "thermometers" | "meters"

@@ -10,7 +10,7 @@ import {
   serializeReportXlsx,
 } from "../lib/report";
 import {
-  ReportsQuerySchema,
+  ExportReportQuerySchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type { ErrorResponse } from "@wattguard/shared";
@@ -59,7 +59,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    validator("query", ReportsQuerySchema),
+    validator("query", ExportReportQuerySchema),
     async (c) => {
       const { buildingIds, startDate, endDate, format: queryFormat } = c.req.valid("query");
       const acceptHeader = c.req.header("accept") || "";

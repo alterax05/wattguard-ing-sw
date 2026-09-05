@@ -7,7 +7,7 @@ import type { JwtVariables } from "hono/jwt";
 import type { HydratedDocument } from "mongoose";
 import { User, type UserDocument } from "../models/User";
 import type { AccessTokenPayload } from "../auth/jwt";
-import type { ErrorResponse } from "@wattguard/shared";
+import type { ErrorResponse, UserRole } from "@wattguard/shared";
 import { apiError } from "../lib/api-response";
 
 /**
@@ -16,11 +16,6 @@ import { apiError } from "../lib/api-response";
 export type AuthVariables = JwtVariables<AccessTokenPayload> & {
   userDoc: HydratedDocument<UserDocument>;
 };
-
-/**
- * Type alias for our JWT payload structure
- */
-export type JWTPayload = AccessTokenPayload;
 
 /**
  * Middleware to load user document from database after JWT verification
@@ -63,7 +58,7 @@ export const loadUserDoc = () => createMiddleware<{
  * 
  * @param roles - One or more roles that are allowed to access the route
  */
-export const requireRole = (...roles: ("admin" | "operator")[]) => 
+export const requireRole = (...roles: UserRole[]) => 
   createMiddleware<{
     Variables: JwtVariables<AccessTokenPayload>;
   }>(async (c, next) => {

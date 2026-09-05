@@ -5,6 +5,7 @@ import {
   PaginationQuerySchema,
   PaginationResponseSchema,
   SortOrderSchema,
+  SelfLinkSchema,
 } from "./common";
 
 export const AlertSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
@@ -23,10 +24,18 @@ export type AlertType = (typeof ALERT_TYPES)[number];
 export const AlertTypeSchema = z.enum(ALERT_TYPES);
 
 export const AlertSchema = z.object({
+  self: SelfLinkSchema.optional(),
   id: ObjectIdSchema.describe("Unique alert identifier"),
   buildingId: ObjectIdSchema.describe("Building identifier this alert belongs to"),
   buildingName: z.string().describe("Name of the building"),
+  building: z.object({
+    self: SelfLinkSchema,
+    name: z.string().optional(),
+  }).optional().describe("Building relation with canonical URI"),
   sensorId: ObjectIdSchema.nullish().transform((v) => v ?? undefined).describe("Optional sensor identifier this alert relates to"),
+  sensor: z.object({
+    self: SelfLinkSchema,
+  }).optional().describe("Sensor relation with canonical URI"),
   type: AlertTypeSchema.describe("Type of the alert"),
   thresholdType: AlertThresholdTypeSchema.nullish().transform((v) => v ?? undefined).describe("Threshold direction for threshold alerts"),
   severity: AlertSeveritySchema.describe("Severity level"),
@@ -95,4 +104,17 @@ export const UpdateAlertStatusResponseSchema = z.object({
 });
 
 export type UpdateAlertStatusResponse = z.infer<typeof UpdateAlertStatusResponseSchema>;
+
+/**
+ * GET /api/v1/alerts/:id - Get alert by ID
+ */
+export const GetAlertParamsSchema = AlertIdParamSchema;
+export type GetAlertParams = z.infer<typeof GetAlertParamsSchema>;
+
+export const GetAlertResponseSchema = z.object({
+  success: z.literal(true),
+  data: AlertSchema,
+});
+export type GetAlertResponse = z.infer<typeof GetAlertResponseSchema>;
+
 

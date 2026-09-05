@@ -6,13 +6,11 @@ import {
   expectTypeOf,
 } from "bun:test";
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
-import { ErrorSchema } from "@wattguard/shared";
-import type { ListAlertsResponse, UpdateAlertStatusResponse } from "@wattguard/shared";
+import type { ListAlertsResponse, UpdateAlertStatusResponse, GetAlertResponse, ErrorResponse} from "@wattguard/shared";
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 import { Alert } from "../../models/Alert";
@@ -171,7 +169,7 @@ describe("alerts api", () => {
       }
     );
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.success).toBe(false);
     if (body.success) {
@@ -206,4 +204,41 @@ describe("alerts api", () => {
     expect(body.data.resolvedBy).toBe("Admin User");
   });
 
+  it("should get an alert by id with HATEOAS links", async () => {
+    const alert = await Alert.findOne();
+    expect(alert).toBeDefined();
+
+    const res = await client.api.v1.alerts[":id"].$get(
+      {
+        param: { id: alert!._id.toString() },
+      },
+      {
+        headers: { Cookie: `access_token=${adminToken}` },
+      }
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expectTypeOf(body).toExtend<GetAlertResponse | ErrorResponse>();
+    expect(body.success).toBe(true);
+    if (!body.success) {
+      return expect.unreachable("Expected response success to be true");
+    }
+    expect(body.data.id).toBe(alert!._id.toString());
+    expect(body.data.self).toBe(`/api/v1/alerts/${alert!._id.toString()}`);
+    expect(body.data.building?.self).toBe(`/api/v1/buildings/${buildingId}`);
+  });
+
+  it("should return 404 for non-existent alert id", async () => {
+    const res = await client.api.v1.alerts[":id"].$get(
+      {
+        param: { id: "507f1f77bcf86cd799439011" },
+      },
+      {
+        headers: { Cookie: `access_token=${adminToken}` },
+      }
+    );
+
+    expect(res.status).toBe(404);
+  });
 });

@@ -4,7 +4,7 @@ import { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Building, type BuildingDocument } from "../models/Building";
 import { BuildingType, type HydratedBuildingType } from "../models/BuildingType";
-import { Sensor, type SensorDocument } from "../models/Sensor";
+import { Sensor } from "../models/Sensor";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
 import {
   toBuildingSummaryDTO,
@@ -24,9 +24,8 @@ import {
   UpdateBuildingResponseSchema,
   DeleteBuildingParamsSchema,
   DeleteBuildingResponseSchema,
-  BuildingReadingsLatestResponseSchema,
-  BuildingReadingsQuerySchema,
-  BuildingReadingsResponseSchema,
+  GetBuildingHistoryQuerySchema,
+  GetBuildingHistoryResponseSchema,
   GetBuildingEfficiencyQuerySchema,
   GetBuildingEfficiencyResponseSchema,
   ErrorSchema,
@@ -35,8 +34,7 @@ import type {
   CreateBuildingResponse,
   DeleteBuildingResponse,
   GetBuildingEfficiencyResponse,
-  BuildingReadingsResponse,
-  BuildingReadingsLatestResponse,
+  GetBuildingHistoryResponse,
   GetBuildingResponse,
   SearchBuildingsResponse,
   UpdateBuildingResponse,
@@ -529,98 +527,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
     }
   )
   .get(
-    "/:id/readings/latest",
-    describeRoute({
-      summary: "Leggi ultime letture",
-      description: "Restituisce l'istantanea realtime delle ultime letture dei sensori",
-      tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
-      responses: {
-        200: {
-          description: "Real-time data retrieved successfully",
-          content: {
-            "application/json": {
-              schema: resolver(BuildingReadingsLatestResponseSchema),
-            },
-          },
-        },
-        401: {
-          description: "Unauthorized",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-        403: {
-          description: "Forbidden",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-        404: {
-          description: "Building not found",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-      },
-    }),
-    validator("param", GetBuildingParamsSchema),
-    async (c) => {
-      const { id } = c.req.valid("param");
-
-      const building = await Building.findById(id);
-      if (!building) {
-        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
-      }
-
-      // Get all active sensors for this building
-      const sensors = await Sensor.find({
-        building: id,
-        status: "active",
-      });
-
-      const internalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "internal_temp");
-      const externalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "external_temp");
-      const energyMeterSensor = sensors.find((s: SensorDocument) => s.sensorType === "energy_meter");
-
-      return c.json(apiSuccess({
-        buildingId: building._id.toString(),
-        buildingName: building.name,
-        timestamp: new Date().toISOString(),
-        data: {
-          internalTemperature: {
-            value: internalTempSensor?.lastReading?.value ?? null,
-            unit: internalTempSensor?.lastReading?.unit ?? "°C",
-            timestamp: internalTempSensor?.lastReading?.timestamp?.toISOString() ?? null,
-            sensorId: internalTempSensor?._id.toString() ?? null,
-          },
-          externalTemperature: {
-            value: externalTempSensor?.lastReading?.value ?? null,
-            unit: externalTempSensor?.lastReading?.unit ?? "°C",
-            timestamp: externalTempSensor?.lastReading?.timestamp?.toISOString() ?? null,
-            sensorId: externalTempSensor?._id.toString() ?? null,
-          },
-          energyConsumption: {
-            value: energyMeterSensor?.lastReading?.value ?? null,
-            unit: energyMeterSensor?.lastReading?.unit ?? "kW",
-            timestamp: energyMeterSensor?.lastReading?.timestamp?.toISOString() ?? null,
-            sensorId: energyMeterSensor?._id.toString() ?? null,
-          },
-        },
-      }) satisfies BuildingReadingsLatestResponse);
-    }
-  )
-  .get(
     "/:id/readings",
     describeRoute({
       summary: "Leggi storico letture",
-      description: "Restituisce lo storico per intervallo di date, per i grafici",
+      description: "Restituisce lo storico per intervallo di date, per i grafici. Usa limit=1&sortOrder=desc per l'ultima lettura",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -628,7 +538,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Historical readings retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(BuildingReadingsResponseSchema),
+              schema: resolver(GetBuildingHistoryResponseSchema),
             },
           },
         },
@@ -667,10 +577,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
       },
     }),
     validator("param", GetBuildingParamsSchema),
-    validator("query", BuildingReadingsQuerySchema),
+    validator("query", GetBuildingHistoryQuerySchema),
     async (c) => {
       const { id } = c.req.valid("param");
-      const { startDate, endDate, sensorType } = c.req.valid("query");
+      const { startDate, endDate, sensorType, limit, sortOrder } = c.req.valid("query");
 
       const building = await Building.findById(id);
       if (!building) {
@@ -690,10 +600,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         query["metadata.sensorType"] = sensorType;
       }
 
-      // Query historical data from time-series collection
+      // Query historical data from time-series collection.
+      // limit=1&sortOrder=desc returns the latest point (replaces readings/latest).
       const readings = await SensorReading.find(query)
-        .sort({ timestamp: 1 })
-        .limit(1000);
+        .sort({ timestamp: sortOrder === "desc" ? -1 : 1 })
+        .limit(limit);
 
       return c.json(apiSuccess({
         buildingId: building._id.toString(),
@@ -709,7 +620,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           sensorType: r.metadata.sensorType,
           sensorId: r.metadata.sensor?.toString(),
         })),
-      }) satisfies BuildingReadingsResponse);
+      }) satisfies GetBuildingHistoryResponse);
     }
   )
   .get(

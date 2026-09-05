@@ -12,21 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { DialogFooter } from "@/components/ui/dialog"
-import type { SensorStatus, SensorType } from "@/hooks/use-sensors"
+import type { SensorStatus, SensorType } from "@wattguard/shared"
+import { SensorStatusSchema, SensorTypeSchema } from "@wattguard/shared"
 
-export const SENSOR_TYPES: SensorType[] = [
-  "internal_temp",
-  "external_temp",
-  "energy_meter",
-  "gas_meter",
-]
+export const SENSOR_TYPES: SensorType[] = [...SensorTypeSchema.options]
 
-export const SENSOR_STATUSES: SensorStatus[] = [
-  "active",
-  "inactive",
-  "maintenance",
-  "error",
-]
+export const SENSOR_STATUSES: SensorStatus[] = [...SensorStatusSchema.options]
 
 export interface SensorFormValues {
   sensorType: SensorType | ""

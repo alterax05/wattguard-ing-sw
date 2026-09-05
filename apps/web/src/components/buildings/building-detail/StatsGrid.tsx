@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next"
 import { Activity, Building2, Thermometer, Zap } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import type { BuildingDetail, RealTimeData } from "@/hooks/use-buildings"
+import type {BuildingDetail} from "@wattguard/shared"
+import type { BuildingRealTimeSnapshot } from "@/hooks/use-buildings"
 
 export interface StatsGridProps {
   building: BuildingDetail
-  realTimeData?: RealTimeData
+  realTimeData?: BuildingRealTimeSnapshot
   activeSensors: number
   totalSensors: number
 }
