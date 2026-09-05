@@ -9,8 +9,6 @@ import { openapiConfig } from "../config/openapi";
 import health from "./health";
 import invites from "./invites";
 import auth from "./auth";
-import authLocal from "./auth-local";
-import authGoogle from "./auth-google";
 import users from "./users";
 import buildingTypes from "./building-types";
 import buildings from "./buildings";
@@ -52,9 +50,6 @@ const app = new Hono()
     }),
   )
   .use("/users/*", ...requireAdmin)
-  .use("/auth/me", ...requireAuth)
-  .use("/auth/me/language", ...requireAuth)
-  .use("/auth/admin/*", ...requireAdmin)
   .use("/building-types/*", ...requireOperator)
   .use("/buildings/*", ...requireOperator)
   .use("/sensors/*", ...requireOperator)
@@ -68,8 +63,6 @@ const app = new Hono()
   .route("/invites", invites)
   .route("/health", health)
   .route("/auth", auth)
-  .route("/auth/local", authLocal)
-  .route("/auth/google", authGoogle)
   .route("/users", users)
   .route("/building-types", buildingTypes)
   .route("/buildings", buildings)

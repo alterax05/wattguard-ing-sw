@@ -49,7 +49,7 @@ async function getAdminToken() {
     }),
   });
 
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin@test.com",
       password: "admin123",
@@ -73,7 +73,7 @@ async function getOperatorToken() {
     }),
   });
 
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "operator@test.com",
       password: "operator123",

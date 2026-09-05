@@ -1,5 +1,5 @@
 /**
- * Integration tests for authentication flows
+ * Integration tests for authentication and session flows
  */
 import {
   describe,
@@ -21,19 +21,49 @@ import { randomToken, hashTokenSha256 } from "../../utils/crypto";
 import { ErrorSchema } from "@wattguard/shared";
 import type {
   ValidateInviteResponse,
-  SetupResponse,
-  LoginResponse,
-  ForgotPasswordResponse,
+  AcceptInviteResponse,
+  SessionResponse,
+  SessionUserResponse,
+  DestroySessionResponse,
+  CreateResetTokenResponse,
   ValidateResetTokenResponse,
-  ResetPasswordResponse,
-  MeResponse,
-  LogoutResponse,
-  CreateInviteResponse,
+  ApplyPasswordResetResponse,
+  GoogleConfigResponse,
 } from "@wattguard/shared";
 
 type ErrorResponse = z.infer<typeof ErrorSchema>;
 
-const client = testClient(app);
+interface MockGooglePayload {
+  sub: string;
+  email: string;
+  email_verified: boolean;
+  name?: string;
+}
+
+let mockPayload: MockGooglePayload = {
+  sub: "google-12345",
+  email: "googleuser@test.com",
+  email_verified: true,
+  name: "Google User",
+};
+let mockVerifyError: Error | null = null;
+
+// Mock google-auth-library
+await mock.module("google-auth-library", () => {
+  return {
+    OAuth2Client: class {
+      constructor(public clientId?: string) {}
+      verifyIdToken() {
+        if (mockVerifyError) {
+          return Promise.reject(mockVerifyError);
+        }
+        return Promise.resolve({
+          getPayload: () => mockPayload,
+        });
+      }
+    },
+  };
+});
 
 // Mock email functions to avoid email requirements in tests
 await mock.module("../../email/mailer", () => ({
@@ -44,18 +74,23 @@ await mock.module("../../email/mailer", () => ({
   sendAlertEmail: mock(async () => Promise.resolve()),
 }));
 
-// Suppress console logs during tests
-
 setupIntegrationTests();
 
-
-beforeEach(async () => {
-});
+const client = testClient(app);
 
 describe("auth api", () => {
+  beforeEach(() => {
+    mockVerifyError = null;
+    mockPayload = {
+      sub: "google-12345",
+      email: "googleuser@test.com",
+      email_verified: true,
+      name: "Google User",
+    };
+  });
+
   describe("invite flow", () => {
     test("creates an admin user and an invite", async () => {
-      // Create admin user directly
       const adminPasswordHash = await Bun.password.hash("admin123", {
         algorithm: "bcrypt",
         cost: 10,
@@ -69,7 +104,7 @@ describe("auth api", () => {
       });
 
       // Login as admin
-      const loginRes = await client.api.v1.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.session.$post({
         json: {
           email: "admin@test.com",
           password: "admin123",
@@ -78,13 +113,12 @@ describe("auth api", () => {
 
       expect(loginRes.status).toBe(200);
       const loginData = await loginRes.json();
-      expectTypeOf(loginData).toExtend<LoginResponse | ErrorResponse>();
+      expectTypeOf(loginData).toExtend<SessionResponse | ErrorResponse>();
       if (!("success" in loginData)) {
         throw new Error("Expected response to contain 'success'");
       }
       expect(loginData.success).toBe(true);
 
-      // Extract JWT from Set-Cookie header
       const setCookieHeader = loginRes.headers.get("set-cookie");
       expect(setCookieHeader).toBeDefined();
       const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
@@ -108,16 +142,16 @@ describe("auth api", () => {
 
       expect(inviteRes.status).toBe(201);
       const inviteData = await inviteRes.json();
-      expectTypeOf(inviteData).toExtend<CreateInviteResponse | ErrorResponse>();
       expect(inviteData.success).toBe(true);
       if (!inviteData.success) {
         throw new Error("Expected response success to be true");
       }
       expect(inviteData.data.email).toBe("user@test.com");
+      expect(inviteData.data.role).toBe("operator");
+      expect(inviteData.data.status).toBe("pending");
     });
 
     test("validates an invite token", async () => {
-      // Create invite manually
       const token = randomToken(32);
       const tokenHash = hashTokenSha256(token);
 
@@ -139,10 +173,10 @@ describe("auth api", () => {
         createdBy: admin._id,
       });
 
-      // Validate invite via path param
       const res = await client.api.v1.invites[":token"].$get({
         param: { token },
       });
+
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
@@ -152,25 +186,10 @@ describe("auth api", () => {
       }
       expect(data.data.valid).toBe(true);
       expect(data.data.email).toBe("user@test.com");
-
-      const resPath = await client.api.v1.invites[":token"].$get({
-        param: { token },
-      });
-      expect(resPath.status).toBe(200);
-      const dataPath = await resPath.json();
-      expect(dataPath.success).toBe(true);
-      if (!dataPath.success) {
-        throw new Error("Expected response success to be true");
-      }
-      expect(dataPath.data.valid).toBe(true);
-      expect(dataPath.data.email).toBe("user@test.com");
+      expect(data.data.role).toBe("operator");
     });
 
-  });
-
-  describe("local password auth", () => {
-    test("sets up password for invited user", async () => {
-      // Create invite
+    test("completes local setup and activates user account via POST /invites/:token/acceptance", async () => {
       const token = randomToken(32);
       const tokenHash = hashTokenSha256(token);
 
@@ -192,10 +211,10 @@ describe("auth api", () => {
         createdBy: admin._id,
       });
 
-      // Setup password
-      const res = await client.api.v1.auth.local.setup.$post({
+      // Accept invite
+      const res = await client.api.v1.invites[":token"].acceptance.$post({
+        param: { token },
         json: {
-          inviteToken: token,
           password: "password123",
           name: "Test User",
         },
@@ -203,7 +222,7 @@ describe("auth api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<SetupResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<AcceptInviteResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         throw new Error("Expected response success to be true");
@@ -220,8 +239,53 @@ describe("auth api", () => {
       expect(invite!.status).toBe("accepted");
     });
 
-    test("logs in with valid credentials", async () => {
-      // Create user
+    test("accepts invite via Google ID token via POST /invites/:token/acceptance", async () => {
+      const token = randomToken(32);
+      const tokenHash = hashTokenSha256(token);
+
+      const admin = await User.create({
+        email: "admin@test.com",
+        role: "admin",
+        passwordHash: await Bun.password.hash("admin123", {
+          algorithm: "bcrypt",
+          cost: 10,
+        }),
+      });
+
+      await Invite.create({
+        email: "googleuser@test.com",
+        role: "operator",
+        tokenHash,
+        status: "pending",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        createdBy: admin._id,
+      });
+
+      const res = await client.api.v1.invites[":token"].acceptance.$post({
+        param: { token },
+        json: {
+          idToken: "valid-mock-google-token",
+        },
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      if (!data.success) throw new Error("Expected success");
+      expect(data.data.email).toBe("googleuser@test.com");
+      expect(data.data.name).toBe("Google User");
+
+      const user = await User.findOne({ email: "googleuser@test.com" });
+      expect(user).toBeDefined();
+      expect(user!.googleSub).toBe("google-12345");
+
+      const invite = await Invite.findOne({ tokenHash });
+      expect(invite!.status).toBe("accepted");
+    });
+  });
+
+  describe("session management (login & logout)", () => {
+    test("logs in with valid local credentials via POST /auth/session", async () => {
       await User.create({
         email: "user@test.com",
         role: "operator",
@@ -231,8 +295,7 @@ describe("auth api", () => {
         }),
       });
 
-      // Login
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: {
           email: "user@test.com",
           password: "password123",
@@ -241,21 +304,19 @@ describe("auth api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<SessionResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         throw new Error("Expected response success to be true");
       }
       expect(data.data.email).toBe("user@test.com");
 
-      // Check cookie was set
       const setCookieHeader = res.headers.get("set-cookie");
       expect(setCookieHeader).toBeDefined();
       expect(setCookieHeader).toContain("access_token=");
     });
 
     test("rejects login with invalid credentials", async () => {
-      // Create user
       await User.create({
         email: "user@test.com",
         role: "operator",
@@ -265,8 +326,7 @@ describe("auth api", () => {
         }),
       });
 
-      // Login with wrong password
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: {
           email: "user@test.com",
           password: "wrongpassword",
@@ -281,11 +341,99 @@ describe("auth api", () => {
       }
       expect(data.error_code).toBe("invalid_credentials");
     });
+
+    test("logs in existing user with valid Google ID token via POST /auth/session", async () => {
+      await User.create({
+        email: "googleuser@test.com",
+        name: "Old Name",
+        role: "operator",
+        isDisabled: false,
+      });
+
+      const res = await client.api.v1.auth.session.$post({
+        json: {
+          idToken: "valid-mock-token",
+        },
+      });
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      if (!data.success) throw new Error("Expected success");
+      expectTypeOf(data).toExtend<SessionResponse>();
+      expect(data.data.email).toBe("googleuser@test.com");
+
+      const user = await User.findOne({ email: "googleuser@test.com" });
+      expect(user!.googleSub).toBe("google-12345");
+      expect(user!.lastLoginAt).toBeDefined();
+
+      const setCookie = res.headers.get("set-cookie");
+      expect(setCookie).toBeDefined();
+      expect(setCookie).toContain("access_token=");
+    });
+
+    test("rejects Google login when user does not exist", async () => {
+      const res = await client.api.v1.auth.session.$post({
+        json: {
+          idToken: "valid-mock-token",
+        },
+      });
+
+      expect(res.status).toBe(404);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      if (data.success) throw new Error("Expected error");
+      expect(data.error_code).toBe("oauth_no_account");
+    });
+
+    test("rejects Google sign-in when account is disabled", async () => {
+      await User.create({
+        email: "googleuser@test.com",
+        role: "operator",
+        isDisabled: true,
+      });
+
+      const res = await client.api.v1.auth.session.$post({
+        json: {
+          idToken: "valid-mock-token",
+        },
+      });
+
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.success).toBe(false);
+      if (data.success) throw new Error("Expected error");
+      expect(data.error_code).toBe("oauth_account_disabled");
+    });
+
+    test("destroys session and clears cookie via DELETE /auth/session", async () => {
+      const res = await client.api.v1.auth.session.$delete();
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<DestroySessionResponse | ErrorResponse>();
+      expect(data.success).toBe(true);
+
+      const setCookieHeader = res.headers.get("set-cookie");
+      expect(setCookieHeader).toBeDefined();
+      expect(setCookieHeader).toContain("access_token=");
+    });
   });
 
-  describe("protected routes", () => {
-    test("accesses protected route with valid token", async () => {
-      // Create user and login
+  describe("Google OAuth config", () => {
+    test("GET /api/v1/auth/google/config returns configured client ID", async () => {
+      const res = await client.api.v1.auth.google.config.$get();
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+      if (!data.success) throw new Error("Expected success");
+      expectTypeOf(data).toExtend<GoogleConfigResponse>();
+      expect(data.data.clientId).toBeDefined();
+    });
+  });
+
+  describe("current session and protected routes", () => {
+    test("accesses current session user via GET /auth/session", async () => {
       await User.create({
         email: "user@test.com",
         role: "operator",
@@ -295,7 +443,7 @@ describe("auth api", () => {
         }),
       });
 
-      const loginRes = await client.api.v1.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.session.$post({
         json: {
           email: "user@test.com",
           password: "password123",
@@ -306,14 +454,13 @@ describe("auth api", () => {
       const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
       const token = tokenMatch![1];
 
-      // Access protected route
-      const res = await client.api.v1.auth.me.$get(undefined, {
+      const res = await client.api.v1.auth.session.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<MeResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<SessionUserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         throw new Error("Expected response success to be true");
@@ -322,11 +469,11 @@ describe("auth api", () => {
     });
 
     test("rejects access without token", async () => {
-      const res = await client.api.v1.auth.me.$get();
+      const res = await client.api.v1.auth.session.$get();
       expect(res.status).toBe(401);
     });
 
-    test("updates the preferred language via PATCH /auth/me/language", async () => {
+    test("updates user profile via PATCH /auth/session", async () => {
       await User.create({
         email: "lang@test.com",
         role: "operator",
@@ -336,7 +483,7 @@ describe("auth api", () => {
         }),
       });
 
-      const loginRes = await client.api.v1.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.session.$post({
         json: { email: "lang@test.com", password: "password123" },
       });
       const setCookieHeader = loginRes.headers.get("set-cookie");
@@ -344,12 +491,12 @@ describe("auth api", () => {
       const token = tokenMatch![1];
       const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
 
-      const meBefore = await client.api.v1.auth.me.$get(undefined, authHeaders);
+      const meBefore = await client.api.v1.auth.session.$get(undefined, authHeaders);
       const beforeData = await meBefore.json();
       expect(beforeData.data.language).toBeUndefined();
 
-      const res = await client.api.v1.auth.me.language.$patch(
-        { json: { language: "it" } },
+      const res = await client.api.v1.auth.session.$patch(
+        { json: { language: "it", name: "Updated Name" } },
         authHeaders,
       );
       expect(res.status).toBe(200);
@@ -359,11 +506,13 @@ describe("auth api", () => {
         throw new Error("Expected response success to be true");
       }
       expect(data.data.language).toBe("it");
+      expect(data.data.name).toBe("Updated Name");
 
       const persisted = await User.findOne({ email: "lang@test.com" });
       expect(persisted!.language).toBe("it");
+      expect(persisted!.name).toBe("Updated Name");
 
-      const invalid = await client.api.v1.auth.me.language.$patch(
+      const invalid = await client.api.v1.auth.session.$patch(
         // @ts-expect-error unsupported locale must be rejected by validation
         { json: { language: "fr" } },
         authHeaders,
@@ -372,7 +521,6 @@ describe("auth api", () => {
     });
 
     test("rejects operator from admin routes", async () => {
-      // Create operator user
       await User.create({
         email: "operator@test.com",
         role: "operator",
@@ -382,7 +530,7 @@ describe("auth api", () => {
         }),
       });
 
-      const loginRes = await client.api.v1.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.session.$post({
         json: {
           email: "operator@test.com",
           password: "password123",
@@ -393,7 +541,6 @@ describe("auth api", () => {
       const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
       const token = tokenMatch![1];
 
-      // Try to access admin route
       const res = await client.api.v1.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -405,52 +552,8 @@ describe("auth api", () => {
     });
   });
 
-  describe("logout and test email", () => {
-    test("logs out and clears the access token cookie", async () => {
-      await User.create({
-        email: "user@test.com",
-        role: "operator",
-        passwordHash: await Bun.password.hash("password123", {
-          algorithm: "bcrypt",
-          cost: 10,
-        }),
-      });
-
-      const res = await client.api.v1.auth.logout.$post();
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<LogoutResponse | ErrorResponse>();
-      if (!("success" in data)) {
-        throw new Error("Expected response to contain 'success'");
-      }
-      expect(data.success).toBe(true);
-
-      const setCookieHeader = res.headers.get("set-cookie");
-      expect(setCookieHeader).toBeDefined();
-      expect(setCookieHeader).toContain("access_token=");
-    });
-
-    test("logs out via RESTful DELETE /auth/session", async () => {
-      const res = await client.api.v1.auth.session.$delete();
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<LogoutResponse | ErrorResponse>();
-      if (!("success" in data)) {
-        throw new Error("Expected response to contain 'success'");
-      }
-      expect(data.success).toBe(true);
-
-      const setCookieHeader = res.headers.get("set-cookie");
-      expect(setCookieHeader).toBeDefined();
-      expect(setCookieHeader).toContain("access_token=");
-    });
-  });
-
   describe("password reset flow", () => {
-    test("requests password reset for existing user", async () => {
-      // Create user
+    test("requests password reset for existing user via POST /auth/reset-tokens", async () => {
       await User.create({
         email: "user@test.com",
         role: "operator",
@@ -460,27 +563,21 @@ describe("auth api", () => {
         }),
       });
 
-      // Request reset
-      const res = await client.api.v1.auth.local["forgot-password"].$post({
+      const res = await client.api.v1.auth["reset-tokens"].$post({
         json: { email: "user@test.com" },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<ForgotPasswordResponse | ErrorResponse>();
-      if (!("success" in data)) {
-        throw new Error("Expected response to contain 'success'");
-      }
+      expectTypeOf(data).toExtend<CreateResetTokenResponse | ErrorResponse>();
       expect(data.success).toBe(true);
 
-      // Verify reset token was created
       const user = await User.findOne({ email: "user@test.com" });
       const resetToken = await PasswordResetToken.findOne({ userId: user!._id });
       expect(resetToken).toBeDefined();
     });
 
     test("completes full password reset flow", async () => {
-      // Create user
       const user = await User.create({
         email: "user@test.com",
         role: "operator",
@@ -490,7 +587,6 @@ describe("auth api", () => {
         }),
       });
 
-      // Create reset token manually
       const token = randomToken(32);
       const tokenHash = hashTokenSha256(token);
 
@@ -500,24 +596,17 @@ describe("auth api", () => {
         expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
       });
 
-      // Validate token via query and path param
-      const validateRes = await client.api.v1.auth.local["validate-reset-token"].$get({
-        query: { token },
+      // Validate token via GET /auth/reset-tokens/:token
+      const validateRes = await client.api.v1.auth["reset-tokens"][":token"].$get({
+        param: { token },
       });
       expect(validateRes.status).toBe(200);
       const validateData = await validateRes.json();
       expectTypeOf(validateData).toExtend<ValidateResetTokenResponse | ErrorResponse>();
+      expect(validateData.success).toBe(true);
 
-      const validatePathRes = await client.api.v1.auth.local["reset-tokens"][":token"].$get({
-        param: { token },
-      });
-      expect(validatePathRes.status).toBe(200);
-      const validatePathData = await validatePathRes.json();
-      expectTypeOf(validatePathData).toExtend<ValidateResetTokenResponse | ErrorResponse>();
-
-
-      // Reset password
-      const resetRes = await client.api.v1.auth.local["reset-password"].$post({
+      // Apply reset password via POST /auth/password-resets
+      const resetRes = await client.api.v1.auth["password-resets"].$post({
         json: {
           token,
           password: "newpassword123",
@@ -526,10 +615,7 @@ describe("auth api", () => {
 
       expect(resetRes.status).toBe(200);
       const resetData = await resetRes.json();
-      expectTypeOf(resetData).toExtend<ResetPasswordResponse | ErrorResponse>();
-      if (!("success" in resetData)) {
-        throw new Error("Expected response to contain 'success'");
-      }
+      expectTypeOf(resetData).toExtend<ApplyPasswordResetResponse | ErrorResponse>();
       expect(resetData.success).toBe(true);
 
       // Verify token was deleted
@@ -537,7 +623,7 @@ describe("auth api", () => {
       expect(deletedToken).toBeNull();
 
       // Login with new password
-      const loginRes = await client.api.v1.auth.local.login.$post({
+      const loginRes = await client.api.v1.auth.session.$post({
         json: {
           email: "user@test.com",
           password: "newpassword123",
@@ -547,7 +633,7 @@ describe("auth api", () => {
       expect(loginRes.status).toBe(200);
 
       // Verify old password doesn't work
-      const oldLoginRes = await client.api.v1.auth.local.login.$post({
+      const oldLoginRes = await client.api.v1.auth.session.$post({
         json: {
           email: "user@test.com",
           password: "oldpassword",
@@ -567,7 +653,6 @@ describe("auth api", () => {
         }),
       });
 
-      // Create expired reset token
       const token = randomToken(32);
       const tokenHash = hashTokenSha256(token);
 
@@ -577,8 +662,7 @@ describe("auth api", () => {
         expiresAt: new Date(Date.now() - 1000), // Expired 1 second ago
       });
 
-      // Try to use expired token
-      const res = await client.api.v1.auth.local["reset-password"].$post({
+      const res = await client.api.v1.auth["password-resets"].$post({
         json: {
           token,
           password: "newpassword123",

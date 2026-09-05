@@ -16,8 +16,8 @@ import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 import { ErrorSchema } from "@wattguard/shared";
 import type {
-  LoginResponse,
-  SetupResponse,
+  SessionResponse,
+  AcceptInviteResponse,
   ValidateInviteResponse,
   CreateInviteResponse,
 } from "@wattguard/shared";
@@ -57,13 +57,13 @@ describe("email validation", () => {
         passwordHash: await Bun.password.hash("password123", { algorithm: "bcrypt", cost: 10 }),
       });
 
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: { email, password: "password123" },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<SessionResponse | ErrorResponse>();
     }
   });
 
@@ -80,7 +80,7 @@ describe("email validation", () => {
     ];
 
     for (const email of invalidEmails) {
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: { email, password: "password123" },
       });
 
@@ -103,7 +103,7 @@ describe("email validation", () => {
     const variations = ["USER@TEST.COM", "User@Test.Com", "UsEr@TeSt.CoM"];
 
     for (const email of variations) {
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: { email, password: "password123" },
       });
 
@@ -123,7 +123,7 @@ describe("email validation", () => {
     });
 
     // Login with uppercase email
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       json: {
         email: "USER@TEST.COM",
         password: "password123",
@@ -132,7 +132,7 @@ describe("email validation", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
+    expectTypeOf(data).toExtend<SessionResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
       throw new Error("Expected response success to be true");
@@ -180,13 +180,14 @@ describe("password validation", () => {
         createdBy: admin._id,
       });
 
-      const res = await client.api.v1.auth.local.setup.$post({
-        json: { inviteToken: newToken, password, name: "Test User" },
+      const res = await client.api.v1.invites[":token"].acceptance.$post({
+        param: { token: newToken },
+        json: { password, name: "Test User" },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<SetupResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<AcceptInviteResponse | ErrorResponse>();
     }
   });
 
@@ -212,8 +213,9 @@ describe("password validation", () => {
     const shortPasswords = ["", "a", "ab", "abc", "1234567"];
 
     for (const password of shortPasswords) {
-      const res = await client.api.v1.auth.local.setup.$post({
-        json: { inviteToken: token, password, name: "Test User" },
+      const res = await client.api.v1.invites[":token"].acceptance.$post({
+        param: { token },
+        json: { password, name: "Test User" },
       });
 
       expect(res.status).toBe(400);
@@ -227,7 +229,7 @@ describe("password validation", () => {
   });
 
   test("rejects missing password field", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       // @ts-expect-error intentionally missing required password field
       json: { email: "user@test.com" },
     });
@@ -241,7 +243,7 @@ describe("password validation", () => {
   });
 
   test("rejects null password", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       // @ts-expect-error intentionally null password
       json: { email: "user@test.com", password: null },
     });
@@ -250,7 +252,7 @@ describe("password validation", () => {
   });
 
   test("rejects an empty password field", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       json: {
         email: "user@test.com",
         password: "",
@@ -277,7 +279,7 @@ describe("request body validation", () => {
 
     for (const body of malformedBodies) {
       // SAFETY: the body is deliberately non-JSON so the transport must reject it; `never` bypasses the client's payload type.
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: body as never,
       });
 
@@ -287,7 +289,7 @@ describe("request body validation", () => {
 
   test("rejects empty request body", async () => {
     // SAFETY: the empty payload is deliberate; `never` bypasses the client's typed-args check so the raw body is sent.
-    const res = await client.api.v1.auth.local.login.$post(
+    const res = await client.api.v1.auth.session.$post(
       {} as never,
       {
         init: {
@@ -302,7 +304,7 @@ describe("request body validation", () => {
 
   test("rejects requests with wrong content type", async () => {
     // SAFETY: the empty payload is deliberate; `never` bypasses the client's typed-args check so the raw body is sent.
-    const res = await client.api.v1.auth.local.login.$post(
+    const res = await client.api.v1.auth.session.$post(
       {} as never,
       {
         init: {
@@ -317,7 +319,7 @@ describe("request body validation", () => {
   });
 
   test("handles missing required fields", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       // @ts-expect-error intentionally missing required fields
       json: {},
     });
@@ -339,7 +341,7 @@ describe("request body validation", () => {
     ];
 
     for (const body of wrongTypes) {
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         // @ts-expect-error intentionally wrong field types
         json: body,
       });
@@ -349,7 +351,7 @@ describe("request body validation", () => {
   });
 
   test("rejects a missing email field", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       // @ts-expect-error intentionally missing required email field
       json: {
         password: "password123",
@@ -514,7 +516,7 @@ async function getAdminToken() {
     passwordHash: await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 }),
   });
 
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin@test.com",
       password: "admin123",

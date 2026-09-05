@@ -6,20 +6,22 @@ import i18n from "@/lib/i18n";
 import {
   isSupportedLocale,
   type User,
-  type LoginRequest,
-  type SetupRequest,
-  type ForgotPasswordRequest,
-  type ResetPasswordRequest,
+  type LocalSessionRequest,
+  type GoogleSessionRequest,
+  type AcceptInviteRequest,
+  type CreateResetTokenRequest,
+  type ApplyPasswordResetRequest,
+  type UpdateSessionRequest,
   type CreateInviteRequest,
   type UpdateUserRequest,
 } from "@wattguard/shared";
 
-export const AUTH_QUERY_KEY = ["auth", "me"] as const;
+export const AUTH_QUERY_KEY = ["auth", "session"] as const;
 
 export type AuthUser = User;
 
 /**
- * Fetch the current authenticated user via GET /api/auth/me.
+ * Fetch the current authenticated user via GET /api/v1/auth/session.
  *
  * - On 401 (not authenticated) the query resolves to `null` instead of erroring,
  *   so components can simply check `data === null` for the guest state.
@@ -31,7 +33,7 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async (): Promise<AuthUser | null> => {
-      const res = await client.api.v1.auth.me.$get();
+      const res = await client.api.v1.auth.session.$get();
 
       if (res.status === 401) {
         return null;
@@ -86,15 +88,14 @@ export function useValidateInvite(token: string | null) {
   });
 }
 
-
 /**
- * Validate a password reset token via GET /api/v1/auth/local/reset-tokens/:token
+ * Validate a password reset token via GET /api/v1/auth/reset-tokens/:token
  */
 export function useValidateResetToken(token: string | null) {
   return useQuery({
     queryKey: ["auth", "validate-reset-token", token],
     queryFn: async () => {
-      const res = await client.api.v1.auth.local["reset-tokens"][":token"].$get({
+      const res = await client.api.v1.auth["reset-tokens"][":token"].$get({
         param: { token: token! },
       });
 
@@ -113,15 +114,81 @@ export function useValidateResetToken(token: string | null) {
 // ── Mutations ───────────────────────────────────────────────────────────────
 
 /**
- * Login via POST /api/auth/local/login.
- * On success, invalidates the auth query so the app re-fetches /me.
+ * Create a session via POST /api/v1/auth/session (local login).
+ * On success, invalidates the auth query so the app re-fetches the session.
  */
 export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: LoginRequest) => {
-      const res = await client.api.v1.auth.local.login.$post({
+    mutationFn: async (input: LocalSessionRequest) => {
+      const res = await client.api.v1.auth.session.$post({
+        json: input,
+      });
+
+      if (!res.ok) {
+        throw new Error(await errorMessageFromResponse(res));
+      }
+
+      const resData = await res.json();
+      return resData.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * Public Google OAuth configuration via GET /api/v1/auth/google/config
+ */
+export function useGoogleAuthConfig() {
+  return useQuery({
+    queryKey: ["auth", "google", "config"],
+    queryFn: async () => {
+      const res = await client.api.v1.auth.google.config.$get();
+      if (!res.ok) return null;
+      const resData = await res.json();
+      return resData.data;
+    },
+    staleTime: Infinity,
+  });
+}
+
+/**
+ * Create a session via POST /api/v1/auth/session using Google Identity Services ID token.
+ */
+export function useGoogleLogin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: GoogleSessionRequest) => {
+      const res = await client.api.v1.auth.session.$post({
+        json: input,
+      });
+
+      if (!res.ok) {
+        throw new Error(await errorMessageFromResponse(res));
+      }
+
+      const resData = await res.json();
+      return resData.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * Update session profile / preferences via PATCH /api/v1/auth/session.
+ */
+export function useUpdateSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateSessionRequest) => {
+      const res = await client.api.v1.auth.session.$patch({
         json: input,
       });
 
@@ -158,28 +225,25 @@ export function useLogout() {
     },
 
     onSuccess: () => {
-      // Set the auth user to null first — this triggers AuthProvider to
-      // re-render with `user: null`, which causes ProtectedRoute to redirect.
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
-      // Clear all other cached data so nothing stale remains.
       queryClient.clear();
-      // Navigate as a safety net (ProtectedRoute will also redirect reactively).
       void navigate("/login");
     },
   });
 }
 
 /**
- * Setup (accept invite with password) via POST /api/auth/local/setup.
+ * Accept invite via POST /api/v1/invites/:token/acceptance (local password or Google SSO).
  * On success, invalidates the auth query so the app picks up the new session.
  */
 export function useSetup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: SetupRequest) => {
-      const res = await client.api.v1.auth.local.setup.$post({
-        json: input,
+    mutationFn: async ({ token, ...body }: { token: string } & AcceptInviteRequest) => {
+      const res = await client.api.v1.invites[":token"].acceptance.$post({
+        param: { token },
+        json: body,
       });
 
       if (!res.ok) {
@@ -196,13 +260,13 @@ export function useSetup() {
 }
 
 /**
- * Forgot password via POST /api/auth/local/forgot-password.
+ * Request password reset token via POST /api/v1/auth/reset-tokens.
  * Always resolves successfully (server never reveals whether the email exists).
  */
 export function useForgotPassword() {
   return useMutation({
-    mutationFn: async (input: ForgotPasswordRequest) => {
-      const res = await client.api.v1.auth.local["forgot-password"].$post({
+    mutationFn: async (input: CreateResetTokenRequest) => {
+      const res = await client.api.v1.auth["reset-tokens"].$post({
         json: input,
       });
 
@@ -217,12 +281,12 @@ export function useForgotPassword() {
 }
 
 /**
- * Reset password via POST /api/auth/local/reset-password.
+ * Reset password via POST /api/v1/auth/password-resets.
  */
 export function useResetPassword() {
   return useMutation({
-    mutationFn: async (input: ResetPasswordRequest) => {
-      const res = await client.api.v1.auth.local["reset-password"].$post({
+    mutationFn: async (input: ApplyPasswordResetRequest) => {
+      const res = await client.api.v1.auth["password-resets"].$post({
         json: input,
       });
 

@@ -16,7 +16,7 @@ let buildingId: string;
 let buildingName: string;
 
 async function login(email: string, password: string): Promise<string> {
-  const response = await client.api.v1.auth.local.login.$post({
+  const response = await client.api.v1.auth.session.$post({
     json: { email, password },
   });
   const cookie = response.headers.get("set-cookie");

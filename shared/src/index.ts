@@ -9,9 +9,9 @@ export * from "./i18n";
 // Common schemas
 export * from "./schemas/common";
 
-// Auth schemas
+// Auth & Session schemas
 export * from "./schemas/auth";
-export * from "./schemas/auth-local";
+export * from "./schemas/password-reset";
 
 // User schemas
 export * from "./schemas/users";

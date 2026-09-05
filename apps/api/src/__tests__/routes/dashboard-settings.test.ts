@@ -51,7 +51,7 @@ beforeEach(async () => {
     passwordHash: hash,
   });
 
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: { email: "admin@test.com", password: "admin123" },
   });
 
@@ -194,7 +194,7 @@ describe("settings api", () => {
       passwordHash: await Bun.password.hash("operator123", { algorithm: "bcrypt", cost: 10 }),
     });
 
-    const loginRes = await client.api.v1.auth.local.login.$post({
+    const loginRes = await client.api.v1.auth.session.$post({
       json: { email: "operator@test.com", password: "operator123" },
     });
 
@@ -222,7 +222,7 @@ describe("settings api", () => {
       passwordHash: await Bun.password.hash("operator123", { algorithm: "bcrypt", cost: 10 }),
     });
 
-    const loginRes = await client.api.v1.auth.local.login.$post({
+    const loginRes = await client.api.v1.auth.session.$post({
       json: { email: "operator-patch@test.com", password: "operator123" },
     });
 

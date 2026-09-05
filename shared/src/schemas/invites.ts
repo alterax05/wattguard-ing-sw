@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EmailSchema, UserRoleSchema, IsoDateTimeSchema } from "./common";
+import { EmailSchema, UserRoleSchema, IsoDateTimeSchema, PublicUserSchema } from "./common";
 
 /**
  * Invite status enum
@@ -122,3 +122,30 @@ export const ValidateInviteResponseSchema = z.object({
 });
 
 export type ValidateInviteResponse = z.infer<typeof ValidateInviteResponseSchema>;
+
+/**
+ * POST /api/v1/invites/:token/acceptance - Accept invite request
+ */
+export const AcceptInviteLocalSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(64),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128),
+});
+
+export const AcceptInviteGoogleSchema = z.object({
+  idToken: z.string().min(1, "Google ID token is required"),
+});
+
+export const AcceptInviteRequestSchema = z.union([
+  AcceptInviteLocalSchema,
+  AcceptInviteGoogleSchema,
+]);
+
+export type AcceptInviteRequest = z.infer<typeof AcceptInviteRequestSchema>;
+
+export const AcceptInviteResponseSchema = z.object({
+  success: z.literal(true),
+  data: PublicUserSchema,
+});
+
+export type AcceptInviteResponse = z.infer<typeof AcceptInviteResponseSchema>;
+

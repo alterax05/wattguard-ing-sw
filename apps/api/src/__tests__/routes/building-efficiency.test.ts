@@ -128,7 +128,7 @@ beforeEach(async () => {
   adminUserId = admin._id;
 
   // Log in
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: { email: "admin@test.com", password: "admin123" },
   });
   const cookie = loginRes.headers.get("set-cookie") ?? "";

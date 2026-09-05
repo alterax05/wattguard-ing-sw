@@ -89,9 +89,10 @@ describe("openapi api", () => {
       const spec = await fetchSpec();
 
       // Check for key authentication endpoints
-      expect(spec.paths["/auth/local/login"]).toBeDefined();
-      expect(spec.paths["/auth/local/setup"]).toBeDefined();
-      expect(spec.paths["/auth/me"]).toBeDefined();
+      expect(spec.paths["/auth/session"]).toBeDefined();
+      expect(spec.paths["/invites/{token}/acceptance"]).toBeDefined();
+      expect(spec.paths["/auth/reset-tokens"]).toBeDefined();
+      expect(spec.paths["/auth/password-resets"]).toBeDefined();
     });
 
     test("includes documented user routes", async () => {
@@ -118,30 +119,30 @@ describe("openapi api", () => {
       const spec = await fetchSpec();
 
       // Check that routes have proper schema definitions
-      const loginPost = spec.paths["/auth/local/login"]?.post;
-      expect(loginPost).toBeDefined();
-      expect(loginPost?.requestBody).toBeDefined();
-      expect(loginPost?.responses).toBeDefined();
-      expect(loginPost?.responses["200"]).toBeDefined();
-      expect(loginPost?.responses["401"]).toBeDefined();
+      const sessionPost = spec.paths["/auth/session"]?.post;
+      expect(sessionPost).toBeDefined();
+      expect(sessionPost?.requestBody).toBeDefined();
+      expect(sessionPost?.responses).toBeDefined();
+      expect(sessionPost?.responses["200"]).toBeDefined();
+      expect(sessionPost?.responses["401"]).toBeDefined();
     });
 
     test("marks protected routes with security requirements", async () => {
       const spec = await fetchSpec();
 
-      // Check that /auth/me requires authentication
-      const meGet = spec.paths["/auth/me"]?.get;
-      expect(meGet).toBeDefined();
-      expect(meGet?.security).toBeDefined();
-      expect(Array.isArray(meGet?.security)).toBe(true);
+      // Check that /auth/session GET requires authentication
+      const sessionGet = spec.paths["/auth/session"]?.get;
+      expect(sessionGet).toBeDefined();
+      expect(sessionGet?.security).toBeDefined();
+      expect(Array.isArray(sessionGet?.security)).toBe(true);
     });
 
     test("includes response descriptions", async () => {
       const spec = await fetchSpec();
 
-      const loginPost = spec.paths["/auth/local/login"]?.post;
-      expect(loginPost?.responses["200"]?.description).toBeDefined();
-      expect(loginPost?.responses["401"]?.description).toBeDefined();
+      const sessionPost = spec.paths["/auth/session"]?.post;
+      expect(sessionPost?.responses["200"]?.description).toBeDefined();
+      expect(sessionPost?.responses["401"]?.description).toBeDefined();
     });
   });
 

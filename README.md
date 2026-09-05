@@ -35,22 +35,15 @@ MQTT_ENABLED=false
 # JWT
 JWT_SECRET=your-secret-key-here
 
-# Google OAuth
+# Google Sign-In (Optional)
 GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 
 # Frontend URL
 VITE_FRONTEND_URL=http://localhost:5173
 
-# Email (Required)
+# Email (Required for invitations / password reset)
 RESEND_API=re_your_resend_api_key
 EMAIL_FROM=onboarding@resend.dev
-
-# Google OAuth (Optional)
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 ```
 
 ### Development
@@ -109,10 +102,11 @@ JWT_SECRET=<production secret>
 PUBLIC_APP_URL=https://<canonical-public-domain>
 ```
 
-If Google authentication is enabled, configure `GOOGLE_CLIENT_ID`,
-`GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI`. The redirect URI must be the
-exact public URL followed by `/api/auth/google/callback`, and the same URI must
-be registered in Google Cloud.
+If Google authentication is enabled, configure `GOOGLE_CLIENT_ID`.
+The frontend utilizes Google Identity Services (GSI) and the backend verifies
+tokens with `google-auth-library` — no redirect URI or client secret is needed.
+Ensure your frontend domain (e.g. `http://localhost:5173` or production URL)
+is registered under **Authorized JavaScript origins** in Google Cloud Console.
 
 If invitations or password resets are enabled, configure the Resend variables
 (`RESEND_API`, and `EMAIL_FROM` with a domain verified in the Resend dashboard).

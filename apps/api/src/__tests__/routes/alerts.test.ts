@@ -44,7 +44,7 @@ beforeEach(async () => {
   
 
   // Generate token through login route
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin-alerts@test.com",
       password: "admin123",

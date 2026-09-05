@@ -69,7 +69,7 @@ beforeEach(async () => {
   });
 
   // Login to get tokens
-  const adminLoginRes = await client.api.v1.auth.local.login.$post({
+  const adminLoginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin@test.com",
       password: "admin123",
@@ -80,7 +80,7 @@ beforeEach(async () => {
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
   adminToken = adminTokenMatch?.[1] ?? "";
 
-  const operatorLoginRes = await client.api.v1.auth.local.login.$post({
+  const operatorLoginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "operator@test.com",
       password: "operator123",

@@ -52,7 +52,7 @@ beforeEach(async () => {
   adminUserId = admin._id;
 
   // Login to get token
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin@test.com",
       password: "admin123",

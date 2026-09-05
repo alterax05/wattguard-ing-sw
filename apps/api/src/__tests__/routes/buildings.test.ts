@@ -70,7 +70,7 @@ beforeEach(async () => {
   });
 
   // Login to get tokens
-  const adminLoginRes = await client.api.v1.auth.local.login.$post({
+  const adminLoginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin@test.com",
       password: "admin123",
@@ -86,7 +86,7 @@ beforeEach(async () => {
   console.log("Admin login status:", adminLoginRes.status);
   console.log("Admin token:", adminToken ? "exists" : "missing");
 
-  const operatorLoginRes = await client.api.v1.auth.local.login.$post({
+  const operatorLoginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "operator@test.com",
       password: "operator123",
