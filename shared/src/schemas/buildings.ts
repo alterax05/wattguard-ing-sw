@@ -24,7 +24,7 @@ export const GeoJSONPointSchema = z.object({
     z.number().min(-180).max(180).describe("Longitude"),
     z.number().min(-90).max(90).describe("Latitude"),
   ]).describe("GeoJSON coordinates [longitude, latitude]"),
-});
+}).meta({ id: "GeoJSONPoint" });
 
 export type GeoJSONPoint = z.infer<typeof GeoJSONPointSchema>;
 
@@ -49,7 +49,7 @@ export const BuildingSummarySchema = z.object({
   activeSensors: z.number().default(0).describe("Count of active sensors"),
   currentConsumption: z.number().nullable().default(null).describe("Latest energy meter reading in kWh, or null if unavailable"),
   updatedAt: IsoDateTimeSchema.default(() => new Date().toISOString()).describe("Last update timestamp"),
-});
+}).meta({ id: "BuildingSummary" });
 
 
 export type BuildingSummary = z.infer<typeof BuildingSummarySchema>;
@@ -64,7 +64,7 @@ export const EfficiencyThresholdsSchema = z.object({
   if (v.enabled && v.minCop == null) {
     ctx.addIssue({ code: "custom", path: ["minCop"], message: "minCop is required when enabled" });
   }
-});
+}).meta({ id: "EfficiencyThresholds" });
 
 export type EfficiencyThresholds = z.infer<typeof EfficiencyThresholdsSchema>;
 
@@ -77,7 +77,7 @@ export const BuildingDetailSchema = BuildingSummarySchema.extend({
   createdBy: ObjectIdSchema.optional().describe("User who created this building"),
   updatedBy: ObjectIdSchema.optional().describe("User who last updated this building"),
   createdAt: IsoDateTimeSchema.optional().describe("Creation timestamp"),
-});
+}).meta({ id: "BuildingDetail" });
 
 export type BuildingDetail = z.infer<typeof BuildingDetailSchema>;
 
@@ -105,7 +105,7 @@ export const SearchBuildingsResponseSchema = z.object({
     buildings: z.array(BuildingSummarySchema).describe("List of buildings matching search criteria"),
     pagination: PaginationResponseSchema,
   }),
-});
+}).meta({ id: "SearchBuildingsResponse" });
 
 export type SearchBuildingsResponse = z.infer<typeof SearchBuildingsResponseSchema>;
 
@@ -124,7 +124,7 @@ export const CreateBuildingRequestSchema = z.object({
   constructionYear: z.number().min(1000).max(new Date().getFullYear() + 10).optional().describe("Year of construction"),
   geographicZone: z.string().min(1, "Geographic zone is required").trim().describe("Geographic zone"),
   efficiencyThresholds: EfficiencyThresholdsSchema.optional(),
-});
+}).meta({ id: "CreateBuildingRequest" });
 
 export type CreateBuildingRequest = z.infer<typeof CreateBuildingRequestSchema>;
 
@@ -134,7 +134,7 @@ export type CreateBuildingRequest = z.infer<typeof CreateBuildingRequestSchema>;
 export const CreateBuildingResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingDetailSchema,
-});
+}).meta({ id: "CreateBuildingResponse" });
 
 export type CreateBuildingResponse = z.infer<typeof CreateBuildingResponseSchema>;
 
@@ -149,7 +149,7 @@ export const GetBuildingParamsSchema = ObjectIdParamSchema;
 export const GetBuildingResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingDetailSchema,
-});
+}).meta({ id: "GetBuildingResponse" });
 
 export type GetBuildingResponse = z.infer<typeof GetBuildingResponseSchema>;
 
@@ -165,7 +165,7 @@ export const UpdateBuildingRequestSchema = CreateBuildingRequestSchema.partial()
   ceilingHeight: z.number().min(0.5).max(20).optional().describe("Ceiling height in meters"),
   status: BuildingStatusSchema.optional().describe("Building status"),
   efficiencyThresholds: EfficiencyThresholdsSchema.optional(),
-});
+}).meta({ id: "UpdateBuildingRequest" });
 
 export type UpdateBuildingRequest = z.infer<typeof UpdateBuildingRequestSchema>;
 
@@ -175,7 +175,7 @@ export type UpdateBuildingRequest = z.infer<typeof UpdateBuildingRequestSchema>;
 export const UpdateBuildingResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingDetailSchema,
-});
+}).meta({ id: "UpdateBuildingResponse" });
 
 export type UpdateBuildingResponse = z.infer<typeof UpdateBuildingResponseSchema>;
 
@@ -193,7 +193,7 @@ export const DeleteBuildingResponseSchema = z.object({
     id: z.string().describe("Deleted building identifier"),
     message: z.string().optional().describe("Deletion message"),
   }),
-});
+}).meta({ id: "DeleteBuildingResponse" });
 
 export type DeleteBuildingResponse = z.infer<typeof DeleteBuildingResponseSchema>;
 
@@ -227,7 +227,7 @@ export const HistoricalDataPointSchema = z.object({
   unit: z.string(),
   sensorType: SensorTypeSchema,
   sensorId: z.string().optional(),
-});
+}).meta({ id: "HistoricalDataPoint" });
 
 export type HistoricalDataPoint = z.infer<typeof HistoricalDataPointSchema>;
 
@@ -239,14 +239,14 @@ export const HistoricalDataResponseSchema = z.object({
   buildingName: z.string(),
   period: PeriodSchema,
   data: z.array(HistoricalDataPointSchema).describe("Historical data points for graphing"),
-});
+}).meta({ id: "HistoricalDataResponse" });
 
 export type HistoricalData = z.infer<typeof HistoricalDataResponseSchema>;
 
 export const GetBuildingHistoryResponseSchema = z.object({
   success: z.literal(true),
   data: HistoricalDataResponseSchema,
-});
+}).meta({ id: "GetBuildingHistoryResponse" });
 
 export type GetBuildingHistoryResponse = z.infer<typeof GetBuildingHistoryResponseSchema>;
 
@@ -274,7 +274,7 @@ export const BuildingEfficiencyDataSchema = z.object({
     insulationQuality: z.number().nullable().describe("Insulation Quality (W/(m²·K))"),
     averageCop: z.number().nullable().describe("Average Coefficient of Performance (COP)"),
   }),
-});
+}).meta({ id: "BuildingEfficiencyData" });
 
 export type EfficiencyMetrics = z.infer<typeof BuildingEfficiencyDataSchema>;
 export type BuildingEfficiencyMetrics = EfficiencyMetrics["metrics"];
@@ -282,7 +282,7 @@ export type BuildingEfficiencyMetrics = EfficiencyMetrics["metrics"];
 export const GetBuildingEfficiencyResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingEfficiencyDataSchema,
-});
+}).meta({ id: "GetBuildingEfficiencyResponse" });
 
 export type GetBuildingEfficiencyResponse = z.infer<typeof GetBuildingEfficiencyResponseSchema>;
 

@@ -12,7 +12,7 @@ import { UserSchema } from "./common";
 export const ListUsersResponseSchema = z.object({
   success: z.literal(true),
   data: z.array(UserSchema).describe("List of users"),
-});
+}).meta({ id: "ListUsersResponse" });
 
 export type ListUsersResponse = z.infer<typeof ListUsersResponseSchema>;
 
@@ -31,7 +31,7 @@ export type GetUserParams = z.infer<typeof GetUserParamsSchema>;
 export const GetUserResponseSchema = z.object({
   success: z.literal(true),
   data: UserSchema,
-});
+}).meta({ id: "GetUserResponse" });
 
 export type GetUserResponse = z.infer<typeof GetUserResponseSchema>;
 
@@ -49,7 +49,7 @@ export const UpdateUserRequestSchema = UserSchema.pick({ role: true, isDisabled:
   .partial()
   .refine((data) => data.role !== undefined || data.isDisabled !== undefined, {
     message: "At least one field (role or isDisabled) must be provided",
-  });
+  }).meta({ id: "UpdateUserRequest" });
 
 export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
 
@@ -59,7 +59,7 @@ export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
 export const UpdateUserResponseSchema = z.object({
   success: z.literal(true),
   data: UserSchema,
-});
+}).meta({ id: "UpdateUserResponse" });
 
 export type UpdateUserResponse = z.infer<typeof UpdateUserResponseSchema>;
 
@@ -78,6 +78,6 @@ export const DeleteUserResponseSchema = z.object({
   data: z.object({
     id: z.string().describe("Deleted user identifier"),
   }),
-});
+}).meta({ id: "DeleteUserResponse" });
 
 export type DeleteUserResponse = z.infer<typeof DeleteUserResponseSchema>;

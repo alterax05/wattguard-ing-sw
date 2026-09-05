@@ -29,6 +29,7 @@ interface OpenApiSpec {
   paths: Record<string, Record<string, OpenApiOperation>>;
   components?: {
     securitySchemes?: Record<string, { type: string }>;
+    schemas?: Record<string, { type?: string }>;
   };
 }
 
@@ -176,6 +177,28 @@ describe("openapi api", () => {
   });
 
   describe("spec validation", () => {
+    test("exposes reusable schemas via components/schemas and $ref", async () => {
+      const spec = await fetchSpec();
+
+      // Named Zod schemas (`.meta({ id })`) must be registered once in
+      // components.schemas instead of inlined at every usage site.
+      const schemas = spec.components?.schemas ?? {};
+      expect(Object.keys(schemas).length).toBeGreaterThan(0);
+      expect(schemas.Error).toBeDefined();
+
+      // Every $ref must resolve to a defined component schema.
+      const raw = JSON.stringify(spec);
+      const refs = new Set<string>();
+      for (const m of raw.matchAll(/#\/components\/schemas\/([A-Za-z0-9_]+)/g)) {
+        const ref = m[1];
+        if (ref !== undefined) refs.add(ref);
+      }
+      expect(refs.size).toBeGreaterThan(0);
+      for (const ref of refs) {
+        expect(schemas[ref]).toBeDefined();
+      }
+    });
+
     test("has consistent path definitions", async () => {
       const spec = await fetchSpec();
 

@@ -9,39 +9,33 @@ const BuildingIdsQuerySchema = z
       value.split(",").every((id) => ObjectIdSchema.safeParse(id.trim()).success),
     "buildingIds must be a comma-separated list of valid MongoDB ObjectIds",
   )
-  .describe("Comma-separated list of building IDs to export");
+  .describe("Comma-separated list of building IDs to include in the report");
 
-const DateRangeQuerySchema = z
+/**
+ * GET /api/v1/reports - Aggregated admin report query parameters
+ *
+ * Admin-only. Dates are calendar dates (YYYY-MM-DD); the endpoint includes
+ * the complete UTC day for both boundaries, which matches the values
+ * submitted by an HTML date input. The `format` query parameter selects the
+ * serialization and takes precedence over the request `Accept` header;
+ * it defaults to `pdf` when omitted.
+ *
+ * Note: raw readings export (CSV/JSON) lives on GET /api/v1/readings and is
+ * validated by `ReadingsQuerySchema` from `./readings`, not here.
+ */
+export const ExportReportQuerySchema = z
   .object({
     buildingIds: BuildingIdsQuerySchema,
     startDate: z.string().date().describe("First date to include (YYYY-MM-DD)"),
     endDate: z.string().date().describe("Last date to include (YYYY-MM-DD)"),
+    format: z
+      .enum(["pdf", "xlsx"])
+      .default("pdf")
+      .describe("Report file format (pdf or xlsx)"),
   })
   .refine(({ startDate, endDate }) => startDate <= endDate, {
     message: "endDate must be on or after startDate",
     path: ["endDate"],
   });
-
-/**
- * GET /api/v1/export/consumption - Consumption export query parameters
- *
- * Dates are calendar dates. The endpoint includes the complete UTC day for
- * both boundaries, which matches the values submitted by an HTML date input.
- */
-export const ExportConsumptionQuerySchema = DateRangeQuerySchema;
-export type ExportConsumptionQuery = z.input<typeof ExportConsumptionQuerySchema>;
-
-/**
- * GET /api/v1/export/report - Aggregated admin report query parameters
- *
- * Same date semantics as the consumption export. The format selects the
- * serialization used by the endpoint.
- */
-export const ExportReportQuerySchema = DateRangeQuerySchema.extend({
-  format: z
-    .enum(["pdf", "xlsx"])
-    .default("pdf")
-    .describe("Report file format (pdf or xlsx)"),
-});
 
 export type ExportReportQuery = z.input<typeof ExportReportQuerySchema>;

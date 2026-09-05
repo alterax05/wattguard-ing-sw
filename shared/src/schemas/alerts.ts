@@ -51,7 +51,7 @@ export const AlertSchema = z.object({
   resolvedAt: IsoDateTimeSchema.nullish().transform((v) => v ?? undefined).describe("When it was resolved"),
   createdAt: IsoDateTimeSchema.describe("Creation timestamp"),
   updatedAt: IsoDateTimeSchema.describe("Last update timestamp"),
-});
+}).meta({ id: "Alert" });
 
 export type Alert = z.infer<typeof AlertSchema>;
 
@@ -80,7 +80,7 @@ export const ListAlertsResponseSchema = z.object({
     alerts: z.array(AlertSchema).describe("List of alerts"),
     pagination: PaginationResponseSchema,
   }),
-});
+}).meta({ id: "ListAlertsResponse" });
 
 export type ListAlertsResponse = z.infer<typeof ListAlertsResponseSchema>;
 
@@ -94,14 +94,14 @@ export const AlertIdParamSchema = z.object({
 
 export const UpdateAlertStatusRequestSchema = z.object({
   status: z.enum(["acknowledged", "resolved"]).describe("New status for the alert"),
-});
+}).meta({ id: "UpdateAlertStatusRequest" });
 
 export type UpdateAlertStatusRequest = z.infer<typeof UpdateAlertStatusRequestSchema>;
 
 export const UpdateAlertStatusResponseSchema = z.object({
   success: z.literal(true),
   data: AlertSchema,
-});
+}).meta({ id: "UpdateAlertStatusResponse" });
 
 export type UpdateAlertStatusResponse = z.infer<typeof UpdateAlertStatusResponseSchema>;
 
@@ -114,7 +114,7 @@ export type GetAlertParams = z.infer<typeof GetAlertParamsSchema>;
 export const GetAlertResponseSchema = z.object({
   success: z.literal(true),
   data: AlertSchema,
-});
+}).meta({ id: "GetAlertResponse" });
 export type GetAlertResponse = z.infer<typeof GetAlertResponseSchema>;
 
 

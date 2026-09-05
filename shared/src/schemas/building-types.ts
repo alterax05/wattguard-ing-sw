@@ -16,7 +16,7 @@ export const BuildingTypeSchema = z.object({
   description: z.string().nullish().transform((v) => v ?? undefined).describe("Optional description of the building type"),
   createdAt: IsoDateTimeSchema.optional().describe("Creation timestamp"),
   updatedAt: IsoDateTimeSchema.optional().describe("Last update timestamp"),
-});
+}).meta({ id: "BuildingType" });
 
 
 export type BuildingType = z.infer<typeof BuildingTypeSchema>;
@@ -27,7 +27,7 @@ export type BuildingType = z.infer<typeof BuildingTypeSchema>;
 export const ListBuildingTypesResponseSchema = z.object({
   success: z.literal(true),
   data: z.array(BuildingTypeSchema).describe("List of building types"),
-});
+}).meta({ id: "ListBuildingTypesResponse" });
 
 export type ListBuildingTypesResponse = z.infer<typeof ListBuildingTypesResponseSchema>;
 
@@ -44,7 +44,7 @@ export type GetBuildingTypeParams = z.infer<typeof GetBuildingTypeParamsSchema>;
 export const GetBuildingTypeResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingTypeSchema,
-});
+}).meta({ id: "GetBuildingTypeResponse" });
 
 export type GetBuildingTypeResponse = z.infer<typeof GetBuildingTypeResponseSchema>;
 
@@ -54,7 +54,7 @@ export type GetBuildingTypeResponse = z.infer<typeof GetBuildingTypeResponseSche
 export const CreateBuildingTypeRequestSchema = z.object({
   name: z.string().min(1, "Name is required").trim().describe("Building type name"),
   description: z.string().trim().optional().describe("Optional description"),
-});
+}).meta({ id: "CreateBuildingTypeRequest" });
 
 export type CreateBuildingTypeRequest = z.infer<typeof CreateBuildingTypeRequestSchema>;
 
@@ -64,7 +64,7 @@ export type CreateBuildingTypeRequest = z.infer<typeof CreateBuildingTypeRequest
 export const CreateBuildingTypeResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingTypeSchema,
-});
+}).meta({ id: "CreateBuildingTypeResponse" });
 
 export type CreateBuildingTypeResponse = z.infer<typeof CreateBuildingTypeResponseSchema>;
 
@@ -76,7 +76,7 @@ export const UpdateBuildingTypeParamsSchema = ObjectIdParamSchema;
 /**
  * PATCH /api/v1/building-types/:id - Update building type request
  */
-export const UpdateBuildingTypeRequestSchema = CreateBuildingTypeRequestSchema.partial();
+export const UpdateBuildingTypeRequestSchema = CreateBuildingTypeRequestSchema.partial().meta({ id: "UpdateBuildingTypeRequest" });
 
 export type UpdateBuildingTypeRequest = z.infer<typeof UpdateBuildingTypeRequestSchema>;
 
@@ -86,7 +86,7 @@ export type UpdateBuildingTypeRequest = z.infer<typeof UpdateBuildingTypeRequest
 export const UpdateBuildingTypeResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingTypeSchema,
-});
+}).meta({ id: "UpdateBuildingTypeResponse" });
 
 export type UpdateBuildingTypeResponse = z.infer<typeof UpdateBuildingTypeResponseSchema>;
 
@@ -104,6 +104,6 @@ export const DeleteBuildingTypeResponseSchema = z.object({
     id: z.string().describe("Deleted building type identifier"),
     message: z.string().optional().describe("Deletion message"),
   }),
-});
+}).meta({ id: "DeleteBuildingTypeResponse" });
 
 export type DeleteBuildingTypeResponse = z.infer<typeof DeleteBuildingTypeResponseSchema>;

@@ -23,7 +23,7 @@ export const InviteSchema = z.object({
     z.string(),
     z.object({ email: z.email() }),
   ]).nullish().transform((v) => v ?? undefined).optional().describe("User who created the invite"),
-});
+}).meta({ id: "Invite" });
 
 export type Invite = z.infer<typeof InviteSchema>;
 
@@ -37,7 +37,7 @@ export const CreateInviteSchema = InviteSchema.pick({
   role: true,
   status: true,
   expiresAt: true,
-});
+}).meta({ id: "CreateInvite" });
 
 export type CreateInvite = z.infer<typeof CreateInviteSchema>;
 
@@ -50,7 +50,7 @@ export type GetInviteByIdParams = z.infer<typeof GetInviteByIdParamsSchema>;
 export const GetInviteByIdResponseSchema = z.object({
   success: z.literal(true),
   data: InviteSchema,
-});
+}).meta({ id: "GetInviteByIdResponse" });
 export type GetInviteByIdResponse = z.infer<typeof GetInviteByIdResponseSchema>;
 
 /**
@@ -70,7 +70,7 @@ export type ListInvitesQuery = z.infer<typeof ListInvitesQuerySchema>;
 export const ListInvitesResponseSchema = z.object({
   success: z.literal(true),
   data: z.array(InviteSchema).describe("List of invites"),
-});
+}).meta({ id: "ListInvitesResponse" });
 
 export type ListInvitesResponse = z.infer<typeof ListInvitesResponseSchema>;
 
@@ -80,7 +80,7 @@ export type ListInvitesResponse = z.infer<typeof ListInvitesResponseSchema>;
 export const CreateInviteRequestSchema = z.object({
   email: EmailSchema,
   role: UserRoleSchema,
-});
+}).meta({ id: "CreateInviteRequest" });
 
 export type CreateInviteRequest = z.infer<typeof CreateInviteRequestSchema>;
 
@@ -90,7 +90,7 @@ export type CreateInviteRequest = z.infer<typeof CreateInviteRequestSchema>;
 export const CreateInviteResponseSchema = z.object({
   success: z.literal(true),
   data: CreateInviteSchema,
-});
+}).meta({ id: "CreateInviteResponse" });
 
 export type CreateInviteResponse = z.infer<typeof CreateInviteResponseSchema>;
 
@@ -109,7 +109,7 @@ export type DeleteInviteParams = z.infer<typeof DeleteInviteParamsSchema>;
 export const DeleteInviteResponseSchema = z.object({
   success: z.literal(true),
   data: InviteSchema,
-});
+}).meta({ id: "DeleteInviteResponse" });
 
 export type DeleteInviteResponse = z.infer<typeof DeleteInviteResponseSchema>;
 
@@ -135,7 +135,7 @@ export const ValidateInviteDataSchema = z.object({
   email: z.email().describe("Email associated with the invite"),
   role: UserRoleSchema.describe("Role assigned to the invite"),
   expiresAt: z.iso.datetime().describe("Expiration timestamp of the invite"),
-});
+}).meta({ id: "ValidateInviteData" });
 
 export type ValidateInviteData = z.infer<typeof ValidateInviteDataSchema>;
 
@@ -145,7 +145,7 @@ export type ValidateInviteData = z.infer<typeof ValidateInviteDataSchema>;
 export const ValidateInviteResponseSchema = z.object({
   success: z.literal(true),
   data: ValidateInviteDataSchema,
-});
+}).meta({ id: "ValidateInviteResponse" });
 
 export type ValidateInviteResponse = z.infer<typeof ValidateInviteResponseSchema>;
 
@@ -161,24 +161,24 @@ export const AcceptInviteLocalSchema = z.object({
   token: z.string().min(1, "Invite token is required"),
   name: z.string().min(2, "Name must be at least 2 characters").max(64),
   password: z.string().min(8, "Password must be at least 8 characters").max(128),
-});
+}).meta({ id: "AcceptInviteLocal" });
 
 export const AcceptInviteGoogleSchema = z.object({
   token: z.string().min(1, "Invite token is required"),
   idToken: z.string().min(1, "Google ID token is required"),
-});
+}).meta({ id: "AcceptInviteGoogle" });
 
 export const AcceptInviteRequestSchema = z.union([
   AcceptInviteLocalSchema,
   AcceptInviteGoogleSchema,
-]);
+]).meta({ id: "AcceptInviteRequest" });
 
 export type AcceptInviteRequest = z.infer<typeof AcceptInviteRequestSchema>;
 
 export const AcceptInviteResponseSchema = z.object({
   success: z.literal(true),
   data: PublicUserSchema,
-});
+}).meta({ id: "AcceptInviteResponse" });
 
 export type AcceptInviteResponse = z.infer<typeof AcceptInviteResponseSchema>;
 
