@@ -1,12 +1,17 @@
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import mongoose, { Types, type QueryFilter } from "mongoose";
+import { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Building, type BuildingDocument } from "../models/Building";
-import { BuildingType } from "../models/BuildingType";
-import { Sensor, type SensorDocument, type SensorType } from "../models/Sensor";
+import { BuildingType, type HydratedBuildingType } from "../models/BuildingType";
+import { Sensor, type SensorDocument } from "../models/Sensor";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
+import {
+  toBuildingSummaryDTO,
+  toBuildingDetailDTO,
+} from "../lib/buildings";
 
+import { apiError, apiSuccess } from "../lib/api-response";
 import {
   SearchBuildingsQuerySchema,
   SearchBuildingsResponseSchema,
@@ -19,9 +24,9 @@ import {
   UpdateBuildingResponseSchema,
   DeleteBuildingParamsSchema,
   DeleteBuildingResponseSchema,
-  GetBuildingRealTimeResponseSchema,
-  GetBuildingHistoryQuerySchema,
-  GetBuildingHistoryResponseSchema,
+  BuildingReadingsLatestResponseSchema,
+  BuildingReadingsQuerySchema,
+  BuildingReadingsResponseSchema,
   GetBuildingEfficiencyQuerySchema,
   GetBuildingEfficiencyResponseSchema,
   ErrorSchema,
@@ -30,11 +35,12 @@ import type {
   CreateBuildingResponse,
   DeleteBuildingResponse,
   GetBuildingEfficiencyResponse,
-  GetBuildingHistoryResponse,
-  GetBuildingRealTimeResponse,
+  BuildingReadingsResponse,
+  BuildingReadingsLatestResponse,
   GetBuildingResponse,
   SearchBuildingsResponse,
   UpdateBuildingResponse,
+  ErrorResponse,
 } from "@wattguard/shared";
 import { calculateBuildingEfficiency } from "../lib/efficiency";
 import { isDistrictHeatingBuilding } from "../lib/energy";
@@ -44,7 +50,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      description: "Search and list buildings with multiple filters",
+      summary: "Cerca edifici",
+      description: "Cerca edifici con filtri, paginazione e ordinamento",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -81,7 +88,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const filter: QueryFilter<BuildingDocument> = {};
 
       if (query.name) {
-        filter.name = { $regex: query.name, $options: "i" }; // Case-insensitive partial match
+        filter.name = { $regex: query.name, $options: "i" };
       }
 
       if (query.address) {
@@ -110,11 +117,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Execute query with pagination
       const buildings = await Building.find(filter)
-        .populate<{ buildingType: { _id: Types.ObjectId; name: string; description: string } }>("buildingType", "name description")
+        .populate<{ buildingType: HydratedBuildingType }>("buildingType", "name description")
         .sort(sort)
         .limit(query.limit)
-        .skip(query.offset)
-        .lean();
+        .skip(query.offset);
 
       // Enrich with active sensor counts and current consumption
       const buildingIds = buildings.map((b) => b._id);
@@ -124,8 +130,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
         _id: Types.ObjectId;
         count: number;
       }>([
-        { $match: { buildingId: { $in: buildingIds }, status: "active" } },
-        { $group: { _id: "$buildingId", count: { $sum: 1 } } },
+        { $match: { building: { $in: buildingIds }, status: "active" } },
+        { $group: { _id: "$building", count: { $sum: 1 } } },
       ]);
 
       const sensorCountMap = new Map(
@@ -139,7 +145,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }>([
         {
           $match: {
-            buildingId: { $in: buildingIds },
+            building: { $in: buildingIds },
             sensorType: "energy_meter",
             status: "active",
             "lastReading.value": { $exists: true },
@@ -148,7 +154,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         { $sort: { "lastReading.timestamp": -1 } },
         {
           $group: {
-            _id: "$buildingId",
+            _id: "$building",
             value: { $first: "$lastReading.value" },
           },
         },
@@ -158,49 +164,26 @@ const app = new Hono<{ Variables: AuthVariables }>()
         energySensors.map((s) => [s._id.toString(), s.value])
       );
 
-      return c.json({
-        buildings: buildings.map((b) => {
-          const buildingType = b.buildingType;
-          const bid = b._id.toString();
-          return {
-            id: bid,
-            name: b.name,
-            address: b.address,
-            surface: b.surface,
-            ceilingHeight: b.ceilingHeight,
-            location: {
-              type: b.location.type,
-              // SAFETY: the GeoJSON Point schema stores a fixed [lon, lat]
-              // pair of numbers.
-              coordinates: b.location.coordinates as [number, number],
-            },
-            buildingType: (buildingType instanceof mongoose.Types.ObjectId)
-              ? buildingType.toString()
-              : {
-                  id: buildingType._id.toString(),
-                  name: buildingType.name,
-                  description: buildingType.description ?? undefined,
-                },
-            heatingSystemType: b.heatingSystemType,
-            status: b.status,
-            geographicZone: b.geographicZone,
-            activeSensors: sensorCountMap.get(bid) ?? 0,
-            currentConsumption: consumptionMap.get(bid) ?? null,
-            updatedAt: b.updatedAt?.toISOString(),
-          };
-        }),
+      return c.json(apiSuccess({
+        buildings: buildings.map((b) =>
+          toBuildingSummaryDTO(b, {
+            activeSensors: sensorCountMap.get(b._id.toString()) ?? 0,
+            currentConsumption: consumptionMap.get(b._id.toString()) ?? null,
+          })
+        ),
         pagination: {
           limit: query.limit,
           offset: query.offset,
           total,
         },
-      } satisfies SearchBuildingsResponse);
+      }) satisfies SearchBuildingsResponse);
     }
   )
   .post(
     "/",
     describeRoute({
-      description: "Create a new building",
+      summary: "Crea edificio",
+      description: "Crea un nuovo edificio verificando tipo e impianto",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -236,80 +219,50 @@ const app = new Hono<{ Variables: AuthVariables }>()
             },
           },
         },
-        404: {
-          description: "Building type not found",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
       },
     }),
     validator("json", CreateBuildingRequestSchema),
     async (c) => {
       const userDoc = c.get("userDoc");
-      const buildingData = c.req.valid("json");
+      const data = c.req.valid("json");
 
-      const buildingType = await BuildingType.findById(buildingData.buildingType).lean();
-
+      // Verify building type exists
+      const buildingType = await BuildingType.findById(data.buildingType);
       if (!buildingType) {
-        return c.json({ error: "Building type not found", code: "building_type_not_found" }, 404);
+        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 400);
       }
 
+      if (isDistrictHeatingBuilding(data.heatingSystemType) && data.efficiencyThresholds?.enabled) {
+        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 400);
+      }
+
+      // Create building
       const building = new Building({
-        ...buildingData,
+        ...data,
+        buildingType: new Types.ObjectId(data.buildingType),
+        efficiencyThresholds: data.efficiencyThresholds ?? { enabled: false, minCop: null },
         createdBy: userDoc._id,
         updatedBy: userDoc._id,
       });
 
       await building.save();
+      
+      c.header("Location", `${c.req.path}/${building._id.toString()}`);
 
-      return c.json({
-        success: true,
-        building: {
-          id: building._id.toString(),
-          name: building.name,
-          address: building.address,
-          surface: building.surface,
-          ceilingHeight: building.ceilingHeight,
-          location: {
-            type: building.location.type,
-            // SAFETY: the GeoJSON Point schema stores a fixed [lon, lat]
-            // pair of numbers.
-            coordinates: building.location.coordinates as [number, number],
-          },
-          buildingType: {
-            id: buildingType._id.toString(),
-            name: buildingType.name,
-            description: buildingType.description ?? undefined,
-          },
-          heatingSystemType: building.heatingSystemType,
-          status: building.status,
-          geographicZone: building.geographicZone,
+      return c.json(
+        apiSuccess(toBuildingDetailDTO(building, {
           activeSensors: 0,
           currentConsumption: null,
-          efficiencyThresholds: {
-            enabled: building.efficiencyThresholds.enabled,
-            minCop: building.efficiencyThresholds.minCop ?? null,
-          },
-          constructionYear: building.constructionYear ?? undefined,
-          createdBy: building.createdBy.toString(),
-          updatedBy: building.updatedBy.toString(),
-          createdAt: building.createdAt?.toISOString(),
-          updatedAt: building.updatedAt?.toISOString(),
-        },
-      } satisfies CreateBuildingResponse, 201);
+        })) satisfies CreateBuildingResponse,
+        201
+      );
     }
   )
-
-  /**
-   * GET /api/buildings/:id - Get building details
-   */
   .get(
     "/:id",
     describeRoute({
-      description: "Get building details",
+      summary: "Leggi edificio",
+      description: "Restituisce il dettaglio con sensori attivi e consumo",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -351,75 +304,38 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const { id } = c.req.valid("param");
 
-      const building = await Building.findById(id).populate<{
-        buildingType: {
-          _id: Types.ObjectId;
-          name: string;
-          description?: string | null;
-        };
-      }>("buildingType", "name description").lean();
+      const building = await Building.findById(id)
+        .populate<{ buildingType: HydratedBuildingType }>("buildingType", "name description");
 
       if (!building) {
-        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
       }
-
-      const bt = building.buildingType;
 
       // Enrich with active sensor count and current consumption
       const [activeSensorsCount, energySensor] = await Promise.all([
-        Sensor.countDocuments({ buildingId: building._id, status: "active" }),
+        Sensor.countDocuments({
+          building: building._id,
+          status: "active",
+        }),
         Sensor.findOne({
-          buildingId: building._id,
+          building: building._id,
           sensorType: "energy_meter",
           status: "active",
           "lastReading.value": { $exists: true },
         }).sort({ "lastReading.timestamp": -1 }),
       ]);
 
-      return c.json({
-        building: {
-          id: building._id.toString(),
-          name: building.name,
-          address: building.address,
-          surface: building.surface,
-          ceilingHeight: building.ceilingHeight,
-          location: {
-            type: building.location.type,
-            // SAFETY: the GeoJSON Point schema stores a fixed [lon, lat]
-            // pair of numbers.
-            coordinates: building.location.coordinates as [number, number],
-          },
-          buildingType: {
-            id: bt._id.toString(),
-            name: bt.name,
-            description: bt.description ?? undefined,
-          },
-          heatingSystemType: building.heatingSystemType,
-          status: building.status,
-          geographicZone: building.geographicZone,
-          activeSensors: activeSensorsCount,
-          currentConsumption: energySensor?.lastReading?.value ?? null,
-          efficiencyThresholds: {
-            enabled: building.efficiencyThresholds.enabled,
-            minCop: building.efficiencyThresholds.minCop ?? null,
-          },
-          constructionYear: building.constructionYear ?? undefined,
-          createdBy: building.createdBy.toString(),
-          updatedBy: building.updatedBy.toString(),
-          createdAt: building.createdAt?.toISOString(),
-          updatedAt: building.updatedAt?.toISOString(),
-        },
-      } satisfies GetBuildingResponse);
+      return c.json(apiSuccess(toBuildingDetailDTO(building, {
+        activeSensors: activeSensorsCount,
+        currentConsumption: energySensor?.lastReading?.value ?? null,
+      })) satisfies GetBuildingResponse);
     }
   )
-
-  /**
-   * PATCH /api/buildings/:id - Update a building
-   */
   .patch(
     "/:id",
     describeRoute({
-      description: "Update a building",
+      summary: "Aggiorna edificio",
+      description: "Aggiorna i dati e gestisce soglie efficienza/teleriscaldamento",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -456,7 +372,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         404: {
-          description: "Building or building type not found",
+          description: "Building not found",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -474,14 +390,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
       }
 
-      // Validate building type if being updated
+      // If buildingType is being updated, verify it exists
       if (updates.buildingType) {
         const buildingType = await BuildingType.findById(updates.buildingType);
         if (!buildingType) {
-          return c.json({ error: "Building type not found", code: "building_type_not_found" }, 404);
+          return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 400);
         }
       }
 
@@ -490,7 +406,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       );
 
       if (resultingDistrictHeating && updates.efficiencyThresholds !== undefined) {
-        return c.json({ error: "Efficiency thresholds are not available for district heating buildings" }, 400);
+        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 400);
       }
 
       if (resultingDistrictHeating && building.efficiencyThresholds.enabled) {
@@ -502,21 +418,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
         });
       }
 
-      // Apply updates
-      if (updates.name !== undefined) building.name = updates.name;
-      if (updates.address !== undefined) building.address = updates.address;
-      if (updates.surface !== undefined) building.surface = updates.surface;
-      if (updates.ceilingHeight !== undefined) building.ceilingHeight = updates.ceilingHeight;
-      if (updates.location !== undefined) building.location = updates.location;
-      if (updates.buildingType !== undefined) building.buildingType = new Types.ObjectId(updates.buildingType);
-      if (updates.heatingSystemType !== undefined)
-        building.heatingSystemType = updates.heatingSystemType;
-      if (updates.constructionYear !== undefined)
-        building.constructionYear = updates.constructionYear;
-      if (updates.geographicZone !== undefined) building.geographicZone = updates.geographicZone;
-      if (updates.status !== undefined) building.status = updates.status;
-      if (updates.efficiencyThresholds !== undefined)
-        building.efficiencyThresholds = updates.efficiencyThresholds;
+      // Apply updates cleanly
+      const { buildingType: newType, ...restUpdates } = updates;
+      Object.assign(building, restUpdates);
+      if (newType !== undefined) {
+        building.buildingType = new Types.ObjectId(newType);
+      }
 
       if (updates.efficiencyThresholds !== undefined && !updates.efficiencyThresholds.enabled) {
         // Disabilitazione soglie: risolve gli alert efficienza ancora aperti.
@@ -531,75 +438,41 @@ const app = new Hono<{ Variables: AuthVariables }>()
       await building.save();
 
       // Populate for response
-      const populatedBuilding = await building.populate<{
-        buildingType: {
-          _id: Types.ObjectId;
-          name: string;
-          description?: string | null;
-        };
-      }>("buildingType", "name description");
-      const bt = populatedBuilding.buildingType;
+      const populatedBuilding = await building.populate<{ buildingType: HydratedBuildingType }>(
+        "buildingType",
+        "name description"
+      );
 
       // Enrich with active sensor count and current consumption
       const [activeSensorsCount, energySensor] = await Promise.all([
-        Sensor.countDocuments({ buildingId: building._id, status: "active" }),
+        Sensor.countDocuments({
+          building: building._id,
+          status: "active",
+        }),
         Sensor.findOne({
-          buildingId: building._id,
+          building: building._id,
           sensorType: "energy_meter",
           status: "active",
           "lastReading.value": { $exists: true },
         }).sort({ "lastReading.timestamp": -1 }),
       ]);
 
-      return c.json({
-        success: true,
-        building: {
-          id: building._id.toString(),
-          name: building.name,
-          address: building.address,
-          surface: building.surface,
-          ceilingHeight: building.ceilingHeight,
-          location: {
-            type: building.location.type,
-            // SAFETY: the GeoJSON Point schema stores a fixed [lon, lat]
-            // pair of numbers.
-            coordinates: building.location.coordinates as [number, number],
-          },
-          buildingType: {
-            id: bt._id.toString(),
-            name: bt.name,
-            description: bt.description ?? undefined,
-          },
-          heatingSystemType: building.heatingSystemType,
-          status: building.status,
-          geographicZone: building.geographicZone,
-          activeSensors: activeSensorsCount,
-          currentConsumption: energySensor?.lastReading?.value ?? null,
-          efficiencyThresholds: {
-            enabled: building.efficiencyThresholds.enabled,
-            minCop: building.efficiencyThresholds.minCop ?? null,
-          },
-          constructionYear: building.constructionYear ?? undefined,
-          createdBy: building.createdBy.toString(),
-          updatedBy: building.updatedBy.toString(),
-          createdAt: building.createdAt?.toISOString(),
-          updatedAt: building.updatedAt?.toISOString(),
-        },
-      } satisfies UpdateBuildingResponse);
+      return c.json(apiSuccess(toBuildingDetailDTO(populatedBuilding, {
+        activeSensors: activeSensorsCount,
+        currentConsumption: energySensor?.lastReading?.value ?? null,
+      })) satisfies UpdateBuildingResponse);
     }
   )
-  /**
-   * DELETE /api/buildings/:id - Delete a building with cascade
-   */
   .delete(
     "/:id",
     describeRoute({
-      description: "Delete a building and all associated sensors and readings",
+      summary: "Elimina edificio",
+      description: "Elimina edificio con sensori, letture e alert associati",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
-          description: "Building deleted successfully",
+          description: "Building and associated data deleted successfully",
           content: {
             "application/json": {
               schema: resolver(DeleteBuildingResponseSchema),
@@ -638,30 +511,28 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
       }
 
-      // Cascade delete: first delete sensor readings, then sensors, then building
-      await Promise.all([
-        SensorReading.deleteMany({ "metadata.buildingId": new Types.ObjectId(id) }),
-        deleteForBuilding(new Types.ObjectId(id)),
-        Sensor.deleteMany({ buildingId: id }),
-        building.deleteOne(),
-      ]);
+      // Cascade delete readings and alerts for this building
+      await SensorReading.deleteMany({ "metadata.building": id });
+      await deleteForBuilding(new Types.ObjectId(id));
+      await Sensor.deleteMany({
+        building: id,
+      });
+      await Building.findByIdAndDelete(id);
 
-      return c.json({
-        success: true,
+      return c.json(apiSuccess({
+        id,
         message: "Building and associated data deleted successfully",
-      } satisfies DeleteBuildingResponse);
+      }) satisfies DeleteBuildingResponse);
     }
   )
-  /**
-   * GET /api/buildings/:id/real-time - Get real-time sensor data
-   */
   .get(
-    "/:id/real-time",
+    "/:id/readings/latest",
     describeRoute({
-      description: "Get real-time sensor data for a building",
+      summary: "Leggi ultime letture",
+      description: "Restituisce l'istantanea realtime delle ultime letture dei sensori",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -669,7 +540,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Real-time data retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(GetBuildingRealTimeResponseSchema),
+              schema: resolver(BuildingReadingsLatestResponseSchema),
             },
           },
         },
@@ -705,18 +576,20 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
       }
 
       // Get all active sensors for this building
-      const sensors = await Sensor.find({ buildingId: id, status: "active" });
+      const sensors = await Sensor.find({
+        building: id,
+        status: "active",
+      });
 
-      // Find sensors by type and get their last readings
       const internalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "internal_temp");
       const externalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "external_temp");
       const energyMeterSensor = sensors.find((s: SensorDocument) => s.sensorType === "energy_meter");
 
-      return c.json({
+      return c.json(apiSuccess({
         buildingId: building._id.toString(),
         buildingName: building.name,
         timestamp: new Date().toISOString(),
@@ -740,21 +613,22 @@ const app = new Hono<{ Variables: AuthVariables }>()
             sensorId: energyMeterSensor?._id.toString() ?? null,
           },
         },
-      } satisfies GetBuildingRealTimeResponse);
+      }) satisfies BuildingReadingsLatestResponse);
     }
   )
   .get(
-    "/:id/history",
+    "/:id/readings",
     describeRoute({
-      description: "Get building historical sensor data for graphing",
+      summary: "Leggi storico letture",
+      description: "Restituisce lo storico per intervallo di date, per i grafici",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
-          description: "Historical data retrieved successfully",
+          description: "Historical readings retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(GetBuildingHistoryResponseSchema),
+              schema: resolver(BuildingReadingsResponseSchema),
             },
           },
         },
@@ -793,19 +667,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
       },
     }),
     validator("param", GetBuildingParamsSchema),
-    validator("query", GetBuildingHistoryQuerySchema),
+    validator("query", BuildingReadingsQuerySchema),
     async (c) => {
       const { id } = c.req.valid("param");
       const { startDate, endDate, sensorType } = c.req.valid("query");
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
       }
 
       // Build query for sensor readings
       const query: QueryFilter<SensorReadingDocument> = {
-        "metadata.buildingId": id,
+        "metadata.building": id,
         timestamp: {
           $gte: new Date(startDate),
           $lte: new Date(endDate),
@@ -819,9 +693,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Query historical data from time-series collection
       const readings = await SensorReading.find(query)
         .sort({ timestamp: 1 })
-        .limit(1000); // Limit for performance
+        .limit(1000);
 
-      return c.json({
+      return c.json(apiSuccess({
         buildingId: building._id.toString(),
         buildingName: building.name,
         period: {
@@ -832,18 +706,17 @@ const app = new Hono<{ Variables: AuthVariables }>()
           timestamp: r.timestamp.toISOString(),
           value: r.value,
           unit: r.unit,
-          // SAFETY: readings persist metadata.sensorType copied from
-          // Sensor.sensorType, which is constrained to the SensorType enum.
-          sensorType: r.metadata.sensorType as SensorType,
-          sensorId: r.metadata.sensorId?.toString(),
+          sensorType: r.metadata.sensorType,
+          sensorId: r.metadata.sensor?.toString(),
         })),
-      } satisfies GetBuildingHistoryResponse);
+      }) satisfies BuildingReadingsResponse);
     }
   )
   .get(
     "/:id/efficiency",
     describeRoute({
-      description: "Calculate building thermal efficiency over a time period",
+      summary: "Calcola efficienza",
+      description: "Calcola l'efficienza termica dell'edificio sul periodo richiesto",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -897,7 +770,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const building = await Building.findById(id);
       if (!building) {
-        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
       }
 
       const start = new Date(startDate);
@@ -905,7 +778,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const metrics = await calculateBuildingEfficiency(building, start, end);
 
-      return c.json({
+      return c.json(apiSuccess({
         buildingId: building._id.toString(),
         buildingName: building.name,
         period: {
@@ -913,7 +786,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           endDate: end.toISOString(),
         },
         metrics,
-      } satisfies GetBuildingEfficiencyResponse);
+      }) satisfies GetBuildingEfficiencyResponse);
     }
   );
 

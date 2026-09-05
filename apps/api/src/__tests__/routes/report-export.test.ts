@@ -17,13 +17,13 @@ let operatorToken: string;
 let buildingId: string;
 
 async function login(email: string, password: string): Promise<string> {
-  const response = await client.api.v1.auth.local.login.$post({
+  const response = await client.api.v1.auth.session.$post({
     json: { email, password },
   });
   const cookie = response.headers.get("set-cookie");
   const token = cookie?.match(/access_token=([^;]+)/)?.[1];
 
-  if (!token) throw new Error(`Token not found for ${email}`);
+  if (!token) return expect.unreachable(`Token not found for ${email}`);
   return token;
 }
 
@@ -71,8 +71,8 @@ beforeEach(async () => {
       value: 2,
       unit: "kW",
       metadata: {
-        sensorId: new Types.ObjectId(),
-        buildingId: building._id,
+        sensor: new Types.ObjectId(),
+        building: building._id,
         sensorType: "energy_meter",
       },
     },
@@ -81,8 +81,8 @@ beforeEach(async () => {
       value: 2,
       unit: "kW",
       metadata: {
-        sensorId: new Types.ObjectId(),
-        buildingId: building._id,
+        sensor: new Types.ObjectId(),
+        building: building._id,
         sensorType: "energy_meter",
       },
     },
@@ -91,8 +91,8 @@ beforeEach(async () => {
       value: 20.5,
       unit: "°C",
       metadata: {
-        sensorId: new Types.ObjectId(),
-        buildingId: building._id,
+        sensor: new Types.ObjectId(),
+        building: building._id,
         sensorType: "internal_temp",
       },
     },
@@ -113,9 +113,9 @@ beforeEach(async () => {
   });
 });
 
-describe("GET /api/v1/export/report", () => {
+describe("GET /api/v1/reports", () => {
   test("requires authentication", async () => {
-    const response = await client.api.v1.export.report.$get({
+    const response = await client.api.v1.reports.$get({
       query: {
         buildingIds: buildingId,
         startDate: "2026-01-01",
@@ -128,7 +128,7 @@ describe("GET /api/v1/export/report", () => {
   });
 
   test("allows only administrators", async () => {
-    const response = await client.api.v1.export.report.$get(
+    const response = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: buildingId,
@@ -144,7 +144,7 @@ describe("GET /api/v1/export/report", () => {
   });
 
   test("rejects missing and reversed date ranges", async () => {
-    const missingDateResponse = await client.api.v1.export.report.$get(
+    const missingDateResponse = await client.api.v1.reports.$get(
       {
         // @ts-expect-error intentionally missing endDate
         query: {
@@ -156,7 +156,7 @@ describe("GET /api/v1/export/report", () => {
     );
     expect(missingDateResponse.status).toBe(400);
 
-    const reversedDateResponse = await client.api.v1.export.report.$get(
+    const reversedDateResponse = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: buildingId,
@@ -172,7 +172,7 @@ describe("GET /api/v1/export/report", () => {
 
   test("rejects an invalid format", async () => {
     // SAFETY: "csv" deliberately violates the format enum so the server must reject it; `never` bypasses the client's query type.
-    const response = await client.api.v1.export.report.$get(
+    const response = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: buildingId,
@@ -188,7 +188,7 @@ describe("GET /api/v1/export/report", () => {
   });
 
   test("returns 404 when a selected building does not exist", async () => {
-    const response = await client.api.v1.export.report.$get(
+    const response = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: new Types.ObjectId().toString(),
@@ -204,7 +204,7 @@ describe("GET /api/v1/export/report", () => {
   });
 
   test("defaults to PDF when format is omitted", async () => {
-    const response = await client.api.v1.export.report.$get(
+    const response = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: buildingId,
@@ -220,7 +220,7 @@ describe("GET /api/v1/export/report", () => {
   });
 
   test("returns a valid PDF file", async () => {
-    const response = await client.api.v1.export.report.$get(
+    const response = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: buildingId,
@@ -244,7 +244,7 @@ describe("GET /api/v1/export/report", () => {
   });
 
   test("returns a valid Excel file with the aggregated data", async () => {
-    const response = await client.api.v1.export.report.$get(
+    const response = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: buildingId,
@@ -323,8 +323,8 @@ describe("GET /api/v1/export/report", () => {
         value: 100,
         unit: "m³",
         metadata: {
-          sensorId: new Types.ObjectId(),
-          buildingId: gasBuilding._id,
+          sensor: new Types.ObjectId(),
+          building: gasBuilding._id,
           sensorType: "gas_meter",
         },
       },
@@ -333,8 +333,8 @@ describe("GET /api/v1/export/report", () => {
         value: 105,
         unit: "m³",
         metadata: {
-          sensorId: new Types.ObjectId(),
-          buildingId: gasBuilding._id,
+          sensor: new Types.ObjectId(),
+          building: gasBuilding._id,
           sensorType: "gas_meter",
         },
       },
@@ -344,14 +344,14 @@ describe("GET /api/v1/export/report", () => {
         value: 2,
         unit: "kW",
         metadata: {
-          sensorId: new Types.ObjectId(),
-          buildingId: gasBuilding._id,
+          sensor: new Types.ObjectId(),
+          building: gasBuilding._id,
           sensorType: "energy_meter",
         },
       },
     ]);
 
-    const response = await client.api.v1.export.report.$get(
+    const response = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: gasBuilding._id.toString(),
@@ -392,7 +392,7 @@ describe("GET /api/v1/export/report", () => {
   });
 
   test("localizes report labels for the requested language", async () => {
-    const response = await client.api.v1.export.report.$get(
+    const response = await client.api.v1.reports.$get(
       {
         query: {
           buildingIds: buildingId,

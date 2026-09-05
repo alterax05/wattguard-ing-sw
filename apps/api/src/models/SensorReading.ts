@@ -6,23 +6,26 @@ import mongoose, { Schema, type InferSchemaType } from "mongoose";
 
 const metadataSchema = new Schema(
   {
-    sensorId: {
+    sensor: {
       type: Schema.Types.ObjectId,
       ref: "Sensor",
       required: true,
     },
-    buildingId: {
+    building: {
       type: Schema.Types.ObjectId,
       ref: "Building",
       required: true,
     },
     sensorType: {
       type: String,
+      enum: ["internal_temp", "external_temp", "energy_meter", "gas_meter"],
       required: true,
-    },
+    } as const,
   },
   { _id: false },
 );
+
+
 
 const sensorReadingSchema = new Schema(
   {
@@ -45,13 +48,15 @@ const sensorReadingSchema = new Schema(
     },
   },
   {
-    // Time-series collection configuration with native TTL
     timeseries: {
       timeField: "timestamp",
       metaField: "metadata",
-      granularity: "minutes", // Data every ~90 seconds
+      granularity: "minutes",
     },
     expireAfterSeconds: 365 * 24 * 60 * 60, // 365 days default retention
+    toObject: {
+      flattenObjectIds: true,
+    },
   }
 );
 

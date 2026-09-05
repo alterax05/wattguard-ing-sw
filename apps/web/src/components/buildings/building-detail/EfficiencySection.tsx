@@ -29,12 +29,12 @@ export function EfficiencySection({ building, range }: EfficiencySectionProps) {
   }, [range])
 
   const { data: efficiencyData, isLoading: efficiencyLoading } =
-    useBuildingEfficiency(building.id, efficiencyParams)
+    useBuildingEfficiency(building._id, efficiencyParams)
 
   // Use key to reset form when building changes, instead of syncing via effect
   return (
     <EfficiencyThresholdForm
-      key={building.id}
+      key={building._id}
       building={building}
       efficiencyData={efficiencyData}
       efficiencyLoading={efficiencyLoading}
@@ -75,7 +75,7 @@ function EfficiencyThresholdForm({
     }
     updateBuilding.mutate(
       {
-        id: building.id,
+        id: building._id,
         efficiencyThresholds: { enabled: effEnabled, minCop: parsed },
       },
       {

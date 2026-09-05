@@ -1,17 +1,18 @@
 /**
  * Building Types routes
  * 
- * All routes in this file require JWT authentication and admin/operator role,
- * applied globally in src/index.ts
- * 
+ * All routes in this file require JWT authentication and admin/operator role.
  * Admin only: POST, PATCH, DELETE (managing building types)
  * Admin + Operator: GET (viewing building types)
  */
 import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
-import type { AuthVariables } from "../middleware/auth";
+import { requireRole, type AuthVariables } from "../middleware/auth";
+import { mongo } from "mongoose";
 import { BuildingType } from "../models/BuildingType";
 import { Building } from "../models/Building";
+import { toBuildingTypeDTO } from "../lib/building-types";
+import { apiError, apiSuccess } from "../lib/api-response";
 import {
   ListBuildingTypesResponseSchema,
   CreateBuildingTypeRequestSchema,
@@ -24,21 +25,19 @@ import {
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
-  CreateBuildingTypeResponse,
-  DeleteBuildingTypeResponse,
   ListBuildingTypesResponse,
+  CreateBuildingTypeResponse,
   UpdateBuildingTypeResponse,
+  DeleteBuildingTypeResponse,
+  ErrorResponse,
 } from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
-  /**
-   * GET /api/building-types - List all building types
-   * Auth: admin + operator
-   */
   .get(
     "/",
     describeRoute({
-      description: "List all building types (admin and operator)",
+      summary: "Elenca tipi di edificio",
+      description: "Restituisce tutti i tipi di edificio ordinati per nome",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -71,26 +70,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const buildingTypes = await BuildingType.find().sort({ name: 1 });
 
-      return c.json({
-        buildingTypes: buildingTypes.map((bt) => ({
-          id: bt._id.toString(),
-          name: bt.name,
-          description: bt.description ?? undefined,
-          createdAt: bt.createdAt.toISOString(),
-          updatedAt: bt.updatedAt.toISOString(),
-        })),
-      } satisfies ListBuildingTypesResponse);
+      return c.json(apiSuccess(buildingTypes.map((bt) => toBuildingTypeDTO(bt))) satisfies ListBuildingTypesResponse);
     }
   )
-
-  /**
-   * POST /api/building-types - Create a new building type
-   * Auth: admin only
-   */
   .post(
     "/",
+    requireRole("admin"),
     describeRoute({
-      description: "Create a new building type (admin only)",
+      summary: "Crea tipo di edificio",
+      description: "Crea un nuovo tipo di edificio (solo admin, nome univoco)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -130,50 +118,31 @@ const app = new Hono<{ Variables: AuthVariables }>()
     }),
     validator("json", CreateBuildingTypeRequestSchema),
     async (c) => {
-      const payload = c.get("jwtPayload");
       const { name, description } = c.req.valid("json");
 
-      // Check if admin (this route should only be accessible to admins)
-      if (payload.role !== "admin") {
-        return c.json({ error: "Only admins can create building types", code: "admin_only" }, 403);
+      try {
+        const buildingType = await BuildingType.create({
+          name,
+          description,
+        });
+
+        c.header("Location", `${c.req.path}/${buildingType._id.toString()}`);
+
+        return c.json(apiSuccess(toBuildingTypeDTO(buildingType)) satisfies CreateBuildingTypeResponse, 201);
+      } catch (err: unknown) {
+        if (err instanceof mongo.MongoServerError && err.code === 11000) {
+          return c.json(apiError("building_type_name_exists", "Building type with this name already exists") satisfies ErrorResponse, 400);
+        }
+        throw err;
       }
-
-      // Check for duplicate name
-      const existing = await BuildingType.findOne({ name });
-      if (existing) {
-        return c.json({ error: "Building type with this name already exists", code: "building_type_name_exists" }, 400);
-      }
-
-      // Create building type
-      const buildingType = await BuildingType.create({
-        name,
-        description,
-      });
-
-      return c.json(
-        {
-          success: true,
-          buildingType: {
-            id: buildingType._id.toString(),
-            name: buildingType.name,
-            description: buildingType.description ?? undefined,
-            createdAt: buildingType.createdAt.toISOString(),
-            updatedAt: buildingType.updatedAt.toISOString(),
-          },
-        } satisfies CreateBuildingTypeResponse,
-        201
-      );
     }
   )
-
-  /**
-   * PATCH /api/building-types/:id - Update a building type
-   * Auth: admin only
-   */
   .patch(
     "/:id",
+    requireRole("admin"),
     describeRoute({
-      description: "Update a building type (admin only)",
+      summary: "Aggiorna tipo di edificio",
+      description: "Aggiorna nome o descrizione di un tipo di edificio (solo admin)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -222,56 +191,35 @@ const app = new Hono<{ Variables: AuthVariables }>()
     validator("param", UpdateBuildingTypeParamsSchema),
     validator("json", UpdateBuildingTypeRequestSchema),
     async (c) => {
-      const payload = c.get("jwtPayload");
       const { id } = c.req.valid("param");
       const updates = c.req.valid("json");
 
-      // Check if admin
-      if (payload.role !== "admin") {
-        return c.json({ error: "Only admins can update building types", code: "admin_only" }, 403);
-      }
-
-      // Find building type
       const buildingType = await BuildingType.findById(id);
       if (!buildingType) {
-        return c.json({ error: "Building type not found", code: "building_type_not_found" }, 404);
+        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 404);
       }
 
-      // Check for duplicate name if name is being updated
-      if (updates.name && updates.name !== buildingType.name) {
-        const existing = await BuildingType.findOne({ name: updates.name });
-        if (existing) {
-          return c.json({ error: "Building type with this name already exists", code: "building_type_name_exists" }, 400);
-        }
-      }
-
-      // Update fields
       if (updates.name !== undefined) buildingType.name = updates.name;
       if (updates.description !== undefined) buildingType.description = updates.description;
 
-      await buildingType.save();
+      try {
+        await buildingType.save();
+      } catch (err: unknown) {
+        if (err instanceof mongo.MongoServerError && err.code === 11000) {
+          return c.json(apiError("building_type_name_exists", "Building type with this name already exists") satisfies ErrorResponse, 400);
+        }
+        throw err;
+      }
 
-      return c.json({
-        success: true,
-        buildingType: {
-          id: buildingType._id.toString(),
-          name: buildingType.name,
-          description: buildingType.description ?? undefined,
-          createdAt: buildingType.createdAt.toISOString(),
-          updatedAt: buildingType.updatedAt.toISOString(),
-        },
-      } satisfies UpdateBuildingTypeResponse);
+      return c.json(apiSuccess(toBuildingTypeDTO(buildingType)) satisfies UpdateBuildingTypeResponse);
     }
   )
-
-  /**
-   * DELETE /api/building-types/:id - Delete a building type
-   * Auth: admin only
-   */
   .delete(
     "/:id",
+    requireRole("admin"),
     describeRoute({
-      description: "Delete a building type (admin only)",
+      summary: "Elimina tipo di edificio",
+      description: "Elimina il tipo se non è in uso da edifici (solo admin)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -319,39 +267,28 @@ const app = new Hono<{ Variables: AuthVariables }>()
     }),
     validator("param", DeleteBuildingTypeParamsSchema),
     async (c) => {
-      const payload = c.get("jwtPayload");
       const { id } = c.req.valid("param");
 
-      // Check if admin
-      if (payload.role !== "admin") {
-        return c.json({ error: "Only admins can delete building types", code: "admin_only" }, 403);
-      }
-
-      // Find building type
       const buildingType = await BuildingType.findById(id);
       if (!buildingType) {
-        return c.json({ error: "Building type not found", code: "building_type_not_found" }, 404);
+        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 404);
       }
 
       // Check if any buildings use this type
       const buildingsUsingType = await Building.countDocuments({ buildingType: id });
       if (buildingsUsingType > 0) {
         return c.json(
-          {
-            error: `Cannot delete building type: ${buildingsUsingType} building(s) are using it`,
-            code: "building_type_in_use",
-          },
+          apiError("building_type_in_use", `Cannot delete building type: ${buildingsUsingType} building(s) are using it`) satisfies ErrorResponse,
           400
         );
       }
 
-      // Delete building type
       await BuildingType.findByIdAndDelete(id);
 
-      return c.json({
-        success: true,
+      return c.json(apiSuccess({
+        id,
         message: `Building type "${buildingType.name}" deleted successfully`,
-      } satisfies DeleteBuildingTypeResponse);
+      }) satisfies DeleteBuildingTypeResponse);
     }
   );
 

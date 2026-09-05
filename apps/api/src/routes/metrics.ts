@@ -6,38 +6,32 @@ import { SensorReading } from "../models/SensorReading";
 import { Alert } from "../models/Alert";
 
 import {
-  DashboardHistoryQuerySchema,
-  DashboardStatsResponseSchema,
-  DashboardHistoryResponseSchema,
+  MetricsHistoryQuerySchema,
+  MetricsResponseSchema,
+  MetricsHistoryResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
-  DashboardHistoryResponse,
-  DashboardStatsResponse,
+  MetricsHistoryResponse,
+  MetricsResponse,
+  ErrorResponse,
 } from "@wattguard/shared";
+import { apiError, apiSuccess } from "../lib/api-response";
 
 const app = new Hono<{ Variables: AuthVariables }>()
-  /**
-   * GET /api/dashboard/stats
-   *
-   * Returns aggregated stats across all buildings:
-   *   - Active / total sensor counts
-   *   - Active alert count
-   *   - Current total electricity consumption (sum of energy_meter lastReading values)
-   *   - Current total gas consumption (sum of gas_meter lastReading values)
-   */
   .get(
-    "/stats",
+    "/",
     describeRoute({
-      description: "Get aggregated dashboard statistics across all buildings",
-      tags: ["Dashboard"],
+      summary: "Leggi metriche di sistema",
+      description: "Restituisce i KPI aggregati: sensori, alert attivi e consumi",
+      tags: ["Metrics"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
-          description: "Dashboard stats retrieved successfully",
+          description: "System metrics retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(DashboardStatsResponseSchema),
+              schema: resolver(MetricsResponseSchema),
             },
           },
         },
@@ -69,7 +63,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
               "lastReading.value": { $exists: true },
             },
           },
-          { $group: { _id: null, total: { $sum: "$lastReading.value" } } },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$lastReading.value" },
+            },
+          },
         ]),
         Sensor.aggregate<ConsumptionAgg>([
           {
@@ -79,11 +78,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
               "lastReading.value": { $exists: true },
             },
           },
-          { $group: { _id: null, total: { $sum: "$lastReading.value" } } },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$lastReading.value" },
+            },
+          },
         ]),
       ]);
 
-      return c.json({
+      const totalElectricity = electricityAgg[0]?.total ?? null;
+      const totalGas = gasAgg[0]?.total ?? null;
+
+      return c.json(apiSuccess({
         sensors: {
           active: activeSensors,
           total: totalSensors,
@@ -92,36 +99,25 @@ const app = new Hono<{ Variables: AuthVariables }>()
           active: activeAlerts,
         },
         consumption: {
-          electricity: electricityAgg[0]?.total ?? null,
-          gas: gasAgg[0]?.total ?? null,
+          electricity: totalElectricity,
+          gas: totalGas,
         },
-      } satisfies DashboardStatsResponse);
-    }
+      }) satisfies MetricsResponse);
+    },
   )
-
-  /**
-   * GET /api/dashboard/history
-   *
-   * Returns time-bucketed aggregate readings across all buildings for energy_meter
-   * and gas_meter sensor types. Useful for the dashboard overview chart.
-   *
-   * Query params:
-   *   - startDate: ISO 8601 date/datetime
-   *   - endDate:   ISO 8601 date/datetime
-   *   - interval:  "hour" | "day" | "week"  (default: "day")
-   */
   .get(
     "/history",
     describeRoute({
-      description: "Get aggregated energy and gas consumption history across all buildings",
-      tags: ["Dashboard"],
+      summary: "Leggi storico metriche",
+      description: "Restituisce energia e gas aggregati per intervallo (ora/giorno/settimana)",
+      tags: ["Metrics"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
-          description: "Historical data retrieved successfully",
+          description: "Historical metrics data retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(DashboardHistoryResponseSchema),
+              schema: resolver(MetricsHistoryResponseSchema),
             },
           },
         },
@@ -135,7 +131,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    validator("query", DashboardHistoryQuerySchema),
+    validator("query", MetricsHistoryQuerySchema),
     async (c) => {
       const { startDate, endDate, interval } = c.req.valid("query");
 
@@ -143,7 +139,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const end = new Date(endDate);
 
       if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-        return c.json({ error: "Invalid date range: startDate must be before endDate", code: "invalid_date_range" }, 400);
+        return c.json(apiError("invalid_date_range", "Invalid date range: startDate must be before endDate") satisfies ErrorResponse, 400);
       }
 
       // Determine the millisecond bucket size for grouping
@@ -188,73 +184,45 @@ const app = new Hono<{ Variables: AuthVariables }>()
           $project: {
             _id: "$_id.bucket",
             sensorType: "$_id.sensorType",
-            avgValue: 1,
+            avgValue: { $round: ["$avgValue", 2] },
           },
         },
         { $sort: { _id: 1 } },
       ]);
 
-      // Pivot: collect all unique bucket dates and merge electricity + gas
-      const bucketMap = new Map<
-        string,
-        { date: Date; electricity: number | null; gas: number | null }
-      >();
+      // Merge energy_meter and gas_meter into a single entry per bucket date
+      const bucketMap = new Map<string, { electricity: number | null; gas: number | null }>();
 
-      for (const row of rawBuckets) {
-        const key = row._id.toISOString();
-        if (!bucketMap.has(key)) {
-          bucketMap.set(key, { date: row._id, electricity: null, gas: null });
+      for (const b of rawBuckets) {
+        const key = b._id instanceof Date ? b._id.toISOString() : new Date(b._id).toISOString();
+        const existing = bucketMap.get(key) ?? { electricity: null, gas: null };
+
+        if (b.sensorType === "energy_meter") {
+          existing.electricity = b.avgValue;
+        } else if (b.sensorType === "gas_meter") {
+          existing.gas = b.avgValue;
         }
-        const entry = bucketMap.get(key)!;
-        if (row.sensorType === "energy_meter") {
-          entry.electricity = Math.round(row.avgValue * 100) / 100;
-        } else if (row.sensorType === "gas_meter") {
-          entry.gas = Math.round(row.avgValue * 100) / 100;
-        }
+
+        bucketMap.set(key, existing);
       }
 
-      // Format dates depending on interval
-      const formatDate = (d: Date): string => {
-        if (interval === "hour") {
-          return d.toLocaleString("it-IT", {
-            day: "2-digit",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: "Europe/Rome",
-          });
-        }
-        if (interval === "week") {
-          return d.toLocaleDateString("it-IT", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            timeZone: "Europe/Rome",
-          });
-        }
-        // day
-        return d.toLocaleDateString("it-IT", {
-          day: "2-digit",
-          month: "short",
-          timeZone: "Europe/Rome",
-        });
-      };
+      const data = Array.from(bucketMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, values]) => ({
+          date,
+          electricity: values.electricity,
+          gas: values.gas,
+        }));
 
-      const data = Array.from(bucketMap.values()).map((entry) => ({
-        date: formatDate(entry.date),
-        electricity: entry.electricity,
-        gas: entry.gas,
-      }));
-
-      return c.json({
+      return c.json(apiSuccess({
         period: {
-          startDate: start.toISOString(),
-          endDate: end.toISOString(),
-          interval,
+          startDate,
+          endDate,
+          interval: interval ?? "day",
         },
         data,
-      } satisfies DashboardHistoryResponse);
-    }
+      }) satisfies MetricsHistoryResponse);
+    },
   );
 
 export default app;

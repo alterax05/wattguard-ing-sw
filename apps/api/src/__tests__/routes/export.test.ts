@@ -16,13 +16,13 @@ let buildingId: string;
 let buildingName: string;
 
 async function login(email: string, password: string): Promise<string> {
-  const response = await client.api.v1.auth.local.login.$post({
+  const response = await client.api.v1.auth.session.$post({
     json: { email, password },
   });
   const cookie = response.headers.get("set-cookie");
   const token = cookie?.match(/access_token=([^;]+)/)?.[1];
 
-  if (!token) throw new Error(`Token not found for ${email}`);
+  if (!token) return expect.unreachable(`Token not found for ${email}`);
   return token;
 }
 
@@ -70,8 +70,8 @@ beforeEach(async () => {
       value: 20.5,
       unit: "°C",
       metadata: {
-        sensorId: new Types.ObjectId(),
-        buildingId: building._id,
+        sensor: new Types.ObjectId(),
+        building: building._id,
         sensorType: "internal_temp",
       },
     },
@@ -80,8 +80,8 @@ beforeEach(async () => {
       value: 5.25,
       unit: "kWh",
       metadata: {
-        sensorId: new Types.ObjectId(),
-        buildingId: building._id,
+        sensor: new Types.ObjectId(),
+        building: building._id,
         sensorType: "energy_meter",
       },
     },
@@ -90,8 +90,8 @@ beforeEach(async () => {
       value: 3.1,
       unit: "m³",
       metadata: {
-        sensorId: new Types.ObjectId(),
-        buildingId: building._id,
+        sensor: new Types.ObjectId(),
+        building: building._id,
         sensorType: "gas_meter",
       },
     },
@@ -100,17 +100,17 @@ beforeEach(async () => {
       value: 99,
       unit: "kWh",
       metadata: {
-        sensorId: new Types.ObjectId(),
-        buildingId: building._id,
+        sensor: new Types.ObjectId(),
+        building: building._id,
         sensorType: "energy_meter",
       },
     },
   ]);
 });
 
-describe("GET /api/v1/export/consumption", () => {
+describe("GET /api/v1/readings", () => {
   test("requires authentication", async () => {
-    const response = await client.api.v1.export.consumption.$get({
+    const response = await client.api.v1.readings.$get({
       query: {
         buildingIds: buildingId,
         startDate: "2026-01-01",
@@ -122,7 +122,7 @@ describe("GET /api/v1/export/consumption", () => {
   });
 
   test("allows only administrators", async () => {
-    const response = await client.api.v1.export.consumption.$get(
+    const response = await client.api.v1.readings.$get(
       {
         query: {
           buildingIds: buildingId,
@@ -137,9 +137,8 @@ describe("GET /api/v1/export/consumption", () => {
   });
 
   test("rejects missing and reversed date ranges", async () => {
-    const missingDateResponse = await client.api.v1.export.consumption.$get(
+    const missingDateResponse = await client.api.v1.readings.$get(
       {
-        // @ts-expect-error intentionally missing date range
         query: {
           buildingIds: buildingId,
         },
@@ -148,7 +147,7 @@ describe("GET /api/v1/export/consumption", () => {
     );
     expect(missingDateResponse.status).toBe(400);
 
-    const reversedDateResponse = await client.api.v1.export.consumption.$get(
+    const reversedDateResponse = await client.api.v1.readings.$get(
       {
         query: {
           buildingIds: buildingId,
@@ -162,12 +161,13 @@ describe("GET /api/v1/export/consumption", () => {
   });
 
   test("returns selected readings in the requested period as CSV", async () => {
-    const response = await client.api.v1.export.consumption.$get(
+    const response = await client.api.v1.readings.$get(
       {
         query: {
           buildingIds: buildingId,
           startDate: "2026-01-01",
           endDate: "2026-01-31",
+          format: "csv",
         },
       },
       { headers: { Cookie: `access_token=${adminToken}` } },
@@ -192,7 +192,7 @@ describe("GET /api/v1/export/consumption", () => {
   });
 
   test("returns 404 when a selected building does not exist", async () => {
-    const response = await client.api.v1.export.consumption.$get(
+    const response = await client.api.v1.readings.$get(
       {
         query: {
           buildingIds: new Types.ObjectId().toString(),

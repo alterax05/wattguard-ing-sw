@@ -42,11 +42,11 @@ export const openapiConfig = {
   tags: [
     {
       name: 'Authentication',
-      description: 'User authentication and account management endpoints',
+      description: 'User authentication, session lifecycle, Google OAuth configuration, and password recovery endpoints',
     },
     {
-      name: 'Admin',
-      description: 'Administrative operations (requires admin role)',
+      name: 'Users',
+      description: 'User management endpoints (admin only)',
     },
     {
       name: 'Invites',
@@ -67,6 +67,30 @@ export const openapiConfig = {
     {
       name: 'Sensors',
       description: 'Sensor management',
-    }
+    },
+    {
+      name: 'Alerts',
+      description: 'Energy efficiency and sensor alerts management',
+    },
+    {
+      name: 'Metrics',
+      description: 'Building metrics and baseline statistics',
+    },
+    {
+      name: 'Readings',
+      description: 'Sensor readings ingestion and historical queries',
+    },
+    {
+      name: 'Reports',
+      description: 'Building energy report generation and exports',
+    },
+    {
+      name: 'Settings',
+      description: 'System and dashboard settings configuration',
+    },
+    {
+      name: 'Backups',
+      description: 'Database backup and restore operations',
+    },
   ],
 };

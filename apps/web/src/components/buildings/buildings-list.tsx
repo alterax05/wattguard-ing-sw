@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useBuildings, type BuildingSummary } from "@/hooks/use-buildings"
 import { Building2, Activity, Zap, Radio } from "lucide-react"
@@ -11,6 +12,7 @@ function getBuildingTypeName(bt: BuildingSummary["buildingType"]): string {
 }
 
 export function BuildingsList() {
+  const navigate = useNavigate()
   const { data, isLoading, isError } = useBuildings({ limit: "5" })
   const { t } = useTranslation()
 
@@ -62,8 +64,17 @@ export function BuildingsList() {
     <div className="space-y-3">
       {buildings.map((building) => (
         <div
-          key={building.id}
-          className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+          key={building._id}
+          className="flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          role="button"
+          tabIndex={0}
+          onClick={() => { void navigate(`/buildings/${building._id}`) }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              void navigate(`/buildings/${building._id}`)
+            }
+          }}
         >
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">

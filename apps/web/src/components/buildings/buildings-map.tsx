@@ -137,12 +137,12 @@ export function BuildingsMap() {
 
         {buildings.map((building) => {
           const isActive = building.status === "active";
-          const isSelected = selectedBuilding?.id === building.id;
+          const isSelected = selectedBuilding?._id === building._id;
           const icon = createBuildingIcon(isActive, isSelected);
 
           return (
             <Marker
-              key={building.id}
+              key={building._id}
               position={[
                 building.location.coordinates[1],
                 building.location.coordinates[0],
@@ -227,7 +227,7 @@ export function BuildingsMap() {
             </div>
 
             <Link
-              to={`/dashboard/buildings/${selectedBuilding.id}`}
+              to={`/buildings/${selectedBuilding._id}`}
               className="block w-full rounded-md bg-primary px-3 py-2 text-center text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               {t("map.viewDetails")}

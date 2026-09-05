@@ -112,13 +112,13 @@ export async function buildReportData(
     }>([
       {
         $match: {
-          "metadata.buildingId": { $in: objectIds },
+          "metadata.building": { $in: objectIds },
           timestamp: { $gte: start, $lte: end },
         },
       },
       {
         $group: {
-          _id: "$metadata.buildingId",
+          _id: "$metadata.building",
           avgInternalTemp: {
             $avg: {
               $cond: [{ $eq: ["$metadata.sensorType", "internal_temp"] }, "$value", null],

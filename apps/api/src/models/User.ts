@@ -52,6 +52,10 @@ const userSchema = new Schema(
   },
   {
     timestamps: true,
+    toObject: {
+      virtuals: true,
+      flattenObjectIds: true,
+    },
   }
 );
 
@@ -62,6 +66,8 @@ userSchema.pre('save', function() {
 });
 
 export type UserDocument = InferSchemaType<typeof userSchema>;
+
+export type HydratedUser = mongoose.HydratedDocument<UserDocument>;
 
 export type UserRole = UserDocument["role"];
 

@@ -6,20 +6,22 @@ import i18n from "@/lib/i18n";
 import {
   isSupportedLocale,
   type User,
-  type LoginRequest,
-  type SetupRequest,
-  type ForgotPasswordRequest,
-  type ResetPasswordRequest,
+  type LocalSessionRequest,
+  type GoogleSessionRequest,
+  type AcceptInviteRequest,
+  type CreateResetTokenRequest,
+  type ApplyPasswordResetRequest,
+  type UpdateSessionRequest,
   type CreateInviteRequest,
   type UpdateUserRequest,
 } from "@wattguard/shared";
 
-export const AUTH_QUERY_KEY = ["auth", "me"] as const;
+export const AUTH_QUERY_KEY = ["auth", "session"] as const;
 
 export type AuthUser = User;
 
 /**
- * Fetch the current authenticated user via GET /api/auth/me.
+ * Fetch the current authenticated user via GET /api/v1/auth/session.
  *
  * - On 401 (not authenticated) the query resolves to `null` instead of erroring,
  *   so components can simply check `data === null` for the guest state.
@@ -31,7 +33,7 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async (): Promise<AuthUser | null> => {
-      const res = await client.api.v1.auth.me.$get();
+      const res = await client.api.v1.auth.session.$get();
 
       if (res.status === 401) {
         return null;
@@ -41,12 +43,13 @@ export function useCurrentUser() {
         throw new Error("Failed to fetch user");
       }
 
-      const data = await res.json();
+      const resData = await res.json();
+      const userData = resData.data;
       const user: AuthUser = {
-        ...data.user,
-        name: data.user.name ?? undefined,
-        language: isSupportedLocale(data.user.language) ? data.user.language : undefined,
-        lastLoginAt: data.user.lastLoginAt ?? undefined,
+        ...userData,
+        name: userData.name ?? undefined,
+        language: isSupportedLocale(userData.language) ? userData.language : undefined,
+        lastLoginAt: userData.lastLoginAt ?? undefined,
       };
 
       // Server-side preference wins at session start so alert emails match
@@ -63,21 +66,22 @@ export function useCurrentUser() {
 }
 
 /**
- * Validate an invite token via GET /api/invites/validate?token=...
+ * Validate an invite token via GET /api/v1/invites/:token
  */
 export function useValidateInvite(token: string | null) {
   return useQuery({
     queryKey: ["invites", "validate", token],
     queryFn: async () => {
-      const res = await client.api.v1.invites.validate.$get({
-        query: { token: token! },
+      const res = await client.api.v1.invites[":token"].$get({
+        param: { token: token! },
       });
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     enabled: !!token,
     retry: false,
@@ -85,23 +89,22 @@ export function useValidateInvite(token: string | null) {
 }
 
 /**
- * Validate a password reset token via GET /api/auth/local/validate-reset-token?token=...
+ * Validate a password reset token via GET /api/v1/auth/reset-tokens/:token
  */
 export function useValidateResetToken(token: string | null) {
   return useQuery({
     queryKey: ["auth", "validate-reset-token", token],
     queryFn: async () => {
-      const res = await client.api.v1.auth.local["validate-reset-token"].$get({
-        query: { token: token! },
+      const res = await client.api.v1.auth["reset-tokens"][":token"].$get({
+        param: { token: token! },
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     enabled: !!token,
     retry: false,
@@ -111,25 +114,24 @@ export function useValidateResetToken(token: string | null) {
 // ── Mutations ───────────────────────────────────────────────────────────────
 
 /**
- * Login via POST /api/auth/local/login.
- * On success, invalidates the auth query so the app re-fetches /me.
+ * Create a session via POST /api/v1/auth/session (local login).
+ * On success, invalidates the auth query so the app re-fetches the session.
  */
 export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: LoginRequest) => {
-      const res = await client.api.v1.auth.local.login.$post({
+    mutationFn: async (input: LocalSessionRequest) => {
+      const res = await client.api.v1.auth.session.$post({
         json: input,
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
@@ -138,7 +140,73 @@ export function useLogin() {
 }
 
 /**
- * Logout via POST /api/auth/logout.
+ * Public Google OAuth configuration via GET /api/v1/auth/google/config
+ */
+export function useGoogleAuthConfig() {
+  return useQuery({
+    queryKey: ["auth", "google", "config"],
+    queryFn: async () => {
+      const res = await client.api.v1.auth.google.config.$get();
+      if (!res.ok) return null;
+      const resData = await res.json();
+      return resData.data;
+    },
+    staleTime: Infinity,
+  });
+}
+
+/**
+ * Create a session via POST /api/v1/auth/session using Google Identity Services ID token.
+ */
+export function useGoogleLogin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: GoogleSessionRequest) => {
+      const res = await client.api.v1.auth.session.$post({
+        json: input,
+      });
+
+      if (!res.ok) {
+        throw new Error(await errorMessageFromResponse(res));
+      }
+
+      const resData = await res.json();
+      return resData.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * Update session profile / preferences via PATCH /api/v1/auth/session.
+ */
+export function useUpdateSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpdateSessionRequest) => {
+      const res = await client.api.v1.auth.session.$patch({
+        json: input,
+      });
+
+      if (!res.ok) {
+        throw new Error(await errorMessageFromResponse(res));
+      }
+
+      const resData = await res.json();
+      return resData.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * Logout via DELETE /api/v1/auth/session.
  * Clears the entire query cache so no stale authenticated data remains.
  */
 export function useLogout() {
@@ -147,7 +215,7 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await client.api.v1.auth.logout.$post();
+      const res = await client.api.v1.auth.session.$delete();
 
       if (!res.ok) {
         throw new Error("Logout failed");
@@ -155,38 +223,35 @@ export function useLogout() {
 
       return res.json();
     },
+
     onSuccess: () => {
-      // Set the auth user to null first — this triggers AuthProvider to
-      // re-render with `user: null`, which causes ProtectedRoute to redirect.
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
-      // Clear all other cached data so nothing stale remains.
       queryClient.clear();
-      // Navigate as a safety net (ProtectedRoute will also redirect reactively).
       void navigate("/login");
     },
   });
 }
 
 /**
- * Setup (accept invite with password) via POST /api/auth/local/setup.
+ * Accept invite via POST /api/v1/invites/:token/acceptance (local password or Google SSO).
  * On success, invalidates the auth query so the app picks up the new session.
  */
 export function useSetup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: SetupRequest) => {
-      const res = await client.api.v1.auth.local.setup.$post({
-        json: input,
+    mutationFn: async ({ token, ...body }: { token: string } & AcceptInviteRequest) => {
+      const res = await client.api.v1.invites[":token"].acceptance.$post({
+        param: { token },
+        json: body,
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
@@ -195,44 +260,42 @@ export function useSetup() {
 }
 
 /**
- * Forgot password via POST /api/auth/local/forgot-password.
+ * Request password reset token via POST /api/v1/auth/reset-tokens.
  * Always resolves successfully (server never reveals whether the email exists).
  */
 export function useForgotPassword() {
   return useMutation({
-    mutationFn: async (input: ForgotPasswordRequest) => {
-      const res = await client.api.v1.auth.local["forgot-password"].$post({
+    mutationFn: async (input: CreateResetTokenRequest) => {
+      const res = await client.api.v1.auth["reset-tokens"].$post({
         json: input,
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
   });
 }
 
 /**
- * Reset password via POST /api/auth/local/reset-password.
+ * Reset password via POST /api/v1/auth/password-resets.
  */
 export function useResetPassword() {
   return useMutation({
-    mutationFn: async (input: ResetPasswordRequest) => {
-      const res = await client.api.v1.auth.local["reset-password"].$post({
+    mutationFn: async (input: ApplyPasswordResetRequest) => {
+      const res = await client.api.v1.auth["password-resets"].$post({
         json: input,
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
   });
 }
@@ -243,27 +306,27 @@ export const USERS_QUERY_KEY = ["admin", "users"] as const;
 export type AdminUser = User;
 
 /**
- * Fetch all users via GET /api/admin/users (admin only).
+ * Fetch all users via GET /api/v1/users (admin only).
  */
 export function useUsers() {
   return useQuery({
     queryKey: USERS_QUERY_KEY,
     queryFn: async (): Promise<AdminUser[]> => {
-      const res = await client.api.v1.admin.users.$get();
+      const res = await client.api.v1.users.$get();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
       const data = await res.json();
-      return data.users;
+      return data.data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }
 
 /**
- * Update a user's role or disabled status via PATCH /api/admin/users/:id (admin only).
+ * Update a user's role or disabled status via PATCH /api/v1/users/:id (admin only).
  * On success, invalidates the users query to refresh the list.
  */
 export function useUpdateUser() {
@@ -272,18 +335,17 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: async (input: UpdateUserRequest & { id: string }) => {
       const { id, ...body } = input;
-      const res = await client.api.v1.admin.users[":id"].$patch({
+      const res = await client.api.v1.users[":id"].$patch({
         param: { id },
         json: body,
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
@@ -292,7 +354,7 @@ export function useUpdateUser() {
 }
 
 /**
- * Delete a user via DELETE /api/admin/users/:id (admin only).
+ * Delete a user via DELETE /api/v1/users/:id (admin only).
  * On success, invalidates the users query to refresh the list.
  */
 export function useDeleteUser() {
@@ -300,17 +362,16 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await client.api.v1.admin.users[":id"].$delete({
+      const res = await client.api.v1.users[":id"].$delete({
         param: { id },
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
@@ -325,17 +386,16 @@ export function useDeleteUser() {
 export function useCreateInvite() {
   return useMutation({
     mutationFn: async (input: CreateInviteRequest) => {
-      const res = await client.api.v1.admin.invites.$post({
+      const res = await client.api.v1.invites.$post({
         json: input,
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
   });
 }

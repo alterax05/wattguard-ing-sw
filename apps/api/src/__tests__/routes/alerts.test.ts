@@ -44,7 +44,7 @@ beforeEach(async () => {
   
 
   // Generate token through login route
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin-alerts@test.com",
       password: "admin123",
@@ -53,7 +53,7 @@ beforeEach(async () => {
 
   const cookie = loginRes.headers.get("set-cookie");
   const tokenMatch = cookie?.match(/access_token=([^;]+)/);
-  if (!tokenMatch) throw new Error("Admin token not found, response status: " + loginRes.status);
+  if (!tokenMatch) return expect.unreachable("Admin token not found, response status: " + loginRes.status);
   // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = tokenMatch[1] as string;
 
@@ -114,12 +114,13 @@ describe("alerts api", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expectTypeOf(body).toExtend<ListAlertsResponse | ErrorResponse>();
-    if (!("alerts" in body)) {
-      throw new Error("Expected response to contain 'alerts'");
+    expect(body.success).toBe(true);
+    if (!body.success) {
+      return expect.unreachable("Expected response success to be true");
     }
-    expect(body.alerts).toBeInstanceOf(Array);
-    expect(body.alerts.length).toBe(2);
-    const thresholdAlert = body.alerts.find(
+    expect(body.data.alerts).toBeInstanceOf(Array);
+    expect(body.data.alerts.length).toBe(2);
+    const thresholdAlert = body.data.alerts.find(
       (alert) => alert.type === "threshold_exceeded",
     );
     expect(thresholdAlert).toBeDefined();
@@ -135,9 +136,10 @@ describe("alerts api", () => {
     const alert = await Alert.findOne({ status: "active" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.v1.alerts[":id"].acknowledge.$patch(
+    const res = await client.api.v1.alerts[":id"].$patch(
       {
         param: { id: alert!._id.toString() },
+        json: { status: "acknowledged" },
       },
       {
         headers: { Cookie: `access_token=${adminToken}` },
@@ -147,21 +149,22 @@ describe("alerts api", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
-    if (!("alert" in body)) {
-      throw new Error("Expected response to contain 'alert'");
-    }
     expect(body.success).toBe(true);
-    expect(body.alert.status).toBe("acknowledged");
-    expect(body.alert.acknowledgedBy).toBe("Admin User");
+    if (!body.success) {
+      return expect.unreachable("Expected response success to be true");
+    }
+    expect(body.data.status).toBe("acknowledged");
+    expect(body.data.acknowledgedBy).toBe("Admin User");
   });
 
   it("should fail to acknowledge an already acknowledged alert", async () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.v1.alerts[":id"].acknowledge.$patch(
+    const res = await client.api.v1.alerts[":id"].$patch(
       {
         param: { id: alert!._id.toString() },
+        json: { status: "acknowledged" },
       },
       {
         headers: { Cookie: `access_token=${adminToken}` },
@@ -170,21 +173,22 @@ describe("alerts api", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    if (!("error" in body)) {
-      throw new Error("Expected response to contain 'error'");
+    expect(body.success).toBe(false);
+    if (body.success) {
+      return expect.unreachable("Expected response success to be false");
     }
-    expect(body.error).toBe("Only active alerts can be acknowledged");
-    // SAFETY: the API error contract pairs the message with an ErrorCode in `code`.
-    expect((body as { error: string; code?: string }).code).toBe("alert_not_active");
+    expect(body.message).toBe("Only active alerts can be acknowledged");
+    expect(body.error_code).toBe("alert_not_active");
   });
 
   it("should resolve an alert", async () => {
     const alert = await Alert.findOne({ status: "acknowledged" });
     expect(alert).toBeDefined();
 
-    const res = await client.api.v1.alerts[":id"].resolve.$patch(
+    const res = await client.api.v1.alerts[":id"].$patch(
       {
         param: { id: alert!._id.toString() },
+        json: { status: "resolved" },
       },
       {
         headers: { Cookie: `access_token=${adminToken}` },
@@ -194,11 +198,12 @@ describe("alerts api", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
-    if (!("alert" in body)) {
-      throw new Error("Expected response to contain 'alert'");
-    }
     expect(body.success).toBe(true);
-    expect(body.alert.status).toBe("resolved");
-    expect(body.alert.resolvedBy).toBe("Admin User");
+    if (!body.success) {
+      return expect.unreachable("Expected response success to be true");
+    }
+    expect(body.data.status).toBe("resolved");
+    expect(body.data.resolvedBy).toBe("Admin User");
   });
+
 });

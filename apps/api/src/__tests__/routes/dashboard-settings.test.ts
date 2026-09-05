@@ -51,12 +51,12 @@ beforeEach(async () => {
     passwordHash: hash,
   });
 
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: { email: "admin@test.com", password: "admin123" },
   });
 
   const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
-  if (!tokenMatch) throw new Error("Admin token not found");
+  if (!tokenMatch) return expect.unreachable("Admin token not found");
   adminToken = tokenMatch[1]!;
 });
 
@@ -67,7 +67,9 @@ describe("GET /api/v1/health", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<HealthResponse>();
-    expect(data.status).toBe("ok");
+    expect(data.success).toBe(true);
+    if (!data.success) return expect.unreachable("Expected success to be true");
+    expect(data.data.status).toBe("ok");
   });
 });
 
@@ -75,9 +77,9 @@ describe("dashboard api", () => {
   test("GET /api/dashboard/stats returns aggregated counters", async () => {
     const admin = await User.findOne({ email: "admin@test.com" });
     await Sensor.create([
-      { buildingId: "507f1f77bcf86cd799439011", sensorType: "internal_temp", location: "Piano 1", installationDate: new Date(), status: "active", transmissionInterval: 90, createdBy: admin!._id, updatedBy: admin!._id },
-      { buildingId: "507f1f77bcf86cd799439011", sensorType: "internal_temp", location: "Piano 2", installationDate: new Date(), status: "active", transmissionInterval: 90, createdBy: admin!._id, updatedBy: admin!._id },
-      { buildingId: "507f1f77bcf86cd799439011", sensorType: "external_temp", location: "Facciata", installationDate: new Date(), status: "inactive", transmissionInterval: 90, createdBy: admin!._id, updatedBy: admin!._id },
+      { building: "507f1f77bcf86cd799439011", sensorType: "internal_temp", location: "Piano 1", installationDate: new Date(), status: "active", transmissionInterval: 90, createdBy: admin!._id, updatedBy: admin!._id },
+      { building: "507f1f77bcf86cd799439011", sensorType: "internal_temp", location: "Piano 2", installationDate: new Date(), status: "active", transmissionInterval: 90, createdBy: admin!._id, updatedBy: admin!._id },
+      { building: "507f1f77bcf86cd799439011", sensorType: "external_temp", location: "Facciata", installationDate: new Date(), status: "inactive", transmissionInterval: 90, createdBy: admin!._id, updatedBy: admin!._id },
     ]);
     await Alert.create({
       buildingId: "507f1f77bcf86cd799439011",
@@ -89,21 +91,22 @@ describe("dashboard api", () => {
       status: "active",
     });
 
-    const res = await client.api.v1.dashboard.stats.$get(undefined, {
+    const res = await client.api.v1.metrics.$get(undefined, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<DashboardStatsResponse | ErrorResponse>();
-    if (!("sensors" in data)) {
-      throw new Error("Expected response to contain 'sensors'");
+    expect(data.success).toBe(true);
+    if (!data.success) {
+      return expect.unreachable("Expected response success to be true");
     }
-    expect(data.sensors.total).toBe(3);
-    expect(data.sensors.active).toBe(2);
-    expect(data.alerts.active).toBe(1);
-    expect(data.consumption.electricity).toBeNull();
-    expect(data.consumption.gas).toBeNull();
+    expect(data.data.sensors.total).toBe(3);
+    expect(data.data.sensors.active).toBe(2);
+    expect(data.data.alerts.active).toBe(1);
+    expect(data.data.consumption.electricity).toBeNull();
+    expect(data.data.consumption.gas).toBeNull();
   });
 
   test("GET /api/dashboard/history returns bucketed data", async () => {
@@ -111,7 +114,7 @@ describe("dashboard api", () => {
     const startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = now.toISOString();
 
-    const res = await client.api.v1.dashboard.history.$get(
+    const res = await client.api.v1.metrics.history.$get(
       {
         query: { startDate, endDate, interval: "day" },
       },
@@ -123,15 +126,16 @@ describe("dashboard api", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<DashboardHistoryResponse | ErrorResponse>();
-    if (!("period" in data)) {
-      throw new Error("Expected response to contain 'period'");
+    expect(data.success).toBe(true);
+    if (!data.success) {
+      return expect.unreachable("Expected response success to be true");
     }
-    expect(data.period.interval).toBe("day");
-    expect(Array.isArray(data.data)).toBe(true);
+    expect(data.data.period.interval).toBe("day");
+    expect(Array.isArray(data.data.data)).toBe(true);
   });
 
   test("GET /api/dashboard/history rejects invalid date range", async () => {
-    const res = await client.api.v1.dashboard.history.$get(
+    const res = await client.api.v1.metrics.history.$get(
       {
         query: { startDate: "2026-01-02T00:00:00.000Z", endDate: "2026-01-01T00:00:00.000Z" },
       },
@@ -153,12 +157,13 @@ describe("settings api", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<GetSettingsResponse | ErrorResponse>();
-    if (!("config" in data)) {
-      throw new Error("Expected response to contain 'config'");
+    expect(data.success).toBe(true);
+    if (!data.success) {
+      return expect.unreachable("Expected response success to be true");
     }
-    expect(data.config.polling.intervalSeconds).toBeGreaterThan(0);
-    expect(data.config.notifications.emailEnabled).toBeTypeOf("boolean");
-    expect(data.config.database.dataRetentionDays).toBeGreaterThan(0);
+    expect(data.data.polling.intervalSeconds).toBeGreaterThan(0);
+    expect(data.data.notifications.emailEnabled).toBeTypeOf("boolean");
+    expect(data.data.database.dataRetentionDays).toBeGreaterThan(0);
   });
 
   test("PATCH /api/settings updates the config", async () => {
@@ -174,11 +179,11 @@ describe("settings api", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<UpdateSettingsResponse | ErrorResponse>();
-    if (!("config" in data)) {
-      throw new Error("Expected response to contain 'config'");
-    }
     expect(data.success).toBe(true);
-    expect(data.config.polling.intervalSeconds).toBe(60);
+    if (!data.success) {
+      return expect.unreachable("Expected response success to be true");
+    }
+    expect(data.data.polling.intervalSeconds).toBe(60);
   });
 
   test("GET /api/settings allows operator role", async () => {
@@ -189,7 +194,7 @@ describe("settings api", () => {
       passwordHash: await Bun.password.hash("operator123", { algorithm: "bcrypt", cost: 10 }),
     });
 
-    const loginRes = await client.api.v1.auth.local.login.$post({
+    const loginRes = await client.api.v1.auth.session.$post({
       json: { email: "operator@test.com", password: "operator123" },
     });
 
@@ -202,10 +207,11 @@ describe("settings api", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    if (!("config" in data)) {
-      throw new Error("Expected response to contain 'config'");
+    expect(data.success).toBe(true);
+    if (!data.success) {
+      return expect.unreachable("Expected response success to be true");
     }
-    expect(data.config.polling.intervalSeconds).toBeGreaterThan(0);
+    expect(data.data.polling.intervalSeconds).toBeGreaterThan(0);
   });
 
   test("PATCH /api/settings rejects non-admin roles", async () => {
@@ -216,7 +222,7 @@ describe("settings api", () => {
       passwordHash: await Bun.password.hash("operator123", { algorithm: "bcrypt", cost: 10 }),
     });
 
-    const loginRes = await client.api.v1.auth.local.login.$post({
+    const loginRes = await client.api.v1.auth.session.$post({
       json: { email: "operator-patch@test.com", password: "operator123" },
     });
 
@@ -250,10 +256,11 @@ describe("settings api", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    if (!("config" in data)) {
-      throw new Error("Expected response to contain 'config'");
+    expect(data.success).toBe(true);
+    if (!data.success) {
+      return expect.unreachable("Expected response success to be true");
     }
-    expect(data.config.database.dataRetentionDays).toBe(30);
+    expect(data.data.database.dataRetentionDays).toBe(30);
 
     // Verify MongoDB collection options updated
     const db = mongoose.connection.db;

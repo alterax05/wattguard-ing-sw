@@ -15,7 +15,7 @@ import { useBuildings } from "@/hooks/use-buildings"
 import {
   SENSORS_QUERY_KEY,
   useAllSensors,
-  type SensorWithBuilding,
+  type Sensor,
 } from "@/hooks/use-sensors"
 import { usePollingInterval } from "@/hooks/use-settings"
 import { getMonitoringStatus } from "@/lib/sensor-status"
@@ -41,7 +41,7 @@ export function SensorsMonitoring() {
   const [buildingFilter, setBuildingFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [sensorGroup, setSensorGroup] = useState<SensorGroup>("all")
-  const [selectedSensor, setSelectedSensor] = useState<SensorWithBuilding | null>(null)
+  const [selectedSensor, setSelectedSensor] = useState<Sensor | null>(null)
   const pollingInterval = usePollingInterval()
 
   const {
@@ -58,18 +58,22 @@ export function SensorsMonitoring() {
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase(intlLocale)
 
   const filteredSensors = sensors.filter((sensor) => {
+    const building = sensor.building instanceof Object ? sensor.building : null
+    const buildingName = building?.name
+    const buildingAddress = building?.address
     const searchableText = [
       sensor.location,
       sensor.serialNumber,
-      sensor.building?.name,
-      sensor.building?.address,
+      buildingName,
+      buildingAddress,
       t(`sensors.type.${sensor.sensorType}`, { defaultValue: sensor.sensorType }),
     ]
       .filter(Boolean)
       .join(" ")
       .toLocaleLowerCase(intlLocale)
     const matchesSearch = !normalizedSearch || searchableText.includes(normalizedSearch)
-    const matchesBuilding = buildingFilter === "all" || sensor.buildingId === buildingFilter
+    const sensorBuildingId = building ? building._id : sensor.building
+    const matchesBuilding = buildingFilter === "all" || sensorBuildingId === buildingFilter
     const matchesStatus = statusFilter === "all" || getMonitoringStatus(sensor) === statusFilter
 
     return matchesSearch && matchesBuilding && matchesStatus
@@ -167,7 +171,7 @@ export function SensorsMonitoring() {
               <SelectContent>
                 <SelectItem value="all">{t("sensors.allBuildings")}</SelectItem>
                 {buildings.map((building) => (
-                  <SelectItem key={building.id} value={building.id}>
+                  <SelectItem key={building._id} value={building._id}>
                     {building.name}
                   </SelectItem>
                 ))}

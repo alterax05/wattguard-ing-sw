@@ -16,7 +16,7 @@ import {
   useAllSensors,
   useDeleteSensor,
   useSensors,
-  type SensorWithBuilding,
+  type Sensor,
 } from "@/hooks/use-sensors";
 import { keepPreviousData } from "@tanstack/react-query";
 import { getMonitoringStatus } from "@/lib/sensor-status";
@@ -83,16 +83,15 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
 
   // API hooks
   const {
-    data: buildingData,
+    data: building,
     isLoading: buildingLoading,
     isError: buildingError,
   } = useBuilding(buildingId);
-  const building = buildingData?.building;
 
   const pollingInterval = usePollingInterval();
   const { data: realTimeData } = useBuildingRealTime(buildingId);
   const { data: allSensorsData } = useAllSensors(
-    { buildingId },
+    { building: buildingId },
     { refetchInterval: pollingInterval },
   );
   const allSensors = allSensorsData?.sensors ?? [];
@@ -104,7 +103,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   const [addSensorOpen, setAddSensorOpen] = useState(false);
   const [isEditingBuilding, setIsEditingBuilding] = useState(false);
   const [manuallyEditingSensorId, setManuallyEditingSensorId] = useState<string | null>(null);
-  const [deletingSensor, setDeletingSensor] = useState<SensorWithBuilding | null>(null);
+  const [deletingSensor, setDeletingSensor] = useState<Sensor | null>(null);
   const deleteSensor = useDeleteSensor();
 
   // Building delete state
@@ -114,10 +113,10 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
   // Deep-link sensor handling — derived without effects, avoids setState-in-effect.
   const sensorIdToEdit = searchParams.get("sensorId");
   const editingSensorId = manuallyEditingSensorId ?? sensorIdToEdit;
-  const editingSensor = allSensors.find((s) => s.id === editingSensorId) ?? null;
+  const editingSensor = allSensors.find((s) => s._id === editingSensorId) ?? null;
 
   const sensorIndex = editingSensor
-    ? allSensors.findIndex((s) => s.id === editingSensor.id)
+    ? allSensors.findIndex((s) => s._id === editingSensor._id)
     : -1;
   const sensorPage =
     sensorIndex >= 0
@@ -127,7 +126,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
 
   const { data: sensorsData, isLoading: sensorsLoading } = useSensors(
     {
-      buildingId,
+      building: buildingId,
       limit: String(SENSORS_PAGE_SIZE),
       offset: String((fetchPage - 1) * SENSORS_PAGE_SIZE),
     },
@@ -154,7 +153,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
 
   const handleDeleteSensor = () => {
     if (!deletingSensor) return;
-    deleteSensor.mutate(deletingSensor.id, {
+    deleteSensor.mutate(deletingSensor._id, {
       onSuccess: () => {
         toast.success(
           t("sensors.deleted", { location: deletingSensor.location }),
@@ -171,7 +170,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
     deleteBuilding.mutate(buildingId, {
       onSuccess: () => {
         toast.success(t("buildings.deleted"));
-        void navigate("/dashboard/buildings");
+        void navigate("/buildings");
       },
       onError: (error) => {
         toast.error(error.message || t("buildings.deleteError"));
@@ -238,7 +237,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
           <Button
             variant="outline"
             className="mt-4 bg-transparent"
-            onClick={() => { void navigate("/dashboard/buildings") }}
+            onClick={() => { void navigate("/buildings") }}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t("buildings.backToSearch")}
@@ -253,7 +252,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
       <BuildingHeader
         building={building}
         isAdmin={isAdmin}
-        onBack={() => { void navigate("/dashboard/buildings") }}
+        onBack={() => { void navigate("/buildings") }}
         onEdit={() => { setIsEditingBuilding(true) }}
         onDelete={() => { setConfirmDeleteBuildingOpen(true) }}
       />
@@ -306,7 +305,7 @@ export function BuildingDetail({ buildingId }: BuildingDetailProps) {
 
       {editingSensor && (
         <EditSensorDialog
-          key={editingSensor.id}
+          key={editingSensor._id}
           sensor={editingSensor}
           open={!!editingSensor}
           onOpenChange={(open: boolean) => {

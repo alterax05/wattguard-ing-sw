@@ -11,13 +11,13 @@ import {
 import { toast } from "sonner"
 import {
   useUpdateSensor,
-  type SensorWithBuilding,
+  type Sensor,
   type UpdateSensorRequest,
 } from "@/hooks/use-sensors"
 import { SensorForm, type SensorFormValues } from "./sensor-form/SensorForm"
 
 interface EditSensorDialogProps {
-  sensor: SensorWithBuilding
+  sensor: Sensor
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -55,7 +55,7 @@ export function EditSensorDialog({ sensor, open, onOpenChange }: EditSensorDialo
     }
 
     const payload: UpdateSensorPayload = {
-      id: sensor.id,
+      id: sensor._id,
       sensorType: values.sensorType || sensor.sensorType,
       location: values.location.trim(),
       status: values.status ?? sensor.status,

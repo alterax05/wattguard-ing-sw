@@ -66,7 +66,8 @@ export function useBuildings(params?: SearchBuildingsParams) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -86,7 +87,8 @@ export function useBuildingTypes() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     staleTime: 10 * 60 * 1000,
   });
@@ -108,7 +110,8 @@ export function useBuilding(id: string | undefined) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
@@ -125,7 +128,7 @@ export function useBuildingRealTime(id: string | undefined) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "real-time", id],
     queryFn: async () => {
-      const res = await client.api.v1.buildings[":id"]["real-time"].$get({
+      const res = await client.api.v1.buildings[":id"].readings.latest.$get({
         param: { id: id! },
       });
 
@@ -133,7 +136,8 @@ export function useBuildingRealTime(id: string | undefined) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     enabled: !!id,
     refetchInterval,
@@ -143,7 +147,7 @@ export function useBuildingRealTime(id: string | undefined) {
 
 /**
  * Fetch historical data for a building.
- * GET /api/buildings/:id/history
+ * GET /api/v1/buildings/:id/readings
  */
 export function useBuildingHistory(id: string | undefined, params: HistoryParams | undefined) {
   return useQuery({
@@ -156,7 +160,7 @@ export function useBuildingHistory(id: string | undefined, params: HistoryParams
       if (params!.sensorType) query.sensorType = params!.sensorType;
       if (params!.interval) query.interval = params!.interval;
 
-      const res = await client.api.v1.buildings[":id"].history.$get({
+      const res = await client.api.v1.buildings[":id"].readings.$get({
         param: { id: id! },
         query,
       });
@@ -165,7 +169,8 @@ export function useBuildingHistory(id: string | undefined, params: HistoryParams
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     enabled: !!id && !!params?.startDate && !!params?.endDate,
     staleTime: 5 * 60 * 1000,
@@ -192,7 +197,8 @@ export function useBuildingEfficiency(id: string | undefined, params: Efficiency
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     enabled: !!id && !!params?.startDate && !!params?.endDate,
     staleTime: 5 * 60 * 1000,
@@ -218,7 +224,8 @@ export function useCreateBuilding() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
@@ -245,7 +252,8 @@ export function useUpdateBuilding() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });
@@ -270,7 +278,8 @@ export function useDeleteBuilding() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });

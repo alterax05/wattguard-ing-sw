@@ -20,8 +20,8 @@ export function useAlerts(params?: { status?: string; buildingId?: string }) {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-      const data: ListAlertsResponse = await res.json();
-      return data;
+      const data = await res.json();
+      return data.data;
     },
   });
 }
@@ -32,13 +32,15 @@ export function useAcknowledgeAlert() {
 
   return useMutation({
     mutationFn: async (alertId: string) => {
-      const res = await client.api.v1.alerts[":id"].acknowledge.$patch({
-        param: { id: alertId }
+      const res = await client.api.v1.alerts[":id"].$patch({
+        param: { id: alertId },
+        json: { status: "acknowledged" },
       });
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       toast.success(t("alerts.acknowledgedToast"));
@@ -56,13 +58,15 @@ export function useResolveAlert() {
 
   return useMutation({
     mutationFn: async (alertId: string) => {
-      const res = await client.api.v1.alerts[":id"].resolve.$patch({
-        param: { id: alertId }
+      const res = await client.api.v1.alerts[":id"].$patch({
+        param: { id: alertId },
+        json: { status: "resolved" },
       });
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       toast.success(t("alerts.resolvedToast"));
@@ -73,3 +77,4 @@ export function useResolveAlert() {
     },
   });
 }
+

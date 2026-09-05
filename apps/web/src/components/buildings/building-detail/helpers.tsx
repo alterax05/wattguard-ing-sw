@@ -1,5 +1,5 @@
 import type { BuildingDetail as BuildingDetailType } from "@/hooks/use-buildings"
-import type { SensorWithBuilding } from "@/hooks/use-sensors"
+import type { Sensor } from "@/hooks/use-sensors"
 import type { DateRange } from "react-day-picker"
 import { Zap, Thermometer, Wind, Flame } from "lucide-react"
 import type { HistoryParams } from "@/hooks/use-buildings"
@@ -14,7 +14,7 @@ export function isDistrictHeating(heatingSystemType: string): boolean {
   return t.includes("teleriscaldamento") || t.includes("district")
 }
 
-export function getSensorIcon(sensorType: SensorWithBuilding["sensorType"]) {
+export function getSensorIcon(sensorType: Sensor["sensorType"]) {
   switch (sensorType) {
     case "internal_temp":
       return <Thermometer className="h-4 w-4" />

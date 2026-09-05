@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ERROR_CODES } from "@wattguard/shared";
 import i18n from "./i18n";
 
 /**
@@ -8,21 +7,27 @@ import i18n from "./i18n";
  * used for localization.
  */
 export interface ApiErrorBody {
+  success?: boolean;
+  error_code?: string;
+  message?: string;
   error?: string;
   code?: string;
 }
 
 const ErrorBodySchema = z.object({
+  success: z.literal(false).optional(),
+  error_code: z.string().min(1).optional(),
+  message: z.string().min(1).optional(),
   error: z.string().min(1).optional(),
-  code: z.enum(ERROR_CODES).optional(),
+  code: z.string().min(1).optional(),
 });
 
 /**
  * Extract a localized, user-friendly message from an RPC error body.
  *
- * The API returns `{ error, code }` on failure. When a known machine-readable
- * `code` is present it is mapped to the localized `errors.<code>` catalog
- * entry; otherwise the raw `error` string is returned. When neither is
+ * The API returns `{ success: false, error_code, message }` on failure. When a known machine-readable
+ * `error_code` is present it is mapped to the localized `errors.<error_code>` catalog
+ * entry; otherwise the raw `message` string is returned. When neither is
  * available (e.g. network errors) the localized `errors.generic` fallback is
  * used. `fallbackKey` may override the generic fallback with another
  * `errors.*` key.
@@ -35,13 +40,15 @@ export function errorMessage(
 
   if (!parsed.success) return localizedFallback(fallbackKey);
 
-  const { code, error } = parsed.data;
-  if (code) {
-    const key = `errors.${code}`;
+  const rawCode = parsed.data.error_code ?? parsed.data.code;
+  const rawMsg = parsed.data.message ?? parsed.data.error;
+
+  if (rawCode) {
+    const key = `errors.${rawCode}`;
     const translated = i18n.exists(key) ? i18n.t(key) : null;
     if (translated) return translated;
   }
-  return error ?? localizedFallback(fallbackKey);
+  return rawMsg ?? localizedFallback(fallbackKey);
 }
 
 function localizedFallback(fallbackKey: string): string {

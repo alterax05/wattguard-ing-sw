@@ -16,8 +16,8 @@ import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 import { ErrorSchema } from "@wattguard/shared";
 import type {
-  LoginResponse,
-  SetupResponse,
+  SessionResponse,
+  AcceptInviteResponse,
   ValidateInviteResponse,
   CreateInviteResponse,
 } from "@wattguard/shared";
@@ -57,13 +57,13 @@ describe("email validation", () => {
         passwordHash: await Bun.password.hash("password123", { algorithm: "bcrypt", cost: 10 }),
       });
 
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: { email, password: "password123" },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<SessionResponse | ErrorResponse>();
     }
   });
 
@@ -80,14 +80,14 @@ describe("email validation", () => {
     ];
 
     for (const email of invalidEmails) {
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: { email, password: "password123" },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+        return expect.unreachable("Expected response to contain 'error'");
       }
       expect(data.error).toBeDefined();
     }
@@ -103,7 +103,7 @@ describe("email validation", () => {
     const variations = ["USER@TEST.COM", "User@Test.Com", "UsEr@TeSt.CoM"];
 
     for (const email of variations) {
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: { email, password: "password123" },
       });
 
@@ -123,7 +123,7 @@ describe("email validation", () => {
     });
 
     // Login with uppercase email
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       json: {
         email: "USER@TEST.COM",
         password: "password123",
@@ -132,12 +132,12 @@ describe("email validation", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
-    if (!("success" in data)) {
-      throw new Error("Expected response to contain 'success'");
-    }
+    expectTypeOf(data).toExtend<SessionResponse | ErrorResponse>();
     expect(data.success).toBe(true);
-    expect(data.user.email).toBe("user@test.com");
+    if (!data.success) {
+      return expect.unreachable("Expected response success to be true");
+    }
+    expect(data.data.email).toBe("user@test.com");
   });
 });
 
@@ -180,13 +180,14 @@ describe("password validation", () => {
         createdBy: admin._id,
       });
 
-      const res = await client.api.v1.auth.local.setup.$post({
-        json: { inviteToken: newToken, password, name: "Test User" },
+      const res = await client.api.v1.invites[":token"].acceptance.$post({
+        param: { token: newToken },
+        json: { password, name: "Test User" },
       });
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<SetupResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<AcceptInviteResponse | ErrorResponse>();
     }
   });
 
@@ -212,14 +213,15 @@ describe("password validation", () => {
     const shortPasswords = ["", "a", "ab", "abc", "1234567"];
 
     for (const password of shortPasswords) {
-      const res = await client.api.v1.auth.local.setup.$post({
-        json: { inviteToken: token, password, name: "Test User" },
+      const res = await client.api.v1.invites[":token"].acceptance.$post({
+        param: { token },
+        json: { password, name: "Test User" },
       });
 
       expect(res.status).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+        return expect.unreachable("Expected response to contain 'error'");
       }
       const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
       expect(errorText).toMatch(/8|Password/);
@@ -227,7 +229,7 @@ describe("password validation", () => {
   });
 
   test("rejects missing password field", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       // @ts-expect-error intentionally missing required password field
       json: { email: "user@test.com" },
     });
@@ -235,13 +237,13 @@ describe("password validation", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     if (!("error" in data)) {
-      throw new Error("Expected response to contain 'error'");
+      return expect.unreachable("Expected response to contain 'error'");
     }
     expect(data.error).toBeDefined();
   });
 
   test("rejects null password", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       // @ts-expect-error intentionally null password
       json: { email: "user@test.com", password: null },
     });
@@ -250,7 +252,7 @@ describe("password validation", () => {
   });
 
   test("rejects an empty password field", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       json: {
         email: "user@test.com",
         password: "",
@@ -260,7 +262,7 @@ describe("password validation", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     if (!("error" in data)) {
-      throw new Error("Expected response to contain 'error'");
+      return expect.unreachable("Expected response to contain 'error'");
     }
     expect(data.error).toBeDefined();
   });
@@ -277,7 +279,7 @@ describe("request body validation", () => {
 
     for (const body of malformedBodies) {
       // SAFETY: the body is deliberately non-JSON so the transport must reject it; `never` bypasses the client's payload type.
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         json: body as never,
       });
 
@@ -287,7 +289,7 @@ describe("request body validation", () => {
 
   test("rejects empty request body", async () => {
     // SAFETY: the empty payload is deliberate; `never` bypasses the client's typed-args check so the raw body is sent.
-    const res = await client.api.v1.auth.local.login.$post(
+    const res = await client.api.v1.auth.session.$post(
       {} as never,
       {
         init: {
@@ -302,7 +304,7 @@ describe("request body validation", () => {
 
   test("rejects requests with wrong content type", async () => {
     // SAFETY: the empty payload is deliberate; `never` bypasses the client's typed-args check so the raw body is sent.
-    const res = await client.api.v1.auth.local.login.$post(
+    const res = await client.api.v1.auth.session.$post(
       {} as never,
       {
         init: {
@@ -317,7 +319,7 @@ describe("request body validation", () => {
   });
 
   test("handles missing required fields", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       // @ts-expect-error intentionally missing required fields
       json: {},
     });
@@ -325,7 +327,7 @@ describe("request body validation", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     if (!("error" in data)) {
-      throw new Error("Expected response to contain 'error'");
+      return expect.unreachable("Expected response to contain 'error'");
     }
     expect(data.error).toBeDefined();
   });
@@ -339,7 +341,7 @@ describe("request body validation", () => {
     ];
 
     for (const body of wrongTypes) {
-      const res = await client.api.v1.auth.local.login.$post({
+      const res = await client.api.v1.auth.session.$post({
         // @ts-expect-error intentionally wrong field types
         json: body,
       });
@@ -349,7 +351,7 @@ describe("request body validation", () => {
   });
 
   test("rejects a missing email field", async () => {
-    const res = await client.api.v1.auth.local.login.$post({
+    const res = await client.api.v1.auth.session.$post({
       // @ts-expect-error intentionally missing required email field
       json: {
         password: "password123",
@@ -359,7 +361,7 @@ describe("request body validation", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     if (!("error" in data)) {
-      throw new Error("Expected response to contain 'error'");
+      return expect.unreachable("Expected response to contain 'error'");
     }
     expect(data.error).toBeDefined();
   });
@@ -385,35 +387,18 @@ describe("query parameter validation", () => {
       createdBy: admin._id,
     });
 
-    const res = await client.api.v1.invites.validate.$get({
-      query: { token },
+    const res = await client.api.v1.invites[":token"].$get({
+      param: { token },
     });
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
   });
 
-  test("rejects missing token query parameter", async () => {
-    const res = await client.api.v1.invites.validate.$get({
-      // @ts-expect-error intentionally missing required token query
-      query: {},
+  test("rejects invalid invite token with 404 or 400", async () => {
+    const res = await client.api.v1.invites[":token"].$get({
+      param: { token: "nonexistent-token" },
     });
-    expect(res.status).toBe(400);
-  });
-
-  test("rejects empty token query parameter", async () => {
-    const res = await client.api.v1.invites.validate.$get({
-      query: { token: "" },
-    });
-    expect(res.status).toBe(400);
-  });
-
-  test("rejects whitespace-only token query parameter", async () => {
-    // Whitespace-only token is invalid, but URL encoding may affect behavior
-    const res = await client.api.v1.invites.validate.$get({
-      query: { token: "   " },
-    });
-    // May return 400 (validation error) or 404 (not found)
     expect([400, 404]).toContain(res.status);
   });
 
@@ -441,17 +426,18 @@ describe("query parameter validation", () => {
     });
 
     // Validate invite
-    const res = await client.api.v1.invites.validate.$get({
-      query: { token },
+    const res = await client.api.v1.invites[":token"].$get({
+      param: { token },
     });
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
-    if (!("valid" in data)) {
-      throw new Error("Expected response to contain 'valid'");
+    expect(data.success).toBe(true);
+    if (!data.success) {
+      return expect.unreachable("Expected response success to be true");
     }
-    expect(data.valid).toBe(true);
-    expect(data.email).toBe("user@test.com");
+    expect(data.data.valid).toBe(true);
+    expect(data.data.email).toBe("user@test.com");
   });
 });
 
@@ -461,7 +447,7 @@ describe("role validation", () => {
     const validRoles = ["admin", "operator"] as const;
 
     for (const role of validRoles) {
-      const res = await client.api.v1.admin.invites.$post(
+      const res = await client.api.v1.invites.$post(
         {
           json: {
             email: `${role}${Math.random()}@test.com`,
@@ -487,7 +473,7 @@ describe("role validation", () => {
 
     for (const role of invalidRoles) {
       // SAFETY: the role value deliberately violates the invite-role enum so the server must reject it; `never` bypasses the client's payload type.
-      const res = await client.api.v1.admin.invites.$post(
+      const res = await client.api.v1.invites.$post(
         {
           json: {
             email: "test@test.com",
@@ -506,7 +492,7 @@ describe("role validation", () => {
   test("rejects missing role field", async () => {
     const token = await getAdminToken();
 
-    const res = await client.api.v1.admin.invites.$post(
+    const res = await client.api.v1.invites.$post(
       {
         // @ts-expect-error intentionally missing required role
         json: {
@@ -530,7 +516,7 @@ async function getAdminToken() {
     passwordHash: await Bun.password.hash("admin123", { algorithm: "bcrypt", cost: 10 }),
   });
 
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin@test.com",
       password: "admin123",

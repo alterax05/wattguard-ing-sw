@@ -24,7 +24,7 @@ export function LanguageToggle() {
 
     // Best-effort persistence of the preference for alert emails; silently
     // ignored when unauthenticated (login pages) or the request fails.
-    void client.api.v1.auth.me.language
+    void client.api.v1.auth.session
       .$patch({ json: { language: code } })
       .catch(() => undefined);
   };

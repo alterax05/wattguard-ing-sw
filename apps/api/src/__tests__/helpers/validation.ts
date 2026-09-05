@@ -74,7 +74,7 @@ export async function createUserAndGetToken(
     }),
   });
 
-  const loginRes = await client.api.v1.auth.local.login.$post({
+  const loginRes = await client.api.v1.auth.session.$post({
     json: { email, password },
   });
 

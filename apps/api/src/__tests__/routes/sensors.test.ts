@@ -80,7 +80,7 @@ beforeEach(async () => {
   });
 
   // Login to get tokens
-  const adminLoginRes = await client.api.v1.auth.local.login.$post({
+  const adminLoginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "admin@test.com",
       password: "admin123",
@@ -91,7 +91,7 @@ beforeEach(async () => {
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
   adminToken = adminTokenMatch![1]!;
 
-  const operatorLoginRes = await client.api.v1.auth.local.login.$post({
+  const operatorLoginRes = await client.api.v1.auth.session.$post({
     json: {
       email: "operator@test.com",
       password: "operator123",
@@ -130,7 +130,7 @@ describe("sensors api", () => {
   describe("POST /api/v1/sensors", () => {
     test("creates a new sensor (admin)", async () => {
       const sensorData = {
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp" as const,
         location: "Piano 1, Aula 101",
         serialNumber: "SN-12345",
@@ -150,17 +150,19 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(201);
       const json = await res.json();
+
       expectTypeOf(json).toExtend<CreateSensorResponse | ErrorResponse>();
-      if (!("sensor" in json)) {
-        throw new Error("Expected response to contain 'sensor'");
-      }
       expect(json.success).toBe(true);
-      expect(json.sensor.sensorType).toBe(sensorData.sensorType);
-      expect(json.sensor.location).toBe(sensorData.location);
-      expect(json.sensor.status).toBe("active");
+      if (!json.success) {
+        return expect.unreachable("Expected response success to be true");
+      }
+      expect(res.headers.get("location")).toBe(`/api/v1/sensors/${json.data._id}`);
+      expect(json.data.sensorType).toBe(sensorData.sensorType);
+      expect(json.data.location).toBe(sensorData.location);
+      expect(json.data.status).toBe("active");
 
       // Verify in database
-      const dbSensor = await Sensor.findById(json.sensor.id);
+      const dbSensor = await Sensor.findById(json.data._id);
       expect(dbSensor).toBeDefined();
 
       
@@ -168,7 +170,7 @@ describe("sensors api", () => {
 
     test("creates sensor with operator role", async () => {
       const sensorData = {
-        buildingId,
+        building: buildingId,
         sensorType: "external_temp" as const,
         location: "Facciata Nord",
       };
@@ -189,7 +191,7 @@ describe("sensors api", () => {
 
     test("rejects duplicate serial number", async () => {
       await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Test",
         serialNumber: "DUPLICATE-001",
@@ -202,7 +204,7 @@ describe("sensors api", () => {
       const res = await client.api.v1.sensors.$post(
         {
           json: {
-            buildingId,
+            building: buildingId,
             sensorType: "external_temp",
             location: "Test 2",
             serialNumber: "DUPLICATE-001",
@@ -217,17 +219,18 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(400);
       const json = await res.json();
-      if (!("error" in json)) {
-        throw new Error("Expected response to contain 'error'");
+      expect(json.success).toBe(false);
+      if (json.success) {
+        return expect.unreachable("Expected response success to be false");
       }
-      expect(json.error).toContain("already exists");
+      expect(json.error_code).toBe("sensor_serial_exists");
     });
 
     test("rejects invalid building ID", async () => {
       const res = await client.api.v1.sensors.$post(
         {
           json: {
-            buildingId: "507f1f77bcf86cd799439011",
+            building: "507f1f77bcf86cd799439011",
             sensorType: "internal_temp",
             location: "Test",
           },
@@ -246,7 +249,7 @@ describe("sensors api", () => {
       const res = await client.api.v1.sensors.$post(
         {
           json: {
-            buildingId,
+            building: buildingId,
             // @ts-expect-error intentionally invalid sensor type
             sensorType: "invalid_type",
             location: "",
@@ -270,7 +273,7 @@ describe("sensors api", () => {
   describe("GET /api/v1/sensors/:id", () => {
     test("returns sensor details", async () => {
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Piano 2",
         serialNumber: "SN-GET-001",
@@ -298,15 +301,16 @@ describe("sensors api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetSensorResponse | ErrorResponse>();
-      if (!("sensor" in json)) {
-        throw new Error("Expected response to contain 'sensor'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        return expect.unreachable("Property 'success' is not true");
       }
-      expect(json.sensor.id).toBeDefined();
-      expect(json.sensor.sensorType).toBe("internal_temp");
-      expect(json.sensor.location).toBe("Piano 2");
-      expect(json.sensor.lastReading).toBeDefined();
-      expect(json.sensor.lastReading!.value).toBe(22.5);
-      expect(json.sensor.isOffline).toBe(false);
+
+      expect(json.data._id).toBeDefined();
+      expect(json.data.sensorType).toBe("internal_temp");
+      expect(json.data.location).toBe("Piano 2");
+      expect(json.data.lastReading).toBeDefined();
+      expect(json.data.lastReading!.value).toBe(22.5);
     });
 
     test("returns 404 for non-existent sensor", async () => {
@@ -321,7 +325,8 @@ describe("sensors api", () => {
         }
       );
 
-      expect(res.status).toBe(404);
+      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
+      expect(res.status as number).toBe(404);
     });
   });
 
@@ -330,9 +335,9 @@ describe("sensors api", () => {
   // ============================================================================
 
   describe("PATCH /api/v1/sensors/:id", () => {
-    test("updates sensor", async () => {
+    test("updates sensor location and status", async () => {
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Original Location",
         installationDate: new Date(),
@@ -362,12 +367,12 @@ describe("sensors api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<UpdateSensorResponse | ErrorResponse>();
-      if (!("sensor" in json)) {
-        throw new Error("Expected response to contain 'sensor'");
-      }
       expect(json.success).toBe(true);
-      expect(json.sensor.location).toBe("Updated Location");
-      expect(json.sensor.status).toBe("inactive");
+      if (!json.success) {
+        return expect.unreachable("Expected response success to be true");
+      }
+      expect(json.data.location).toBe("Updated Location");
+      expect(json.data.status).toBe("inactive");
 
       
     });
@@ -394,7 +399,7 @@ describe("sensors api", () => {
 
     test("deletes alerts for a removed threshold without deleting alerts for the other threshold", async () => {
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Threshold Sensor",
         installationDate: new Date(),
@@ -486,7 +491,7 @@ describe("sensors api", () => {
   describe("DELETE /api/v1/sensors/:id", () => {
     test("deletes sensor and cascade delete readings", async () => {
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "To Delete",
         installationDate: new Date(),
@@ -501,8 +506,8 @@ describe("sensors api", () => {
         value: 22.5,
         unit: "°C",
         metadata: {
-          sensorId: sensor._id,
-          buildingId: new Types.ObjectId(buildingId),
+          sensor: sensor._id,
+          building: new Types.ObjectId(buildingId),
           sensorType: "internal_temp",
         },
       });
@@ -537,7 +542,7 @@ describe("sensors api", () => {
       const json = await res.json();
       expectTypeOf(json).toExtend<DeleteSensorResponse | ErrorResponse>();
       if (!("success" in json)) {
-        throw new Error("Expected response to contain 'success'");
+        return expect.unreachable("Expected response to contain 'success'");
       }
       expect(json.success).toBe(true);
 
@@ -547,7 +552,7 @@ describe("sensors api", () => {
 
       // Verify readings deleted
       const readings = await SensorReading.countDocuments({
-        "metadata.sensorId": sensor._id,
+        "metadata.sensor": sensor._id,
       });
       expect(readings).toBe(0);
 
@@ -580,13 +585,13 @@ describe("sensors api", () => {
   // ============================================================================
 
   describe("inactivity detection", () => {
-    test("marks an active sensor as inactive when it exceeds 2× transmissionInterval", async () => {
+    test("marks an active sensor as inactive when it exceeds 2x transmissionInterval", async () => {
       const transmissionInterval = 60; // 60 s
       // lastReading is 200 s ago → exceeds 2 × 60 = 120 s
       const staleTimestamp = new Date(Date.now() - 200_000);
 
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Piano 1",
         installationDate: new Date(),
@@ -607,16 +612,19 @@ describe("sensors api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<ListSensorsResponse | ErrorResponse>();
-      if (!("sensors" in json)) throw new Error("missing sensors");
-      const found = json.sensors.find((s) => s.id === sensor._id.toString());
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        return expect.unreachable("missing sensors");
+      }
+      const found = json.data.sensors.find((s) => s._id === sensor._id.toString());
       expect(found).toBeDefined();
       expect(found!.status).toBe("inactive");
-      expect(found!.isOffline).toBe(true);
 
-      // Verify the DB was updated
+      // GET is a safe method: status is computed in memory without mutating the DB
       const dbSensor = await Sensor.findById(sensor._id);
-      expect(dbSensor!.status).toBe("inactive");
+      expect(dbSensor).toBeDefined();
     });
+
 
     test("does not mark an active sensor as inactive when reading is within 2× transmissionInterval", async () => {
       const transmissionInterval = 300; // 300 s
@@ -624,7 +632,7 @@ describe("sensors api", () => {
       const freshTimestamp = new Date(Date.now() - 100_000);
 
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Piano 2",
         installationDate: new Date(),
@@ -644,18 +652,18 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("sensors" in json)) throw new Error("missing sensors");
-      const found = json.sensors.find((s) => s.id === sensor._id.toString());
+      expect(json.success).toBe(true);
+      if (!json.success) return expect.unreachable("missing sensors");
+      const found = json.data.sensors.find((s) => s._id === sensor._id.toString());
       expect(found).toBeDefined();
       expect(found!.status).toBe("active");
-      expect(found!.isOffline).toBe(false);
     });
 
     test("does not change status of sensors in maintenance or error when they have stale readings", async () => {
       const staleTimestamp = new Date(Date.now() - 600_000); // 10 min ago
 
       const maintenanceSensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Manutenzione",
         installationDate: new Date(),
@@ -667,7 +675,7 @@ describe("sensors api", () => {
       });
 
       const errorSensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "external_temp",
         location: "Errore",
         installationDate: new Date(),
@@ -687,20 +695,21 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("sensors" in json)) throw new Error("missing sensors");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        return expect.unreachable("missing sensor");
+      };
 
-      const m = json.sensors.find((s) => s.id === maintenanceSensor._id.toString());
+      const m = json.data.sensors.find((s) => s._id === maintenanceSensor._id.toString());
       expect(m!.status).toBe("maintenance");
-      expect(m!.isOffline).toBe(false);
 
-      const e = json.sensors.find((s) => s.id === errorSensor._id.toString());
+      const e = json.data.sensors.find((s) => s._id === errorSensor._id.toString());
       expect(e!.status).toBe("error");
-      expect(e!.isOffline).toBe(false);
     });
 
     test("marks active sensor with no lastReading as inactive", async () => {
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "energy_meter",
         location: "Contatore",
         installationDate: new Date(),
@@ -719,8 +728,9 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("sensors" in json)) throw new Error("missing sensors");
-      const found = json.sensors.find((s) => s.id === sensor._id.toString());
+      expect(json.success).toBe(true);
+      if (!json.success) return expect.unreachable("missing sensors");
+      const found = json.data.sensors.find((s) => s._id === sensor._id.toString());
       expect(found!.status).toBe("inactive");
     });
   });
@@ -732,7 +742,7 @@ describe("sensors api", () => {
   describe("GET /api/v1/sensors/:id/readings", () => {
     test("returns sensor readings history", async () => {
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Test",
         installationDate: new Date(),
@@ -749,8 +759,8 @@ describe("sensors api", () => {
           value: 21.0,
           unit: "°C",
           metadata: {
-            sensorId: sensor._id,
-            buildingId: new Types.ObjectId(buildingId),
+            sensor: sensor._id,
+            building: new Types.ObjectId(buildingId),
             sensorType: "internal_temp",
           },
         },
@@ -759,8 +769,8 @@ describe("sensors api", () => {
           value: 22.0,
           unit: "°C",
           metadata: {
-            sensorId: sensor._id,
-            buildingId: new Types.ObjectId(buildingId),
+            sensor: sensor._id,
+            building: new Types.ObjectId(buildingId),
             sensorType: "internal_temp",
           },
         },
@@ -769,8 +779,8 @@ describe("sensors api", () => {
           value: 23.0,
           unit: "°C",
           metadata: {
-            sensorId: sensor._id,
-            buildingId: new Types.ObjectId(buildingId),
+            sensor: sensor._id,
+            building: new Types.ObjectId(buildingId),
             sensorType: "internal_temp",
           },
         },
@@ -789,17 +799,18 @@ describe("sensors api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetSensorReadingsResponse | ErrorResponse>();
-      if (!("readings" in json)) {
-        throw new Error("Expected response to contain 'readings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        return expect.unreachable("Expected response success to be true");
       }
-      expect(json.readings.length).toBe(3);
-      expect(json.readings[0]!.value).toBe(23.0); // Most recent first
-      expect(json.readings[2]!.value).toBe(21.0); // Oldest last
+      expect(json.data.readings.length).toBe(3);
+      expect(json.data.readings[0]!.value).toBe(23.0); // Most recent first
+      expect(json.data.readings[2]!.value).toBe(21.0); // Oldest last
     });
 
     test("supports date range filtering", async () => {
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Test",
         installationDate: new Date(),
@@ -815,8 +826,8 @@ describe("sensors api", () => {
           value: 20.0,
           unit: "°C",
           metadata: {
-            sensorId: sensor._id,
-            buildingId: new Types.ObjectId(buildingId),
+            sensor: sensor._id,
+            building: new Types.ObjectId(buildingId),
             sensorType: "internal_temp",
           },
         },
@@ -825,8 +836,8 @@ describe("sensors api", () => {
           value: 22.0,
           unit: "°C",
           metadata: {
-            sensorId: sensor._id,
-            buildingId: new Types.ObjectId(buildingId),
+            sensor: sensor._id,
+            building: new Types.ObjectId(buildingId),
             sensorType: "internal_temp",
           },
         },
@@ -846,16 +857,17 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("readings" in json)) {
-        throw new Error("Expected response to contain 'readings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        return expect.unreachable("Expected response success to be true");
       }
-      expect(json.readings.length).toBe(1); // Only the reading from 1 day ago
-      expect(json.readings[0]!.value).toBe(22.0);
+      expect(json.data.readings.length).toBe(1); // Only the reading from 1 day ago
+      expect(json.data.readings[0]!.value).toBe(22.0);
     });
 
     test("supports pagination", async () => {
       const sensor = await Sensor.create({
-        buildingId,
+        building: buildingId,
         sensorType: "internal_temp",
         location: "Test",
         installationDate: new Date(),
@@ -870,12 +882,12 @@ describe("sensors api", () => {
         value: 20 + i,
         unit: "°C",
         metadata: {
-          sensorId: sensor._id,
-          buildingId: new Types.ObjectId(buildingId),
+          sensor: sensor._id,
+          building: new Types.ObjectId(buildingId),
           sensorType: "internal_temp",
         },
       }));
-      await SensorReading.create(readings);
+      await SensorReading.insertMany(readings);
 
       const res = await client.api.v1.sensors[":id"].readings.$get(
         {
@@ -889,13 +901,14 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("readings" in json) || !("pagination" in json)) {
-        throw new Error("Expected response to contain 'readings' and 'pagination'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        return expect.unreachable("Expected response success to be true");
       }
-      expect(json.readings.length).toBe(2);
-      expect(json.pagination.total).toBe(5);
-      expect(json.pagination.limit).toBe(2);
-      expect(json.pagination.offset).toBe(0);
+      expect(json.data.readings.length).toBe(2);
+      expect(json.data.pagination.total).toBe(5);
+      expect(json.data.pagination.limit).toBe(2);
+      expect(json.data.pagination.offset).toBe(0);
     });
 
     test("returns 404 for non-existent sensor", async () => {

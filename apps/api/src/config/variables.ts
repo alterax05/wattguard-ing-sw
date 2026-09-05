@@ -88,13 +88,7 @@ export const PUBLIC_APP_URL = normalizeAppUrl(configuredAppUrl || LOCAL_APP_URL)
 
 // ── Google OAuth ─────────────────────────────────────────────────────────────
 
-export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
-export const GOOGLE_REDIRECT_URI =
-  process.env.GOOGLE_REDIRECT_URI ||
-  (IS_PRODUCTION
-    ? `${PUBLIC_APP_URL}/api/auth/google/callback`
-    : "http://localhost:3000/api/auth/google/callback");
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || (IS_TEST ? "test-google-client-id" : "");
 
 // ── Email (Resend) ───────────────────────────────────────────────────────────
 

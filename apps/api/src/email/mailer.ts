@@ -6,7 +6,7 @@
  * the email in the language they requested.
  */
 import { Resend } from "resend";
-import { ADMIN_EMAIL, EMAIL_FROM, PUBLIC_APP_URL, RESEND_API } from "../config/variables";
+import { EMAIL_FROM, PUBLIC_APP_URL, RESEND_API } from "../config/variables";
 import { ensureI18nReady, getTranslator } from "../lib/i18n";
 import { DEFAULT_LOCALE, type LocaleCode, type AlertSeverity, type UserRole } from "@wattguard/shared";
 
@@ -99,25 +99,6 @@ export async function sendPasswordResetEmail(
       <p><small>${t("emails.reset.htmlExpiry")}</small></p>
       <p><small>${t("emails.reset.htmlIgnore")}</small></p>
     `,
-  });
-}
-
-/**
- * Verify the Resend configuration by sending a test email in the given language.
- */
-export async function sendTestEmail(
-  to?: string,
-  lang: LocaleCode = DEFAULT_LOCALE,
-): Promise<void> {
-  await ensureI18nReady();
-  const t = getTranslator(lang);
-  const recipient = to || ADMIN_EMAIL;
-
-  await sendEmail({
-    to: recipient,
-    subject: t("emails.test.subject"),
-    text: t("emails.test.text"),
-    html: t("emails.test.html"),
   });
 }
 

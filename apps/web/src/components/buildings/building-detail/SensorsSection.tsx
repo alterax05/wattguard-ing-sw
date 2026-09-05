@@ -22,10 +22,10 @@ import {
 } from "@/components/ui/pagination"
 import { getMonitoringStatus, getMonitoringStatusPresentation } from "@/lib/sensor-status"
 import { getSensorIcon, getPaginationItems } from "./helpers"
-import type { SensorWithBuilding } from "@/hooks/use-sensors"
+import type { Sensor } from "@/hooks/use-sensors"
 
 export interface SensorsSectionProps {
-  sensors: SensorWithBuilding[]
+  sensors: Sensor[]
   sensorsLoading: boolean
   totalSensors: number
   totalPages: number
@@ -33,7 +33,7 @@ export interface SensorsSectionProps {
   onPageChange: (page: number) => void
   onAddSensor: () => void
   onEditSensor: (id: string) => void
-  onDeleteSensor: (sensor: SensorWithBuilding) => void
+  onDeleteSensor: (sensor: Sensor) => void
 }
 
 export function SensorsSection({
@@ -108,7 +108,7 @@ export function SensorsSection({
               const StatusIcon = statusPresentation.icon
               return (
                 <div
-                  key={sensor.id}
+                  key={sensor._id}
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div className="flex items-center gap-3">
@@ -148,7 +148,7 @@ export function SensorsSection({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { onEditSensor(sensor.id) }}>
+                        <DropdownMenuItem onClick={() => { onEditSensor(sensor._id) }}>
                           <Pencil className="mr-2 h-4 w-4" />
                           {t("common.edit")}
                         </DropdownMenuItem>

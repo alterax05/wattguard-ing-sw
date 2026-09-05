@@ -1,4 +1,4 @@
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { Types, type QueryFilter } from "mongoose";
 import { Alert as AlertModel, type AlertDocument } from "../models/Alert";
@@ -6,40 +6,37 @@ import {
   ListAlertsQuerySchema,
   ListAlertsResponseSchema,
   AlertIdParamSchema,
+  UpdateAlertStatusRequestSchema,
   UpdateAlertStatusResponseSchema,
 } from "@wattguard/shared";
+
 import type {
   ListAlertsResponse,
   UpdateAlertStatusResponse,
+  ErrorResponse,
 } from "@wattguard/shared";
-import { ErrorSchema } from "@wattguard/shared";
+import { ErrorSchema, type ErrorCode } from "@wattguard/shared";
 import type { AuthVariables } from "../middleware/auth";
+import { apiError, apiSuccess } from "../lib/api-response";
 import {
   acknowledge,
   resolveManually,
   toAlertDTO,
-  type AlertDTOInput,
-  type AlertErrorCode,
 } from "../lib/alerts";
 import { getRequestLocale } from "../lib/i18n";
 
-type AlertRouteContext = Context<{ Variables: AuthVariables }>;
-
-function alertErrorResponse(c: AlertRouteContext, code: AlertErrorCode) {
+function getAlertError(code: ErrorCode) {
   switch (code) {
     case "invalid_alert_id":
-      return c.json({ error: "Invalid alert ID format", code }, 400);
+      return { error: "Invalid alert ID format", status: 400 as const };
     case "alert_not_found":
-      return c.json({ error: "Alert not found", code }, 404);
+      return { error: "Alert not found", status: 404 as const };
     case "alert_not_active":
-      return c.json(
-        { error: "Only active alerts can be acknowledged", code },
-        400,
-      );
+      return { error: "Only active alerts can be acknowledged", status: 400 as const };
     case "alert_already_resolved":
-      return c.json({ error: "Alert is already resolved", code }, 400);
-    case "internal_server_error":
-      return c.json({ error: "Internal server error", code }, 500);
+      return { error: "Alert is already resolved", status: 400 as const };
+    default:
+      return { error: "Internal server error", status: 500 as const };
   }
 }
 
@@ -48,8 +45,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     describeRoute({
       tags: ["Alerts"],
-      summary: "List alerts",
-      description: "Retrieve a paginated list of alerts, optionally filtered.",
+      summary: "Elenca alert",
+      description: "Restituisce gli alert paginati con filtri opzionali",
       responses: {
         200: {
           description: "List of alerts retrieved successfully",
@@ -82,10 +79,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (buildingId) {
         if (!Types.ObjectId.isValid(buildingId)) {
           return c.json(
-            {
-              error: "Invalid building ID format",
-              code: "invalid_building_id",
-            },
+            apiError("invalid_building_id", "Invalid building ID format") satisfies ErrorResponse,
             400,
           );
         }
@@ -102,11 +96,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
           .sort(sortConfig)
           .skip(offset)
           .limit(limit)
-          .lean(),
+          .exec(),
         AlertModel.countDocuments(filter),
       ]);
 
-      return c.json({
+      return c.json(apiSuccess({
         alerts: alerts.map((a) =>
           toAlertDTO(a, { locale: getRequestLocale(c) }),
         ),
@@ -115,18 +109,18 @@ const app = new Hono<{ Variables: AuthVariables }>()
           offset,
           total,
         },
-      } satisfies ListAlertsResponse);
+      }) satisfies ListAlertsResponse);
     },
   )
   .patch(
-    "/:id/acknowledge",
+    "/:id",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Acknowledge an alert",
-      description: "Mark an active alert as acknowledged.",
+      summary: "Aggiorna stato alert",
+      description: "Aggiorna lo stato di un alert (acknowledge o resolve)",
       responses: {
         200: {
-          description: "Alert acknowledged successfully",
+          description: "Alert status updated successfully",
           content: {
             "application/json": {
               schema: resolver(UpdateAlertStatusResponseSchema),
@@ -134,7 +128,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
-          description: "Invalid ID format or alert not active",
+          description: "Invalid ID format, invalid status transition, or validation error",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
         404: {
@@ -144,75 +138,29 @@ const app = new Hono<{ Variables: AuthVariables }>()
       },
     }),
     validator("param", AlertIdParamSchema),
+    validator("json", UpdateAlertStatusRequestSchema),
     async (c) => {
       const { id } = c.req.valid("param");
+      const { status } = c.req.valid("json");
       const user = c.get("userDoc");
+      const actor = user.name || user.email;
 
-      const result = await acknowledge({ id, actor: user.name || user.email });
+      const result =
+        status === "acknowledged"
+          ? await acknowledge({ id, actor })
+          : await resolveManually({ id, actor });
+
       if (!result.ok) {
-        return alertErrorResponse(c, result.code);
+        const { error, status: errStatus } = getAlertError(result.code);
+        return c.json(apiError(result.code, error) satisfies ErrorResponse, errStatus);
       }
 
-      return c.json({
-        success: true as const,
-        // SAFETY: result.alert comes back from findOneAndUpdate({ returnDocument: "after" })
-        // on the Alert collection, so it is a full document with _id and
-        // timestamps as required by AlertDTOInput.
-        alert: toAlertDTO(result.alert as AlertDTOInput, {
-          locale: getRequestLocale(c),
-        }),
-      } satisfies UpdateAlertStatusResponse);
-    },
-  )
-  .patch(
-    "/:id/resolve",
-    describeRoute({
-      tags: ["Alerts"],
-      summary: "Resolve an alert",
-      description: "Mark an alert as resolved.",
-      responses: {
-        200: {
-          description: "Alert resolved successfully",
-          content: {
-            "application/json": {
-              schema: resolver(UpdateAlertStatusResponseSchema),
-            },
-          },
-        },
-        400: {
-          description: "Invalid ID format",
-          content: { "application/json": { schema: resolver(ErrorSchema) } },
-        },
-        404: {
-          description: "Alert not found",
-          content: { "application/json": { schema: resolver(ErrorSchema) } },
-        },
-      },
-    }),
-    validator("param", AlertIdParamSchema),
-    async (c) => {
-      const { id } = c.req.valid("param");
-      const user = c.get("userDoc");
-
-      const result = await resolveManually({
-        id,
-        actor: user.name || user.email,
-      });
-      if (!result.ok) {
-        return alertErrorResponse(c, result.code);
-      }
-
-      return c.json({
-        success: true as const,
-        // SAFETY: result.alert comes back from findOneAndUpdate({ returnDocument: "after" })
-        // on the Alert collection, so it is a full document with _id and
-        // timestamps as required by AlertDTOInput.
-        alert: toAlertDTO(result.alert as AlertDTOInput, {
-          locale: getRequestLocale(c),
-        }),
-      } satisfies UpdateAlertStatusResponse);
+      return c.json(apiSuccess(toAlertDTO(result.alert, {
+        locale: getRequestLocale(c),
+      })) satisfies UpdateAlertStatusResponse);
     },
   );
+
 
 export default app;
 export type AppType = typeof app;

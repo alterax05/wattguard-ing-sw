@@ -1,7 +1,7 @@
 import { Flame, Thermometer, Wind, Zap } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getDateFnsLocale, getIntlLocale } from "@/lib/dates"
-import type { SensorType, SensorWithBuilding } from "@/hooks/use-sensors"
+import type { SensorType, Sensor } from "@/hooks/use-sensors"
 import type { MonitoringStatus } from "@/lib/sensor-status"
 
 export type SensorGroup = "all" | "thermometers" | "meters"
@@ -34,7 +34,7 @@ export function getSensorUnit(sensorType: SensorType) {
   }
 }
 
-export function belongsToGroup(sensor: SensorWithBuilding, group: SensorGroup) {
+export function belongsToGroup(sensor: Sensor, group: SensorGroup) {
   if (group === "all") return true
   if (group === "thermometers") {
     return sensor.sensorType === "internal_temp" || sensor.sensorType === "external_temp"

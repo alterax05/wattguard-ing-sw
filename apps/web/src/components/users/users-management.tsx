@@ -77,7 +77,7 @@ export function UsersManagement() {
     const roleLabel = newRole === "admin" ? t("users.role.admin") : t("users.role.operator")
 
     updateUser.mutate(
-      { id: user.id, role: newRole },
+      { id: user._id, role: newRole },
       {
         onSuccess: () => {
           toast.success(t("users.roleUpdated", { name: user.name ?? user.email, role: roleLabel }))
@@ -92,7 +92,7 @@ export function UsersManagement() {
   const handleDeleteConfirm = () => {
     if (!userToDelete) return
 
-    deleteUser.mutate(userToDelete.id, {
+    deleteUser.mutate(userToDelete._id, {
       onSuccess: () => {
         toast.success(t("users.deleted", { name: userToDelete.name ?? userToDelete.email }))
         setUserToDelete(null)
@@ -111,7 +111,7 @@ export function UsersManagement() {
     const actionLabel = nextDisabled ? t("users.disabled") : t("users.reenabled")
 
     updateUser.mutate(
-      { id: userToToggle.id, isDisabled: nextDisabled },
+      { id: userToToggle._id, isDisabled: nextDisabled },
       {
         onSuccess: () => {
           toast.success(t("users.statusChanged", { name: userToToggle.name ?? userToToggle.email, status: actionLabel }))
@@ -125,7 +125,7 @@ export function UsersManagement() {
     )
   }
 
-  const isSelf = (userId: string) => currentUser?.id === userId
+  const isSelf = (userId: string) => currentUser?._id === userId
   const dateFnsLocale = getDateFnsLocale()
 
   return (
@@ -172,7 +172,7 @@ export function UsersManagement() {
           {!isLoading && !error && users && users.length > 0 && (
             <div className="space-y-3">
               {users.map((user) => (
-                <Card key={user.id} className="overflow-hidden">
+                <Card key={user._id} className="overflow-hidden">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-4">
@@ -214,7 +214,7 @@ export function UsersManagement() {
                             {t("users.disabledBadge")}
                           </Badge>
                         )}
-                        {!isSelf(user.id) && (
+                        {!isSelf(user._id) && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">

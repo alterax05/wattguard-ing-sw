@@ -35,24 +35,16 @@ export class SensorNotFoundError extends Error {
  */
 export async function ingestReading(input: IngestReadingInput): Promise<void> {
   const sensor = await Sensor.findById(input.sensorId).populate<{
-    buildingId: BuildingDocument;
-  }>("buildingId");
+    building: BuildingDocument;
+  }>("building");
 
   if (!sensor) {
     throw new SensorNotFoundError(input.sensorId);
   }
 
-  // The building ref may fail to populate if the referenced document was
-  // deleted; fall back to the raw ObjectId and an unknown-name placeholder.
-  // SAFETY: buildingId is a ref to Building populated above; when population
-  // fails (referenced doc deleted) mongoose keeps the raw ObjectId instead.
-  const building = sensor.buildingId as BuildingDocument | mongoose.Types.ObjectId;
-  const buildingId =
-    building instanceof mongoose.Types.ObjectId ? building : building._id;
-  const buildingName =
-    building instanceof mongoose.Types.ObjectId
-      ? "Edificio Sconosciuto"
-      : building.name;
+  const building = sensor.building;
+  const buildingId = building instanceof mongoose.Types.ObjectId ? building : building._id;
+  const buildingName = building instanceof mongoose.Types.ObjectId ? "Edificio Sconosciuto" : building.name;
 
   // Create the reading document
   await SensorReading.create([
@@ -61,8 +53,8 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
       value: input.value,
       unit: input.unit,
       metadata: {
-        sensorId: sensor._id,
-        buildingId,
+        sensor: sensor._id,
+        building: buildingId,
         sensorType: sensor.sensorType,
       },
     },

@@ -1,44 +1,91 @@
 /**
- * Authentication schemas for general auth routes
+ * Authentication and Session schemas
  * 
- * Routes: /api/v1/auth/me, /api/v1/auth/logout, /api/v1/auth/admin/test-email
+ * Routes: /api/v1/auth/session, /api/v1/auth/google/config
  */
 import { z } from "zod";
-import { UserSchema, EmailSchema } from "./common";
+import { PublicUserSchema, UserSchema } from "./common";
+import { SUPPORTED_LOCALES } from "../i18n";
 
 /**
- * GET /api/v1/auth/me - Current user response
+ * Local email/password session creation request
  */
-export const MeResponseSchema = z.object({
-  user: UserSchema,
+export const LocalSessionRequestSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
-export type MeResponse = z.infer<typeof MeResponseSchema>;
+export type LocalSessionRequest = z.infer<typeof LocalSessionRequestSchema>;
 
 /**
- * POST /api/v1/auth/logout - Logout success response
+ * Google ID token session creation request
  */
-export const LogoutResponseSchema = z.object({
+export const GoogleSessionRequestSchema = z.object({
+  idToken: z.string().min(1, "Google ID token is required"),
+});
+
+export type GoogleSessionRequest = z.infer<typeof GoogleSessionRequestSchema>;
+
+/**
+ * Unified session creation request schema (local or Google)
+ */
+export const SessionRequestSchema = z.union([
+  LocalSessionRequestSchema,
+  GoogleSessionRequestSchema,
+]);
+
+export type SessionRequest = z.infer<typeof SessionRequestSchema>;
+
+/**
+ * Successful session creation response
+ */
+export const SessionResponseSchema = z.object({
   success: z.literal(true),
+  data: PublicUserSchema,
 });
 
-export type LogoutResponse = z.infer<typeof LogoutResponseSchema>;
+export type SessionResponse = z.infer<typeof SessionResponseSchema>;
 
 /**
- * POST /api/v1/auth/admin/test-email - Test email request
+ * GET /api/v1/auth/session - Current session / user response
  */
-export const TestEmailRequestSchema = z.object({
-  to: EmailSchema.describe("Email address to send test email to"),
-});
-
-export type TestEmailRequest = z.infer<typeof TestEmailRequestSchema>;
-
-/**
- * POST /api/v1/auth/admin/test-email - Test email success response
- */
-export const TestEmailResponseSchema = z.object({
+export const SessionUserResponseSchema = z.object({
   success: z.literal(true),
-  message: z.string().describe("Success message"),
+  data: UserSchema,
 });
 
-export type TestEmailResponse = z.infer<typeof TestEmailResponseSchema>;
+export type SessionUserResponse = z.infer<typeof SessionUserResponseSchema>;
+
+/**
+ * PATCH /api/v1/auth/session - Update current session / user profile
+ */
+export const UpdateSessionRequestSchema = z.object({
+  language: z.enum(SUPPORTED_LOCALES).optional().describe("User preferred language for email alerts and UI"),
+  name: z.string().min(2).max(64).optional().describe("User display name"),
+});
+
+export type UpdateSessionRequest = z.infer<typeof UpdateSessionRequestSchema>;
+
+/**
+ * DELETE /api/v1/auth/session - Destroy session response
+ */
+export const DestroySessionResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string().optional().describe("Success message"),
+  }),
+});
+
+export type DestroySessionResponse = z.infer<typeof DestroySessionResponseSchema>;
+
+/**
+ * GET /api/v1/auth/google/config - Public Google Client ID response
+ */
+export const GoogleConfigResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    clientId: z.string().describe("Configured Google OAuth Client ID"),
+  }),
+});
+
+export type GoogleConfigResponse = z.infer<typeof GoogleConfigResponseSchema>;

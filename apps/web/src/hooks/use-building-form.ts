@@ -99,8 +99,8 @@ function toDefaultValues(building?: BuildingDetail, _mode: BuildingFormMode = "c
       address: building.address,
       surface: building.surface.toString(),
       ceilingHeight: building.ceilingHeight ? building.ceilingHeight.toString() : "3.0",
-      // SAFETY: BuildingType union is string ID or populated object with id; instanceof Object narrows to object case
-      buildingType: building.buildingType instanceof Object ? (building.buildingType as { id: string }).id : building.buildingType,
+      // SAFETY: BuildingType union is string ID or populated object with _id; instanceof Object narrows to object case
+      buildingType: building.buildingType instanceof Object ? (building.buildingType as { _id: string })._id : building.buildingType,
       heatingSystemType: building.heatingSystemType,
       constructionYear: building.constructionYear ? building.constructionYear.toString() : "",
       geographicZone: building.geographicZone,
@@ -174,7 +174,7 @@ export function useBuildingForm({ mode, building }: UseBuildingFormOptions) {
       form.reset(toDefaultValues(building, mode))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps — form.reset stable, we want building change only
-  }, [building?.id])
+  }, [building?._id])
 
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(() => {
     if (building) {
