@@ -5,41 +5,48 @@ import { expect } from "bun:test";
 import { testClient } from "hono/testing";
 import { app } from "../../index";
 import { User } from "../../models/User";
+import type { UserRole } from "@wattguard/shared";
 
 export const client = testClient(app);
+
+export interface ResponseLike {
+  status: number;
+  json(): Promise<object>;
+}
 
 /**
  * Asserts that a response is a validation error (400)
  */
-export async function expectValidationError(response: Response, fieldName?: string) {
+export async function expectValidationError(response: ResponseLike, fieldName?: string) {
   expect(response.status).toBe(400);
   // SAFETY: the API returns a JSON body with its message under `error` on 400 responses.
-  const data = (await response.json()) as { error?: string };
+  const data = (await response.json()) as { error?: string | string[] };
   expect(data.error).toBeDefined();
   
   if (fieldName) {
-    expect(data.error?.toLowerCase()).toContain(fieldName.toLowerCase());
+    const errorStr = JSON.stringify(data);
+    expect(errorStr.toLowerCase()).toContain(fieldName.toLowerCase());
   }
 }
 
 /**
  * Asserts that a response is unauthorized (401)
  */
-export function expectUnauthorized(response: Response) {
+export function expectUnauthorized(response: { status: number }) {
   expect(response.status).toBe(401);
 }
 
 /**
  * Asserts that a response is forbidden (403)
  */
-export function expectForbidden(response: Response) {
+export function expectForbidden(response: { status: number }) {
   expect(response.status).toBe(403);
 }
 
 /**
  * Asserts that a response is not found (404)
  */
-export function expectNotFound(response: Response) {
+export function expectNotFound(response: { status: number }) {
   expect(response.status).toBe(404);
 }
 
@@ -63,7 +70,7 @@ export async function expectSuccess<T>(response: Response, status = 200): Promis
 export async function createUserAndGetToken(
   email: string,
   password: string,
-  role: "admin" | "operator" = "operator"
+  role: UserRole = "operator"
 ) {
   await User.create({
     email,

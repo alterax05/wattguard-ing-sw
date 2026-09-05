@@ -56,9 +56,7 @@ await mock.module("../../lib/weather", () => ({
 import { app } from "../../index";
 import { testClient } from "hono/testing";
 import { expectTypeOf } from "bun:test";
-import { z } from "zod";
-import { ErrorSchema } from "@wattguard/shared";
-import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
+import type { GetBuildingEfficiencyResponse, ErrorResponse} from "@wattguard/shared";
 import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
@@ -95,7 +93,7 @@ function mkReading(
   return { timestamp, value, unit, metadata: { sensor: sensorId, building: buildingId, sensorType } };
 }
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 

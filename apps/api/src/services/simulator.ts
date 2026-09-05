@@ -9,17 +9,16 @@ import {
   GAS_LHV_KWH_PER_M3,
   classifyHeatingSystem,
   roomHeatCapacity,
+  type EnergySensorType,
 } from "../lib/energy";
 
 import type { IngestReadingInput } from "./reading-service";
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
-export type SimulatorReading = IngestReadingInput;
-
 export type SimulatorOptions = {
   /** Called for every produced reading. May be async. */
-  onReading: (reading: SimulatorReading) => void | Promise<void>;
+  onReading: (reading: IngestReadingInput) => void | Promise<void>;
   /** Seed a default admin, building type, building, and sensors when the DB is empty. */
   autoSeed?: boolean;
   /** Simulated seconds per real second (defaults to SIM_TIME_SCALE). */
@@ -78,7 +77,7 @@ export type HeatingProfile = {
   // Which sensor type carries the energy signal for this system.
   //   "energy_meter" → emit kW (electrical draw for heat pumps, thermal for district)
   //   "gas_meter"    → emit cumulative m³ (fuel volume odometer for gas boilers)
-  energySensorType: "energy_meter" | "gas_meter";
+  energySensorType: EnergySensorType;
 };
 
 export function getHeatingProfile(heatingSystemType: string): HeatingProfile {
@@ -457,7 +456,7 @@ export async function startSimulator(opts: SimulatorOptions): Promise<SimulatorH
       const reading = computeSensorReading(state, sensorType, intervalSeconds);
       if (!reading) return;
 
-      const payload: SimulatorReading = {
+      const payload: IngestReadingInput = {
         sensorId,
         value: reading.value,
         unit: reading.unit,

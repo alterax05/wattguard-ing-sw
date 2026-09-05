@@ -1,5 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
-import { SUPPORTED_LOCALES } from "@wattguard/shared";
+import { SUPPORTED_LOCALES, UserRoleSchema } from "@wattguard/shared";
 
 const userSchema = new Schema(
   {
@@ -18,10 +18,10 @@ const userSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "operator"],
+      enum: UserRoleSchema.options,
       required: true,
     },
-    // TODO: quindi si può disabilitare un utente senza cancellarlo?
+    // Whether the account is disabled without deleting it.
     isDisabled: {
       type: Boolean,
       default: false,
@@ -68,7 +68,5 @@ userSchema.pre('save', function() {
 export type UserDocument = InferSchemaType<typeof userSchema>;
 
 export type HydratedUser = mongoose.HydratedDocument<UserDocument>;
-
-export type UserRole = UserDocument["role"];
 
 export const User = mongoose.model("User", userSchema);

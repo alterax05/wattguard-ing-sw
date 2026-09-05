@@ -1,7 +1,2 @@
-import { ExportReportQuerySchema, type ExportReportQuery } from "./export";
-
-/**
- * GET /api/v1/reports - Aggregated energy report query parameters
- */
-export const ReportsQuerySchema = ExportReportQuerySchema;
-export type ReportsQuery = ExportReportQuery;
+// Reports route uses ExportReportQuerySchema from ./export directly.
+// This module is kept for path stability; no aliases.

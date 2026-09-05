@@ -1,4 +1,5 @@
 import mongoose, { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
+import { InviteStatusSchema, UserRoleSchema } from "@wattguard/shared";
 
 const inviteSchema = new Schema(
   {
@@ -11,7 +12,7 @@ const inviteSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "operator"],
+      enum: UserRoleSchema.options,
       required: true,
     },
     tokenHash: {
@@ -22,7 +23,7 @@ const inviteSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "accepted", "revoked", "expired"],
+      enum: InviteStatusSchema.options,
       default: "pending",
       index: true,
     },
@@ -52,8 +53,6 @@ const inviteSchema = new Schema(
 export type InviteDocument = InferSchemaType<typeof inviteSchema>;
 
 export type HydratedInvite = HydratedDocument<InviteDocument>;
-
-export type InviteStatus = InviteDocument["status"];
 
 // TTL index to automatically delete expired invites
 inviteSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

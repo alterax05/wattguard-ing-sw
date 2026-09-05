@@ -9,9 +9,7 @@ import {
   isGasBoilerBuilding,
   roomHeatCapacity,
 } from "./energy";
-import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
-
-export type BuildingEfficiencyMetrics = GetBuildingEfficiencyResponse["data"]["metrics"];
+import type { BuildingEfficiencyMetrics } from "@wattguard/shared";
 
 /**
  * Calcola le metriche di efficienza termica di un edificio su una finestra

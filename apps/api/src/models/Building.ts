@@ -1,11 +1,7 @@
 import mongoose, { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
+import { BuildingStatusSchema, type GeoJSONPoint } from "@wattguard/shared";
 
-export interface GeoPoint {
-  type: "Point";
-  coordinates: [number, number];
-}
-
-const pointSchema = new Schema<GeoPoint>(
+const pointSchema = new Schema<GeoJSONPoint>(
   {
     type: {
       type: String,
@@ -80,7 +76,7 @@ export const buildingSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive", "decommissioned"],
+      enum: BuildingStatusSchema.options,
       default: "active",
       index: true,
     },
@@ -122,5 +118,3 @@ buildingSchema.index({ status: 1, buildingType: 1 });
 export const Building = mongoose.model("Building", buildingSchema);
 
 export type BuildingDocument = HydratedDocument<InferSchemaType<typeof buildingSchema>>;
-
-export type BuildingStatus = BuildingDocument["status"];

@@ -19,20 +19,19 @@ import {
 } from "bun:test";
 
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
-import { ErrorSchema } from "@wattguard/shared";
+import { expectValidationError } from "../helpers/validation";
+import { PopulatedBuildingSchema } from "@wattguard/shared";
 import type {
   CreateSensorResponse,
   GetSensorResponse,
   UpdateSensorResponse,
   DeleteSensorResponse,
   ListSensorsResponse,
-  GetSensorReadingsResponse,
-} from "@wattguard/shared";
+  GetSensorReadingsResponse, ErrorResponse} from "@wattguard/shared";
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 import { User } from "../../models/User";
@@ -217,7 +216,7 @@ describe("sensors api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(409);
       const json = await res.json();
       expect(json.success).toBe(false);
       if (json.success) {
@@ -262,7 +261,7 @@ describe("sensors api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      await expectValidationError(res);
     });
   });
 
@@ -307,6 +306,9 @@ describe("sensors api", () => {
       }
 
       expect(json.data._id).toBeDefined();
+      expect(json.data.self).toBe(`/api/v1/sensors/${sensor._id.toString()}`);
+      const building = PopulatedBuildingSchema.parse(json.data.building);
+      expect(building.self).toBe(`/api/v1/buildings/${buildingId}`);
       expect(json.data.sensorType).toBe("internal_temp");
       expect(json.data.location).toBe("Piano 2");
       expect(json.data.lastReading).toBeDefined();
@@ -325,8 +327,7 @@ describe("sensors api", () => {
         }
       );
 
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(404);
+      expect(res.status).toBe(404);
     });
   });
 

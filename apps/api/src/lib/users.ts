@@ -7,9 +7,17 @@ import {
 import type { HydratedUser } from "../models/User";
 
 export const toUserDto = (user: HydratedUser): UserDto => {
-  return UserSchema.parse(user.toObject());
+  const obj = user.toObject();
+  return UserSchema.parse({
+    ...obj,
+    self: `/api/v1/users/${String(obj._id)}`,
+  });
 };
 
 export const toPublicUserDto = (user: HydratedUser): PublicUserDto => {
-  return PublicUserSchema.parse(user.toObject());
+  const obj = user.toObject();
+  return PublicUserSchema.parse({
+    ...obj,
+    self: `/api/v1/users/${String(obj._id)}`,
+  });
 };

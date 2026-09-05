@@ -3,12 +3,9 @@ import { SystemConfig } from "../models/SystemConfig";
 import { User } from "../models/User";
 import { sendAlertEmail, type AlertEmailEvent, type AlertEmailPayload } from "../email/mailer";
 
-export type AlertNotificationEvent = AlertEmailEvent;
-export type AlertNotificationPayload = AlertEmailPayload;
-
 export async function dispatchAlertNotifications(
-  event: AlertNotificationEvent,
-  payload: AlertNotificationPayload,
+  event: AlertEmailEvent,
+  payload: AlertEmailPayload,
 ): Promise<void> {
   const config = await SystemConfig.getOrCreate();
   if (!config.notifications?.emailEnabled) return;
@@ -34,8 +31,8 @@ export async function dispatchAlertNotifications(
  * (ingestion path or efficiency cron). Failures are logged and swallowed.
  */
 export function queueAlertNotification(
-  event: AlertNotificationEvent,
-  payload: AlertNotificationPayload,
+  event: AlertEmailEvent,
+  payload: AlertEmailPayload,
 ): void {
   void dispatchAlertNotifications(event, payload).catch((error) => {
     console.error("Alert notification dispatch failed:", error);

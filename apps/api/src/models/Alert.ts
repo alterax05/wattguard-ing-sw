@@ -1,4 +1,9 @@
 import mongoose, { Schema, type HydratedDocument, type InferSchemaType } from "mongoose";
+import {
+  AlertSeveritySchema,
+  AlertStatusSchema,
+  AlertThresholdTypeSchema,
+} from "@wattguard/shared";
 
 
 const alertSchema = new Schema(
@@ -25,12 +30,12 @@ const alertSchema = new Schema(
     },
     thresholdType: {
       type: String,
-      enum: ["min", "max"],
+      enum: AlertThresholdTypeSchema.options,
       required: false,
     },
     severity: {
       type: String,
-      enum: ["low", "medium", "high", "critical"],
+      enum: AlertSeveritySchema.options,
       required: true,
     },
     sensorType: {
@@ -55,7 +60,7 @@ const alertSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["active", "acknowledged", "resolved"],
+      enum: AlertStatusSchema.options,
       default: "active",
       index: true,
     },
@@ -92,9 +97,6 @@ alertSchema.index({ sensorId: 1, type: 1, status: 1 });
 
 export type AlertDocument = InferSchemaType<typeof alertSchema>;
 
-export type AlertStatus = AlertDocument["status"];
-export type AlertThresholdType = AlertDocument["thresholdType"];
-export type AlertSeverity = AlertDocument["severity"];
 export type HydratedAlert = HydratedDocument<AlertDocument>;
 
 export const Alert = mongoose.model("Alert", alertSchema);

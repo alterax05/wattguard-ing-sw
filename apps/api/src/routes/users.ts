@@ -11,6 +11,8 @@ import { toUserDto } from "../lib/users";
 import { apiError, apiSuccess } from "../lib/api-response";
 import {
   ListUsersResponseSchema,
+  GetUserParamsSchema,
+  GetUserResponseSchema,
   UpdateUserParamsSchema,
   UpdateUserRequestSchema,
   UpdateUserResponseSchema,
@@ -22,6 +24,7 @@ import {
 import type {
   DeleteUserResponse,
   ListUsersResponse,
+  GetUserResponse,
   UpdateUserResponse,
   ErrorResponse,
 } from "@wattguard/shared";
@@ -66,6 +69,66 @@ const app = new Hono<{ Variables: AuthVariables }>()
         .sort({ createdAt: -1 });
 
       return c.json(apiSuccess(users.map(toUserDto)) satisfies ListUsersResponse);
+    }
+  )
+  .get(
+    "/:id",
+    describeRoute({
+      summary: "Leggi utente",
+      description: "Restituisce i dati di un singolo utente per ID (solo admin)",
+      tags: ["Users"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "User details retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(GetUserResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid user ID parameter",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "User not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", GetUserParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const user = await User.findById(id);
+      if (!user) {
+        return c.json(apiError("user_not_found", "User not found") satisfies ErrorResponse, 404);
+      }
+      return c.json(apiSuccess(toUserDto(user)) satisfies GetUserResponse);
     }
   )
   .patch(

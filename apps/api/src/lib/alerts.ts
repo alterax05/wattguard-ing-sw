@@ -18,8 +18,6 @@ export { computeDeviationSeverity } from "./alert-severity";
 
 export const SYSTEM_RESOLVER = "system";
 
-export type AlertErrorCode = ErrorCode;
-
 export type AlertResult<T> =
   | ({ ok: true } & T)
   | { ok: false; code: ErrorCode };
@@ -235,5 +233,19 @@ export function toAlertDTO(
     const translate = options.t ?? getTranslator(options.locale!);
     obj.resolvedBy = translate("alerts.systemResolver");
   }
-  return AlertSchema.parse(obj);
+  const idStr = obj._id.toString();
+  return AlertSchema.parse({
+    ...obj,
+    id: idStr,
+    self: `/api/v1/alerts/${idStr}`,
+    building: {
+      self: `/api/v1/buildings/${String(obj.buildingId)}`,
+      name: obj.buildingName,
+    },
+    sensor: obj.sensorId
+      ? {
+          self: `/api/v1/sensors/${String(obj.sensorId)}`,
+        }
+      : undefined,
+  });
 }

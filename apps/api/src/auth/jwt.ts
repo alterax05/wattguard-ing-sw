@@ -3,6 +3,7 @@
  */
 import { sign } from "hono/jwt";
 import { JWT_SECRET } from "../config/variables";
+import type { UserRole } from "@wattguard/shared";
 
 const JWT_EXPIRATION_HOURS = 8; // 8 hours
 
@@ -17,7 +18,7 @@ const JWT_EXPIRATION_HOURS = 8; // 8 hours
 export type AccessTokenPayload = {
   sub: string;
   email: string;
-  role: "admin" | "operator";
+  role: UserRole;
   iat?: number;
   exp?: number;
 }
@@ -28,7 +29,7 @@ export type AccessTokenPayload = {
  * @returns Signed JWT string
  */
 export async function signAccessToken(
-  payload: { userId: string; email: string; role: "admin" | "operator" }
+  payload: { userId: string; email: string; role: UserRole }
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const exp = now + JWT_EXPIRATION_HOURS * 60 * 60;
