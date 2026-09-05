@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type {Sensor} from "@wattguard/shared"
 import { useTranslation } from "react-i18next"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -15,7 +16,6 @@ import { useBuildings } from "@/hooks/use-buildings"
 import {
   SENSORS_QUERY_KEY,
   useAllSensors,
-  type Sensor,
 } from "@/hooks/use-sensors"
 import { usePollingInterval } from "@/hooks/use-settings"
 import { getMonitoringStatus } from "@/lib/sensor-status"

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/pagination"
 import { getMonitoringStatus, getMonitoringStatusPresentation } from "@/lib/sensor-status"
 import { getSensorIcon, getPaginationItems } from "./helpers"
-import type { Sensor } from "@/hooks/use-sensors"
+import type { Sensor } from "@wattguard/shared"
 
 export interface SensorsSectionProps {
   sensors: Sensor[]

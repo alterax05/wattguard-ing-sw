@@ -1,8 +1,6 @@
 import type { TFunction } from "i18next"
 import type { BuildingStatus } from "@wattguard/shared"
 
-export type { BuildingStatus }
-
 export const BUILDING_STATUS_STYLES = {
   active: "bg-chart-3/15 text-chart-3",
   inactive: "",

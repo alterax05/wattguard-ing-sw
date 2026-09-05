@@ -25,7 +25,7 @@ import { BuildingMap } from "./BuildingMap"
 import { TRENTO_CENTER } from "./geocode"
 import { getBuildingStatusLabel } from "@/lib/building-status"
 import type { BuildingFormValues } from "@/hooks/use-building-form"
-import { useBuildingTypes } from "@/hooks/use-buildings"
+import { useBuildingTypes } from "@/hooks/use-building-types"
 import { useAuth } from "@/lib/auth"
 import { AddBuildingTypeDialog } from "@/components/building-types"
 

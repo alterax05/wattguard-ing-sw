@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type {Invite} from "@wattguard/shared"
 import { useTranslation } from "react-i18next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty"
@@ -29,7 +30,7 @@ import {
   Hourglass,
 } from "lucide-react"
 import { AddUserDialog } from "@/components/users/add-user-dialog"
-import { useInvites, useRevokeInvite, type Invite } from "@/hooks/use-invites"
+import { useInvites, useRevokeInvite } from "@/hooks/use-invites"
 import { format } from "date-fns"
 import { getDateFnsLocale } from "@/lib/dates"
 

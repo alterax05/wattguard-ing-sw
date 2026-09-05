@@ -43,12 +43,12 @@ import { AddUserDialog } from "./add-user-dialog"
 import { format } from "date-fns"
 import { getDateFnsLocale } from "@/lib/dates"
 import { toast } from "sonner"
-import type { AdminUser } from "@/hooks/use-auth"
+import type { User } from "@wattguard/shared"
 
 export function UsersManagement() {
   const [showAddDialog, setShowAddDialog] = useState(false)
-  const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null)
-  const [userToToggle, setUserToToggle] = useState<AdminUser | null>(null)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [userToToggle, setUserToToggle] = useState<User | null>(null)
   const { data: users, isLoading, error } = useUsers()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
@@ -72,7 +72,7 @@ export function UsersManagement() {
     )
   }
 
-  const handleRoleChange = (user: AdminUser) => {
+  const handleRoleChange = (user: User) => {
     const newRole = user.role === "admin" ? "operator" : "admin"
     const roleLabel = newRole === "admin" ? t("users.role.admin") : t("users.role.operator")
 

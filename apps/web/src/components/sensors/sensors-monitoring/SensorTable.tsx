@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SensorTableRow } from "./SensorTableRow"
-import type { Sensor } from "@/hooks/use-sensors"
+import type { Sensor } from "@wattguard/shared"
 
 export function SensorTableRoot({
   title,

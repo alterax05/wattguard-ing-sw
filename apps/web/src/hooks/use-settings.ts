@@ -7,13 +7,8 @@ import { errorMessageFromResponse } from "@/lib/errors";
 export const SETTINGS_QUERY_KEY = ["settings"] as const;
 
 import type {
-  SystemConfig,
   UpdateSettingsRequest as UpdateSettingsInput,
 } from "@wattguard/shared";
-
-// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
-
-export type { SystemConfig, UpdateSettingsInput };
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 

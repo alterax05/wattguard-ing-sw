@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import {
   BUILDING_STATUS_STYLES,
   getBuildingStatusLabel,
-  type BuildingStatus,
 } from "@/lib/building-status"
+import type { BuildingStatus } from "@wattguard/shared"
 
 interface BuildingStatusBadgeProps {
   status: BuildingStatus

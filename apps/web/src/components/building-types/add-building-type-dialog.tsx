@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import type {BuildingType} from "@wattguard/shared"
 import {
   Dialog,
   DialogCloseButton,
@@ -8,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useCreateBuildingType, type BuildingType } from "@/hooks/use-building-types";
+import { useCreateBuildingType } from "@/hooks/use-building-types";
 import { BuildingTypeForm, toBuildingTypePayload, useBuildingTypeForm, type BuildingTypeFormValues } from "./BuildingTypeForm";
 
 interface AddBuildingTypeDialogProps {

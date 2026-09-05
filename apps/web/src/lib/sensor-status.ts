@@ -1,10 +1,10 @@
 import type { TFunction } from "i18next"
 import { AlertCircle, CheckCircle2, WifiOff, Wrench, type LucideIcon } from "lucide-react"
-import type { SensorStatus } from "@/hooks/use-sensors"
+import type { SensorStatus } from "@wattguard/shared"
 
-export type MonitoringStatus = "active" | "offline" | "maintenance" | "error"
+export type MonitoringStatus = Exclude<SensorStatus, "inactive"> | "offline"
 
-export interface MonitoringStatusPresentation {
+interface MonitoringStatusPresentation {
   label: string
   icon: LucideIcon
   className: string

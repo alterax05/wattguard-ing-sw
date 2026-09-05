@@ -1,5 +1,14 @@
+import { z } from "zod"
+
 export const TRENTO_CENTER: [number, number] = [46.0667, 11.1167]
 export const DEFAULT_ZOOM = 14
+
+const NominatimResultSchema = z.array(
+  z.object({
+    lat: z.string(),
+    lon: z.string(),
+  })
+)
 
 export async function geocodeAddress(
   address: string
@@ -19,13 +28,14 @@ export async function geocodeAddress(
 
   if (!res.ok) return null
 
-  // SAFETY: the Nominatim search endpoint returns a JSON array of places with lat/lon strings on 200.
-  const results = (await res.json()) as { lat: string; lon: string }[]
-  const first = results[0]
+  const parsed = NominatimResultSchema.safeParse(await res.json())
+  if (!parsed.success) return null
+  const first = parsed.data[0]
   if (!first) return null
 
-  return {
-    lat: parseFloat(first.lat),
-    lon: parseFloat(first.lon),
-  }
+  const lat = parseFloat(first.lat)
+  const lon = parseFloat(first.lon)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+
+  return { lat, lon }
 }

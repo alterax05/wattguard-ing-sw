@@ -1,9 +1,10 @@
 import { memo, useDeferredValue, useMemo, useState } from "react";
+import type {BuildingType} from "@wattguard/shared"
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { AlertCircle, Loader2, MoreVertical, Pencil, Plus, Search, Tags, Trash2 } from "lucide-react";
 
-import { useBuildingTypes, useDeleteBuildingType, type BuildingType } from "@/hooks/use-building-types";
+import { useBuildingTypes, useDeleteBuildingType } from "@/hooks/use-building-types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
