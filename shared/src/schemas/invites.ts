@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EmailSchema, UserRoleSchema, IsoDateTimeSchema, PublicUserSchema } from "./common";
+import { EmailSchema, UserRoleSchema, IsoDateTimeSchema, PublicUserSchema, SelfLinkSchema, ObjectIdParamSchema } from "./common";
 
 /**
  * Invite status enum
@@ -11,6 +11,7 @@ export type InviteStatus = z.infer<typeof InviteStatusSchema>;
  * Invite object schema (for responses)
  */
 export const InviteSchema = z.object({
+  self: SelfLinkSchema.optional(),
   _id: z.string().describe("Unique invite identifier"),
   email: z.email().describe("Email address of invitee"),
   role: UserRoleSchema,
@@ -30,6 +31,7 @@ export type Invite = z.infer<typeof InviteSchema>;
  * POST /api/v1/invites - Created invite projection
  */
 export const CreateInviteSchema = InviteSchema.pick({
+  self: true,
   _id: true,
   email: true,
   role: true,
@@ -38,6 +40,29 @@ export const CreateInviteSchema = InviteSchema.pick({
 });
 
 export type CreateInvite = z.infer<typeof CreateInviteSchema>;
+
+/**
+ * GET /api/v1/invites/:id - Get invite by ID params (canonical resource URI)
+ */
+export const GetInviteByIdParamsSchema = ObjectIdParamSchema;
+export type GetInviteByIdParams = z.infer<typeof GetInviteByIdParamsSchema>;
+
+export const GetInviteByIdResponseSchema = z.object({
+  success: z.literal(true),
+  data: InviteSchema,
+});
+export type GetInviteByIdResponse = z.infer<typeof GetInviteByIdResponseSchema>;
+
+/**
+ * GET /api/v1/invites - List query. When `token` is present the route acts
+ * as public token lookup (validation). Without `token` it lists all invites
+ * (admin only).
+ */
+export const ListInvitesQuerySchema = z.object({
+  token: z.string().min(1).optional().describe("Invitation token for public lookup"),
+});
+
+export type ListInvitesQuery = z.infer<typeof ListInvitesQuerySchema>;
 
 /**
  * GET /api/v1/invites - List all invites response
@@ -77,8 +102,6 @@ export const DeleteInviteParamsSchema = z.object({
 });
 
 export type DeleteInviteParams = z.infer<typeof DeleteInviteParamsSchema>;
-export const RevokeInviteParamsSchema = DeleteInviteParamsSchema;
-export type RevokeInviteParams = DeleteInviteParams;
 
 /**
  * DELETE /api/v1/invites/:id - Revoke invite response
@@ -89,23 +112,26 @@ export const DeleteInviteResponseSchema = z.object({
 });
 
 export type DeleteInviteResponse = z.infer<typeof DeleteInviteResponseSchema>;
-export const RevokeInviteResponseSchema = DeleteInviteResponseSchema;
-export type RevokeInviteResponse = DeleteInviteResponse;
 
 /**
- * GET /api/v1/invites/:token - Get invite details by token
+ * Public invite lookup by token now uses GET /api/v1/invites?token=xxx.
+ * The path-param form GET /api/v1/invites/:token was removed to keep one
+ * canonical URI per invite (GET /api/v1/invites/:id).
  */
-export const GetInviteParamsSchema = z.object({
+export const GetInviteTokenQuerySchema = z.object({
   token: z.string().min(1, "Invite token is required").describe("Invitation token"),
 });
 
-export type GetInviteParams = z.infer<typeof GetInviteParamsSchema>;
+export type GetInviteTokenQuery = z.infer<typeof GetInviteTokenQuerySchema>;
 
 /**
- * Validation response data
+ * Validation response data (includes canonical id/self so the client can
+ * PATCH /api/v1/invites/:id to accept)
  */
 export const ValidateInviteDataSchema = z.object({
   valid: z.literal(true),
+  _id: z.string().describe("Invite identifier (canonical resource id)"),
+  self: SelfLinkSchema.describe("Canonical URI of the invite"),
   email: z.email().describe("Email associated with the invite"),
   role: UserRoleSchema.describe("Role assigned to the invite"),
   expiresAt: z.iso.datetime().describe("Expiration timestamp of the invite"),
@@ -124,14 +150,21 @@ export const ValidateInviteResponseSchema = z.object({
 export type ValidateInviteResponse = z.infer<typeof ValidateInviteResponseSchema>;
 
 /**
- * POST /api/v1/invites/:token/acceptance - Accept invite request
+ * PATCH /api/v1/invites/:id - Accept invite (state transition pending -> accepted).
+ * Token travels in the body, never in the path. Creates the User and opens the Session.
  */
+export const AcceptInviteParamsSchema = ObjectIdParamSchema;
+
+export type AcceptInviteParams = z.infer<typeof AcceptInviteParamsSchema>;
+
 export const AcceptInviteLocalSchema = z.object({
+  token: z.string().min(1, "Invite token is required"),
   name: z.string().min(2, "Name must be at least 2 characters").max(64),
   password: z.string().min(8, "Password must be at least 8 characters").max(128),
 });
 
 export const AcceptInviteGoogleSchema = z.object({
+  token: z.string().min(1, "Invite token is required"),
   idToken: z.string().min(1, "Google ID token is required"),
 });
 
