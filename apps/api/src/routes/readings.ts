@@ -33,8 +33,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
+      summary: "Esporta letture",
       description:
-        "Retrieve sensor readings with content negotiation (CSV or JSON download)",
+        "Esporta le letture filtrate per edifici e periodo in CSV o JSON (solo admin)",
       tags: ["Readings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

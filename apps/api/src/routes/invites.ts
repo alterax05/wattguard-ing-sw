@@ -47,7 +47,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     ...requireAdmin,
     describeRoute({
-      description: "List all invitation records (admin only)",
+      summary: "Elenca inviti",
+      description: "Restituisce tutti gli inviti con stato e mittente (solo admin)",
       tags: ["Invites"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -89,7 +90,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     ...requireAdmin,
     describeRoute({
-      description: "Create a new user invitation and send invitation email (admin only)",
+      summary: "Crea invito",
+      description: "Crea un invito e invia l'email di registrazione (solo admin, validità 7 giorni)",
       tags: ["Invites"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -190,7 +192,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     ...requireAdmin,
     describeRoute({
-      description: "Revoke/delete a pending invitation (admin only)",
+      summary: "Revoca invito",
+      description: "Revoca un invito in stato pending (solo admin)",
       tags: ["Invites"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -258,7 +261,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:token",
     describeRoute({
-      description: "Get invitation details by token (public)",
+      summary: "Verifica invito",
+      description: "Restituisce i dettagli pubblici di un invito dal token",
       tags: ["Invites"],
       responses: {
         200: {
@@ -300,7 +304,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/:token/acceptance",
     describeRoute({
-      description: "Accept an invitation and activate user account (local password or Google SSO)",
+      summary: "Accetta invito",
+      description: "Crea l'account (password o Google) e apre la sessione",
       tags: ["Invites"],
       responses: {
         200: {

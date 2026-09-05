@@ -55,7 +55,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/session",
     describeRoute({
-      description: "Create an authenticated session using either email+password or a Google ID token",
+      summary: "Crea sessione",
+      description: "Crea una sessione tramite email+password o token ID Google; imposta il cookie access_token",
       tags: ["Authentication"],
       responses: {
         200: {
@@ -234,7 +235,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/session",
     ...requireAuth,
     describeRoute({
-      description: "Get current authenticated session and user information",
+      summary: "Leggi sessione corrente",
+      description: "Restituisce utente e dati della sessione autenticata",
       tags: ["Authentication"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -267,7 +269,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/session",
     ...requireAuth,
     describeRoute({
-      description: "Update current authenticated user's profile and preferences (e.g. language, name)",
+      summary: "Aggiorna profilo corrente",
+      description: "Aggiorna nome e preferenze (es. lingua) dell'utente autenticato",
       tags: ["Authentication"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -310,7 +313,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .delete(
     "/session",
     describeRoute({
-      description: "Destroy current authenticated session (logout)",
+      summary: "Chiudi sessione",
+      description: "Distrugge la sessione corrente cancellando il cookie di autenticazione",
       tags: ["Authentication"],
       responses: {
         200: {
@@ -339,7 +343,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/google/config",
     describeRoute({
-      description: "Get public Google OAuth Client ID for frontend SDK",
+      summary: "Leggi config Google OAuth",
+      description: "Restituisce il Client ID Google pubblico per l'SDK del frontend",
       tags: ["Authentication"],
       responses: {
         200: {
@@ -363,7 +368,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/reset-tokens",
     describeRoute({
-      description: "Request password reset token (sends email if account exists)",
+      summary: "Richiedi reset password",
+      description: "Crea il token di reset e invia l'email se l'account esiste",
       tags: ["Authentication"],
       responses: {
         200: {
@@ -412,7 +418,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/reset-tokens/:token",
     describeRoute({
-      description: "Inspect and validate a password reset token without consuming it",
+      summary: "Verifica token di reset",
+      description: "Controlla la validità del token di reset senza consumarlo",
       tags: ["Authentication"],
       responses: {
         200: {
@@ -471,7 +478,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/password-resets",
     describeRoute({
-      description: "Reset password using valid reset token (one-time use)",
+      summary: "Reimposta password",
+      description: "Reimposta la password con un token valido (uso singolo)",
       tags: ["Authentication"],
       responses: {
         200: {

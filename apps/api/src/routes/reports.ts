@@ -26,8 +26,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
+      summary: "Scarica report energetico",
       description:
-        "Download an aggregated energy report for selected buildings and period as PDF or Excel (admin only)",
+        "Genera il report aggregato per edifici e periodo in PDF o Excel (solo admin)",
       tags: ["Reports"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

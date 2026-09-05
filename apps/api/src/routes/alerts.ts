@@ -45,8 +45,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     describeRoute({
       tags: ["Alerts"],
-      summary: "List alerts",
-      description: "Retrieve a paginated list of alerts, optionally filtered.",
+      summary: "Elenca alert",
+      description: "Restituisce gli alert paginati con filtri opzionali",
       responses: {
         200: {
           description: "List of alerts retrieved successfully",
@@ -116,8 +116,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Update alert status",
-      description: "Update an alert's status (acknowledge or resolve).",
+      summary: "Aggiorna stato alert",
+      description: "Aggiorna lo stato di un alert (acknowledge o resolve)",
       responses: {
         200: {
           description: "Alert status updated successfully",

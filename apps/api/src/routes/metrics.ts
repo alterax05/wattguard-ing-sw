@@ -22,7 +22,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      description: "Get aggregated system-wide KPI metrics across all buildings",
+      summary: "Leggi metriche di sistema",
+      description: "Restituisce i KPI aggregati: sensori, alert attivi e consumi",
       tags: ["Metrics"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -107,7 +108,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/history",
     describeRoute({
-      description: "Get aggregated historical energy and gas readings across all buildings",
+      summary: "Leggi storico metriche",
+      description: "Restituisce energia e gas aggregati per intervallo (ora/giorno/settimana)",
       tags: ["Metrics"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

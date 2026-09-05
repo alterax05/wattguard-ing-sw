@@ -42,7 +42,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      description: "List all sensors with optional filters (building, type, status)",
+      summary: "Elenca sensori",
+      description: "Restituisce i sensori con filtri per edificio, tipo e stato",
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -94,7 +95,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/",
     describeRoute({
-      description: "Create a new sensor for a building",
+      summary: "Crea sensore",
+      description: "Crea un nuovo sensore per un edificio esistente",
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -164,7 +166,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id",
     describeRoute({
-      description: "Get sensor details with building information",
+      summary: "Leggi sensore",
+      description: "Restituisce il dettaglio del sensore con dati dell'edificio",
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -202,7 +205,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .patch(
     "/:id",
     describeRoute({
-      description: "Update sensor configuration",
+      summary: "Aggiorna sensore",
+      description: "Aggiorna configurazione e soglie del sensore",
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -281,7 +285,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .delete(
     "/:id",
     describeRoute({
-      description: "Delete a sensor and its reading",
+      summary: "Elimina sensore",
+      description: "Elimina sensore con letture e alert associati",
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -330,7 +335,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id/readings",
     describeRoute({
-      description: "Get historical sensor readings",
+      summary: "Leggi letture sensore",
+      description: "Restituisce lo storico letture del sensore con paginazione",
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

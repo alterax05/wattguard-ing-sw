@@ -36,7 +36,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      description: "List all building types",
+      summary: "Elenca tipi di edificio",
+      description: "Restituisce tutti i tipi di edificio ordinati per nome",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -76,7 +77,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     requireRole("admin"),
     describeRoute({
-      description: "Create a new building type (admin only)",
+      summary: "Crea tipo di edificio",
+      description: "Crea un nuovo tipo di edificio (solo admin, nome univoco)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -139,7 +141,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     requireRole("admin"),
     describeRoute({
-      description: "Update a building type (admin only)",
+      summary: "Aggiorna tipo di edificio",
+      description: "Aggiorna nome o descrizione di un tipo di edificio (solo admin)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -215,7 +218,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     requireRole("admin"),
     describeRoute({
-      description: "Delete a building type (admin only)",
+      summary: "Elimina tipo di edificio",
+      description: "Elimina il tipo se non è in uso da edifici (solo admin)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

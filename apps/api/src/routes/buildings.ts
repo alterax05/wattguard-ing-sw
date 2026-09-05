@@ -50,7 +50,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      description: "Search and list buildings with multiple filters",
+      summary: "Cerca edifici",
+      description: "Cerca edifici con filtri, paginazione e ordinamento",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -181,7 +182,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/",
     describeRoute({
-      description: "Create a new building",
+      summary: "Crea edificio",
+      description: "Crea un nuovo edificio verificando tipo e impianto",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -259,7 +261,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id",
     describeRoute({
-      description: "Get building details",
+      summary: "Leggi edificio",
+      description: "Restituisce il dettaglio con sensori attivi e consumo",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -331,7 +334,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .patch(
     "/:id",
     describeRoute({
-      description: "Update a building",
+      summary: "Aggiorna edificio",
+      description: "Aggiorna i dati e gestisce soglie efficienza/teleriscaldamento",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -462,7 +466,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .delete(
     "/:id",
     describeRoute({
-      description: "Delete a building and all associated sensors and readings",
+      summary: "Elimina edificio",
+      description: "Elimina edificio con sensori, letture e alert associati",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -526,7 +531,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id/readings/latest",
     describeRoute({
-      description: "Get real-time / latest sensor readings snapshot for a building",
+      summary: "Leggi ultime letture",
+      description: "Restituisce l'istantanea realtime delle ultime letture dei sensori",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -613,7 +619,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id/readings",
     describeRoute({
-      description: "Get building historical sensor readings for graphing",
+      summary: "Leggi storico letture",
+      description: "Restituisce lo storico per intervallo di date, per i grafici",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -708,7 +715,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id/efficiency",
     describeRoute({
-      description: "Calculate building thermal efficiency over a time period",
+      summary: "Calcola efficienza",
+      description: "Calcola l'efficienza termica dell'edificio sul periodo richiesto",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
