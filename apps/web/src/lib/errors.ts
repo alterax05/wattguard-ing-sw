@@ -4,7 +4,8 @@ import i18n from "./i18n";
 /**
  * Body returned by API routes on failure, per the shared error contract:
  * a human-readable English `error` fallback plus a machine-readable `code`
- * used for localization.
+ * used for localization. `details` carries interpolation values for
+ * localized messages that contain placeholders (e.g. `{ count }`).
  */
 export interface ApiErrorBody {
   success?: boolean;
@@ -12,6 +13,7 @@ export interface ApiErrorBody {
   message?: string;
   error?: string;
   code?: string;
+  details?: Record<string, string | number>;
 }
 
 const ErrorBodySchema = z.object({
@@ -20,14 +22,15 @@ const ErrorBodySchema = z.object({
   message: z.string().min(1).optional(),
   error: z.string().min(1).optional(),
   code: z.string().min(1).optional(),
+  details: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
 });
 
 /**
  * Extract a localized, user-friendly message from an RPC error body.
  *
- * The API returns `{ success: false, error_code, message }` on failure. When a known machine-readable
+ * The API returns `{ success: false, error_code, message, details? }` on failure. When a known machine-readable
  * `error_code` is present it is mapped to the localized `errors.<error_code>` catalog
- * entry; otherwise the raw `message` string is returned. When neither is
+ * entry, interpolating the optional `details` values; otherwise the raw `message` string is returned. When neither is
  * available (e.g. network errors) the localized `errors.generic` fallback is
  * used. `fallbackKey` may override the generic fallback with another
  * `errors.*` key.
@@ -45,7 +48,7 @@ export function errorMessage(
 
   if (rawCode) {
     const key = `errors.${rawCode}`;
-    const translated = i18n.exists(key) ? i18n.t(key) : null;
+    const translated = i18n.exists(key) ? i18n.t(key, parsed.data.details) : null;
     if (translated) return translated;
   }
   return rawMsg ?? localizedFallback(fallbackKey);

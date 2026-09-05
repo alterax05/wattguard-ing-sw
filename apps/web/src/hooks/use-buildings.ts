@@ -6,12 +6,15 @@ import { usePollingInterval } from "./use-settings";
 // ── Query Keys ──────────────────────────────────────────────────────────────
 
 export const BUILDINGS_QUERY_KEY = ["buildings"] as const;
-export const BUILDING_TYPES_QUERY_KEY = ["building-types"] as const;
+
+// Building-type queries/mutations live in their own deep module; re-exported
+// here so existing `use-buildings` imports keep working.
+export { BUILDING_TYPES_QUERY_KEY, useBuildingTypes } from "./use-building-types";
+export type { BuildingType } from "./use-building-types";
 
 import type {
   BuildingSummary,
   BuildingDetail,
-  BuildingType,
   RealTimeData,
   HistoricalDataPoint,
   EfficiencyMetrics,
@@ -27,7 +30,6 @@ import type {
 export type {
   BuildingSummary,
   BuildingDetail,
-  BuildingType,
   RealTimeData,
   HistoricalDataPoint,
   EfficiencyMetrics,
@@ -70,27 +72,6 @@ export function useBuildings(params?: SearchBuildingsParams) {
       return resData.data;
     },
     staleTime: 2 * 60 * 1000,
-  });
-}
-
-/**
- * Fetch all building types.
- * GET /api/building-types
- */
-export function useBuildingTypes() {
-  return useQuery({
-    queryKey: BUILDING_TYPES_QUERY_KEY,
-    queryFn: async () => {
-      const res = await client.api.v1["building-types"].$get();
-
-      if (!res.ok) {
-        throw new Error(await errorMessageFromResponse(res));
-      }
-
-      const resData = await res.json();
-      return resData.data;
-    },
-    staleTime: 10 * 60 * 1000,
   });
 }
 

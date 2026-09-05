@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useTranslation } from "react-i18next"
-import { useFormContext, type UseFormReturn } from "react-hook-form"
-import { Loader2, Search, MapPin } from "lucide-react"
+import { useFormContext, useWatch, type UseFormReturn } from "react-hook-form"
+import { Loader2, Search, MapPin, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,8 @@ import { TRENTO_CENTER } from "./geocode"
 import { getBuildingStatusLabel } from "@/lib/building-status"
 import type { BuildingFormValues } from "@/hooks/use-building-form"
 import { useBuildingTypes } from "@/hooks/use-buildings"
+import { useAuth } from "@/lib/auth"
+import { AddBuildingTypeDialog } from "@/components/building-types"
 
 // ── Context (state-decouple, lifted state for siblings) ─────────────────────
 
@@ -151,8 +153,10 @@ export function BuildingFormNameField() {
 export function BuildingFormAddressField() {
   const { t } = useTranslation()
   const { isPending, geocoding, handleGeocode } = useBuildingFormContext()
-  const { watch } = useFormContext<BuildingFormValues>()
-  const address = watch("address")
+  // NOTE: useWatch (not watch) — render-time watch() reads are frozen
+  // by React Compiler memoization; useWatch subscribes and stays reactive.
+  const { control } = useFormContext<BuildingFormValues>()
+  const address = useWatch({ control, name: "address" })
   return (
     <FormField
       name="address"
@@ -267,35 +271,65 @@ export function BuildingFormYearField() {
 export function BuildingFormTypeField() {
   const { t } = useTranslation()
   const { isPending } = useBuildingFormContext()
+  const { user } = useAuth()
+  const { setValue } = useFormContext<BuildingFormValues>()
   const { data: buildingTypesData, isLoading: typesLoading } = useBuildingTypes()
+  const [showAddType, setShowAddType] = React.useState(false)
+  const isAdmin = user?.role === "admin"
   return (
-    <FormField<BuildingFormValues>
-      name="buildingType"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{t("buildings.form.type")}</FormLabel>
-          <Select value={field.value} onValueChange={field.onChange} disabled={isPending || typesLoading}>
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={
-                    typesLoading ? t("buildings.form.typesLoading") : t("buildings.form.typePlaceholder")
-                  }
-                />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {buildingTypesData?.map((type) => (
-                <SelectItem key={type._id} value={type._id}>
-                  {type.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <>
+      <FormField<BuildingFormValues>
+        name="buildingType"
+        render={({ field }) => (
+          <FormItem>
+            <div className="flex items-center justify-between gap-2">
+              <FormLabel>{t("buildings.form.type")}</FormLabel>
+              {isAdmin ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => { setShowAddType(true) }}
+                  disabled={isPending}
+                  title={t("buildingTypes.addTypeShort")}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  {t("buildingTypes.add")}
+                </Button>
+              ) : null}
+            </div>
+            <Select value={field.value} onValueChange={field.onChange} disabled={isPending || typesLoading}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      typesLoading ? t("buildings.form.typesLoading") : t("buildings.form.typePlaceholder")
+                    }
+                  />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {buildingTypesData?.map((type) => (
+                  <SelectItem key={type._id} value={type._id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      {showAddType ? (
+        <AddBuildingTypeDialog
+          onClose={() => { setShowAddType(false) }}
+          onCreated={(created) => {
+            setValue("buildingType", created._id, { shouldDirty: true, shouldValidate: true })
+          }}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -303,8 +337,10 @@ export function BuildingFormTypeField() {
 export function BuildingFormStatusField() {
   const { t } = useTranslation()
   const { isPending } = useBuildingFormContext()
-  const { watch } = useFormContext<BuildingFormValues>()
-  const status = watch("status")
+  // NOTE: useWatch (not watch) — render-time watch() reads are frozen
+  // by React Compiler memoization; useWatch subscribes and stays reactive.
+  const { control } = useFormContext<BuildingFormValues>()
+  const status = useWatch({ control, name: "status" })
   return (
     <FormField<BuildingFormValues>
       name="status"

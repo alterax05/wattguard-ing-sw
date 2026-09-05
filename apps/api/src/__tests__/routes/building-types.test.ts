@@ -549,6 +549,7 @@ describe("building-types api", () => {
         return expect.unreachable("Expected response success to be false");
       }
       expect(json.error_code).toBe("building_type_in_use");
+      expect(json.details).toEqual({ count: 1 });
 
       // Verify building type still exists
       const stillExists = await BuildingType.findById(buildingType._id);

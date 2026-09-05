@@ -482,6 +482,39 @@
     "efficiencyThresholdSaved": "Efficiency threshold saved",
     "efficiencyThresholdSaveError": "Error saving the threshold"
   },
+  "buildingTypes": {
+    "manage": "Manage types",
+    "add": "New type",
+    "addTitle": "Add building type",
+    "addDescription": "Create a new building type (admin only). It will be available in the building form.",
+    "editTitle": "Edit building type",
+    "editDescription": "Update the name or description of this building type.",
+    "searchPlaceholder": "Search types by name...",
+    "empty": "No building types found",
+    "emptyDescription": "Create the first building type to classify buildings.",
+    "loading": "Loading building types...",
+    "loadError": "Error loading building types",
+    "create": "Create type",
+    "creating": "Creating...",
+    "saveChanges": "Save changes",
+    "saving": "Saving...",
+    "created": "Building type created successfully",
+    "createError": "Error creating the building type",
+    "updated": "Building type updated successfully",
+    "updateError": "Error updating the building type",
+    "deleted": "Building type deleted successfully",
+    "deleteError": "Error deleting the building type",
+    "deleteTitle": "Delete building type",
+    "deleteConfirmDescription": "Are you sure you want to delete \"{{name}}\"? Types in use by buildings cannot be deleted.",
+    "addTypeShort": "Add new type",
+    "form": {
+      "name": "Name *",
+      "namePlaceholder": "e.g. School",
+      "nameRequired": "Name is required",
+      "description": "Description",
+      "descriptionPlaceholder": "e.g. Public school buildings (optional)"
+    }
+  },
   "sensors": {
     "type": {
       "temperature": "Internal temperature",

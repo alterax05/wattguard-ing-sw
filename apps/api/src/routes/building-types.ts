@@ -278,7 +278,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const buildingsUsingType = await Building.countDocuments({ buildingType: id });
       if (buildingsUsingType > 0) {
         return c.json(
-          apiError("building_type_in_use", `Cannot delete building type: ${buildingsUsingType} building(s) are using it`) satisfies ErrorResponse,
+          apiError(
+            "building_type_in_use",
+            `Cannot delete building type: ${buildingsUsingType} building(s) are using it`,
+            { count: buildingsUsingType }
+          ) satisfies ErrorResponse,
           400
         );
       }

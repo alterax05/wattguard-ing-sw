@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next"
+import { useWatch } from "react-hook-form"
 import {
   Dialog,
   DialogCloseButton,
@@ -23,7 +24,9 @@ export function AddBuildingDialog({ onClose }: AddBuildingDialogProps) {
   const { form } = buildingForm
 
   const isPending = createBuilding.isPending
-  const buildingType = form.watch("buildingType")
+  // NOTE: useWatch (not form.watch) — render-time watch() reads are frozen
+  // by React Compiler memoization; useWatch subscribes and stays reactive.
+  const buildingType = useWatch({ control: form.control, name: "buildingType" })
 
   const onValid = (values: BuildingFormValues) => {
     const { status: _status, ...rest } = toBuildingPayload(values)

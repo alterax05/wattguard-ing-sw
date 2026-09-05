@@ -482,6 +482,39 @@
     "efficiencyThresholdSaved": "Soglia di efficienza salvata",
     "efficiencyThresholdSaveError": "Errore nel salvataggio della soglia"
   },
+  "buildingTypes": {
+    "manage": "Gestisci tipologie",
+    "add": "Nuova tipologia",
+    "addTitle": "Aggiungi tipologia di edificio",
+    "addDescription": "Crea una nuova tipologia di edificio (solo admin). Sarà disponibile nel form edificio.",
+    "editTitle": "Modifica tipologia di edificio",
+    "editDescription": "Aggiorna nome o descrizione di questa tipologia.",
+    "searchPlaceholder": "Cerca tipologie per nome...",
+    "empty": "Nessuna tipologia trovata",
+    "emptyDescription": "Crea la prima tipologia per classificare gli edifici.",
+    "loading": "Caricamento tipologie...",
+    "loadError": "Errore nel caricamento delle tipologie",
+    "create": "Crea tipologia",
+    "creating": "Creazione...",
+    "saveChanges": "Salva modifiche",
+    "saving": "Salvataggio...",
+    "created": "Tipologia creata con successo",
+    "createError": "Errore nella creazione della tipologia",
+    "updated": "Tipologia aggiornata con successo",
+    "updateError": "Errore nell'aggiornamento della tipologia",
+    "deleted": "Tipologia eliminata con successo",
+    "deleteError": "Errore nell'eliminazione della tipologia",
+    "deleteTitle": "Elimina tipologia",
+    "deleteConfirmDescription": "Sei sicuro di voler eliminare \"{{name}}\"? Le tipologie in uso dagli edifici non possono essere eliminate.",
+    "addTypeShort": "Aggiungi nuova tipologia",
+    "form": {
+      "name": "Nome *",
+      "namePlaceholder": "es. Scuola",
+      "nameRequired": "Il nome è obbligatorio",
+      "description": "Descrizione",
+      "descriptionPlaceholder": "es. Edifici scolastici pubblici (opzionale)"
+    }
+  },
   "sensors": {
     "type": {
       "temperature": "Temperatura interna",

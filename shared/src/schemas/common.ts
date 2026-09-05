@@ -8,6 +8,17 @@ import { z } from "zod";
 import { SUPPORTED_LOCALES } from "../i18n";
 
 /**
+ * Interpolation values for the localized `errors.*` message (e.g. `{ count }`
+ * for `building_type_in_use`). Only string/number primitives so they can be
+ * passed straight to i18next.
+ */
+export const ErrorDetailsSchema = z
+  .record(z.string(), z.union([z.string(), z.number()]))
+  .describe("Interpolation values for the localized error message");
+
+export type ErrorDetails = z.infer<typeof ErrorDetailsSchema>;
+
+/**
  * Standard error response schema
  *
  * `code` is a machine-readable `ErrorCode` (see `shared/src/error-codes.ts`)
@@ -18,6 +29,7 @@ export const ErrorSchema = z.object({
   success: z.literal(false).describe("Indicates failure"),
   error_code: z.string().describe("Machine-readable error code"),
   message: z.string().describe("Error message describing what went wrong"),
+  details: ErrorDetailsSchema.optional().describe("Interpolation values for the localized error message"),
 });
 
 export type ErrorResponse = z.infer<typeof ErrorSchema>;

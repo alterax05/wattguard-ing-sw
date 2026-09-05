@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { useWatch } from "react-hook-form"
 import {
   Dialog,
   DialogCloseButton,
@@ -36,7 +37,9 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
 
   const [confirmDecommission, setConfirmDecommission] = useState(false)
   const isPending = updateBuilding.isPending
-  const buildingType = form.watch("buildingType")
+  // NOTE: useWatch (not form.watch) — render-time watch() reads are frozen
+  // by React Compiler memoization; useWatch subscribes and stays reactive.
+  const buildingType = useWatch({ control: form.control, name: "buildingType" })
 
   const performUpdate = (values: BuildingFormValues) => {
     const payload = toBuildingPayload(values)

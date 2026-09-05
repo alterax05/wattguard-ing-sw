@@ -482,6 +482,39 @@
     "efficiencyThresholdSaved": "Effizienzschwelle gespeichert",
     "efficiencyThresholdSaveError": "Fehler beim Speichern der Schwelle"
   },
+  "buildingTypes": {
+    "manage": "Typen verwalten",
+    "add": "Neuer Typ",
+    "addTitle": "Gebäudetyp hinzufügen",
+    "addDescription": "Neuen Gebäudetyp erstellen (nur Admin). Er steht danach im Gebäudeformular zur Verfügung.",
+    "editTitle": "Gebäudetyp bearbeiten",
+    "editDescription": "Name oder Beschreibung dieses Gebäudetyps aktualisieren.",
+    "searchPlaceholder": "Typen nach Name suchen...",
+    "empty": "Keine Gebäudetypen gefunden",
+    "emptyDescription": "Erstellen Sie den ersten Gebäudetyp zur Klassifizierung von Gebäuden.",
+    "loading": "Gebäudetypen werden geladen...",
+    "loadError": "Fehler beim Laden der Gebäudetypen",
+    "create": "Typ erstellen",
+    "creating": "Wird erstellt...",
+    "saveChanges": "Änderungen speichern",
+    "saving": "Wird gespeichert...",
+    "created": "Gebäudetyp erfolgreich erstellt",
+    "createError": "Fehler beim Erstellen des Gebäudetyps",
+    "updated": "Gebäudetyp erfolgreich aktualisiert",
+    "updateError": "Fehler beim Aktualisieren des Gebäudetyps",
+    "deleted": "Gebäudetyp erfolgreich gelöscht",
+    "deleteError": "Fehler beim Löschen des Gebäudetyps",
+    "deleteTitle": "Gebäudetyp löschen",
+    "deleteConfirmDescription": "Möchten Sie „{{name}}“ wirklich löschen? Typen, die von Gebäuden verwendet werden, können nicht gelöscht werden.",
+    "addTypeShort": "Neuen Typ hinzufügen",
+    "form": {
+      "name": "Name *",
+      "namePlaceholder": "z. B. Schule",
+      "nameRequired": "Name ist erforderlich",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "z. B. Öffentliche Schulgebäude (optional)"
+    }
+  },
   "sensors": {
     "type": {
       "temperature": "Innentemperatur",
