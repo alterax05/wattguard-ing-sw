@@ -49,17 +49,17 @@ type ExportFormat = "csv" | "xlsx" | "pdf"
 
 const EXPORT_ACTIONS = {
   csv: {
-    url: "/api/v1/export/consumption",
-    formatParam: undefined,
+    url: "/api/v1/readings",
+    formatParam: "csv",
     filename: (start: string, end: string) => `wattguard-consumption-${start}-${end}.csv`,
   },
   xlsx: {
-    url: "/api/v1/export/report",
+    url: "/api/v1/reports",
     formatParam: "xlsx",
     filename: (start: string, end: string) => `wattguard-report-${start}-${end}.xlsx`,
   },
   pdf: {
-    url: "/api/v1/export/report",
+    url: "/api/v1/reports",
     formatParam: "pdf",
     filename: (start: string, end: string) => `wattguard-report-${start}-${end}.pdf`,
   },
@@ -93,7 +93,7 @@ export function BuildingSearch() {
   const { data: typesData } = useBuildingTypes()
 
   const buildings = useMemo(() => buildingsData?.buildings ?? [], [buildingsData])
-  const buildingTypes = typesData?.buildingTypes ?? []
+  const buildingTypes = typesData ?? []
 
   // Client-side filtering by search query and type
   const filteredBuildings = useMemo(() => {
@@ -104,7 +104,7 @@ export function BuildingSearch() {
       const matchesType =
         typeFilter === "all" ||
         (b.buildingType instanceof Object
-          ? b.buildingType.id === typeFilter
+          ? b.buildingType._id === typeFilter
           : b.buildingType === typeFilter)
       return matchesSearch && matchesType
     })
@@ -125,7 +125,7 @@ export function BuildingSearch() {
     if (selectedIds.length === filteredBuildings.length) {
       setSelectedIds([])
     } else {
-      setSelectedIds(filteredBuildings.slice(0, MAX_COMPARE_BUILDINGS).map((b) => b.id))
+      setSelectedIds(filteredBuildings.slice(0, MAX_COMPARE_BUILDINGS).map((b) => b._id))
     }
   }
 
@@ -166,7 +166,7 @@ export function BuildingSearch() {
   }
 
   const handleBuildingClick = (id: string) => {
-    void navigate(`/dashboard/buildings/${id}`)
+    void navigate(`/buildings/${id}`)
   }
 
   return (
@@ -192,7 +192,7 @@ export function BuildingSearch() {
                 <SelectContent>
                   <SelectItem value="all">{t("buildings.allTypes")}</SelectItem>
                   {buildingTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
+                    <SelectItem key={type._id} value={type._id}>
                       {type.name}
                     </SelectItem>
                   ))}
@@ -246,7 +246,7 @@ export function BuildingSearch() {
                       variant="default"
                       onClick={() => {
                         const ids = selectedIds.join(",")
-                        void navigate(`/dashboard/buildings/compare?ids=${ids}`)
+                        void navigate(`/buildings/compare?ids=${ids}`)
                       }}
                     >
                       <Eye className="mr-2 h-4 w-4" />
@@ -370,18 +370,18 @@ export function BuildingSearch() {
           ) : (
             filteredBuildings.map((building) => (
               <BuildingCard.Root
-                key={building.id}
-                isSelected={selectedIds.includes(building.id)}
-                onClick={() => { handleBuildingClick(building.id) }}
+                key={building._id}
+                isSelected={selectedIds.includes(building._id)}
+                onClick={() => { handleBuildingClick(building._id) }}
               >
                 {isAdmin && (
                   <BuildingCard.Checkbox
-                    checked={selectedIds.includes(building.id)}
+                    checked={selectedIds.includes(building._id)}
                     disabled={
-                      !selectedIds.includes(building.id) &&
+                      !selectedIds.includes(building._id) &&
                       selectedIds.length >= MAX_COMPARE_BUILDINGS
                     }
-                    onCheckedChange={() => { toggleSelect(building.id) }}
+                    onCheckedChange={() => { toggleSelect(building._id) }}
                   />
                 )}
                 <BuildingCard.Body building={building} />

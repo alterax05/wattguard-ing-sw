@@ -28,7 +28,7 @@ const lastReadingSchema = new Schema(
 
 const sensorSchema = new Schema(
   {
-    buildingId: {
+    building: {
       type: Schema.Types.ObjectId,
       ref: Building,
       required: true,
@@ -92,10 +92,15 @@ const sensorSchema = new Schema(
   },
   {
     timestamps: true,
+    toObject: {
+      virtuals: true,
+      flattenObjectIds: true
+    },
   },
 );
 
-sensorSchema.index({ buildingId: 1, sensorType: 1 });
+sensorSchema.index({ building: 1, sensorType: 1 });
+
 
 sensorSchema.methods.isActive = function (this: HydratedDocument<SensorDocument>): boolean {
   if (!this.lastReading?.timestamp) return false;
@@ -122,13 +127,17 @@ export type SensorStatus = SensorDocument["status"];
 
 export type SensorType = SensorDocument["sensorType"];
 
+interface ISensorMethods {
+  isActive(): boolean;
+  updateStatus(newStatus?: SensorStatus): Promise<void>
+}
+
+export type HydratedSensor = HydratedDocument<SensorDocument, ISensorMethods>;
+
 type SensorModel = mongoose.Model<
   SensorDocument,
   object,
-  {
-    isActive(): boolean;
-    updateStatus(newStatus?: SensorStatus): Promise<void>;
-  },
+  ISensorMethods,
   object
 >;
 

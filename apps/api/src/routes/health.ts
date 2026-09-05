@@ -24,7 +24,7 @@ const app = new Hono().get(
       },
     },
   }),
-  (c) => c.json({ status: "ok" } satisfies HealthResponse),
+  (c) => c.json({ success: true as const, data: { status: "ok" } } satisfies HealthResponse),
 );
 
 export default app;

@@ -15,23 +15,41 @@ import { SUPPORTED_LOCALES } from "../i18n";
  * fallback string.
  */
 export const ErrorSchema = z.object({
-  error: z.string().describe("Error message describing what went wrong"),
-  code: z.string().optional().describe("Machine-readable error code"),
+  success: z.literal(false).describe("Indicates failure"),
+  error_code: z.string().describe("Machine-readable error code"),
+  message: z.string().describe("Error message describing what went wrong"),
 });
 
+export type ErrorResponse = z.infer<typeof ErrorSchema>;
+
+export const SuccessEnvelopeSchema = <T extends z.ZodType>(dataSchema: T) =>
+  z.object({
+    success: z.literal(true),
+    data: dataSchema,
+  });
+
+export type SuccessEnvelope<T> = {
+  success: true;
+  data: T;
+};
+
 export const HealthResponseSchema = z.object({
-  status: z.string(),
+  success: z.literal(true),
+  data: z.object({
+    status: z.string(),
+  }),
 });
 
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
-export type ErrorResponse = z.infer<typeof ErrorSchema>;
 
 /**
  * Standard success response schema
  */
 export const SuccessSchema = z.object({
   success: z.literal(true),
-  message: z.string().optional().describe("Optional success message"),
+  data: z.object({
+    message: z.string().optional().describe("Optional success message"),
+  }),
 });
 
 export type SuccessResponse = z.infer<typeof SuccessSchema>;
@@ -41,7 +59,10 @@ export type SuccessResponse = z.infer<typeof SuccessSchema>;
  */
 export const DeleteResponseSchema = z.object({
   success: z.literal(true),
-  message: z.string().describe("Confirmation message"),
+  data: z.object({
+    id: z.string().optional().describe("Deleted resource identifier"),
+    message: z.string().optional().describe("Confirmation message"),
+  }),
 });
 
 export type DeleteResponse = z.infer<typeof DeleteResponseSchema>;
@@ -87,6 +108,15 @@ export const ObjectIdSchema = z
   .describe("MongoDB ObjectId");
 
 /**
+ * ISO 8601 DateTime schema
+ * Accepts ISO string or JavaScript Date instance, serializing to ISO 8601 string.
+ */
+export const IsoDateTimeSchema = z.union([
+  z.iso.datetime().describe("ISO 8601 timestamp string"),
+  z.date().transform((d) => d.toISOString()),
+]);
+
+/**
  * Path parameter schema for a resource identified by an ObjectId
  */
 export const ObjectIdParamSchema = z.object({
@@ -97,14 +127,14 @@ export const ObjectIdParamSchema = z.object({
  * User response schema
  */
 export const UserSchema = z.object({
-  id: ObjectIdSchema.describe("Unique user identifier"),
+  _id: ObjectIdSchema.describe("Unique user identifier"),
   email: z.email().describe("User email address"),
-  name: z.string().optional().describe("User display name"),
+  name: z.string().nullish().transform((v) => v ?? undefined).optional().describe("User display name"),
   role: UserRoleSchema,
   isDisabled: z.boolean().optional().describe("Whether the user account is disabled"),
-  language: LocaleSchema.optional().describe("Preferred UI locale used for emails"),
-  lastLoginAt: z.iso.datetime().optional().describe("Timestamp of last login"),
-  createdAt: z.iso.datetime().optional().describe("Account creation timestamp"),
+  language: LocaleSchema.nullish().transform((v) => v ?? undefined).optional().describe("Preferred UI locale used for emails"),
+  lastLoginAt: IsoDateTimeSchema.nullish().transform((v) => v ?? undefined).optional().describe("Timestamp of last login"),
+  createdAt: IsoDateTimeSchema.optional().describe("Account creation timestamp"),
 });
 
 export type User = z.infer<typeof UserSchema>;
@@ -112,13 +142,12 @@ export type User = z.infer<typeof UserSchema>;
 /**
  * Public user projection (no audit/timestamps) — used in auth responses
  */
-export const PublicUserSchema = UserSchema.pick({
-  id: true,
-  email: true,
-  name: true,
-  role: true,
-  language: true,
+export const PublicUserSchema = UserSchema.omit({
+  isDisabled: true,
+  lastLoginAt: true,
+  createdAt: true
 });
+
 
 export type PublicUser = z.infer<typeof PublicUserSchema>;
 

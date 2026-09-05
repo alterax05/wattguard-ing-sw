@@ -1,19 +1,15 @@
-import { z } from "zod";
-import { Types, type ClientSession } from "mongoose";
+import { Types, type ClientSession, type QueryFilter } from "mongoose";
 import type { TFunction } from "i18next";
 import {
   THRESHOLD_ALERT_TYPE,
   EFFICIENCY_ALERT_TYPE,
   AlertSchema,
-  type AlertType,
+  type Alert as AlertDTO,
+  type AlertStatus,
+  type ErrorCode,
   type LocaleCode,
 } from "@wattguard/shared";
-import {
-  Alert,
-  type AlertDocument,
-  type AlertThresholdType,
-  type AlertSeverity,
-} from "../models/Alert";
+import { Alert, type AlertDocument, type HydratedAlert } from "../models/Alert";
 import { getTranslator } from "./i18n";
 import { computeDeviationSeverity } from "./alert-severity";
 
@@ -21,142 +17,98 @@ export { THRESHOLD_ALERT_TYPE, EFFICIENCY_ALERT_TYPE };
 export { computeDeviationSeverity } from "./alert-severity";
 
 export const SYSTEM_RESOLVER = "system";
-const LEGACY_SYSTEM_RESOLVER = "Sistema";
 
-export type AlertErrorCode =
-  | "invalid_alert_id"
-  | "alert_not_found"
-  | "alert_not_active"
-  | "alert_already_resolved"
-  | "internal_server_error";
+export type AlertErrorCode = ErrorCode;
 
 export type AlertResult<T> =
   | ({ ok: true } & T)
-  | { ok: false; code: AlertErrorCode };
+  | { ok: false; code: ErrorCode };
 
-export type AlertDTO = z.infer<typeof AlertSchema>;
+export type RaiseThresholdInput = Pick<
+  AlertDocument,
+  "sensorId" | "buildingId" | "buildingName" | "unit" | "thresholdType"
+> &
+  Partial<Pick<AlertDocument, "sensorType" | "location" | "limit" | "severity">> & {
+    value: number;
+    session?: ClientSession;
+  };
 
-export type AlertDTOInput = AlertDocument & {
-  _id: Types.ObjectId;
-  createdAt?: Date;
-  updatedAt?: Date;
-};
-
-export type RaiseThresholdInput = {
-  sensorId: Types.ObjectId;
-  buildingId: Types.ObjectId;
-  buildingName: string;
-  sensorType?: string;
-  location?: string;
-  value: number;
-  unit: string;
-  thresholdType: AlertThresholdType;
-  limit: number | null;
-  severity?: AlertSeverity;
-  session: ClientSession;
-};
-
-export async function raiseThreshold(
-  input: RaiseThresholdInput,
-): Promise<AlertResult<{ created: boolean }>> {
-  try {
-    // accepted dedupe race
-    const existing = await Alert.findOne({
-      sensorId: input.sensorId,
-      type: THRESHOLD_ALERT_TYPE,
-      status: "active",
-    }).session(input.session);
-
-    if (existing) return { ok: true, created: false };
-
-    await Alert.create(
-      [
-        {
-          buildingId: input.buildingId,
-          buildingName: input.buildingName,
-          sensorId: input.sensorId,
-          type: THRESHOLD_ALERT_TYPE,
-          thresholdType: input.thresholdType,
-          severity: input.severity ?? computeDeviationSeverity(input.value, input.limit),
-          sensorType: input.sensorType,
-          location: input.location,
-          value: input.value,
-          unit: input.unit,
-          limit: input.limit ?? null,
-          status: "active",
-        },
-      ],
-      { session: input.session },
-    );
-
-    return { ok: true, created: true };
-  } catch (error) {
-    console.error("Error raising threshold alert:", error);
-    return { ok: false, code: "internal_server_error" };
-  }
-}
-
-export type RaiseEfficiencyInput = {
-  buildingId: Types.ObjectId;
-  buildingName: string;
+export type RaiseEfficiencyInput = Pick<AlertDocument, "buildingId" | "buildingName"> & {
   cop: number;
   minCop: number;
 };
 
-export async function raiseEfficiency(
-  input: RaiseEfficiencyInput,
+async function raiseAlert(
+  data: Partial<AlertDocument> &
+    Pick<AlertDocument, "buildingId" | "buildingName" | "type"> & { value: number },
+  session?: ClientSession,
 ): Promise<AlertResult<{ created: boolean }>> {
   try {
-    // accepted dedupe race
-    const existing = await Alert.findOne({
-      buildingId: input.buildingId,
-      type: EFFICIENCY_ALERT_TYPE,
-      status: "active",
-    });
+    const dedupeFilter: QueryFilter<AlertDocument> = data.sensorId
+      ? { sensorId: data.sensorId, type: data.type, status: "active" }
+      : { buildingId: data.buildingId, type: data.type, status: "active" };
 
-    if (existing) return { ok: true, created: false };
+    const query = Alert.findOne(dedupeFilter);
+    if (session) query.session(session);
+    if (await query) return { ok: true, created: false };
 
-    await Alert.create({
-      buildingId: input.buildingId,
-      buildingName: input.buildingName,
-      type: EFFICIENCY_ALERT_TYPE,
-      thresholdType: "min",
-      severity: computeDeviationSeverity(input.cop, input.minCop),
-      value: Number(input.cop.toFixed(2)),
-      unit: "COP",
-      limit: input.minCop,
-      location: input.buildingName,
-      status: "active",
-    });
+    const limit = data.limit ?? null;
+    const severity = data.severity ?? computeDeviationSeverity(data.value, limit);
+    await Alert.create(
+      [{ ...data, limit, severity, status: "active" }],
+      session ? { session } : undefined,
+    );
 
     return { ok: true, created: true };
   } catch (error) {
-    console.error("Error raising efficiency alert:", error);
+    console.error("Error raising alert:", error);
     return { ok: false, code: "internal_server_error" };
   }
 }
 
-export type AlertActionInput = {
+export function raiseThreshold({ session, ...data }: RaiseThresholdInput) {
+  return raiseAlert({ ...data, type: THRESHOLD_ALERT_TYPE }, session);
+}
+
+export function raiseEfficiency({ buildingId, buildingName, cop, minCop }: RaiseEfficiencyInput) {
+  return raiseAlert({
+    buildingId,
+    buildingName,
+    type: EFFICIENCY_ALERT_TYPE,
+    thresholdType: "min",
+    value: Number(cop.toFixed(2)),
+    unit: "COP",
+    limit: minCop,
+    location: buildingName,
+  });
+}
+
+export interface AlertActionInput {
   id: string;
   actor: string;
   now?: Date;
-};
+}
 
-export async function acknowledge(
-  input: AlertActionInput,
-): Promise<AlertResult<{ alert: AlertDocument }>> {
-  if (!Types.ObjectId.isValid(input.id)) {
+async function updateAlertStatus(
+  { id, actor, now = new Date() }: AlertActionInput,
+  fromStatuses: AlertStatus[],
+  toStatus: "acknowledged" | "resolved",
+  invalidStatusErrorCode: ErrorCode,
+): Promise<AlertResult<{ alert: HydratedAlert }>> {
+  if (!Types.ObjectId.isValid(id)) {
     return { ok: false, code: "invalid_alert_id" };
   }
 
   try {
+    const isAck = toStatus === "acknowledged";
     const updated = await Alert.findOneAndUpdate(
-      { _id: new Types.ObjectId(input.id), status: "active" },
+      { _id: new Types.ObjectId(id), status: { $in: fromStatuses } },
       {
         $set: {
-          status: "acknowledged",
-          acknowledgedBy: input.actor,
-          acknowledgedAt: input.now ?? new Date(),
+          status: toStatus,
+          ...(isAck
+            ? { acknowledgedBy: actor, acknowledgedAt: now }
+            : { resolvedBy: actor, resolvedAt: now }),
         },
       },
       { returnDocument: "after" },
@@ -164,67 +116,46 @@ export async function acknowledge(
 
     if (updated) return { ok: true, alert: updated };
 
-    const existing = await Alert.findById(input.id);
+    const existing = await Alert.findById(id);
     if (!existing) return { ok: false, code: "alert_not_found" };
-    return { ok: false, code: "alert_not_active" };
+    return { ok: false, code: invalidStatusErrorCode };
   } catch (error) {
-    console.error("Error acknowledging alert:", error);
+    console.error(`Error updating alert status to ${toStatus}:`, error);
     return { ok: false, code: "internal_server_error" };
   }
 }
 
-export async function resolveManually(
-  input: AlertActionInput,
-): Promise<AlertResult<{ alert: AlertDocument }>> {
-  if (!Types.ObjectId.isValid(input.id)) {
-    return { ok: false, code: "invalid_alert_id" };
-  }
-
-  try {
-    const updated = await Alert.findOneAndUpdate(
-      { _id: new Types.ObjectId(input.id), status: { $in: ["active", "acknowledged"] } },
-      {
-        $set: {
-          status: "resolved",
-          resolvedBy: input.actor,
-          resolvedAt: input.now ?? new Date(),
-        },
-      },
-      { returnDocument: "after" },
-    );
-
-    if (updated) return { ok: true, alert: updated };
-
-    const existing = await Alert.findById(input.id);
-    if (!existing) return { ok: false, code: "alert_not_found" };
-    return { ok: false, code: "alert_already_resolved" };
-  } catch (error) {
-    console.error("Error resolving alert:", error);
-    return { ok: false, code: "internal_server_error" };
-  }
+export function acknowledge(input: AlertActionInput) {
+  return updateAlertStatus(input, ["active"], "acknowledged", "alert_not_active");
 }
 
-export type ResolveEfficiencyForBuildingInput = {
+export function resolveManually(input: AlertActionInput) {
+  return updateAlertStatus(input, ["active", "acknowledged"], "resolved", "alert_already_resolved");
+}
+
+export interface ResolveEfficiencyForBuildingInput {
   buildingId: Types.ObjectId;
   actor: string;
   now?: Date;
-};
+}
 
-export async function resolveEfficiencyForBuilding(
-  input: ResolveEfficiencyForBuildingInput,
-): Promise<AlertResult<{ resolved: number }>> {
+export async function resolveEfficiencyForBuilding({
+  buildingId,
+  actor,
+  now = new Date(),
+}: ResolveEfficiencyForBuildingInput): Promise<AlertResult<{ resolved: number }>> {
   try {
     const result = await Alert.updateMany(
       {
-        buildingId: input.buildingId,
+        buildingId,
         type: EFFICIENCY_ALERT_TYPE,
         status: { $in: ["active", "acknowledged"] },
       },
       {
         $set: {
           status: "resolved",
-          resolvedBy: input.actor,
-          resolvedAt: input.now ?? new Date(),
+          resolvedBy: actor,
+          resolvedAt: now,
         },
       },
     );
@@ -236,25 +167,26 @@ export async function resolveEfficiencyForBuilding(
   }
 }
 
-export type PruneForRemovedThresholdsInput = {
+export interface PruneForRemovedThresholdsInput {
   sensorId: Types.ObjectId;
   removedThresholdTypes: readonly ("min" | "max")[];
-};
+}
 
-export async function pruneForRemovedThresholds(
-  input: PruneForRemovedThresholdsInput,
-): Promise<AlertResult<{ deleted: number }>> {
-  if (input.removedThresholdTypes.length === 0) {
+export async function pruneForRemovedThresholds({
+  sensorId,
+  removedThresholdTypes,
+}: PruneForRemovedThresholdsInput): Promise<AlertResult<{ deleted: number }>> {
+  if (removedThresholdTypes.length === 0) {
     return { ok: true, deleted: 0 };
   }
 
   try {
     const result = await Alert.deleteMany({
-      sensorId: input.sensorId,
+      sensorId,
       type: THRESHOLD_ALERT_TYPE,
       $or: [
-        { thresholdType: { $in: input.removedThresholdTypes } },
-        { thresholdType: { $exists: false } }, // legacy prune arm
+        { thresholdType: { $in: removedThresholdTypes } },
+        { thresholdType: { $exists: false } },
       ],
     });
 
@@ -289,45 +221,19 @@ export async function deleteForSensor(
   }
 }
 
-function resolveActor(
-  value: string | null | undefined,
-  opts?: { locale?: LocaleCode; t?: TFunction },
-): string | undefined {
-  if (value == null) return undefined;
-  if (value === SYSTEM_RESOLVER || value === LEGACY_SYSTEM_RESOLVER) {
-    // legacy sentinel recognition
-    if (opts?.t) return opts.t("alerts.systemResolver");
-    if (opts?.locale) return getTranslator(opts.locale)("alerts.systemResolver");
-    return value;
-  }
-  return value;
+export interface AlertSerializerOptions {
+  locale?: LocaleCode;
+  t?: TFunction;
 }
 
 export function toAlertDTO(
-  alert: AlertDTOInput,
-  opts?: { locale?: LocaleCode; t?: TFunction },
+  alert: HydratedAlert,
+  options?: AlertSerializerOptions,
 ): AlertDTO {
-  return {
-    id: alert._id.toString(),
-    buildingId: alert.buildingId.toString(),
-    buildingName: alert.buildingName,
-    sensorId: alert.sensorId?.toString(),
-    // SAFETY: alerts are only created through raiseThreshold/raiseEfficiency,
-    // so the stored type string is always one of the two AlertType values.
-    type: alert.type as AlertType,
-    thresholdType: alert.thresholdType ?? undefined,
-    severity: alert.severity,
-    sensorType: alert.sensorType ?? undefined,
-    location: alert.location ?? undefined,
-    value: alert.value ?? undefined,
-    unit: alert.unit ?? undefined,
-    limit: alert.limit ?? undefined,
-    status: alert.status,
-    acknowledgedBy: resolveActor(alert.acknowledgedBy, opts),
-    acknowledgedAt: alert.acknowledgedAt?.toISOString() ?? undefined,
-    resolvedBy: resolveActor(alert.resolvedBy, opts),
-    resolvedAt: alert.resolvedAt?.toISOString() ?? undefined,
-    createdAt: alert.createdAt.toISOString(),
-    updatedAt: alert.updatedAt.toISOString(),
-  };
+  const obj = alert.toObject();
+  if ((options?.locale || options?.t) && obj.resolvedBy === SYSTEM_RESOLVER) {
+    const translate = options.t ?? getTranslator(options.locale!);
+    obj.resolvedBy = translate("alerts.systemResolver");
+  }
+  return AlertSchema.parse(obj);
 }

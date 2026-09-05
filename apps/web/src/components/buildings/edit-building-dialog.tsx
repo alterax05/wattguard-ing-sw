@@ -42,7 +42,7 @@ export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProp
     const payload = toBuildingPayload(values)
     updateBuilding.mutate(
       {
-        id: building.id,
+        id: building._id,
         name: payload.name,
         address: payload.address,
         surface: payload.surface,

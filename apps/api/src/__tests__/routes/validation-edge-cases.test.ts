@@ -133,11 +133,11 @@ describe("email validation", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
-    if (!("success" in data)) {
-      throw new Error("Expected response to contain 'success'");
-    }
     expect(data.success).toBe(true);
-    expect(data.user.email).toBe("user@test.com");
+    if (!data.success) {
+      throw new Error("Expected response success to be true");
+    }
+    expect(data.data.email).toBe("user@test.com");
   });
 });
 
@@ -385,35 +385,18 @@ describe("query parameter validation", () => {
       createdBy: admin._id,
     });
 
-    const res = await client.api.v1.invites.validate.$get({
-      query: { token },
+    const res = await client.api.v1.invites[":token"].$get({
+      param: { token },
     });
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
   });
 
-  test("rejects missing token query parameter", async () => {
-    const res = await client.api.v1.invites.validate.$get({
-      // @ts-expect-error intentionally missing required token query
-      query: {},
+  test("rejects invalid invite token with 404 or 400", async () => {
+    const res = await client.api.v1.invites[":token"].$get({
+      param: { token: "nonexistent-token" },
     });
-    expect(res.status).toBe(400);
-  });
-
-  test("rejects empty token query parameter", async () => {
-    const res = await client.api.v1.invites.validate.$get({
-      query: { token: "" },
-    });
-    expect(res.status).toBe(400);
-  });
-
-  test("rejects whitespace-only token query parameter", async () => {
-    // Whitespace-only token is invalid, but URL encoding may affect behavior
-    const res = await client.api.v1.invites.validate.$get({
-      query: { token: "   " },
-    });
-    // May return 400 (validation error) or 404 (not found)
     expect([400, 404]).toContain(res.status);
   });
 
@@ -441,17 +424,18 @@ describe("query parameter validation", () => {
     });
 
     // Validate invite
-    const res = await client.api.v1.invites.validate.$get({
-      query: { token },
+    const res = await client.api.v1.invites[":token"].$get({
+      param: { token },
     });
     expect(res.status).toBe(200);
     const data = await res.json();
     expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
-    if (!("valid" in data)) {
-      throw new Error("Expected response to contain 'valid'");
+    expect(data.success).toBe(true);
+    if (!data.success) {
+      throw new Error("Expected response success to be true");
     }
-    expect(data.valid).toBe(true);
-    expect(data.email).toBe("user@test.com");
+    expect(data.data.valid).toBe(true);
+    expect(data.data.email).toBe("user@test.com");
   });
 });
 
@@ -461,7 +445,7 @@ describe("role validation", () => {
     const validRoles = ["admin", "operator"] as const;
 
     for (const role of validRoles) {
-      const res = await client.api.v1.admin.invites.$post(
+      const res = await client.api.v1.invites.$post(
         {
           json: {
             email: `${role}${Math.random()}@test.com`,
@@ -487,7 +471,7 @@ describe("role validation", () => {
 
     for (const role of invalidRoles) {
       // SAFETY: the role value deliberately violates the invite-role enum so the server must reject it; `never` bypasses the client's payload type.
-      const res = await client.api.v1.admin.invites.$post(
+      const res = await client.api.v1.invites.$post(
         {
           json: {
             email: "test@test.com",
@@ -506,7 +490,7 @@ describe("role validation", () => {
   test("rejects missing role field", async () => {
     const token = await getAdminToken();
 
-    const res = await client.api.v1.admin.invites.$post(
+    const res = await client.api.v1.invites.$post(
       {
         // @ts-expect-error intentionally missing required role
         json: {

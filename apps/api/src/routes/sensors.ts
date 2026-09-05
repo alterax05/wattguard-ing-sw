@@ -2,11 +2,16 @@ import { Hono } from "hono";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
-import { Sensor, type SensorDocument, type SensorType } from "../models/Sensor";
-import { Building, type BuildingDocument } from "../models/Building";
+import { Sensor, type SensorDocument } from "../models/Sensor";
+import { Building } from "../models/Building";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
 import { deleteForSensor, pruneForRemovedThresholds } from "../lib/alerts";
+import {
+  toSensorDTO,
+  toSensorReadingDTO,
+} from "../lib/sensors";
 
+import { apiError, apiSuccess } from "../lib/api-response";
 import {
   ListSensorsQuerySchema,
   ListSensorsResponseSchema,
@@ -26,6 +31,7 @@ import {
 import type {
   CreateSensorResponse,
   DeleteSensorResponse,
+  ErrorResponse,
   GetSensorReadingsResponse,
   GetSensorResponse,
   ListSensorsResponse,
@@ -33,9 +39,6 @@ import type {
 } from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
-  /**
-   * GET /api/sensors - List all sensors with filters
-   */
   .get(
     "/",
     describeRoute({
@@ -59,7 +62,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Build filter
       const filter: QueryFilter<SensorDocument> = {};
-      if (query.buildingId) filter.buildingId = query.buildingId;
+      if (query.building) filter.building = query.building;
       if (query.sensorType) filter.sensorType = query.sensorType;
       if (query.status) filter.status = query.status;
 
@@ -72,65 +75,22 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Get sensors with building populated
       const sensors = await Sensor.find(filter)
-        .populate<{ buildingId: Types.ObjectId | BuildingDocument }>("buildingId", "name address")
+        .populate("building", "name address")
         .sort({ [sortField]: sortOrder })
         .limit(query.limit)
         .skip(query.offset);
 
-      return c.json({
-        sensors: sensors.map((sensor) => {
-          const buildingRef = sensor.buildingId;
-          const building =
-            buildingRef instanceof Types.ObjectId ? undefined : buildingRef;
-          const isOverdue = sensor.status === "active" && !sensor.isActive();
-          const effectiveStatus = isOverdue ? "inactive" : sensor.status;
-          return {
-            id: sensor._id.toString(),
-            buildingId:
-              buildingRef instanceof Types.ObjectId
-                ? buildingRef.toString()
-                : buildingRef._id.toString(),
-            sensorType: sensor.sensorType,
-            location: sensor.location,
-            serialNumber: sensor.serialNumber ?? undefined,
-            installationDate: sensor.installationDate.toISOString(),
-            status: effectiveStatus,
-            isOffline: effectiveStatus === "inactive",
-
-            lastReading: sensor.lastReading
-              ? {
-                  value: sensor.lastReading.value,
-                  timestamp: sensor.lastReading.timestamp.toISOString(),
-                  unit: sensor.lastReading.unit,
-                }
-              : undefined,
-            transmissionInterval: sensor.transmissionInterval,
-            minThreshold: sensor.minThreshold ?? undefined,
-            maxThreshold: sensor.maxThreshold ?? undefined,
-            building: building?.name
-              ? {
-                  id: building._id.toString(),
-                  name: building.name,
-                  address: building.address,
-                }
-              : undefined,
-            createdBy: sensor.createdBy?.toString(),
-            updatedBy: sensor.updatedBy?.toString(),
-            createdAt: sensor.createdAt?.toISOString(),
-            updatedAt: sensor.updatedAt?.toISOString(),
-          };
-        }),
+      c.header("X-Total-Count", total.toString());
+      return c.json(apiSuccess({
+        sensors: sensors.map((s) => toSensorDTO(s, { checkInactivity: true })),
         pagination: {
           limit: query.limit,
           offset: query.offset,
           total,
         },
-      } satisfies ListSensorsResponse);
+      }) satisfies ListSensorsResponse);
     }
   )
-  /**
-   * POST /api/sensors - Create a new sensor
-   */
   .post(
     "/",
     describeRoute({
@@ -168,18 +128,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const userDoc = c.get("userDoc");
       const data = c.req.valid("json");
+      const buildingId = data.building;
 
       // Verify building exists
-      const building = await Building.findById(data.buildingId);
+      const building = await Building.findById(buildingId);
       if (!building) {
-        return c.json({ error: "Building not found", code: "building_not_found" }, 404);
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
       }
 
       // Check for duplicate serial number if provided
       if (data.serialNumber) {
         const existing = await Sensor.findOne({ serialNumber: data.serialNumber });
         if (existing) {
-          return c.json({ error: "Sensor with this serial number already exists", code: "sensor_serial_exists" }, 400);
+          return c.json(apiError("sensor_serial_exists", "Sensor with this serial number already exists") satisfies ErrorResponse, 400);
         }
       }
 
@@ -193,34 +154,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
         updatedBy: userDoc._id,
       });
 
-      c.header("Location", `/api/v1/sensors/${sensor._id.toString()}`);
+      c.header("Location", `${c.req.path.replace(/\/+$/, "")}/${sensor._id.toString()}`);
       return c.json(
-        {
-          success: true,
-
-          sensor: {
-            id: sensor._id.toString(),
-            buildingId: building?._id?.toString() ?? sensor.buildingId.toString(),
-            sensorType: sensor.sensorType,
-            location: sensor.location,
-            serialNumber: sensor.serialNumber ?? undefined,
-            installationDate: sensor.installationDate.toISOString(),
-            status: sensor.status,
-            transmissionInterval: sensor.transmissionInterval,
-            createdBy: sensor.createdBy.toString(),
-            updatedBy: sensor.updatedBy.toString(),
-            createdAt: sensor.createdAt?.toISOString(),
-            updatedAt: sensor.updatedAt?.toISOString(),
-          },
-        } satisfies CreateSensorResponse,
+        apiSuccess(toSensorDTO(sensor)) satisfies CreateSensorResponse,
         201
       );
     }
   )
-
-  /**
-   * GET /api/sensors/:id - Get sensor details
-   */
   .get(
     "/:id",
     describeRoute({
@@ -250,63 +190,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
     async (c) => {
       const { id } = c.req.valid("param");
 
-      const sensor = await Sensor.findById(id).populate<{ buildingId: Types.ObjectId | BuildingDocument }>("buildingId", "name address");
+      const sensor = await Sensor.findById(id).populate("building", "name address");
 
       if (!sensor) {
-        return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
+        return c.json(apiError("sensor_not_found", "Sensor not found") satisfies ErrorResponse, 404);
       }
 
-      const buildingRef = sensor.buildingId;
-      const building =
-        buildingRef instanceof Types.ObjectId ? undefined : buildingRef;
-      const buildingId =
-        buildingRef instanceof Types.ObjectId
-          ? buildingRef.toString()
-          : buildingRef._id.toString();
-
-      const isOverdue = sensor.status === "active" && !sensor.isActive();
-      const effectiveStatus = isOverdue ? "inactive" : sensor.status;
-
-      return c.json({
-        sensor: {
-          id: sensor._id.toString(),
-          buildingId,
-          sensorType: sensor.sensorType,
-          location: sensor.location,
-          serialNumber: sensor.serialNumber ?? undefined,
-          installationDate: sensor.installationDate.toISOString(),
-          status: effectiveStatus,
-          isOffline: effectiveStatus === "inactive",
-          lastReading: sensor.lastReading
-
-            ? {
-                value: sensor.lastReading.value,
-                timestamp: sensor.lastReading.timestamp.toISOString(),
-                unit: sensor.lastReading.unit,
-              }
-            : undefined,
-          transmissionInterval: sensor.transmissionInterval,
-          minThreshold: sensor.minThreshold ?? undefined,
-          maxThreshold: sensor.maxThreshold ?? undefined,
-          building: building
-            ? {
-                id: building._id.toString(),
-                name: building.name,
-                address: building.address,
-              }
-            : undefined,
-          createdBy: sensor.createdBy?.toString(),
-          updatedBy: sensor.updatedBy?.toString(),
-          createdAt: sensor.createdAt?.toISOString(),
-          updatedAt: sensor.updatedAt?.toISOString(),
-        },
-      } satisfies GetSensorResponse);
+      return c.json(apiSuccess(toSensorDTO(sensor, { checkInactivity: true })) satisfies GetSensorResponse);
     }
   )
-
-  /**
-   * PATCH /api/sensors/:id - Update a sensor
-   */
   .patch(
     "/:id",
     describeRoute({
@@ -349,7 +241,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const sensor = await Sensor.findById(id).lean();
       if (!sensor) {
-        return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
+        return c.json(apiError("sensor_not_found", "Sensor not found") satisfies ErrorResponse, 404);
       }
 
       const removedThresholdTypes: ("min" | "max")[] = [];
@@ -360,7 +252,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.serialNumber && updates.serialNumber !== sensor.serialNumber) {
         const existing = await Sensor.findOne({ serialNumber: updates.serialNumber });
         if (existing) {
-          return c.json({ error: "Sensor with this serial number already exists", code: "sensor_serial_exists" }, 400);
+          return c.json(apiError("sensor_serial_exists", "Sensor with this serial number already exists") satisfies ErrorResponse, 400);
         }
       }
 
@@ -383,42 +275,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       await pruneForRemovedThresholds({ sensorId: sensor._id, removedThresholdTypes });
 
-      return c.json({
-        success: true,
-        sensor: {
-          id: updatedSensor!._id.toString(),
-          buildingId: updatedSensor!.buildingId.toString(),
-          sensorType: updatedSensor!.sensorType,
-          location: updatedSensor!.location,
-          serialNumber: updatedSensor!.serialNumber ?? undefined,
-          installationDate: updatedSensor!.installationDate.toISOString(),
-          status: updatedSensor!.status,
-          lastReading: updatedSensor!.lastReading
-            ? {
-                value: updatedSensor!.lastReading.value,
-                timestamp: updatedSensor!.lastReading.timestamp.toISOString(),
-                unit: updatedSensor!.lastReading.unit,
-              }
-            : undefined,
-          transmissionInterval: updatedSensor!.transmissionInterval,
-          minThreshold: updatedSensor!.minThreshold ?? undefined,
-          maxThreshold: updatedSensor!.maxThreshold ?? undefined,
-          createdBy: updatedSensor!.createdBy?.toString(),
-          updatedBy: updatedSensor!.updatedBy?.toString(),
-          createdAt: updatedSensor!.createdAt?.toISOString(),
-          updatedAt: updatedSensor!.updatedAt?.toISOString(),
-        },
-      } satisfies UpdateSensorResponse);
+      return c.json(apiSuccess(toSensorDTO(updatedSensor!)) satisfies UpdateSensorResponse);
     }
   )
-
-  /**
-   * DELETE /api/sensors/:id - Delete a sensor
-   */
   .delete(
     "/:id",
     describeRoute({
-      description: "Delete a sensor and its readings (Gestione sensori)",
+      description: "Delete a sensor and its reading",
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -446,11 +309,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const sensor = await Sensor.findById(id);
       if (!sensor) {
-        return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
+        return c.json(apiError("sensor_not_found", "Sensor not found") satisfies ErrorResponse, 404);
       }
 
       // Delete associated readings
-      await SensorReading.deleteMany({ "metadata.sensorId": id });
+      await SensorReading.deleteMany({ "metadata.sensor": id });
 
       // Delete alerts associated with the sensor
       await deleteForSensor(new Types.ObjectId(id));
@@ -458,15 +321,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Delete sensor
       await Sensor.findByIdAndDelete(id);
 
-      return c.json({
-        success: true,
+      return c.json(apiSuccess({
+        id,
         message: `Sensor "${sensor.location}" deleted successfully`,
-      } satisfies DeleteSensorResponse);
+      }) satisfies DeleteSensorResponse);
     }
   )
-  /**
-   * GET /api/sensors/:id/readings - Get sensor readings history
-   */
   .get(
     "/:id/readings",
     describeRoute({
@@ -500,11 +360,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const sensor = await Sensor.findById(id);
       if (!sensor) {
-        return c.json({ error: "Sensor not found", code: "sensor_not_found" }, 404);
+        return c.json(apiError("sensor_not_found", "Sensor not found") satisfies ErrorResponse, 404);
       }
 
       // Build query
-      const filter: QueryFilter<SensorReadingDocument> = {"metadata.sensorId": id};
+      const filter: QueryFilter<SensorReadingDocument> = {"metadata.sensor": id};
 
       if (query.startDate || query.endDate) {
         filter.timestamp = {};
@@ -522,28 +382,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
         .limit(query.limit)
         .skip(query.offset);
 
-      return c.json({
-        readings: readings.map((r) => ({
-          id: r._id?.toString(),
-          timestamp: r.timestamp.toISOString(),
-          value: r.value,
-          unit: r.unit,
-          metadata: r.metadata
-            ? {
-                sensorId: r.metadata.sensorId.toString(),
-                buildingId: r.metadata.buildingId.toString(),
-                // SAFETY: readings persist metadata.sensorType copied from
-                // Sensor.sensorType, which is constrained to SensorType.
-                sensorType: r.metadata.sensorType as SensorType,
-              }
-            : undefined,
-        })),
+      return c.json(apiSuccess({
+        readings: readings.map(toSensorReadingDTO),
         pagination: {
           limit: query.limit,
           offset: query.offset,
           total,
         },
-      } satisfies GetSensorReadingsResponse);
+      }) satisfies GetSensorReadingsResponse);
     }
   );
 

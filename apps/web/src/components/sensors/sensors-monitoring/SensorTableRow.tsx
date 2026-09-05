@@ -6,15 +6,16 @@ import { getMonitoringStatus, getMonitoringStatusPresentation } from "@/lib/sens
 import { getIntlLocale } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { getSensorIcon, getSensorUnit, getLastUpdate } from "./helpers"
-import type { SensorWithBuilding } from "@/hooks/use-sensors"
+import { PopulatedBuildingSchema } from "@wattguard/shared"
+import type { Sensor } from "@/hooks/use-sensors"
 import type { KeyboardEvent } from "react"
 
 export function SensorTableRow({
   sensor,
   onSelect,
 }: {
-  sensor: SensorWithBuilding
-  onSelect: (sensor: SensorWithBuilding) => void
+  sensor: Sensor
+  onSelect: (sensor: Sensor) => void
 }) {
   const { t } = useTranslation()
   const status = getMonitoringStatus(sensor)
@@ -22,6 +23,8 @@ export function SensorTableRow({
   const lastUpdate = getLastUpdate(sensor.lastReading?.timestamp)
   const StatusIcon = statusPresentation.icon
   const intlLocale = getIntlLocale()
+  const parsedBuilding = PopulatedBuildingSchema.safeParse(sensor.building)
+  const building = parsedBuilding.success ? parsedBuilding.data : null
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -51,10 +54,10 @@ export function SensorTableRow({
           <div>
             <p className="font-medium">{sensor.location}</p>
             <p className="text-xs text-muted-foreground">
-              {sensor.building?.name ?? t("sensors.buildingUnavailable")}
+              {building?.name ?? t("sensors.buildingUnavailable")}
             </p>
-            {sensor.building?.address && (
-              <p className="text-xs text-muted-foreground">{sensor.building.address}</p>
+            {building?.address && (
+              <p className="text-xs text-muted-foreground">{building.address}</p>
             )}
             {sensor.serialNumber && (
               <p className="mt-1 text-xs text-muted-foreground">{t("sensors.serial", { serial: sensor.serialNumber })}</p>

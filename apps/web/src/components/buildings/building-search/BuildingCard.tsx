@@ -153,7 +153,7 @@ export const BuildingCard = Object.assign(
       <BuildingCardRoot
         isSelected={isSelected}
         onClick={() => {
-          onBuildingClick(building.id)
+          onBuildingClick(building._id)
         }}
       >
         {isAdmin && (
@@ -161,7 +161,7 @@ export const BuildingCard = Object.assign(
             checked={isSelected}
             disabled={!isSelected && selectedCount >= MAX_COMPARE_BUILDINGS}
             onCheckedChange={() => {
-              onToggleSelect(building.id)
+              onToggleSelect(building._id)
             }}
           />
         )}

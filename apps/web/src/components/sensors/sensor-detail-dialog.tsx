@@ -9,9 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Building2, Calendar, ChevronRight, Pencil, TrendingUp, Thermometer, Wind, Zap, Flame } from "lucide-react"
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { useSensor, useSensorReadings, type SensorWithBuilding, type SensorType } from "@/hooks/use-sensors"
+import { useSensor, useSensorReadings, type Sensor, type SensorType } from "@/hooks/use-sensors"
 import { getMonitoringStatus, getMonitoringStatusPresentation } from "@/lib/sensor-status"
 import { getIntlLocale } from "@/lib/dates"
+import { PopulatedBuildingSchema, ObjectIdSchema } from "@wattguard/shared"
 
 function getSensorUnit(sensorType: SensorType) {
   switch (sensorType) {
@@ -42,7 +43,7 @@ interface SensorDetailDialogProps {
   /** Pass a sensor ID to fetch details from the API */
   sensorId?: string
   /** Or pass a pre-loaded sensor object (avoids extra API call) */
-  sensor?: SensorWithBuilding
+  sensor?: Sensor
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -50,12 +51,12 @@ interface SensorDetailDialogProps {
 export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, onOpenChange }: SensorDetailDialogProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const effectiveId = sensorId ?? preloadedSensor?.id
+  const effectiveId = sensorId ?? preloadedSensor?._id
   const { data: sensorData, isLoading: sensorLoading } = useSensor(
     preloadedSensor ? undefined : effectiveId
   )
 
-  const sensor = preloadedSensor ?? sensorData?.sensor
+  const sensor = preloadedSensor ?? sensorData
 
   // Fetch last 24 hours of readings
   const readingsParams = useMemo(() => {
@@ -91,16 +92,22 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
     ? getMonitoringStatusPresentation(getMonitoringStatus(sensor), t)
     : null
 
+  const parsedBuilding = sensor ? PopulatedBuildingSchema.safeParse(sensor.building) : null
+  const buildingDoc = parsedBuilding?.success ? parsedBuilding.data : null
+  const buildingId = buildingDoc
+    ? buildingDoc._id
+    : (sensor ? (ObjectIdSchema.safeParse(sensor.building).data ?? null) : null)
+
   const goToBuilding = () => {
-    if (!sensor?.building) return
+    if (!buildingId) return
     onOpenChange(false)
-    void navigate(`/dashboard/buildings/${sensor.building.id}`)
+    void navigate(`/buildings/${buildingId}`)
   }
 
   const goToEditSensor = () => {
-    if (!sensor) return
+    if (!sensor || !buildingId) return
     onOpenChange(false)
-    void navigate(`/dashboard/buildings/${sensor.buildingId}?sensorId=${sensor.id}`)
+    void navigate(`/buildings/${buildingId}?sensorId=${sensor._id}`)
   }
 
   const handleBuildingKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -133,7 +140,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                 {sensor.location}
               </DialogTitle>
               <DialogDescription>
-                {sensor.building?.name ?? t("sensors.building")}
+                {buildingDoc?.name ?? t("sensors.building")}
                 {sensor.serialNumber ? t("sensors.serial", { serial: sensor.serialNumber }) : ""}
               </DialogDescription>
             </DialogHeader>
@@ -221,7 +228,7 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
               <Separator />
 
               {/* Building Info */}
-              {sensor.building && (
+              {buildingDoc && (
                 <div>
                   <div className="mb-3 flex items-center gap-2 text-sm font-medium">
                     <Building2 className="h-4 w-4" />
@@ -230,14 +237,14 @@ export function SensorDetailDialog({ sensorId, sensor: preloadedSensor, open, on
                   <div
                     role="button"
                     tabIndex={0}
-                    aria-label={t("buildings.openDetails", { name: sensor.building.name })}
+                    aria-label={t("buildings.openDetails", { name: buildingDoc.name })}
                     onClick={goToBuilding}
                     onKeyDown={handleBuildingKeyDown}
                     className="group flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <div>
-                      <p className="font-medium">{sensor.building.name}</p>
-                      <p className="text-sm text-muted-foreground">{sensor.building.address}</p>
+                      <p className="font-medium">{buildingDoc.name}</p>
+                      <p className="text-sm text-muted-foreground">{buildingDoc.address}</p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                   </div>

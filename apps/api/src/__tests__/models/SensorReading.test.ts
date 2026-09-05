@@ -44,7 +44,7 @@ describe("SensorReading schema", () => {
 
     // Create sensor
     const sensor = await Sensor.create({
-      buildingId: buildingId,
+      building: buildingId,
       sensorType: "internal_temp",
       location: "Sala Principale",
       serialNumber: "SN001",
@@ -63,8 +63,8 @@ describe("SensorReading schema", () => {
         value: 22.5,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -72,8 +72,8 @@ describe("SensorReading schema", () => {
       expect(reading.timestamp).toBeInstanceOf(Date);
       expect(reading.value).toBe(22.5);
       expect(reading.unit).toBe("°C");
-      expect(reading.metadata.sensorId.toString()).toBe(sensorId.toString());
-      expect(reading.metadata.buildingId.toString()).toBe(buildingId.toString());
+      expect(reading.metadata.sensor.toString()).toBe(sensorId.toString());
+      expect(reading.metadata.building.toString()).toBe(buildingId.toString());
       expect(reading.metadata.sensorType).toBe("internal_temp");
       expect(reading._id).toBeDefined();
     });
@@ -84,8 +84,8 @@ describe("SensorReading schema", () => {
           value: 22.5,
           unit: "°C",
           metadata: {
-            sensorId: sensorId,
-            buildingId: buildingId,
+            sensor: sensorId,
+            building: buildingId,
             sensorType: "internal_temp",
           },
         }),
@@ -98,8 +98,8 @@ describe("SensorReading schema", () => {
           timestamp: new Date(),
           unit: "°C",
           metadata: {
-            sensorId: sensorId,
-            buildingId: buildingId,
+            sensor: sensorId,
+            building: buildingId,
             sensorType: "internal_temp",
           },
         }),
@@ -112,36 +112,36 @@ describe("SensorReading schema", () => {
           timestamp: new Date(),
           value: 22.5,
           metadata: {
-            sensorId: sensorId,
-            buildingId: buildingId,
+            sensor: sensorId,
+            building: buildingId,
             sensorType: "internal_temp",
           },
         }),
       ).rejects.toThrow(MongooseError.ValidationError);
     });
 
-    test("fails without required metadata.sensorId", async () => {
+    test("fails without required metadata.sensor", async () => {
       await expect(
         SensorReading.create({
           timestamp: new Date(),
           value: 22.5,
           unit: "°C",
           metadata: {
-            buildingId: buildingId,
+            building: buildingId,
             sensorType: "internal_temp",
           },
         }),
       ).rejects.toThrow(MongooseError.ValidationError);
     });
 
-    test("fails without required metadata.buildingId", async () => {
+    test("fails without required metadata.building", async () => {
       await expect(
         SensorReading.create({
           timestamp: new Date(),
           value: 22.5,
           unit: "°C",
           metadata: {
-            sensorId: sensorId,
+            sensor: sensorId,
             sensorType: "internal_temp",
           },
         }),
@@ -155,8 +155,8 @@ describe("SensorReading schema", () => {
           value: 22.5,
           unit: "°C",
           metadata: {
-            sensorId: sensorId,
-            buildingId: buildingId,
+            sensor: sensorId,
+            building: buildingId,
           },
         }),
       ).rejects.toThrow(MongooseError.ValidationError);
@@ -168,8 +168,8 @@ describe("SensorReading schema", () => {
         value: 22.5,
         unit: "  °C  ",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -185,8 +185,8 @@ describe("SensorReading schema", () => {
         value: 100,
         unit: "W",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "energy_meter",
         },
       });
@@ -200,8 +200,8 @@ describe("SensorReading schema", () => {
         value: 22.567,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -215,8 +215,8 @@ describe("SensorReading schema", () => {
         value: -5.2,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "external_temp",
         },
       });
@@ -230,8 +230,8 @@ describe("SensorReading schema", () => {
         value: 0,
         unit: "W",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "energy_meter",
         },
       });
@@ -250,8 +250,8 @@ describe("SensorReading schema", () => {
         value: 21.0,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -261,8 +261,8 @@ describe("SensorReading schema", () => {
         value: 22.0,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -272,8 +272,8 @@ describe("SensorReading schema", () => {
         value: 23.0,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -294,25 +294,25 @@ describe("SensorReading schema", () => {
       expect(readings.length).toBe(2); // Last two readings
     });
 
-    test("queries readings by sensorId", async () => {
+    test("queries readings by sensor", async () => {
       const readings = await SensorReading.find({
-        "metadata.sensorId": sensorId,
+        "metadata.sensor": sensorId,
       });
 
       expect(readings.length).toBe(3);
-      expect(readings.every((r) => r.metadata.sensorId.toString() === sensorId.toString())).toBe(
+      expect(readings.every((r) => r.metadata.sensor.toString() === sensorId.toString())).toBe(
         true
       );
     });
 
-    test("queries readings by buildingId", async () => {
+    test("queries readings by building", async () => {
       const readings = await SensorReading.find({
-        "metadata.buildingId": buildingId,
+        "metadata.building": buildingId,
       });
 
       expect(readings.length).toBe(3);
       expect(
-        readings.every((r) => r.metadata.buildingId.toString() === buildingId.toString())
+        readings.every((r) => r.metadata.building.toString() === buildingId.toString())
       ).toBe(true);
     });
 
@@ -327,7 +327,7 @@ describe("SensorReading schema", () => {
 
     test("sorts readings by timestamp", async () => {
       const readings = await SensorReading.find({
-        "metadata.sensorId": sensorId,
+        "metadata.sensor": sensorId,
       }).sort({ timestamp: -1 });
 
       expect(readings.length).toBe(3);
@@ -341,7 +341,7 @@ describe("SensorReading schema", () => {
 
     test("gets latest reading for sensor", async () => {
       const latestReading = await SensorReading.findOne({
-        "metadata.sensorId": sensorId,
+        "metadata.sensor": sensorId,
       }).sort({ timestamp: -1 });
 
       expect(latestReading).not.toBeNull();
@@ -350,7 +350,7 @@ describe("SensorReading schema", () => {
 
     test("calculates average value over time range", async () => {
       const readings = await SensorReading.find({
-        "metadata.sensorId": sensorId,
+        "metadata.sensor": sensorId,
       });
 
       const values = readings.map((r) => r.value);
@@ -365,7 +365,7 @@ describe("SensorReading schema", () => {
 
     beforeEach(async () => {
       const sensor2 = await Sensor.create({
-        buildingId: buildingId,
+        building: buildingId,
         sensorType: "external_temp",
         location: "Esterno",
         serialNumber: "SN002",
@@ -382,8 +382,8 @@ describe("SensorReading schema", () => {
         value: 22.0,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -393,8 +393,8 @@ describe("SensorReading schema", () => {
         value: 10.0,
         unit: "°C",
         metadata: {
-          sensorId: sensor2Id,
-          buildingId: buildingId,
+          sensor: sensor2Id,
+          building: buildingId,
           sensorType: "external_temp",
         },
       });
@@ -402,7 +402,7 @@ describe("SensorReading schema", () => {
 
     test("filters readings by specific sensor", async () => {
       const sensor1Readings = await SensorReading.find({
-        "metadata.sensorId": sensorId,
+        "metadata.sensor": sensorId,
       });
 
       expect(sensor1Readings.length).toBe(1);
@@ -411,7 +411,7 @@ describe("SensorReading schema", () => {
 
     test("gets all readings for a building", async () => {
       const buildingReadings = await SensorReading.find({
-        "metadata.buildingId": buildingId,
+        "metadata.building": buildingId,
       });
 
       expect(buildingReadings.length).toBe(2);
@@ -440,8 +440,8 @@ describe("SensorReading schema", () => {
         value: 22.5,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -455,8 +455,8 @@ describe("SensorReading schema", () => {
         value: 22.5,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -473,8 +473,8 @@ describe("SensorReading schema", () => {
         value: 22.5,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -492,8 +492,8 @@ describe("SensorReading schema", () => {
         value: 21.0,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -503,15 +503,15 @@ describe("SensorReading schema", () => {
         value: 22.0,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
 
-      await SensorReading.deleteMany({ "metadata.sensorId": sensorId });
+      await SensorReading.deleteMany({ "metadata.sensor": sensorId });
 
-      const remaining = await SensorReading.find({ "metadata.sensorId": sensorId });
+      const remaining = await SensorReading.find({ "metadata.sensor": sensorId });
 
       expect(remaining.length).toBe(0);
     });
@@ -522,8 +522,8 @@ describe("SensorReading schema", () => {
         value: 21.0,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
@@ -533,13 +533,13 @@ describe("SensorReading schema", () => {
         value: 22.0,
         unit: "°C",
         metadata: {
-          sensorId: sensorId,
-          buildingId: buildingId,
+          sensor: sensorId,
+          building: buildingId,
           sensorType: "internal_temp",
         },
       });
 
-      const count = await SensorReading.countDocuments({ "metadata.sensorId": sensorId });
+      const count = await SensorReading.countDocuments({ "metadata.sensor": sensorId });
 
       expect(count).toBe(2);
     });

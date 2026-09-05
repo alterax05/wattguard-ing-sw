@@ -64,7 +64,7 @@ describe("readingService", () => {
     options: { status?: SensorStatus; minThreshold?: number; maxThreshold?: number } = {},
   ) {
     return Sensor.create({
-      buildingId,
+      building: buildingId,
       sensorType: "internal_temp",
       location: "Sala Principale",
       installationDate: new Date("2024-01-01"),
@@ -85,13 +85,13 @@ describe("readingService", () => {
       timestamp,
     });
 
-    const reading = await SensorReading.findOne({ "metadata.sensorId": sensor._id });
+    const reading = await SensorReading.findOne({ "metadata.sensor": sensor._id });
     expect(reading).not.toBeNull();
     expect(reading!.value).toBe(22.5);
     expect(reading!.unit).toBe("°C");
     expect(reading!.timestamp).toEqual(timestamp);
-    expect(reading!.metadata.sensorId.toString()).toBe(sensor._id.toString());
-    expect(reading!.metadata.buildingId.toString()).toBe(buildingId.toString());
+    expect(reading!.metadata.sensor.toString()).toBe(sensor._id.toString());
+    expect(reading!.metadata.building.toString()).toBe(buildingId.toString());
     expect(reading!.metadata.sensorType).toBe("internal_temp");
 
     const updated = await Sensor.findById(sensor._id);
@@ -213,7 +213,7 @@ describe("readingService", () => {
     readingCreateSpy.mockRestore();
 
     expect(await Alert.countDocuments({ sensorId: sensor._id })).toBe(0);
-    expect(await SensorReading.countDocuments({ "metadata.sensorId": sensor._id })).toBe(0);
+    expect(await SensorReading.countDocuments({ "metadata.sensor": sensor._id })).toBe(0);
 
     const updated = await Sensor.findById(sensor._id);
     expect(updated!.lastReading).toBeUndefined();
@@ -246,7 +246,7 @@ describe("readingService", () => {
     // The reading is already stored (time-series inserts cannot run inside
     // transactions); the alert and lastReading update must be rolled back.
     expect(await Alert.countDocuments({ sensorId: sensor._id })).toBe(0);
-    expect(await SensorReading.countDocuments({ "metadata.sensorId": sensor._id })).toBe(1);
+    expect(await SensorReading.countDocuments({ "metadata.sensor": sensor._id })).toBe(1);
 
     const updated = await Sensor.findById(sensor._id);
     expect(updated!.lastReading).toBeUndefined();

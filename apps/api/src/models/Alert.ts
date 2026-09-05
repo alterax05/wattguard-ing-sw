@@ -1,4 +1,4 @@
-import mongoose, { Schema, type InferSchemaType } from "mongoose";
+import mongoose, { Schema, type HydratedDocument, type InferSchemaType } from "mongoose";
 
 
 const alertSchema = new Schema(
@@ -78,6 +78,10 @@ const alertSchema = new Schema(
   },
   {
     timestamps: true,
+    toObject: {
+      virtuals: true,
+      flattenObjectIds: true,
+    },
   }
 );
 
@@ -91,5 +95,6 @@ export type AlertDocument = InferSchemaType<typeof alertSchema>;
 export type AlertStatus = AlertDocument["status"];
 export type AlertThresholdType = AlertDocument["thresholdType"];
 export type AlertSeverity = AlertDocument["severity"];
+export type HydratedAlert = HydratedDocument<AlertDocument>;
 
 export const Alert = mongoose.model("Alert", alertSchema);

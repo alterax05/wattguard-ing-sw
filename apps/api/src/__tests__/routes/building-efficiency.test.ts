@@ -92,7 +92,7 @@ function mkReading(
   sensorId: string,
   buildingId: string,
 ) {
-  return { timestamp, value, unit, metadata: { sensorId, buildingId, sensorType } };
+  return { timestamp, value, unit, metadata: { sensor: sensorId, building: buildingId, sensorType } };
 }
 
 type ErrorResponse = z.infer<typeof ErrorSchema>;
@@ -169,7 +169,7 @@ async function createSensor(
   sensorType: "internal_temp" | "external_temp" | "energy_meter" | "gas_meter",
 ) {
   return Sensor.create({
-    buildingId,
+    building: buildingId,
     sensorType,
     location: "Test Location",
     installationDate: new Date(),
@@ -268,15 +268,16 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       expectTypeOf(json).toExtend<GetBuildingEfficiencyResponse | ErrorResponse>();
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.totalEnergyConsumed).toBe(0);
-      expect(json.metrics.estimatedHeatLossCoefficient).toBeNull();
-      expect(json.metrics.insulationQuality).toBeNull();
-      expect(json.metrics.averageCop).toBeNull();
+      expect(json.data.metrics.totalEnergyConsumed).toBe(0);
+      expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
+      expect(json.data.metrics.insulationQuality).toBeNull();
+      expect(json.data.metrics.averageCop).toBeNull();
       // weather fallback supplies the external temperature
-      expect(json.metrics.averageExternalTemperature).toBe(5.0);
+      expect(json.data.metrics.averageExternalTemperature).toBe(5.0);
     });
   });
 
@@ -301,7 +302,6 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const MIN = 60_000;
 
       const readings: object[] = [];
-
       const coolingTemps = [22.0, 21.75, 21.5, 21.25, 21.0];
       for (let i = 0; i < coolingTemps.length; i++) {
         const t = new Date(t0.getTime() + i * MIN);
@@ -309,7 +309,6 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
         readings.push(mkReading(t, 5.0,               "°C", "external_temp", sid_e, bid));
         readings.push(mkReading(t, 0.0,               "kW", "energy_meter",  sid_p, bid));
       }
-
       const heatingTemps = [21.0, 21.3, 21.6, 21.9, 22.2];
       for (let i = 1; i < heatingTemps.length; i++) {
         const t = new Date(t0.getTime() + (4 + i) * MIN);
@@ -328,8 +327,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) throw new Error("missing metrics");
-      const m = json.metrics;
+      expect(json.success).toBe(true);
+      if (!json.success) throw new Error("missing metrics");
+      const m = json.data.metrics;
 
       expect(m.totalEnergyConsumed).toBeGreaterThan(0);
       expect(m.averageExternalTemperature).toBeCloseTo(5.0, 0);
@@ -383,8 +383,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 9 * MIN));
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) throw new Error("missing metrics");
-      const m = json.metrics;
+      expect(json.success).toBe(true);
+      if (!json.success) throw new Error("missing metrics");
+      const m = json.data.metrics;
 
       // The weather API must have been called (no sensor data)
       expect(weatherCallCount).toBeGreaterThan(0);
@@ -443,7 +444,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
         timestamp: new Date(t0.getTime() + i * MIN),
         value: v,
         unit: "m³",
-        metadata: { sensorId: sid_g, buildingId: bid, sensorType: "gas_meter" },
+        metadata: { sensor: sid_g, building: bid, sensorType: "gas_meter" },
       }));
       await SensorReading.insertMany(readings);
 
@@ -451,10 +452,11 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       const expectedKWh = (110 - 100) * GAS_LHV_KWH_PER_M3; // 10 × 10.55 = 105.5
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.totalEnergyConsumed).toBeCloseTo(expectedKWh, 1);
+      expect(json.data.metrics.totalEnergyConsumed).toBeCloseTo(expectedKWh, 1);
     });
 
     test("gas meter reset (last < first) yields 0 totalEnergyConsumed", async () => {
@@ -468,18 +470,19 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const MIN = 60_000;
 
       await SensorReading.insertMany([
-        { timestamp: t0,                           value: 500, unit: "m³", metadata: { sensorId: sid_g, buildingId: bid, sensorType: "gas_meter" } },
-        { timestamp: new Date(t0.getTime() + MIN), value: 10,  unit: "m³", metadata: { sensorId: sid_g, buildingId: bid, sensorType: "gas_meter" } },
+        { timestamp: t0,                           value: 500, unit: "m³", metadata: { sensor: sid_g, building: bid, sensorType: "gas_meter" } },
+        { timestamp: new Date(t0.getTime() + MIN), value: 10,  unit: "m³", metadata: { sensor: sid_g, building: bid, sensorType: "gas_meter" } },
       ]);
 
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 2 * MIN));
 
       expect(status).toBe(200);
       // last (10) < first (500) → consumed = 0
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.totalEnergyConsumed).toBe(0);
+      expect(json.data.metrics.totalEnergyConsumed).toBe(0);
     });
   });
 
@@ -510,10 +513,11 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.averageCop).toBeNull();
+      expect(json.data.metrics.averageCop).toBeNull();
     });
 
     test("averageCop is null for 'district_heating' keyword", async () => {
@@ -541,10 +545,11 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.averageCop).toBeNull();
+      expect(json.data.metrics.averageCop).toBeNull();
     });
   });
 
@@ -578,8 +583,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) throw new Error("missing metrics");
-      const m = json.metrics;
+      expect(json.success).toBe(true);
+      if (!json.success) throw new Error("missing metrics");
+      const m = json.data.metrics;
       expect(m.estimatedHeatLossCoefficient).not.toBeNull();
       expect(m.insulationQuality).not.toBeNull();
       expect(m.insulationQuality).toBeCloseTo(m.estimatedHeatLossCoefficient! / surface, 1);
@@ -600,11 +606,12 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const { status, json } = await getEfficiency(bid, ts(t0, 0), ts(t0, 2 * MIN));
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.estimatedHeatLossCoefficient).toBeNull();
-      expect(json.metrics.insulationQuality).toBeNull();
+      expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
+      expect(json.data.metrics.insulationQuality).toBeNull();
     });
   });
 
@@ -640,10 +647,11 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       // Sensor data wins
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.averageExternalTemperature).toBeCloseTo(SENSOR_TEMP, 1);
+      expect(json.data.metrics.averageExternalTemperature).toBeCloseTo(SENSOR_TEMP, 1);
       expect(weatherCallCount).toBe(0);
     });
   });
@@ -671,13 +679,14 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       // No external temp available → null
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.averageExternalTemperature).toBeNull();
+      expect(json.data.metrics.averageExternalTemperature).toBeNull();
       // Without tempDiff, H and COP remain null
-      expect(json.metrics.estimatedHeatLossCoefficient).toBeNull();
-      expect(json.metrics.averageCop).toBeNull();
+      expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
+      expect(json.data.metrics.averageCop).toBeNull();
     });
   });
 
@@ -710,8 +719,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) throw new Error("missing metrics");
-      const m = json.metrics;
+      expect(json.success).toBe(true);
+      if (!json.success) throw new Error("missing metrics");
+      const m = json.data.metrics;
 
       expect(m.estimatedHeatLossCoefficient).not.toBeNull();
       expect(m.estimatedHeatLossCoefficient).toBeGreaterThan(0);
@@ -760,8 +770,9 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       mockWeatherImpl = () => Promise.resolve(5.0);
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) throw new Error("missing metrics");
-      const m = json.metrics;
+      expect(json.success).toBe(true);
+      if (!json.success) throw new Error("missing metrics");
+      const m = json.data.metrics;
       expect(m.estimatedHeatLossCoefficient).not.toBeNull();
       // COP requires avgH from the first pass — must be non-null
       expect(m.averageCop).not.toBeNull();
@@ -785,12 +796,13 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const { status, json } = await getEfficiency(bid, ts(t0, -60_000), ts(t0, 60_000));
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.estimatedHeatLossCoefficient).toBeNull();
-      expect(json.metrics.insulationQuality).toBeNull();
-      expect(json.metrics.averageCop).toBeNull();
+      expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
+      expect(json.data.metrics.insulationQuality).toBeNull();
+      expect(json.data.metrics.averageCop).toBeNull();
     });
 
     test("two readings within the same minute collapse to one bucket → physics null", async () => {
@@ -811,11 +823,12 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const { status, json } = await getEfficiency(bid, ts(t0, -60_000), ts(t0, 60_000));
 
       expect(status).toBe(200);
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.metrics.estimatedHeatLossCoefficient).toBeNull();
-      expect(json.metrics.averageCop).toBeNull();
+      expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
+      expect(json.data.metrics.averageCop).toBeNull();
     });
   });
 
@@ -830,21 +843,22 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       expectTypeOf(json).toExtend<GetBuildingEfficiencyResponse | ErrorResponse>();
-      if (!("metrics" in json)) {
-        throw new Error("Expected response to contain 'metrics'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.buildingId).toBe(bid);
-      expect(json.buildingName).toBe("Test Building");
-      expect(json.period).toBeDefined();
-      expect(json.period.startDate).toBeDefined();
-      expect(json.period.endDate).toBeDefined();
-      expect(json.metrics).toBeDefined();
-      expect(Number.isFinite(json.metrics.totalEnergyConsumed)).toBe(true);
+      expect(json.data.buildingId).toBe(bid);
+      expect(json.data.buildingName).toBe("Test Building");
+      expect(json.data.period).toBeDefined();
+      expect(json.data.period.startDate).toBeDefined();
+      expect(json.data.period.endDate).toBeDefined();
+      expect(json.data.metrics).toBeDefined();
+      expect(Number.isFinite(json.data.metrics.totalEnergyConsumed)).toBe(true);
       // All nullable metrics must be present as keys (even if null)
-      expect("averageExternalTemperature"   in json.metrics).toBe(true);
-      expect("estimatedHeatLossCoefficient" in json.metrics).toBe(true);
-      expect("insulationQuality"            in json.metrics).toBe(true);
-      expect("averageCop"                   in json.metrics).toBe(true);
+      expect("averageExternalTemperature"   in json.data.metrics).toBe(true);
+      expect("estimatedHeatLossCoefficient" in json.data.metrics).toBe(true);
+      expect("insulationQuality"            in json.data.metrics).toBe(true);
+      expect("averageCop"                   in json.data.metrics).toBe(true);
     });
 
     test("period dates in response reflect the requested window", async () => {
@@ -856,11 +870,12 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const { status, json } = await getEfficiency(bid, startDate, endDate);
 
       expect(status).toBe(200);
-      if (!("period" in json)) {
-        throw new Error("Expected response to contain 'period'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(new Date(json.period.startDate).toISOString()).toBe(startDate);
-      expect(new Date(json.period.endDate).toISOString()).toBe(endDate);
+      expect(new Date(json.data.period.startDate).toISOString()).toBe(startDate);
+      expect(new Date(json.data.period.endDate).toISOString()).toBe(endDate);
     });
   });
 });

@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { ObjectIdSchema, PaginationQuerySchema, PaginationResponseSchema, SortOrderSchema } from "./common";
+import {
+  IsoDateTimeSchema,
+  ObjectIdSchema,
+  PaginationQuerySchema,
+  PaginationResponseSchema,
+  SortOrderSchema,
+} from "./common";
 
 export const AlertSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
 export type AlertSeverity = z.infer<typeof AlertSeveritySchema>;
@@ -20,22 +26,22 @@ export const AlertSchema = z.object({
   id: ObjectIdSchema.describe("Unique alert identifier"),
   buildingId: ObjectIdSchema.describe("Building identifier this alert belongs to"),
   buildingName: z.string().describe("Name of the building"),
-  sensorId: ObjectIdSchema.optional().describe("Optional sensor identifier this alert relates to"),
+  sensorId: ObjectIdSchema.nullish().transform((v) => v ?? undefined).describe("Optional sensor identifier this alert relates to"),
   type: AlertTypeSchema.describe("Type of the alert"),
-  thresholdType: AlertThresholdTypeSchema.optional().describe("Threshold direction for threshold alerts"),
+  thresholdType: AlertThresholdTypeSchema.nullish().transform((v) => v ?? undefined).describe("Threshold direction for threshold alerts"),
   severity: AlertSeveritySchema.describe("Severity level"),
-  sensorType: z.string().optional().describe("Sensor type the alert relates to"),
-  location: z.string().optional().describe("Physical location of the sensor"),
-  value: z.number().optional().describe("Measured value that triggered the alert"),
-  unit: z.string().optional().describe("Unit of the measured value"),
-  limit: z.number().optional().describe("Threshold limit that was exceeded"),
+  sensorType: z.string().nullish().transform((v) => v ?? undefined).describe("Sensor type the alert relates to"),
+  location: z.string().nullish().transform((v) => v ?? undefined).describe("Physical location of the sensor"),
+  value: z.number().nullish().transform((v) => v ?? undefined).describe("Measured value that triggered the alert"),
+  unit: z.string().nullish().transform((v) => v ?? undefined).describe("Unit of the measured value"),
+  limit: z.number().nullish().transform((v) => v ?? undefined).describe("Threshold limit that was exceeded"),
   status: AlertStatusSchema.describe("Current status"),
-  acknowledgedBy: z.string().optional().describe("Name of the user who acknowledged"),
-  acknowledgedAt: z.iso.datetime().optional().describe("When it was acknowledged"),
-  resolvedBy: z.string().optional().describe("Name of the user who resolved"),
-  resolvedAt: z.iso.datetime().optional().describe("When it was resolved"),
-  createdAt: z.iso.datetime().describe("Creation timestamp"),
-  updatedAt: z.iso.datetime().describe("Last update timestamp"),
+  acknowledgedBy: z.string().nullish().transform((v) => v ?? undefined).describe("Name of the user who acknowledged"),
+  acknowledgedAt: IsoDateTimeSchema.nullish().transform((v) => v ?? undefined).describe("When it was acknowledged"),
+  resolvedBy: z.string().nullish().transform((v) => v ?? undefined).describe("Name of the user who resolved"),
+  resolvedAt: IsoDateTimeSchema.nullish().transform((v) => v ?? undefined).describe("When it was resolved"),
+  createdAt: IsoDateTimeSchema.describe("Creation timestamp"),
+  updatedAt: IsoDateTimeSchema.describe("Last update timestamp"),
 });
 
 export type Alert = z.infer<typeof AlertSchema>;
@@ -60,8 +66,11 @@ export type ListAlertsQuery = z.input<typeof ListAlertsQuerySchema>;
  * GET /api/alerts - List alerts response
  */
 export const ListAlertsResponseSchema = z.object({
-  alerts: z.array(AlertSchema).describe("List of alerts"),
-  pagination: PaginationResponseSchema,
+  success: z.literal(true),
+  data: z.object({
+    alerts: z.array(AlertSchema).describe("List of alerts"),
+    pagination: PaginationResponseSchema,
+  }),
 });
 
 export type ListAlertsResponse = z.infer<typeof ListAlertsResponseSchema>;
@@ -82,7 +91,7 @@ export type UpdateAlertStatusRequest = z.infer<typeof UpdateAlertStatusRequestSc
 
 export const UpdateAlertStatusResponseSchema = z.object({
   success: z.literal(true),
-  alert: AlertSchema,
+  data: AlertSchema,
 });
 
 export type UpdateAlertStatusResponse = z.infer<typeof UpdateAlertStatusResponseSchema>;

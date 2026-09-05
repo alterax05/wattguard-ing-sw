@@ -45,8 +45,8 @@ export const openapiConfig = {
       description: 'User authentication and account management endpoints',
     },
     {
-      name: 'Admin',
-      description: 'Administrative operations (requires admin role)',
+      name: 'Users',
+      description: 'User management endpoints (admin only)',
     },
     {
       name: 'Invites',

@@ -345,7 +345,7 @@ async function seedInitialRecords() {
     });
   }
 
-  const sensorCount = await Sensor.countDocuments({ buildingId: building._id });
+  const sensorCount = await Sensor.countDocuments({ building: building._id });
   if (sensorCount === 0) {
     // Seed the energy sensor that matches the building's heating profile so a
     // gas-boiler building gets a gas_meter instead of an energy_meter.
@@ -354,7 +354,7 @@ async function seedInitialRecords() {
     debugPrint(`   Creating default sensors (${energySensorType})...`);
     await Sensor.insertMany([
       {
-        buildingId: building._id,
+        building: building._id,
         sensorType: "internal_temp",
         location: "Living Room",
         serialNumber: "SIM-INT-001",
@@ -365,7 +365,7 @@ async function seedInitialRecords() {
         updatedBy: user._id,
       },
       {
-        buildingId: building._id,
+        building: building._id,
         sensorType: "external_temp",
         location: "Garden",
         serialNumber: "SIM-EXT-001",
@@ -376,7 +376,7 @@ async function seedInitialRecords() {
         updatedBy: user._id,
       },
       {
-        buildingId: building._id,
+        building: building._id,
         sensorType: energySensorType,
         location: isGas ? "Boiler Room" : "Main Panel",
         serialNumber: isGas ? "SIM-GAS-001" : "SIM-PWR-001",
@@ -402,7 +402,7 @@ async function bootstrapGasOdometer(
   if (state.profile.energySensorType !== "gas_meter") return;
   try {
     const last = await SensorReading.findOne({
-      "metadata.buildingId": buildingId,
+      "metadata.building": buildingId,
       "metadata.sensorType": "gas_meter",
     })
       .sort({ timestamp: -1 })
@@ -484,7 +484,7 @@ export async function startSimulator(opts: SimulatorOptions): Promise<SimulatorH
     sensors: HydratedDocument<SensorDocument>[],
   ): Promise<Map<string, BuildingDocument>> => {
     const buildingIds: string[] = [
-      ...new Set(sensors.map((s) => s.buildingId.toString())),
+      ...new Set(sensors.map((s) => s.building.toString())),
     ];
     const buildings = await Building.find({ _id: { $in: buildingIds } });
     const buildingMap = new Map(buildings.map((b) => [b._id.toString(), b]));
@@ -514,7 +514,8 @@ export async function startSimulator(opts: SimulatorOptions): Promise<SimulatorH
     const sensorId = sensor._id.toString();
     if (running.has(sensorId)) return;
 
-    const building = buildingMap.get(sensor.buildingId.toString());
+    const bId = sensor.building.toString();
+    const building = bId ? buildingMap.get(bId) : undefined;
     if (!building) {
       console.warn(`⚠️  No building found for sensor ${sensorId} — skipping.`);
       return;

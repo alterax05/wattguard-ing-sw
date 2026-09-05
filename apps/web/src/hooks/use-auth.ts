@@ -41,12 +41,13 @@ export function useCurrentUser() {
         throw new Error("Failed to fetch user");
       }
 
-      const data = await res.json();
+      const resData = await res.json();
+      const userData = resData.data;
       const user: AuthUser = {
-        ...data.user,
-        name: data.user.name ?? undefined,
-        language: isSupportedLocale(data.user.language) ? data.user.language : undefined,
-        lastLoginAt: data.user.lastLoginAt ?? undefined,
+        ...userData,
+        name: userData.name ?? undefined,
+        language: isSupportedLocale(userData.language) ? userData.language : undefined,
+        lastLoginAt: userData.lastLoginAt ?? undefined,
       };
 
       // Server-side preference wins at session start so alert emails match
@@ -77,7 +78,8 @@ export function useValidateInvite(token: string | null) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     enabled: !!token,
     retry: false,
@@ -96,13 +98,12 @@ export function useValidateResetToken(token: string | null) {
         param: { token: token! },
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     enabled: !!token,
     retry: false,
@@ -124,13 +125,12 @@ export function useLogin() {
         json: input,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
@@ -182,13 +182,12 @@ export function useSetup() {
         json: input,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
@@ -207,13 +206,12 @@ export function useForgotPassword() {
         json: input,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
   });
 }
@@ -228,13 +226,12 @@ export function useResetPassword() {
         json: input,
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
   });
 }
@@ -245,27 +242,27 @@ export const USERS_QUERY_KEY = ["admin", "users"] as const;
 export type AdminUser = User;
 
 /**
- * Fetch all users via GET /api/admin/users (admin only).
+ * Fetch all users via GET /api/v1/users (admin only).
  */
 export function useUsers() {
   return useQuery({
     queryKey: USERS_QUERY_KEY,
     queryFn: async (): Promise<AdminUser[]> => {
-      const res = await client.api.v1.admin.users.$get();
+      const res = await client.api.v1.users.$get();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
       const data = await res.json();
-      return data.users;
+      return data.data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }
 
 /**
- * Update a user's role or disabled status via PATCH /api/admin/users/:id (admin only).
+ * Update a user's role or disabled status via PATCH /api/v1/users/:id (admin only).
  * On success, invalidates the users query to refresh the list.
  */
 export function useUpdateUser() {
@@ -274,18 +271,17 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: async (input: UpdateUserRequest & { id: string }) => {
       const { id, ...body } = input;
-      const res = await client.api.v1.admin.users[":id"].$patch({
+      const res = await client.api.v1.users[":id"].$patch({
         param: { id },
         json: body,
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
@@ -294,7 +290,7 @@ export function useUpdateUser() {
 }
 
 /**
- * Delete a user via DELETE /api/admin/users/:id (admin only).
+ * Delete a user via DELETE /api/v1/users/:id (admin only).
  * On success, invalidates the users query to refresh the list.
  */
 export function useDeleteUser() {
@@ -302,17 +298,16 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await client.api.v1.admin.users[":id"].$delete({
+      const res = await client.api.v1.users[":id"].$delete({
         param: { id },
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
@@ -327,17 +322,16 @@ export function useDeleteUser() {
 export function useCreateInvite() {
   return useMutation({
     mutationFn: async (input: CreateInviteRequest) => {
-      const res = await client.api.v1.admin.invites.$post({
+      const res = await client.api.v1.invites.$post({
         json: input,
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return data;
+      const resData = await res.json();
+      return resData.data;
     },
   });
 }

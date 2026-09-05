@@ -37,11 +37,12 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: [...DASHBOARD_QUERY_KEY, "stats"],
     queryFn: async () => {
-      const res = await client.api.v1.dashboard.stats.$get();
+      const res = await client.api.v1.metrics.$get();
       if (!res.ok) {
         throw new Error("Failed to fetch dashboard stats");
       }
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     staleTime: 60 * 1000,
     refetchInterval: intervalMs,
@@ -50,7 +51,7 @@ export function useDashboardStats() {
 
 /**
  * Fetch aggregated historical energy/gas data for the dashboard chart.
- * GET /api/dashboard/history
+ * GET /api/v1/metrics/history
  */
 export function useDashboardHistory(params: DashboardHistoryParams) {
   return useQuery({
@@ -63,11 +64,12 @@ export function useDashboardHistory(params: DashboardHistoryParams) {
       if (params.interval) {
         query.interval = params.interval;
       }
-      const res = await client.api.v1.dashboard.history.$get({ query });
+      const res = await client.api.v1.metrics.history.$get({ query });
       if (!res.ok) {
         throw new Error("Failed to fetch dashboard history");
       }
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!params.startDate && !!params.endDate,

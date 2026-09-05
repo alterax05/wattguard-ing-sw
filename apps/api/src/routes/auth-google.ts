@@ -21,6 +21,8 @@ import {
   IS_PRODUCTION,
   PUBLIC_APP_URL,
 } from "../config/variables";
+import { apiError } from "../lib/api-response";
+import type { ErrorResponse } from "@wattguard/shared";
 
 const APP_URL = PUBLIC_APP_URL;
 
@@ -128,20 +130,20 @@ const app = new Hono()
     const inviteToken = c.req.query("inviteToken");
 
     if (!inviteToken) {
-      return c.json({ error: "inviteToken is required", code: "invite_token_required" }, 400);
+      return c.json(apiError("invite_token_required", "inviteToken is required") satisfies ErrorResponse, 400);
     }
 
     const tokenHash = hashTokenSha256(inviteToken);
     const invite = await Invite.findOne({ tokenHash, status: "pending" });
 
     if (!invite) {
-      return c.json({ error: "Invalid or already used invite", code: "invite_invalid_or_used" }, 400);
+      return c.json(apiError("invite_invalid_or_used", "Invalid or already used invite") satisfies ErrorResponse, 400);
     }
 
     if (invite.expiresAt < new Date()) {
       invite.status = "expired";
       await invite.save();
-      return c.json({ error: "Invite has expired", code: "invite_expired" }, 400);
+      return c.json(apiError("invite_expired", "Invite has expired") satisfies ErrorResponse, 400);
     }
 
     const state = randomToken(32);

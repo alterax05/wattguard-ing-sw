@@ -141,17 +141,16 @@ describe("buildings api", () => {
       expect(res.status).toBe(201);
       const json = await res.json();
       expectTypeOf(json).toExtend<CreateBuildingResponse | ErrorResponse>();
-      if (!("building" in json)) {
-        throw new Error("Expected response to contain 'building'");
-      }
       expect(json.success).toBe(true);
-      expect(json.building.name).toBe(buildingData.name);
-      expect(json.building.address).toBe(buildingData.address);
-      expect(json.building.status).toBe("active"); // Default value
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
+      }
+      expect(json.data.name).toBe(buildingData.name);
+      expect(json.data.address).toBe(buildingData.address);
+      expect(json.data.status).toBe("active"); // Default value
 
       // Verify building was created in DB
-      // SAFETY: the create-building route echoes the created document, whose `id` is its ObjectId string.
-      const building = await Building.findById((json as { building: { id: string } }).building.id);
+      const building = await Building.findById(json.data._id);
       expect(building).toBeDefined();
       expect(building!.name).toBe(buildingData.name);
     });
@@ -273,13 +272,13 @@ describe("buildings api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
-      if (!("building" in json)) {
-        throw new Error("Expected response to contain 'building'");
-      }
       expect(json.success).toBe(true);
-      expect(json.building.name).toBe("Updated Name");
-      expect(json.building.surface).toBe(1500);
-      expect(json.building.status).toBe("inactive");
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
+      }
+      expect(json.data.name).toBe("Updated Name");
+      expect(json.data.surface).toBe(1500);
+      expect(json.data.status).toBe("inactive");
     });
 
     test("returns 404 for non-existent building", async () => {
@@ -332,10 +331,11 @@ describe("buildings api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
-      if (!("building" in json)) {
-        throw new Error("Expected response to contain 'building'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.building.efficiencyThresholds).toEqual({ enabled: true, minCop: 2.5 });
+      expect(json.data.efficiencyThresholds).toEqual({ enabled: true, minCop: 2.5 });
     });
 
     test("PATCH rejects enabled threshold without minCop", async () => {
@@ -503,7 +503,7 @@ describe("buildings api", () => {
       });
 
       const sensor = await Sensor.create({
-        buildingId: building._id,
+        building: building._id,
         sensorType: "internal_temp",
         location: "Piano 1",
         status: "active",
@@ -518,8 +518,8 @@ describe("buildings api", () => {
         value: 22.5,
         unit: "°C",
         metadata: {
-          sensorId: sensor._id,
-          buildingId: building._id,
+          sensor: sensor._id,
+          building: building._id,
           sensorType: "internal_temp",
         },
       });
@@ -567,7 +567,7 @@ describe("buildings api", () => {
       expect(deletedSensor).toBeNull();
 
       // Verify readings deleted
-      const readings = await SensorReading.find({ "metadata.buildingId": building._id });
+      const readings = await SensorReading.find({ "metadata.building": building._id });
       expect(readings.length).toBe(0);
 
       const alerts = await Alert.countDocuments({ buildingId: building._id });
@@ -636,11 +636,12 @@ describe("buildings api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<SearchBuildingsResponse | ErrorResponse>();
-      if (!("buildings" in json)) {
-        throw new Error("Expected response to contain 'buildings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.buildings.length).toBe(2);
-      expect(json.buildings[0]!.name).toContain("Scuola");
+      expect(json.data.buildings.length).toBe(2);
+      expect(json.data.buildings[0]!.name).toContain("Scuola");
     });
 
     test("searches by address", async () => {
@@ -655,11 +656,12 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("buildings" in json)) {
-        throw new Error("Expected response to contain 'buildings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.buildings.length).toBe(1);
-      expect(json.buildings[0]!.address).toContain("Garibaldi");
+      expect(json.data.buildings.length).toBe(1);
+      expect(json.data.buildings[0]!.address).toContain("Garibaldi");
     });
 
     test("filters by zone", async () => {
@@ -674,11 +676,12 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("buildings" in json)) {
-        throw new Error("Expected response to contain 'buildings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.buildings.length).toBe(1);
-      expect(json.buildings[0]!.geographicZone).toBe("Centro");
+      expect(json.data.buildings.length).toBe(1);
+      expect(json.data.buildings[0]!.geographicZone).toBe("Centro");
     });
 
     test("filters by building type", async () => {
@@ -693,10 +696,11 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("buildings" in json)) {
-        throw new Error("Expected response to contain 'buildings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.buildings.length).toBe(3); // All test buildings have same type
+      expect(json.data.buildings.length).toBe(3); // All test buildings have same type
     });
 
     test("filters by status", async () => {
@@ -711,11 +715,12 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("buildings" in json)) {
-        throw new Error("Expected response to contain 'buildings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.buildings.length).toBe(1);
-      expect(json.buildings[0]!.status).toBe("inactive");
+      expect(json.data.buildings.length).toBe(1);
+      expect(json.data.buildings[0]!.status).toBe("inactive");
     });
 
     test("combines multiple filters", async () => {
@@ -730,11 +735,12 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("buildings" in json)) {
-        throw new Error("Expected response to contain 'buildings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.buildings.length).toBe(1);
-      expect(json.buildings[0]!.name).toBe("Scuola Primaria Centro");
+      expect(json.data.buildings.length).toBe(1);
+      expect(json.data.buildings[0]!.name).toBe("Scuola Primaria Centro");
     });
 
     test("supports pagination", async () => {
@@ -749,13 +755,14 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("buildings" in json) || !("pagination" in json)) {
-        throw new Error("Expected response to contain 'buildings' and 'pagination'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.buildings.length).toBe(2);
-      expect(json.pagination.total).toBe(3);
-      expect(json.pagination.limit).toBe(2);
-      expect(json.pagination.offset).toBe(0);
+      expect(json.data.buildings.length).toBe(2);
+      expect(json.data.pagination.total).toBe(3);
+      expect(json.data.pagination.limit).toBe(2);
+      expect(json.data.pagination.offset).toBe(0);
     });
 
     test("supports sorting", async () => {
@@ -770,13 +777,14 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("buildings" in json)) {
-        throw new Error("Expected response to contain 'buildings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(json.buildings.length).toBeGreaterThan(0);
+      expect(json.data.buildings.length).toBeGreaterThan(0);
       // Verify ascending order
-      for (let i = 1; i < json.buildings.length; i++) {
-        expect(json.buildings[i]!.name >= json.buildings[i - 1]!.name).toBe(true);
+      for (let i = 1; i < json.data.buildings.length; i++) {
+        expect(json.data.buildings[i]!.name >= json.data.buildings[i - 1]!.name).toBe(true);
       }
     });
 
@@ -790,10 +798,11 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("buildings" in json)) {
-        throw new Error("Expected response to contain 'buildings'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response success to be true");
       }
-      const building = json.buildings[0]!;
+      const building = json.data.buildings[0]!;
 
       expect(building.name).toBeDefined();
       expect(building.address).toBeDefined();
@@ -832,14 +841,15 @@ describe("buildings api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetBuildingResponse | ErrorResponse>();
-      if (!("building" in json)) {
-        throw new Error("Expected response to contain 'building'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.building.name).toBe("Test Building Details");
-      expect(json.building.address).toBe("Via Details 1, Milano");
-      expect(json.building.surface).toBe(2000);
-      expect(json.building.constructionYear).toBe(2000);
-      expect(json.building.buildingType).toBeDefined();
+      expect(json.data.name).toBe("Test Building Details");
+      expect(json.data.address).toBe("Via Details 1, Milano");
+      expect(json.data.surface).toBe(2000);
+      expect(json.data.constructionYear).toBe(2000);
+      expect(json.data.buildingType).toBeDefined();
     });
   });
 
@@ -863,7 +873,7 @@ describe("buildings api", () => {
 
       await Sensor.create([
         {
-          buildingId: building._id,
+          building: building._id,
           sensorType: "internal_temp",
           location: "Piano 1",
           status: "active",
@@ -874,7 +884,7 @@ describe("buildings api", () => {
           lastReading: { value: 22.5, unit: "°C", timestamp: now },
         },
         {
-          buildingId: building._id,
+          building: building._id,
           sensorType: "external_temp",
           location: "Facciata",
           status: "active",
@@ -885,7 +895,7 @@ describe("buildings api", () => {
           lastReading: { value: 10.2, unit: "°C", timestamp: now },
         },
         {
-          buildingId: building._id,
+          building: building._id,
           sensorType: "energy_meter",
           location: "Locale tecnico",
           status: "active",
@@ -897,7 +907,7 @@ describe("buildings api", () => {
         },
       ]);
 
-      const res = await client.api.v1.buildings[":id"]["real-time"].$get(
+      const res = await client.api.v1.buildings[":id"].readings.latest.$get(
         {
           param: { id: building._id.toString() },
         },
@@ -909,20 +919,21 @@ describe("buildings api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetBuildingRealTimeResponse | ErrorResponse>();
-      if (!("data" in json)) {
-        throw new Error("Expected response to contain 'data'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
       expect(json.data).toBeDefined();
-      expect(json.data.internalTemperature).toBeDefined();
-      expect(json.data.internalTemperature.value).toBe(22.5);
-      expect(json.data.internalTemperature.unit).toBe("°C");
+      expect(json.data.data.internalTemperature).toBeDefined();
+      expect(json.data.data.internalTemperature.value).toBe(22.5);
+      expect(json.data.data.internalTemperature.unit).toBe("°C");
 
-      expect(json.data.externalTemperature).toBeDefined();
-      expect(json.data.externalTemperature.value).toBe(10.2);
+      expect(json.data.data.externalTemperature).toBeDefined();
+      expect(json.data.data.externalTemperature.value).toBe(10.2);
 
-      expect(json.data.energyConsumption).toBeDefined();
-      expect(json.data.energyConsumption.value).toBe(150.5);
-      expect(json.data.energyConsumption.unit).toBe("kW");
+      expect(json.data.data.energyConsumption).toBeDefined();
+      expect(json.data.data.energyConsumption.value).toBe(150.5);
+      expect(json.data.data.energyConsumption.unit).toBe("kW");
     });
 
     test("handles missing sensors gracefully", async () => {
@@ -942,7 +953,7 @@ describe("buildings api", () => {
 
       // Only create one sensor
       await Sensor.create({
-        buildingId: building._id,
+        building: building._id,
         sensorType: "internal_temp",
         location: "Piano 1",
         status: "active",
@@ -953,7 +964,7 @@ describe("buildings api", () => {
         lastReading: { value: 22.5, unit: "°C", timestamp: new Date() },
       });
 
-      const res = await client.api.v1.buildings[":id"]["real-time"].$get(
+      const res = await client.api.v1.buildings[":id"].readings.latest.$get(
         {
           param: { id: building._id.toString() },
         },
@@ -964,12 +975,13 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("data" in json)) {
-        throw new Error("Expected response to contain 'data'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
-      expect(json.data.internalTemperature.value).toBe(22.5);
-      expect(json.data.externalTemperature.value).toBeNull();
-      expect(json.data.energyConsumption.value).toBeNull();
+      expect(json.data.data.internalTemperature.value).toBe(22.5);
+      expect(json.data.data.externalTemperature.value).toBeNull();
+      expect(json.data.data.energyConsumption.value).toBeNull();
     });
   });
 
@@ -990,7 +1002,7 @@ describe("buildings api", () => {
       });
 
       const sensor = await Sensor.create({
-        buildingId: building._id,
+        building: building._id,
         sensorType: "internal_temp",
         location: "Piano 1",
         status: "active",
@@ -1010,8 +1022,8 @@ describe("buildings api", () => {
           value: 20 + Math.random() * 4, // 20-24°C
           unit: "°C",
           metadata: {
-            sensorId: sensor._id,
-            buildingId: building._id,
+            sensor: sensor._id,
+            building: building._id,
             sensorType: "internal_temp",
           },
         });
@@ -1021,7 +1033,7 @@ describe("buildings api", () => {
       const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const endDate = now.toISOString();
 
-      const res = await client.api.v1.buildings[":id"].history.$get(
+      const res = await client.api.v1.buildings[":id"].readings.$get(
         {
           param: { id: building._id.toString() },
           query: { startDate, endDate, sensorType: "internal_temp", interval: "hour" },
@@ -1034,16 +1046,17 @@ describe("buildings api", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expectTypeOf(json).toExtend<GetBuildingHistoryResponse | ErrorResponse>();
-      if (!("data" in json)) {
-        throw new Error("Expected response to contain 'data'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
       expect(json.data).toBeDefined();
-      expect(json.data.length).toBeGreaterThan(0);
-      expect(json.buildingId).toBe(building._id.toString());
-      expect(json.buildingName).toBe(building.name);
+      expect(json.data.data.length).toBeGreaterThan(0);
+      expect(json.data.buildingId).toBe(building._id.toString());
+      expect(json.data.buildingName).toBe(building.name);
 
       // Verify data structure
-      const dataPoint = json.data[0]!;
+      const dataPoint = json.data.data[0]!;
       expect(dataPoint.timestamp).toBeDefined();
       expect(dataPoint.value).toBeDefined();
       expect(dataPoint.sensorType).toBe("internal_temp");
@@ -1065,7 +1078,7 @@ describe("buildings api", () => {
       });
 
       const sensor = await Sensor.create({
-        buildingId: building._id,
+        building: building._id,
         sensorType: "energy_meter",
         location: "Locale tecnico",
         status: "active",
@@ -1084,19 +1097,19 @@ describe("buildings api", () => {
           timestamp: twoDaysAgo,
           value: 100,
           unit: "kW",
-          metadata: { sensorId: sensor._id, buildingId: building._id, sensorType: "energy_meter" },
+          metadata: { sensor: sensor._id, building: building._id, sensorType: "energy_meter" },
         },
         {
           timestamp: oneDayAgo,
           value: 150,
           unit: "kW",
-          metadata: { sensorId: sensor._id, buildingId: building._id, sensorType: "energy_meter" },
+          metadata: { sensor: sensor._id, building: building._id, sensorType: "energy_meter" },
         },
         {
           timestamp: now,
           value: 200,
           unit: "kW",
-          metadata: { sensorId: sensor._id, buildingId: building._id, sensorType: "energy_meter" },
+          metadata: { sensor: sensor._id, building: building._id, sensorType: "energy_meter" },
         },
       ]);
 
@@ -1104,7 +1117,7 @@ describe("buildings api", () => {
       const startDate = oneDayAgo.toISOString();
       const endDate = now.toISOString();
 
-      const res = await client.api.v1.buildings[":id"].history.$get(
+      const res = await client.api.v1.buildings[":id"].readings.$get(
         {
           param: { id: building._id.toString() },
           query: { startDate, endDate, sensorType: "energy_meter" },
@@ -1116,12 +1129,13 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      if (!("data" in json)) {
-        throw new Error("Expected response to contain 'data'");
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        throw new Error("Expected response to be successful");
       }
       // Should only include readings from the last 24 hours
-      expect(json.data.length).toBeGreaterThan(0);
-      json.data.forEach((point) => {
+      expect(json.data.data.length).toBeGreaterThan(0);
+      json.data.data.forEach((point) => {
         const timestamp = new Date(point.timestamp);
         expect(timestamp.getTime()).toBeGreaterThanOrEqual(oneDayAgo.getTime());
       });
@@ -1143,7 +1157,7 @@ describe("buildings api", () => {
       });
 
       const sensor = await Sensor.create({
-        buildingId: building._id,
+        building: building._id,
         sensorType: "internal_temp",
         location: "Piano 1",
         status: "active",
@@ -1160,7 +1174,7 @@ describe("buildings api", () => {
           timestamp: new Date(now.getTime() - i * 5 * 60 * 1000), // Every 5 minutes
           value: 22,
           unit: "°C",
-          metadata: { sensorId: sensor._id, buildingId: building._id, sensorType: "internal_temp" },
+          metadata: { sensor: sensor._id, building: building._id, sensorType: "internal_temp" },
         });
       }
       await SensorReading.insertMany(readings);
@@ -1172,7 +1186,7 @@ describe("buildings api", () => {
       const intervals = ["minute", "hour", "day"] as const;
 
       for (const interval of intervals) {
-        const res = await client.api.v1.buildings[":id"].history.$get(
+        const res = await client.api.v1.buildings[":id"].readings.$get(
           {
             param: { id: building._id.toString() },
             query: { startDate, endDate, sensorType: "internal_temp", interval },
@@ -1184,11 +1198,12 @@ describe("buildings api", () => {
 
         expect(res.status).toBe(200);
         const json = await res.json();
-        if (!("data" in json)) {
-          throw new Error("Expected response to contain 'data'");
+        expect(json.success).toBe(true);
+        if (!json.success) {
+          throw new Error("Expected response to be successful");
         }
-        expect(json.data.length).toBeGreaterThan(0);
-        expect(json.buildingId).toBeDefined();
+        expect(json.data.data.length).toBeGreaterThan(0);
+        expect(json.data.buildingId).toBeDefined();
       }
     });
   });

@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { User } from "../models/User";
+import { toPublicUserDto } from "../lib/users";
 import { Invite } from "../models/Invite";
 import { PasswordResetToken } from "../models/PasswordResetToken";
 import { hashTokenSha256, randomToken } from "../utils/crypto";
@@ -13,6 +14,7 @@ import { signAccessToken } from "../auth/jwt";
 import { sendPasswordResetEmail } from "../email/mailer";
 import { loginRateLimiter, passwordResetRateLimiter } from "../middleware/rate-limit";
 import { IS_PRODUCTION } from "../config/variables";
+import { apiError, apiSuccess } from "../lib/api-response";
 import {
   SetupRequestSchema,
   SetupResponseSchema,
@@ -23,17 +25,17 @@ import {
   ValidateResetTokenQuerySchema,
   ValidateResetTokenParamsSchema,
   ValidateResetTokenResponseSchema,
-
   ResetPasswordRequestSchema,
   ResetPasswordResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
-  ForgotPasswordResponse,
-  LoginResponse,
-  ResetPasswordResponse,
   SetupResponse,
+  LoginResponse,
+  ForgotPasswordResponse,
   ValidateResetTokenResponse,
+  ResetPasswordResponse,
+  ErrorResponse,
 } from "@wattguard/shared";
 
 /**
@@ -77,19 +79,19 @@ const app = new Hono()
       const invite = await Invite.findOne({ tokenHash, status: "pending" });
 
       if (!invite) {
-        return c.json({ error: "Invalid or already used invite", code: "invite_invalid_or_used" }, 400);
+        return c.json(apiError("invite_invalid_or_used", "Invalid or already used invite") satisfies ErrorResponse, 400);
       }
 
       if (invite.expiresAt < new Date()) {
         invite.status = "expired";
         await invite.save();
-        return c.json({ error: "Invite has expired", code: "invite_expired" }, 400);
+        return c.json(apiError("invite_expired", "Invite has expired") satisfies ErrorResponse, 400);
       }
 
       // Check if user already exists
       const existingUser = await User.findOne({ email: invite.email });
       if (existingUser) {
-        return c.json({ error: "User already exists", code: "user_email_exists" }, 400);
+        return c.json(apiError("user_email_exists", "User already exists") satisfies ErrorResponse, 400);
       }
 
       // Hash password using Bun's built-in password hasher
@@ -129,15 +131,7 @@ const app = new Hono()
         path: "/",
       });
 
-      return c.json({
-        success: true,
-        user: {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name ?? undefined,
-          role: user.role,
-        },
-      } satisfies SetupResponse);
+      return c.json(apiSuccess(toPublicUserDto(user)) satisfies SetupResponse);
     }
   )
   .post(
@@ -191,11 +185,11 @@ const app = new Hono()
       
       // Check if user exists and has password after verification
       if (!user || !user.passwordHash || !valid) {
-        return c.json({ error: "Invalid credentials", code: "invalid_credentials" }, 401);
+        return c.json(apiError("invalid_credentials", "Invalid credentials") satisfies ErrorResponse, 401);
       }
 
       if (user.isDisabled) {
-        return c.json({ error: "Account is disabled", code: "account_disabled" }, 403);
+        return c.json(apiError("account_disabled", "Account is disabled") satisfies ErrorResponse, 403);
       }
 
       // Update last login
@@ -218,15 +212,7 @@ const app = new Hono()
         path: "/",
       });
 
-      return c.json({
-        success: true,
-        user: {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name ?? undefined,
-          role: user.role,
-        },
-      } satisfies LoginResponse);
+      return c.json(apiSuccess(toPublicUserDto(user)) satisfies LoginResponse);
     }
   )
   .post(
@@ -251,10 +237,9 @@ const app = new Hono()
       const { email } = c.req.valid("json");
 
       // Always return success to prevent email enumeration
-      const successResponse = {
-        success: true,
+      const successResponse = apiSuccess({
         message: "Se l'email esiste, riceverai un link per reimpostare la password",
-      } satisfies ForgotPasswordResponse;
+      }) satisfies ForgotPasswordResponse;
 
       try {
         // Find user
@@ -327,14 +312,14 @@ const app = new Hono()
       const resetToken = await PasswordResetToken.findOne({ tokenHash });
 
       if (!resetToken) {
-        return c.json({ error: "Invalid reset token", code: "invalid_reset_token" }, 404);
+        return c.json(apiError("invalid_reset_token", "Invalid reset token") satisfies ErrorResponse, 404);
       }
 
       if (resetToken.expiresAt < new Date()) {
-        return c.json({ error: "Reset token has expired", code: "reset_token_expired" }, 400);
+        return c.json(apiError("reset_token_expired", "Reset token has expired") satisfies ErrorResponse, 400);
       }
 
-      return c.json({ valid: true } satisfies ValidateResetTokenResponse);
+      return c.json(apiSuccess({ valid: true as const }) satisfies ValidateResetTokenResponse);
     }
   )
   .get(
@@ -377,14 +362,14 @@ const app = new Hono()
       const resetToken = await PasswordResetToken.findOne({ tokenHash });
 
       if (!resetToken) {
-        return c.json({ error: "Invalid reset token", code: "invalid_reset_token" }, 404);
+        return c.json(apiError("invalid_reset_token", "Invalid reset token") satisfies ErrorResponse, 404);
       }
 
       if (resetToken.expiresAt < new Date()) {
-        return c.json({ error: "Reset token has expired", code: "reset_token_expired" }, 400);
+        return c.json(apiError("reset_token_expired", "Reset token has expired") satisfies ErrorResponse, 400);
       }
 
-      return c.json({ valid: true } satisfies ValidateResetTokenResponse);
+      return c.json(apiSuccess({ valid: true as const }) satisfies ValidateResetTokenResponse);
     }
   )
 
@@ -429,18 +414,18 @@ const app = new Hono()
       const resetToken = await PasswordResetToken.findOne({ tokenHash });
 
       if (!resetToken) {
-        return c.json({ error: "Invalid reset token", code: "invalid_reset_token" }, 404);
+        return c.json(apiError("invalid_reset_token", "Invalid reset token") satisfies ErrorResponse, 404);
       }
 
       if (resetToken.expiresAt < new Date()) {
         await PasswordResetToken.findByIdAndDelete(resetToken._id);
-        return c.json({ error: "Reset token has expired", code: "reset_token_expired" }, 400);
+        return c.json(apiError("reset_token_expired", "Reset token has expired") satisfies ErrorResponse, 400);
       }
 
       // Find user
       const user = await User.findById(resetToken.userId);
       if (!user) {
-        return c.json({ error: "User not found", code: "user_not_found" }, 404);
+        return c.json(apiError("user_not_found", "User not found") satisfies ErrorResponse, 404);
       }
 
       // Hash new password
@@ -461,10 +446,9 @@ const app = new Hono()
       // Delete the reset token (one-time use)
       await PasswordResetToken.findByIdAndDelete(resetToken._id);
 
-      return c.json({
-        success: true,
+      return c.json(apiSuccess({
         message: "Password reset successfully",
-      } satisfies ResetPasswordResponse);
+      }) satisfies ResetPasswordResponse);
     }
   );
 

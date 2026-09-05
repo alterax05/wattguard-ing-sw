@@ -46,6 +46,9 @@ export function App() {
               <Route path="/buildings" element={<BuildingsPage />} />
               <Route path="/buildings/compare" element={<BuildingsComparePage />} />
               <Route path="/buildings/:id" element={<BuildingDetailPage />} />
+              <Route path="/dashboard/buildings" element={<Navigate to="/buildings" replace />} />
+              <Route path="/dashboard/buildings/compare" element={<Navigate to="/buildings/compare" replace />} />
+              <Route path="/dashboard/buildings/:id" element={<BuildingDetailPage />} />
               <Route path="/sensors" element={<SensorsPage />} />
               <Route path="/alerts" element={<AlertsPage />} />
 

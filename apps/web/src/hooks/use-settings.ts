@@ -31,8 +31,8 @@ export function useSettings() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data: { config: SystemConfig } = await res.json();
-      return data.config;
+      const resData = await res.json();
+      return resData.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: false,
@@ -78,8 +78,8 @@ export function useUpdateSettings() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      const data = await res.json();
-      return data.config;
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: (updatedConfig) => {
       // Update the cache directly with the returned config

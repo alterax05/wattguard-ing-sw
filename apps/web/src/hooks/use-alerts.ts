@@ -20,8 +20,8 @@ export function useAlerts(params?: { status?: string; buildingId?: string }) {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-      const data: ListAlertsResponse = await res.json();
-      return data;
+      const data = await res.json();
+      return data.data;
     },
   });
 }
@@ -39,7 +39,8 @@ export function useAcknowledgeAlert() {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       toast.success(t("alerts.acknowledgedToast"));
@@ -64,7 +65,8 @@ export function useResolveAlert() {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-      return res.json();
+      const resData = await res.json();
+      return resData.data;
     },
     onSuccess: () => {
       toast.success(t("alerts.resolvedToast"));

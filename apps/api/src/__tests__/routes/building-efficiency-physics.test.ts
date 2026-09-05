@@ -84,7 +84,7 @@ beforeEach(async () => {
 
   // Create Sensors
   energySensor = await Sensor.create({
-    buildingId: building._id,
+    building: building._id,
     sensorType: "energy_meter",
     location: "Basement",
     installationDate: new Date(),
@@ -93,7 +93,7 @@ beforeEach(async () => {
   });
 
   tempSensor = await Sensor.create({
-    buildingId: building._id,
+    building: building._id,
     sensorType: "internal_temp",
     location: "Living Room",
     installationDate: new Date(),
@@ -102,7 +102,7 @@ beforeEach(async () => {
   });
 
   extSensor = await Sensor.create({
-    buildingId: building._id,
+    building: building._id,
     sensorType: "external_temp",
     location: "Outside",
     installationDate: new Date(),
@@ -145,21 +145,21 @@ beforeEach(async () => {
       timestamp,
       value: 0, // Power OFF
       unit: "W",
-      metadata: { sensorId: energySensor._id, buildingId: building._id, sensorType: "energy_meter" },
+      metadata: { sensor: energySensor._id, building: building._id, sensorType: "energy_meter" },
     });
     
     readings.push({
       timestamp,
       value: currentTemp,
       unit: "°C",
-      metadata: { sensorId: tempSensor._id, buildingId: building._id, sensorType: "internal_temp" },
+      metadata: { sensor: tempSensor._id, building: building._id, sensorType: "internal_temp" },
     });
     
     readings.push({
       timestamp,
       value: EXT_TEMP,
       unit: "°C",
-      metadata: { sensorId: extSensor._id, buildingId: building._id, sensorType: "external_temp" },
+      metadata: { sensor: extSensor._id, building: building._id, sensorType: "external_temp" },
     });
 
     // Evolve
@@ -180,28 +180,28 @@ beforeEach(async () => {
       timestamp,
       value: P_ELEC,
       unit: "W",
-      metadata: { sensorId: energySensor._id, buildingId: building._id, sensorType: "energy_meter" },
+      metadata: { sensor: energySensor._id, building: building._id, sensorType: "energy_meter" },
     });
     
     readings.push({
       timestamp,
       value: currentTemp,
       unit: "°C",
-      metadata: { sensorId: tempSensor._id, buildingId: building._id, sensorType: "internal_temp" },
+      metadata: { sensor: tempSensor._id, building: building._id, sensorType: "internal_temp" },
     });
     
     readings.push({
       timestamp,
       value: EXT_TEMP,
       unit: "°C",
-      metadata: { sensorId: extSensor._id, buildingId: building._id, sensorType: "external_temp" },
+      metadata: { sensor: extSensor._id, building: building._id, sensorType: "external_temp" },
     });
 
     // Evolve
     currentTemp = evolveTemp(currentTemp, 15 * 60, P_THERMAL);
   }
 
-  await SensorReading.create(readings);
+  await SensorReading.insertMany(readings);
 });
 
 describe("GET /api/v1/buildings/:id/efficiency", () => {
@@ -226,22 +226,23 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
     const json = await res.json();
     expectTypeOf(json).toExtend<GetBuildingEfficiencyResponse | ErrorResponse>();
 
-    if (!("metrics" in json)) throw new Error("missing metrics");
+    expect(json.success).toBe(true);
+    if (!json.success) throw new Error("Expected response to be successful");
 
     // Verify Physics Metrics
 
     // 1. Estimated Heat Loss Coefficient (H)
     // Should be close to 50
-    expect(json.metrics.estimatedHeatLossCoefficient).not.toBeNull();
-    expect(json.metrics.estimatedHeatLossCoefficient).toBeGreaterThan(40);
-    expect(json.metrics.estimatedHeatLossCoefficient).toBeLessThan(60);
+    expect(json.data.metrics.estimatedHeatLossCoefficient).not.toBeNull();
+    expect(json.data.metrics.estimatedHeatLossCoefficient).toBeGreaterThan(40);
+    expect(json.data.metrics.estimatedHeatLossCoefficient).toBeLessThan(60);
 
     // 2. Average COP (Device Efficiency)
     // Should be close to 3.0
-    expect(json.metrics.averageCop).not.toBeNull();
-    expect(json.metrics.averageCop).toBeCloseTo(3.0, 0); 
-    expect(json.metrics.averageCop).toBeGreaterThan(2.5);
-    expect(json.metrics.averageCop).toBeLessThan(3.5);
+    expect(json.data.metrics.averageCop).not.toBeNull();
+    expect(json.data.metrics.averageCop).toBeCloseTo(3.0, 0); 
+    expect(json.data.metrics.averageCop).toBeGreaterThan(2.5);
+    expect(json.data.metrics.averageCop).toBeLessThan(3.5);
   });
 
   test("returns 400 for invalid dates", async () => {

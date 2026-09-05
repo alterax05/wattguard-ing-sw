@@ -7,6 +7,8 @@ import type { JwtVariables } from "hono/jwt";
 import type { HydratedDocument } from "mongoose";
 import { User, type UserDocument } from "../models/User";
 import type { AccessTokenPayload } from "../auth/jwt";
+import type { ErrorResponse } from "@wattguard/shared";
+import { apiError } from "../lib/api-response";
 
 /**
  * Extend Hono's JwtVariables with our custom userDoc
@@ -36,17 +38,17 @@ export const loadUserDoc = () => createMiddleware<{
   const payload = c.get("jwtPayload");
 
   if (!payload || !payload.sub) {
-    return c.json({ error: "Unauthorized: Invalid token payload", code: "unauthorized_invalid_token" }, 401);
+    return c.json(apiError("unauthorized_invalid_token", "Unauthorized: Invalid token payload") satisfies ErrorResponse, 401);
   }
 
   // Fetch user from DB to ensure still exists and not disabled
   const userDoc = await User.findById(payload.sub);
   if (!userDoc) {
-    return c.json({ error: "Unauthorized: User not found", code: "unauthorized_user_not_found" }, 401);
+    return c.json(apiError("unauthorized_user_not_found", "Unauthorized: User not found") satisfies ErrorResponse, 401);
   }
 
   if (userDoc.isDisabled) {
-    return c.json({ error: "Forbidden: Account disabled", code: "account_disabled" }, 403);
+    return c.json(apiError("account_disabled", "Forbidden: Account disabled") satisfies ErrorResponse, 403);
   }
 
   // Attach userDoc to context
@@ -68,17 +70,11 @@ export const requireRole = (...roles: ("admin" | "operator")[]) =>
     const payload = c.get("jwtPayload");
 
     if (!payload) {
-      return c.json(
-        { error: "Forbidden: Authentication required", code: "unauthorized_invalid_token" },
-        403
-      );
+      return c.json(apiError("unauthorized_invalid_token", "Forbidden: Authentication required") satisfies ErrorResponse, 403);
     }
 
     if (!roles.includes(payload.role)) {
-      return c.json(
-        { error: `Forbidden: Requires one of: ${roles.join(", ")}`, code: "forbidden_role" },
-        403
-      );
+      return c.json(apiError("forbidden_role", `Forbidden: Requires one of: ${roles.join(", ")}`) satisfies ErrorResponse, 403);
     }
 
     await next();

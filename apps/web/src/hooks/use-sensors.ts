@@ -17,7 +17,7 @@ const SENSOR_PAGE_SIZE = 100;
 import type {
   SensorType,
   SensorStatus,
-  SensorWithBuilding,
+  Sensor,
   SensorReading,
   ListSensorsQuery,
   ListSensorsResponse,
@@ -31,7 +31,7 @@ import type {
 export type {
   SensorType,
   SensorStatus,
-  SensorWithBuilding,
+  Sensor,
   SensorReading,
   CreateSensorRequest,
   UpdateSensorRequest,
@@ -39,7 +39,7 @@ export type {
 
 export type ListSensorsParams = ListSensorsQuery;
 export type SensorReadingsParams = GetSensorReadingsQuery;
-export type SensorListData = ListSensorsResponse;
+export type SensorListData = ListSensorsResponse["data"];
 
 export interface UseSensorsOptions {
   refetchInterval?: number | false;
@@ -50,7 +50,7 @@ export interface UseSensorsOptions {
 
 async function fetchSensorPage(params?: ListSensorsParams): Promise<SensorListData> {
   const query: ListSensorsParams = {};
-  if (params?.buildingId) query.buildingId = params.buildingId;
+  if (params?.building) query.building = params.building;
   if (params?.sensorType) query.sensorType = params.sensorType;
   if (params?.status) query.status = params.status;
   if (params?.sortBy) query.sortBy = params.sortBy;
@@ -64,7 +64,8 @@ async function fetchSensorPage(params?: ListSensorsParams): Promise<SensorListDa
     throw new Error(await errorMessageFromResponse(res));
   }
 
-  return res.json();
+  const json = await res.json();
+  return json.data;
 }
 
 /**
@@ -136,7 +137,7 @@ export function useSensor(id: string | undefined) {
       }
 
       const data = await res.json();
-      return data;
+      return data.data;
     },
     enabled: !!id,
     staleTime: 60 * 1000,
@@ -168,7 +169,7 @@ export function useSensorReadings(id: string | undefined, params?: SensorReading
       }
 
       const data = await res.json();
-      return data;
+      return data.data;
     },
     enabled: !!id,
     staleTime: 30 * 1000,
@@ -194,7 +195,8 @@ export function useCreateSensor() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const data = await res.json();
+      return data.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
@@ -222,7 +224,8 @@ export function useUpdateSensor() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const data = await res.json();
+      return data.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });
@@ -250,7 +253,8 @@ export function useDeleteSensor() {
         throw new Error(await errorMessageFromResponse(res));
       }
 
-      return res.json();
+      const data = await res.json();
+      return data.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });

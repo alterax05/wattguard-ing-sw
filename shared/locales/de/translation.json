@@ -171,7 +171,6 @@
     "invite_pending_exists": "Für diese E-Mail existiert bereits eine ausstehende Einladung.",
     "only_pending_invites_revocable": "Nur ausstehende Einladungen können widerrufen werden.",
     "invite_email_failed": "Die Einladungs-E-Mail konnte nicht gesendet werden. Überprüfen Sie die E-Mail-Konfiguration.",
-    "test_email_failed": "Die Test-E-Mail konnte nicht gesendet werden. Überprüfen Sie die E-Mail-Konfiguration.",
     "invalid_reset_token": "Der Reset-Link ist ungültig.",
     "reset_token_expired": "Der Reset-Link ist abgelaufen.",
     "building_not_found": "Gebäude nicht gefunden.",

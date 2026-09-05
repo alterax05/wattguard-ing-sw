@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SensorTableRow } from "./SensorTableRow"
-import type { SensorWithBuilding } from "@/hooks/use-sensors"
+import type { Sensor } from "@/hooks/use-sensors"
 
 export function SensorTableRoot({
   title,
@@ -113,8 +113,8 @@ export function SensorTableRows({
   sensors,
   onSelect,
 }: {
-  sensors: SensorWithBuilding[]
-  onSelect: (sensor: SensorWithBuilding) => void
+  sensors: Sensor[]
+  onSelect: (sensor: Sensor) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -131,7 +131,7 @@ export function SensorTableRows({
       </TableHeader>
       <TableBody>
         {sensors.map((sensor) => (
-          <SensorTableRow key={sensor.id} sensor={sensor} onSelect={onSelect} />
+          <SensorTableRow key={sensor._id} sensor={sensor} onSelect={onSelect} />
         ))}
       </TableBody>
     </Table>
@@ -139,11 +139,11 @@ export function SensorTableRows({
 }
 
 export interface SensorTableProps {
-  sensors: SensorWithBuilding[]
+  sensors: Sensor[]
   isLoading: boolean
   errorMessage?: string
   onRetry: () => void
-  onSelect: (sensor: SensorWithBuilding) => void
+  onSelect: (sensor: Sensor) => void
 }
 
 export const SensorTable = Object.assign(

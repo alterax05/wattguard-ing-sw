@@ -13,8 +13,8 @@ export * from "./schemas/common";
 export * from "./schemas/auth";
 export * from "./schemas/auth-local";
 
-// Admin schemas
-export * from "./schemas/admin";
+// User schemas
+export * from "./schemas/users";
 
 // Invite schemas
 export * from "./schemas/invites";
@@ -34,6 +34,11 @@ export * from "./schemas/alerts";
 
 // Dashboard schemas
 export * from "./schemas/dashboard";
+export * from "./schemas/metrics";
 
-// Export schemas
+// Export & Readings / Reports schemas
 export * from "./schemas/export";
+export * from "./schemas/readings";
+export * from "./schemas/reports";
+export * from "./schemas/backups";
+

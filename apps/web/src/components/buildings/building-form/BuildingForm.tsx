@@ -285,8 +285,8 @@ export function BuildingFormTypeField() {
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              {buildingTypesData?.buildingTypes.map((type) => (
-                <SelectItem key={type.id} value={type.id}>
+              {buildingTypesData?.map((type) => (
+                <SelectItem key={type._id} value={type._id}>
                   {type.name}
                 </SelectItem>
               ))}

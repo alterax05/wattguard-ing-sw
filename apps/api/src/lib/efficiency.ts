@@ -11,7 +11,7 @@ import {
 } from "./energy";
 import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
 
-export type BuildingEfficiencyMetrics = GetBuildingEfficiencyResponse["metrics"];
+export type BuildingEfficiencyMetrics = GetBuildingEfficiencyResponse["data"]["metrics"];
 
 /**
  * Calcola le metriche di efficienza termica di un edificio su una finestra
@@ -35,7 +35,7 @@ export async function calculateBuildingEfficiency(
       // Gas boiler buildings use gas_meter instead of energy_meter.
       const energySensorType = energySensorTypeFor(building.heatingSystemType);
       const sensorMatch = {
-        "metadata.buildingId": building._id,
+        "metadata.building": building._id,
         timestamp: { $gte: start, $lte: end },
         "metadata.sensorType": { $in: [energySensorType, "internal_temp", "external_temp"] }
       };
@@ -70,13 +70,13 @@ export async function calculateBuildingEfficiency(
       if (isGasBoiler) {
         // Fetch first and last gas_meter readings in the period
         const [firstGas] = await SensorReading.find({
-          "metadata.buildingId": building._id,
+          "metadata.building": building._id,
           timestamp: { $gte: start, $lte: end },
           "metadata.sensorType": "gas_meter",
         }).sort({ timestamp: 1 }).limit(1);
 
         const [lastGas] = await SensorReading.find({
-          "metadata.buildingId": building._id,
+          "metadata.building": building._id,
           timestamp: { $gte: start, $lte: end },
           "metadata.sensorType": "gas_meter",
         }).sort({ timestamp: -1 }).limit(1);
@@ -92,7 +92,7 @@ export async function calculateBuildingEfficiency(
         }>([
           {
             $match: {
-              "metadata.buildingId": building._id,
+              "metadata.building": building._id,
               timestamp: { $gte: start, $lte: end },
               "metadata.sensorType": "external_temp",
             }
@@ -160,7 +160,7 @@ export async function calculateBuildingEfficiency(
       // Match only temperature sensors for gas buildings (energy handled separately above)
       const physicsSensorMatch = isGasBoiler
         ? {
-            "metadata.buildingId": building._id,
+            "metadata.building": building._id,
             timestamp: { $gte: start, $lte: end },
             "metadata.sensorType": { $in: ["internal_temp", "external_temp"] }
           }
@@ -225,8 +225,8 @@ export async function calculateBuildingEfficiency(
       let weatherFallbackExtTemp: number | null = null;
       if (!hasSensorExternalTemp) {
         weatherFallbackExtTemp = await getAverageHistoricalTemperature(
-          building.location.coordinates[1]!,
-          building.location.coordinates[0]!,
+          building.location.coordinates[1],
+          building.location.coordinates[0],
           start,
           end
         );
@@ -303,8 +303,8 @@ export async function calculateBuildingEfficiency(
       let averageExternalTemperature: number | null = avgExternalTempFromBasic;
       if (averageExternalTemperature === null) {
         averageExternalTemperature = weatherFallbackExtTemp ?? await getAverageHistoricalTemperature(
-          building.location.coordinates[1]!,
-          building.location.coordinates[0]!,
+          building.location.coordinates[1],
+          building.location.coordinates[0],
           start,
           end
         );

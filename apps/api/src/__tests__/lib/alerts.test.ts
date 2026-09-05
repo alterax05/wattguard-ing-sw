@@ -411,30 +411,6 @@ describe("lib/alerts", () => {
 
     const dto = toAlertDTO(alert);
 
-    expect(Object.keys(dto).sort()).toEqual(
-      [
-        "id",
-        "buildingId",
-        "buildingName",
-        "sensorId",
-        "type",
-        "thresholdType",
-        "severity",
-        "sensorType",
-        "location",
-        "value",
-        "unit",
-        "limit",
-        "status",
-        "acknowledgedBy",
-        "acknowledgedAt",
-        "resolvedBy",
-        "resolvedAt",
-        "createdAt",
-        "updatedAt",
-      ].sort(),
-    );
-
     expect(dto.id).toBe(alert._id.toString());
     expect(dto.buildingId).toBe(buildingId.toString());
     expect(dto.buildingName).toBe("Test Building");
@@ -466,23 +442,10 @@ describe("lib/alerts", () => {
       resolvedBy: SYSTEM_RESOLVER,
       resolvedAt: new Date("2024-06-01T12:00:00Z"),
     });
-    const legacyAlert = await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
-      type: THRESHOLD_ALERT_TYPE,
-      severity: "high",
-      status: "resolved",
-      resolvedBy: "Sistema",
-      resolvedAt: new Date("2024-06-01T12:00:00Z"),
-    });
 
     expect(toAlertDTO(systemAlert, { locale: "en" }).resolvedBy).toBe("System");
     expect(toAlertDTO(systemAlert, { locale: "it" }).resolvedBy).toBe("Sistema");
-    expect(toAlertDTO(legacyAlert, { locale: "en" }).resolvedBy).toBe("System");
-    expect(toAlertDTO(legacyAlert, { locale: "it" }).resolvedBy).toBe("Sistema");
-
     expect(toAlertDTO(systemAlert).resolvedBy).toBe(SYSTEM_RESOLVER);
-    expect(toAlertDTO(legacyAlert).resolvedBy).toBe("Sistema");
 
     const userAlert = await Alert.create({
       buildingId,

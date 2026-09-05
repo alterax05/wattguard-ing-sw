@@ -68,7 +68,7 @@ function mkReading(
   sensorId: string,
   buildingId: string,
 ) {
-  return { timestamp, value, unit, metadata: { sensorId, buildingId, sensorType } };
+  return { timestamp, value, unit, metadata: { sensor: sensorId, building: buildingId, sensorType } };
 }
 
 // ── lifecycle ────────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ async function createSensor(
   sensorType: "internal_temp" | "external_temp" | "energy_meter" | "gas_meter",
 ) {
   return Sensor.create({
-    buildingId,
+    building: buildingId,
     sensorType,
     location: "Test Location",
     installationDate: new Date(),

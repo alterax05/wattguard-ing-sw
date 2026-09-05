@@ -171,7 +171,6 @@
     "invite_pending_exists": "Esiste già un invito in sospeso per questa email.",
     "only_pending_invites_revocable": "Solo gli inviti in sospeso possono essere revocati.",
     "invite_email_failed": "Invio dell'email di invito non riuscito. Controlla la configurazione email.",
-    "test_email_failed": "Invio dell'email di test non riuscito. Controlla la configurazione email.",
     "invalid_reset_token": "Il link di reimpostazione non è valido.",
     "reset_token_expired": "Il link di reimpostazione è scaduto.",
     "building_not_found": "Edificio non trovato.",

@@ -21,7 +21,7 @@ export type SetupRequest = z.infer<typeof SetupRequestSchema>;
 
 export const SetupResponseSchema = z.object({
   success: z.literal(true),
-  user: PublicUserSchema,
+  data: PublicUserSchema,
 });
 
 export type SetupResponse = z.infer<typeof SetupResponseSchema>;
@@ -38,7 +38,7 @@ export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
 export const LoginResponseSchema = z.object({
   success: z.literal(true),
-  user: PublicUserSchema,
+  data: PublicUserSchema,
 });
 
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
@@ -54,7 +54,9 @@ export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordRequestSchema>;
 
 export const ForgotPasswordResponseSchema = z.object({
   success: z.literal(true),
-  message: z.string().describe("Success message (always returns success to prevent email enumeration)"),
+  data: z.object({
+    message: z.string().describe("Success message (always returns success to prevent email enumeration)"),
+  }),
 });
 
 export type ForgotPasswordResponse = z.infer<typeof ForgotPasswordResponseSchema>;
@@ -71,7 +73,10 @@ export const ValidateResetTokenParamsSchema = z.object({
 export type ValidateResetTokenParams = z.infer<typeof ValidateResetTokenParamsSchema>;
 
 export const ValidateResetTokenResponseSchema = z.object({
-  valid: z.literal(true),
+  success: z.literal(true),
+  data: z.object({
+    valid: z.literal(true),
+  }),
 });
 
 export type ValidateResetTokenResponse = z.infer<typeof ValidateResetTokenResponseSchema>;
@@ -89,7 +94,9 @@ export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>;
 
 export const ResetPasswordResponseSchema = z.object({
   success: z.literal(true),
-  message: z.string().describe("Success message"),
+  data: z.object({
+    message: z.string().describe("Success message"),
+  }),
 });
 
 export type ResetPasswordResponse = z.infer<typeof ResetPasswordResponseSchema>;

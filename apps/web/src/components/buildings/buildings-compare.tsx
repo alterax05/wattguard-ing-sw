@@ -75,7 +75,8 @@ function BuildingsCompareProvider({
       queryFn: async () => {
         const res = await client.api.v1.buildings[":id"].$get({ param: { id } })
         if (!res.ok) throw new Error(await errorMessageFromResponse(res, "Building not found"))
-        return res.json()
+        const resData = await res.json()
+        return resData.data
       },
       staleTime: 2 * 60 * 1000,
     })),
@@ -90,7 +91,8 @@ function BuildingsCompareProvider({
           query: { startDate: efficiencyParams!.startDate, endDate: efficiencyParams!.endDate },
         })
         if (!res.ok) throw new Error(await errorMessageFromResponse(res, "Efficiency error"))
-        return res.json()
+        const resData = await res.json()
+        return resData.data
       },
       staleTime: 5 * 60 * 1000,
       enabled: !!efficiencyParams,
@@ -101,7 +103,7 @@ function BuildingsCompareProvider({
   const buildings = buildingQueries
     .map((q, i) => {
       if (!q.data) return null
-      return { building: q.data.building, efficiency: efficiencyQueries[i]?.data ?? null }
+      return { building: q.data, efficiency: efficiencyQueries[i]?.data ?? null }
     })
     .filter(Boolean) as Array<{ building: BuildingDetail; efficiency: EfficiencyMetrics | null }>
 
@@ -125,7 +127,7 @@ function BuildingsCompareHeader() {
   const { t } = useTranslation()
   return (
     <div className="flex items-center gap-4">
-      <Button variant="ghost" size="icon" onClick={() => { void navigate("/dashboard/buildings") }}>
+      <Button variant="ghost" size="icon" onClick={() => { void navigate("/buildings") }}>
         <ArrowLeft className="h-5 w-5" />
         <span className="sr-only">{t("common.back")}</span>
       </Button>
@@ -171,9 +173,9 @@ function BuildingsCompareSummaryCards() {
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {buildings.map(({ building }) => (
         <Card
-          key={building.id}
+          key={building._id}
           className="cursor-pointer transition-all hover:shadow-md hover:ring-1 hover:ring-border"
-          onClick={() => { void navigate(`/dashboard/buildings/${building.id}`) }}
+          onClick={() => { void navigate(`/buildings/${building._id}`) }}
         >
           <CardContent className="pt-6">
             <div className="space-y-4">
@@ -237,7 +239,7 @@ function BuildingsCompareEfficiency() {
         ) : buildings.some((b) => b.efficiency) ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {buildings.map(({ building, efficiency }) => (
-              <div key={building.id} className="rounded-lg border p-4 space-y-3">
+              <div key={building._id} className="rounded-lg border p-4 space-y-3">
                 <p className="text-sm font-semibold">{building.name}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -292,7 +294,7 @@ function BuildingsCompareTable() {
               <tr className="border-b">
                 <th className="pb-3 pr-4 text-left font-medium text-muted-foreground">{t("buildings.parameter")}</th>
                 {buildings.map(({ building }) => (
-                  <th key={building.id} className="pb-3 pr-4 text-left font-medium">
+                  <th key={building._id} className="pb-3 pr-4 text-left font-medium">
                     {building.name}
                   </th>
                 ))}
@@ -302,7 +304,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("common.status")}</td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4">
+                  <td key={building._id} className="py-3 pr-4">
                     <BuildingStatusBadge status={building.status} />
                   </td>
                 ))}
@@ -312,7 +314,7 @@ function BuildingsCompareTable() {
                   {t("buildings.surface")} ({t("common.squareMeters")})
                 </td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4 tabular-nums">
+                  <td key={building._id} className="py-3 pr-4 tabular-nums">
                     {building.surface}
                   </td>
                 ))}
@@ -324,7 +326,7 @@ function BuildingsCompareTable() {
                   </span>
                 </td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4 tabular-nums">
+                  <td key={building._id} className="py-3 pr-4 tabular-nums">
                     {building.activeSensors}
                   </td>
                 ))}
@@ -336,7 +338,7 @@ function BuildingsCompareTable() {
                   </span>
                 </td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4 font-semibold tabular-nums text-chart-1">
+                  <td key={building._id} className="py-3 pr-4 font-semibold tabular-nums text-chart-1">
                     {building.currentConsumption != null ? building.currentConsumption.toFixed(1) : t("common.na")}
                   </td>
                 ))}
@@ -344,7 +346,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("buildings.kwhPerSqm")}</td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4 tabular-nums">
+                  <td key={building._id} className="py-3 pr-4 tabular-nums">
                     {building.currentConsumption != null && building.surface > 0
                       ? (building.currentConsumption / building.surface).toFixed(2)
                       : t("common.na")}
@@ -354,7 +356,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("buildings.type")}</td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4">
+                  <td key={building._id} className="py-3 pr-4">
                     {getBuildingTypeName(building.buildingType)}
                   </td>
                 ))}
@@ -362,7 +364,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("buildings.constructionYear")}</td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4 tabular-nums">
+                  <td key={building._id} className="py-3 pr-4 tabular-nums">
                     {building.constructionYear ?? t("common.na")}
                   </td>
                 ))}
@@ -370,7 +372,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("buildings.heatingSystem")}</td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4">
+                  <td key={building._id} className="py-3 pr-4">
                     {building.heatingSystemType}
                   </td>
                 ))}
@@ -378,7 +380,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("buildings.geographicZone")}</td>
                 {buildings.map(({ building }) => (
-                  <td key={building.id} className="py-3 pr-4">
+                  <td key={building._id} className="py-3 pr-4">
                     {building.geographicZone}
                   </td>
                 ))}
@@ -386,7 +388,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("buildings.efficiencyCopAvg")}</td>
                 {buildings.map(({ building, efficiency }) => (
-                  <td key={building.id} className="py-3 pr-4 font-semibold tabular-nums">
+                  <td key={building._id} className="py-3 pr-4 font-semibold tabular-nums">
                     {efficiency?.metrics.averageCop != null ? efficiency.metrics.averageCop.toFixed(2) : t("common.na")}
                   </td>
                 ))}
@@ -394,7 +396,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("buildings.efficiencyHeatLossShort")}</td>
                 {buildings.map(({ building, efficiency }) => (
-                  <td key={building.id} className="py-3 pr-4 tabular-nums">
+                  <td key={building._id} className="py-3 pr-4 tabular-nums">
                     {efficiency?.metrics.estimatedHeatLossCoefficient != null
                       ? efficiency.metrics.estimatedHeatLossCoefficient.toFixed(1)
                       : t("common.na")}
@@ -404,7 +406,7 @@ function BuildingsCompareTable() {
               <tr>
                 <td className="py-3 pr-4 text-muted-foreground">{t("buildings.totalConsumptionKwh")}</td>
                 {buildings.map(({ building, efficiency }) => (
-                  <td key={building.id} className="py-3 pr-4 font-semibold tabular-nums">
+                  <td key={building._id} className="py-3 pr-4 font-semibold tabular-nums">
                     {efficiency?.metrics.totalEnergyConsumed != null ? efficiency.metrics.totalEnergyConsumed.toFixed(1) : t("common.na")}
                   </td>
                 ))}
@@ -459,7 +461,7 @@ function BuildingsCompareInner({ buildingIds }: { buildingIds: string[] }) {
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <Building2 className="mb-3 h-10 w-10 text-muted-foreground" />
         <p className="font-medium">{t("buildings.notFound")}</p>
-        <Button variant="outline" className="mt-4 bg-transparent" onClick={() => { void navigate("/dashboard/buildings") }}>
+        <Button variant="outline" className="mt-4 bg-transparent" onClick={() => { void navigate("/buildings") }}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           {t("buildings.backToSearch")}
         </Button>

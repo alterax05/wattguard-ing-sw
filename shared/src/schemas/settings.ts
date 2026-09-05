@@ -48,7 +48,8 @@ export const SystemConfigSchema = z.object({
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 
 export const GetSettingsResponseSchema = z.object({
-  config: SystemConfigSchema,
+  success: z.literal(true),
+  data: SystemConfigSchema,
 });
 
 export type GetSettingsResponse = z.infer<typeof GetSettingsResponseSchema>;
@@ -73,7 +74,7 @@ export type UpdateSettingsRequest = z.infer<typeof UpdateSettingsRequestSchema>;
 
 export const UpdateSettingsResponseSchema = z.object({
   success: z.literal(true),
-  config: SystemConfigSchema,
+  data: SystemConfigSchema,
 });
 
 export type UpdateSettingsResponse = z.infer<typeof UpdateSettingsResponseSchema>;

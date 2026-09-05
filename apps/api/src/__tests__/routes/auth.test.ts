@@ -28,9 +28,7 @@ import type {
   ResetPasswordResponse,
   MeResponse,
   LogoutResponse,
-  TestEmailResponse,
   CreateInviteResponse,
-  ListInvitesResponse,
 } from "@wattguard/shared";
 
 type ErrorResponse = z.infer<typeof ErrorSchema>;
@@ -94,7 +92,7 @@ describe("auth api", () => {
       const token = tokenMatch![1];
 
       // Create invite
-      const inviteRes = await client.api.v1.admin.invites.$post(
+      const inviteRes = await client.api.v1.invites.$post(
         {
           json: {
             email: "user@test.com",
@@ -111,11 +109,11 @@ describe("auth api", () => {
       expect(inviteRes.status).toBe(201);
       const inviteData = await inviteRes.json();
       expectTypeOf(inviteData).toExtend<CreateInviteResponse | ErrorResponse>();
-      if (!("success" in inviteData)) {
-        throw new Error("Expected response to contain 'success'");
-      }
       expect(inviteData.success).toBe(true);
-      expect(inviteData.invite.email).toBe("user@test.com");
+      if (!inviteData.success) {
+        throw new Error("Expected response success to be true");
+      }
+      expect(inviteData.data.email).toBe("user@test.com");
     });
 
     test("validates an invite token", async () => {
@@ -141,29 +139,31 @@ describe("auth api", () => {
         createdBy: admin._id,
       });
 
-      // Validate invite via query param and path param
-      const res = await client.api.v1.invites.validate.$get({
-        query: { token },
+      // Validate invite via path param
+      const res = await client.api.v1.invites[":token"].$get({
+        param: { token },
       });
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
-      if (!("valid" in data)) {
-        throw new Error("Expected response to contain 'valid'");
+      expect(data.success).toBe(true);
+      if (!data.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(data.valid).toBe(true);
-      expect(data.email).toBe("user@test.com");
+      expect(data.data.valid).toBe(true);
+      expect(data.data.email).toBe("user@test.com");
 
       const resPath = await client.api.v1.invites[":token"].$get({
         param: { token },
       });
       expect(resPath.status).toBe(200);
       const dataPath = await resPath.json();
-      if (!("valid" in dataPath)) {
-        throw new Error("Expected response to contain 'valid'");
+      expect(dataPath.success).toBe(true);
+      if (!dataPath.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(dataPath.valid).toBe(true);
-      expect(dataPath.email).toBe("user@test.com");
+      expect(dataPath.data.valid).toBe(true);
+      expect(dataPath.data.email).toBe("user@test.com");
     });
 
   });
@@ -204,11 +204,11 @@ describe("auth api", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<SetupResponse | ErrorResponse>();
-      if (!("success" in data)) {
-        throw new Error("Expected response to contain 'success'");
-      }
       expect(data.success).toBe(true);
-      expect(data.user.email).toBe("user@test.com");
+      if (!data.success) {
+        throw new Error("Expected response success to be true");
+      }
+      expect(data.data.email).toBe("user@test.com");
 
       // Verify user was created
       const user = await User.findOne({ email: "user@test.com" });
@@ -242,11 +242,11 @@ describe("auth api", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<LoginResponse | ErrorResponse>();
-      if (!("success" in data)) {
-        throw new Error("Expected response to contain 'success'");
-      }
       expect(data.success).toBe(true);
-      expect(data.user.email).toBe("user@test.com");
+      if (!data.success) {
+        throw new Error("Expected response success to be true");
+      }
+      expect(data.data.email).toBe("user@test.com");
 
       // Check cookie was set
       const setCookieHeader = res.headers.get("set-cookie");
@@ -275,10 +275,11 @@ describe("auth api", () => {
 
       expect(res.status).toBe(401);
       const data = await res.json();
-      if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+      expect(data.success).toBe(false);
+      if (data.success) {
+        throw new Error("Expected response success to be false");
       }
-      expect(data.error).toBeDefined();
+      expect(data.error_code).toBe("invalid_credentials");
     });
   });
 
@@ -313,10 +314,11 @@ describe("auth api", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expectTypeOf(data).toExtend<MeResponse | ErrorResponse>();
-      if (!("user" in data)) {
-        throw new Error("Expected response to contain 'user'");
+      expect(data.success).toBe(true);
+      if (!data.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(data.user.email).toBe("user@test.com");
+      expect(data.data.email).toBe("user@test.com");
     });
 
     test("rejects access without token", async () => {
@@ -344,7 +346,7 @@ describe("auth api", () => {
 
       const meBefore = await client.api.v1.auth.me.$get(undefined, authHeaders);
       const beforeData = await meBefore.json();
-      expect(beforeData.user.language).toBeUndefined();
+      expect(beforeData.data.language).toBeUndefined();
 
       const res = await client.api.v1.auth.me.language.$patch(
         { json: { language: "it" } },
@@ -352,10 +354,11 @@ describe("auth api", () => {
       );
       expect(res.status).toBe(200);
       const data = await res.json();
-      if (!("user" in data)) {
-        throw new Error("Expected response to contain 'user'");
+      expect(data.success).toBe(true);
+      if (!data.success) {
+        throw new Error("Expected response success to be true");
       }
-      expect(data.user.language).toBe("it");
+      expect(data.data.language).toBe("it");
 
       const persisted = await User.findOne({ email: "lang@test.com" });
       expect(persisted!.language).toBe("it");
@@ -391,17 +394,14 @@ describe("auth api", () => {
       const token = tokenMatch![1];
 
       // Try to access admin route
-      const res = await client.api.v1.admin.invites.$get(undefined, {
+      const res = await client.api.v1.invites.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       expect(res.status).toBe(403);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
-      if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
-      }
-      expect(data.error).toBeDefined();
+      const data = ErrorSchema.parse(await res.json());
+      expect(data.success).toBe(false);
+      expect(data.error_code).toBeDefined();
     });
   });
 
@@ -445,48 +445,6 @@ describe("auth api", () => {
       const setCookieHeader = res.headers.get("set-cookie");
       expect(setCookieHeader).toBeDefined();
       expect(setCookieHeader).toContain("access_token=");
-    });
-
-
-    test("sends test email as admin", async () => {
-      await User.create({
-        email: "admin@test.com",
-        role: "admin",
-        isDisabled: false,
-        passwordHash: await Bun.password.hash("admin123", {
-          algorithm: "bcrypt",
-          cost: 10,
-        }),
-      });
-
-      const loginRes = await client.api.v1.auth.local.login.$post({
-        json: {
-          email: "admin@test.com",
-          password: "admin123",
-        },
-      });
-
-      const tokenMatch = loginRes.headers
-        .get("set-cookie")!
-        .match(/access_token=([^;]+)/);
-      const token = tokenMatch![1];
-
-      const res = await client.api.v1.auth.admin["test-email"].$post(
-        {
-          json: { to: "test@test.com" },
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<TestEmailResponse | ErrorResponse>();
-      if (!("success" in data)) {
-        throw new Error("Expected response to contain 'success'");
-      }
-      expect(data.success).toBe(true);
     });
   });
 
@@ -629,10 +587,11 @@ describe("auth api", () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+      expect(data.success).toBe(false);
+      if (data.success) {
+        throw new Error("Expected response success to be false");
       }
-      expect(data.error).toContain("expired");
+      expect(data.error_code).toContain("expired");
     });
   });
 });

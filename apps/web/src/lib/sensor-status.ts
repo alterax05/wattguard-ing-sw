@@ -18,9 +18,8 @@ export interface MonitoringStatusPresentation {
  */
 export function getMonitoringStatus(sensor: {
   status: SensorStatus
-  isOffline?: boolean
 }): MonitoringStatus {
-  if (sensor.status === "inactive" || (sensor.status === "active" && sensor.isOffline)) {
+  if (sensor.status === "inactive") {
     return "offline"
   }
 

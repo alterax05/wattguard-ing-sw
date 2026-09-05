@@ -57,7 +57,7 @@ export function AddSensorDialog({
     }
 
     const payload: CreateSensorRequest = {
-      buildingId,
+      building: buildingId,
       sensorType: values.sensorType,
       location: values.location.trim(),
     }

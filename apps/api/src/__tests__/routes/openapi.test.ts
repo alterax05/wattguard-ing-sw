@@ -94,11 +94,11 @@ describe("openapi api", () => {
       expect(spec.paths["/auth/me"]).toBeDefined();
     });
 
-    test("includes documented admin routes", async () => {
+    test("includes documented user routes", async () => {
       const spec = await fetchSpec();
 
-      // Check for admin endpoints
-      expect(spec.paths["/admin/invites"]).toBeDefined();
+      // Check for user endpoints
+      expect(spec.paths["/users"]).toBeDefined();
     });
 
     test("includes tags for route organization", async () => {
@@ -110,7 +110,8 @@ describe("openapi api", () => {
       // Check for expected tags
       const tagNames = (spec.tags ?? []).map((tag) => tag.name);
       expect(tagNames).toContain("Authentication");
-      expect(tagNames).toContain("Admin");
+      expect(tagNames).toContain("Users");
+      expect(tagNames).toContain("Invites");
     });
 
     test("defines request/response schemas", async () => {

@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { 
   ObjectIdSchema, 
+  IsoDateTimeSchema,
   BuildingStatusSchema, 
   HeatingSystemTypeSchema,
   PaginationQuerySchema,
   PaginationResponseSchema,
   PeriodSchema,
   ObjectIdParamSchema,
-  DeleteResponseSchema,
   SortOrderSchema,
   SensorTypeSchema,
 } from "./common";
@@ -29,27 +29,29 @@ export type GeoJSONPoint = z.infer<typeof GeoJSONPointSchema>;
  * Building response schema
  */
 export const BuildingSummarySchema = z.object({
-  id: ObjectIdSchema.describe("Unique building identifier"),
+  _id: ObjectIdSchema.describe("Unique building identifier"),
   name: z.string().describe("Building name"),
   address: z.string().describe("Building address"),
   surface: z.number().describe("Surface area in square meters"),
   ceilingHeight: z.number().describe("Ceiling height in meters"),
   location: GeoJSONPointSchema.describe("Geographic location as GeoJSON Point"),
   buildingType: z.union([
-    z.string(), // ID
+    ObjectIdSchema.describe("Building type identifier"),
+    //TODO: ma c'è buildingTypeSchema...
     z.object({
-      id: ObjectIdSchema,
+      _id: ObjectIdSchema,
       name: z.string(),
-      description: z.string().optional(),
+      description: z.string().nullish().transform((v) => v ?? undefined),
     }),
   ]).describe("Building type (ID or populated object)"),
   heatingSystemType: z.string().describe("Type of heating system"),
   status: BuildingStatusSchema,
   geographicZone: z.string().describe("Geographic zone"),
-  activeSensors: z.number().describe("Count of active sensors"),
-  currentConsumption: z.number().nullable().describe("Latest energy meter reading in kWh, or null if unavailable"),
-  updatedAt: z.iso.datetime().describe("Last update timestamp"),
+  activeSensors: z.number().default(0).describe("Count of active sensors"),
+  currentConsumption: z.number().nullable().default(null).describe("Latest energy meter reading in kWh, or null if unavailable"),
+  updatedAt: IsoDateTimeSchema.default(() => new Date().toISOString()).describe("Last update timestamp"),
 });
+
 
 export type BuildingSummary = z.infer<typeof BuildingSummarySchema>;
 
@@ -71,11 +73,11 @@ export type EfficiencyThresholds = z.infer<typeof EfficiencyThresholdsSchema>;
  * Building response schema
  */
 export const BuildingDetailSchema = BuildingSummarySchema.extend({
-  constructionYear: z.number().optional().describe("Year of construction"),
+  constructionYear: z.number().int().nullish().transform((v) => v ?? undefined).describe("Year of construction"),
   efficiencyThresholds: EfficiencyThresholdsSchema,
-  createdBy: z.string().optional().describe("User who created this building"),
-  updatedBy: z.string().optional().describe("User who last updated this building"),
-  createdAt: z.iso.datetime().optional().describe("Creation timestamp"),
+  createdBy: ObjectIdSchema.optional().describe("User who created this building"),
+  updatedBy: ObjectIdSchema.optional().describe("User who last updated this building"),
+  createdAt: IsoDateTimeSchema.optional().describe("Creation timestamp"),
 });
 
 export type BuildingDetail = z.infer<typeof BuildingDetailSchema>;
@@ -99,8 +101,11 @@ export type SearchBuildingsQuery = z.input<typeof SearchBuildingsQuerySchema>;
  * GET /api/v1/buildings
  */
 export const SearchBuildingsResponseSchema = z.object({
-  buildings: z.array(BuildingSummarySchema).describe("List of buildings matching search criteria"),
-  pagination: PaginationResponseSchema,
+  success: z.literal(true),
+  data: z.object({
+    buildings: z.array(BuildingSummarySchema).describe("List of buildings matching search criteria"),
+    pagination: PaginationResponseSchema,
+  }),
 });
 
 export type SearchBuildingsResponse = z.infer<typeof SearchBuildingsResponseSchema>;
@@ -119,6 +124,7 @@ export const CreateBuildingRequestSchema = z.object({
   heatingSystemType: HeatingSystemTypeSchema.describe("Type of heating system"),
   constructionYear: z.number().min(1000).max(new Date().getFullYear() + 10).optional().describe("Year of construction"),
   geographicZone: z.string().min(1, "Geographic zone is required").trim().describe("Geographic zone"),
+  efficiencyThresholds: EfficiencyThresholdsSchema.optional(),
 });
 
 export type CreateBuildingRequest = z.infer<typeof CreateBuildingRequestSchema>;
@@ -128,7 +134,7 @@ export type CreateBuildingRequest = z.infer<typeof CreateBuildingRequestSchema>;
  */
 export const CreateBuildingResponseSchema = z.object({
   success: z.literal(true),
-  building: BuildingDetailSchema,
+  data: BuildingDetailSchema,
 });
 
 export type CreateBuildingResponse = z.infer<typeof CreateBuildingResponseSchema>;
@@ -142,7 +148,8 @@ export const GetBuildingParamsSchema = ObjectIdParamSchema;
  * GET /api/v1/buildings/:id - Get building response 
  */
 export const GetBuildingResponseSchema = z.object({
-  building: BuildingDetailSchema,
+  success: z.literal(true),
+  data: BuildingDetailSchema,
 });
 
 export type GetBuildingResponse = z.infer<typeof GetBuildingResponseSchema>;
@@ -168,7 +175,7 @@ export type UpdateBuildingRequest = z.infer<typeof UpdateBuildingRequestSchema>;
  */
 export const UpdateBuildingResponseSchema = z.object({
   success: z.literal(true),
-  building: BuildingDetailSchema,
+  data: BuildingDetailSchema,
 });
 
 export type UpdateBuildingResponse = z.infer<typeof UpdateBuildingResponseSchema>;
@@ -181,7 +188,13 @@ export const DeleteBuildingParamsSchema = ObjectIdParamSchema;
 /**
  * DELETE /api/v1/buildings/:id - Delete building response
  */
-export const DeleteBuildingResponseSchema = DeleteResponseSchema;
+export const DeleteBuildingResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    id: z.string().describe("Deleted building identifier"),
+    message: z.string().optional().describe("Deletion message"),
+  }),
+});
 
 export type DeleteBuildingResponse = z.infer<typeof DeleteBuildingResponseSchema>;
 
@@ -208,15 +221,21 @@ export type RealTimeDataSnapshot = z.infer<typeof RealTimeDataSchema>;
 /**
  * GET /api/v1/buildings/:id/real-time - Get building real-time data response
  */
-export const GetBuildingRealTimeResponseSchema = z.object({
+export const RealTimeDataResponseSchema = z.object({
   buildingId: ObjectIdSchema,
   buildingName: z.string(),
   timestamp: z.iso.datetime().describe("Timestamp of this snapshot"),
   data: RealTimeDataSchema,
 });
 
+export type RealTimeData = z.infer<typeof RealTimeDataResponseSchema>;
+
+export const GetBuildingRealTimeResponseSchema = z.object({
+  success: z.literal(true),
+  data: RealTimeDataResponseSchema,
+});
+
 export type GetBuildingRealTimeResponse = z.infer<typeof GetBuildingRealTimeResponseSchema>;
-export type RealTimeData = GetBuildingRealTimeResponse;
 
 /**
  * GET /api/v1/buildings/:id/history - Get building historical data query parameters
@@ -246,11 +265,18 @@ export type HistoricalDataPoint = z.infer<typeof HistoricalDataPointSchema>;
 /**
  * GET /api/v1/buildings/:id/history - Get building historical data response
  */
-export const GetBuildingHistoryResponseSchema = z.object({
+export const HistoricalDataResponseSchema = z.object({
   buildingId: ObjectIdSchema,
   buildingName: z.string(),
   period: PeriodSchema,
   data: z.array(HistoricalDataPointSchema).describe("Historical data points for graphing"),
+});
+
+export type HistoricalData = z.infer<typeof HistoricalDataResponseSchema>;
+
+export const GetBuildingHistoryResponseSchema = z.object({
+  success: z.literal(true),
+  data: HistoricalDataResponseSchema,
 });
 
 export type GetBuildingHistoryResponse = z.infer<typeof GetBuildingHistoryResponseSchema>;
@@ -268,7 +294,7 @@ export type GetBuildingEfficiencyQuery = z.input<typeof GetBuildingEfficiencyQue
 /**
  * GET /api/v1/buildings/:id/efficiency - Efficiency response
  */
-export const GetBuildingEfficiencyResponseSchema = z.object({
+export const BuildingEfficiencyDataSchema = z.object({
   buildingId: ObjectIdSchema,
   buildingName: z.string(),
   period: PeriodSchema,
@@ -281,6 +307,23 @@ export const GetBuildingEfficiencyResponseSchema = z.object({
   }),
 });
 
+export type EfficiencyMetrics = z.infer<typeof BuildingEfficiencyDataSchema>;
+export type BuildingEfficiencyMetrics = EfficiencyMetrics["metrics"];
+
+export const GetBuildingEfficiencyResponseSchema = z.object({
+  success: z.literal(true),
+  data: BuildingEfficiencyDataSchema,
+});
+
 export type GetBuildingEfficiencyResponse = z.infer<typeof GetBuildingEfficiencyResponseSchema>;
-export type EfficiencyMetrics = GetBuildingEfficiencyResponse;
-export type BuildingEfficiencyMetrics = GetBuildingEfficiencyResponse["metrics"];
+
+// RESTful Aliases for sub-resources: /buildings/:id/readings and /buildings/:id/readings/latest
+export const BuildingReadingsLatestResponseSchema = GetBuildingRealTimeResponseSchema;
+export type BuildingReadingsLatestResponse = z.infer<typeof BuildingReadingsLatestResponseSchema>;
+
+export const BuildingReadingsQuerySchema = GetBuildingHistoryQuerySchema;
+export type BuildingReadingsQuery = z.input<typeof BuildingReadingsQuerySchema>;
+
+export const BuildingReadingsResponseSchema = GetBuildingHistoryResponseSchema;
+export type BuildingReadingsResponse = z.infer<typeof BuildingReadingsResponseSchema>;
+

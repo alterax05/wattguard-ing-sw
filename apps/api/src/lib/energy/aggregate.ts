@@ -57,7 +57,7 @@ export async function aggregateDailyConsumptionForBuildings(
     }>([
       {
         $match: {
-          "metadata.buildingId": energyIdSet,
+          "metadata.building": energyIdSet,
           timestamp: { $gte: start, $lte: end },
           "metadata.sensorType": "energy_meter",
         },
@@ -65,7 +65,7 @@ export async function aggregateDailyConsumptionForBuildings(
       {
         $group: {
           _id: {
-            buildingId: "$metadata.buildingId",
+            buildingId: "$metadata.building",
             day: {
               $dateToString: { format: "%Y-%m-%d", date: "$timestamp", timezone: "UTC" },
             },
@@ -144,14 +144,14 @@ export async function aggregateConsumptionForBuildings(
     }>([
       {
         $match: {
-          "metadata.buildingId": idSet,
+          "metadata.building": idSet,
           timestamp: { $gte: start, $lte: end },
           "metadata.sensorType": "energy_meter",
         },
       },
       {
         $group: {
-          _id: "$metadata.buildingId",
+          _id: "$metadata.building",
           avgPowerKW: {
             $avg: {
               $cond: [{ $eq: ["$unit", "W"] }, { $divide: ["$value", 1000] }, "$value"],
@@ -171,7 +171,7 @@ export async function aggregateConsumptionForBuildings(
     }>([
       {
         $match: {
-          "metadata.buildingId": gasIdSet,
+          "metadata.building": gasIdSet,
           timestamp: { $gte: start, $lte: end },
           "metadata.sensorType": "gas_meter",
         },
@@ -179,7 +179,7 @@ export async function aggregateConsumptionForBuildings(
       { $sort: { timestamp: 1 } },
       {
         $group: {
-          _id: "$metadata.buildingId",
+          _id: "$metadata.building",
           // $top = first element of the ascending timestamp order (earliest reading)
           firstValue: { $top: { output: "$value", sortBy: { timestamp: 1 } } },
           lastValue: { $bottom: { output: "$value", sortBy: { timestamp: 1 } } },

@@ -23,12 +23,7 @@ export const DashboardHistoryQuerySchema = z.object({
 
 export type DashboardHistoryQuery = z.input<typeof DashboardHistoryQuerySchema>;
 
-// ── Response Schemas ─────────────────────────────────────────────────────────
-
-/**
- * Response for GET /api/v1/dashboard/stats
- */
-export const DashboardStatsResponseSchema = z.object({
+export const DashboardStatsSchema = z.object({
   sensors: z.object({
     active: z.number().describe("Total active sensors across all buildings"),
     total: z.number().describe("Total sensors across all buildings"),
@@ -42,8 +37,17 @@ export const DashboardStatsResponseSchema = z.object({
   }),
 });
 
+export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
+
+/**
+ * Response for GET /api/v1/dashboard/stats
+ */
+export const DashboardStatsResponseSchema = z.object({
+  success: z.literal(true),
+  data: DashboardStatsSchema,
+});
+
 export type DashboardStatsResponse = z.infer<typeof DashboardStatsResponseSchema>;
-export type DashboardStats = DashboardStatsResponse;
 
 /**
  * A single data point in the history response
@@ -57,9 +61,9 @@ export const DashboardHistoryDataPointSchema = z.object({
 export type DashboardHistoryDataPoint = z.infer<typeof DashboardHistoryDataPointSchema>;
 
 /**
- * Response for GET /api/v1/dashboard/history
+ * Data payload for GET /api/v1/dashboard/history
  */
-export const DashboardHistoryResponseSchema = z.object({
+export const DashboardHistoryDataSchema = z.object({
   period: z.object({
     startDate: z.string(),
     endDate: z.string(),
@@ -68,5 +72,14 @@ export const DashboardHistoryResponseSchema = z.object({
   data: z.array(DashboardHistoryDataPointSchema),
 });
 
+export type DashboardHistory = z.infer<typeof DashboardHistoryDataSchema>;
+
+/**
+ * Response for GET /api/v1/dashboard/history
+ */
+export const DashboardHistoryResponseSchema = z.object({
+  success: z.literal(true),
+  data: DashboardHistoryDataSchema,
+});
+
 export type DashboardHistoryResponse = z.infer<typeof DashboardHistoryResponseSchema>;
-export type DashboardHistory = DashboardHistoryResponse;

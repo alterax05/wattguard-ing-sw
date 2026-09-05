@@ -21,7 +21,7 @@ const systemConfigSchema = new Schema(
   { timestamps: true },
 );
 
-type SystemConfigDocument = InferSchemaType<typeof systemConfigSchema>;
+export type SystemConfigDocument = InferSchemaType<typeof systemConfigSchema>;
 /**
  * Returns the single SystemConfig document, creating it with defaults if it
  * does not yet exist.

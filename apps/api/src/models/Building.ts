@@ -1,6 +1,11 @@
 import mongoose, { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 
-const pointSchema = new Schema(
+export interface GeoPoint {
+  type: "Point";
+  coordinates: [number, number];
+}
+
+const pointSchema = new Schema<GeoPoint>(
   {
     type: {
       type: String,
@@ -10,6 +15,10 @@ const pointSchema = new Schema(
     coordinates: {
       type: [Number],
       required: true,
+      validate: {
+        validator: (val: number[]) => val.length === 2,
+        message: "Coordinates must be a [longitude, latitude] pair",
+      },
     },
   },
   { _id: false }
@@ -98,6 +107,10 @@ export const buildingSchema = new Schema(
   },
   {
     timestamps: true,
+    toObject: {
+      virtuals: true,
+      flattenObjectIds: true,
+    },
   }
 );
 

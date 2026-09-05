@@ -1,4 +1,4 @@
-import mongoose, { Schema, type InferSchemaType } from "mongoose";
+import mongoose, { Schema, type HydratedDocument, type InferSchemaType } from "mongoose";
 
 const buildingTypeSchema = new Schema(
   {
@@ -16,6 +16,10 @@ const buildingTypeSchema = new Schema(
   },
   {
     timestamps: true,
+    toObject: {
+      virtuals: true,
+      flattenObjectIds: true
+    },
   }
 );
 
@@ -25,3 +29,5 @@ export const BuildingType = mongoose.model(
 );
 
 export type BuildingTypeDocument = InferSchemaType<typeof buildingTypeSchema>;
+
+export type HydratedBuildingType = HydratedDocument<BuildingTypeDocument>;

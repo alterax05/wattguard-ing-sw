@@ -270,7 +270,7 @@ setupIntegrationTests();
       updatedBy: user._id,
     });
     const hpInt = await Sensor.create({
-      buildingId: hpBuilding._id,
+      building: hpBuilding._id,
       sensorType: "internal_temp",
       location: "Living Room",
       installationDate: new Date(),
@@ -279,7 +279,7 @@ setupIntegrationTests();
       updatedBy: user._id,
     });
     const hpExt = await Sensor.create({
-      buildingId: hpBuilding._id,
+      building: hpBuilding._id,
       sensorType: "external_temp",
       location: "Garden",
       installationDate: new Date(),
@@ -288,7 +288,7 @@ setupIntegrationTests();
       updatedBy: user._id,
     });
     const hpEnergy = await Sensor.create({
-      buildingId: hpBuilding._id,
+      building: hpBuilding._id,
       sensorType: "energy_meter",
       location: "Main Panel",
       installationDate: new Date(),
@@ -311,7 +311,7 @@ setupIntegrationTests();
       updatedBy: user._id,
     });
     const gasMeter = await Sensor.create({
-      buildingId: gasBuilding._id,
+      building: gasBuilding._id,
       sensorType: "gas_meter",
       location: "Boiler Room",
       installationDate: new Date(),
@@ -327,8 +327,8 @@ setupIntegrationTests();
         value: 42,
         unit: "m3",
         metadata: {
-          sensorId: gasMeter._id,
-          buildingId: gasBuilding._id,
+          sensor: gasMeter._id,
+          building: gasBuilding._id,
           sensorType: "gas_meter",
         },
       },
@@ -374,7 +374,7 @@ setupIntegrationTests();
   });
 
   test("clamps internal_temp to the setpoint floor", () => {
-    const intReadings = readings.filter((r) => r.unit === "°C");
+    const intReadings = readings.filter((r) => r.sensorId === hpIntId);
     for (const reading of intReadings) {
       expect(reading.value).toBeGreaterThanOrEqual(18.5);
     }
@@ -418,7 +418,7 @@ setupIntegrationTests();
     expect(initialCount).toBe(4);
 
     const newSensor = await Sensor.create({
-      buildingId: new Types.ObjectId(hpBuildingId),
+      building: new Types.ObjectId(hpBuildingId),
       sensorType: "external_temp",
       location: "Terrace",
       installationDate: new Date(),

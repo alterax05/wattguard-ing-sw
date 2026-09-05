@@ -1,4 +1,4 @@
-import mongoose, { Schema, type InferSchemaType, type Types } from "mongoose";
+import mongoose, { Schema, type InferSchemaType, type HydratedDocument } from "mongoose";
 
 const inviteSchema = new Schema(
   {
@@ -42,31 +42,16 @@ const inviteSchema = new Schema(
   },
   {
     timestamps: true,
+    toObject: {
+      virtuals: true,
+      flattenObjectIds: true,
+    },
   }
 );
 
-if (!inviteSchema.options.toObject) inviteSchema.options.toObject = {};
-
-/** Plain-object form of an Invite emitted by `toObject()` during serialization. */
-interface InviteToObjectResult {
-  [key: string]:
-    | Types.ObjectId
-    | string
-    | number
-    | boolean
-    | Date
-    | InviteToObjectResult
-    | null
-    | undefined;
-}
-
-inviteSchema.options.toObject.transform = function (doc, ret: InviteToObjectResult) {
-  ret.id = ret._id;
-  delete ret._id;
-  return ret;
-};
-
 export type InviteDocument = InferSchemaType<typeof inviteSchema>;
+
+export type HydratedInvite = HydratedDocument<InviteDocument>;
 
 export type InviteStatus = InviteDocument["status"];
 

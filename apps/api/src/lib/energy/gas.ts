@@ -36,7 +36,7 @@ export async function aggregateGasEnergyByBucket(
   }>([
     {
       $match: {
-        "metadata.buildingId": { $in: buildingIds },
+        "metadata.building": { $in: buildingIds },
         timestamp: { $gte: start, $lte: end },
         "metadata.sensorType": "gas_meter",
       },
@@ -44,7 +44,7 @@ export async function aggregateGasEnergyByBucket(
     { $sort: { timestamp: 1 } },
     {
       $setWindowFields: {
-        partitionBy: "$metadata.buildingId",
+        partitionBy: "$metadata.building",
         sortBy: { timestamp: 1 },
         output: {
           prevValue: { $shift: { output: "$value", by: -1 } },
@@ -84,7 +84,7 @@ export async function aggregateGasEnergyByBucket(
     { $match: { deltaM3: { $gte: 0 }, deltaTHours: { $gt: 0 } } },
     {
       $group: {
-        _id: { buildingId: "$metadata.buildingId", bucket: "$bucket" },
+        _id: { buildingId: "$metadata.building", bucket: "$bucket" },
         deltaM3: { $sum: "$deltaM3" },
         deltaTHours: { $sum: "$deltaTHours" },
         avgGasPowerKW: { $avg: "$gasPowerKW" },
