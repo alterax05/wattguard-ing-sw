@@ -655,6 +655,32 @@
     "inviting": "Sending...",
     "sendInvite": "Send Invite"
   },
+  "invites": {
+    "tabs": {
+      "users": "Users",
+      "invites": "Invites"
+    },
+    "title": "Pending and Past Invites",
+    "invite": "Invite User",
+    "loading": "Loading invites...",
+    "loadError": "Error loading invites: {{message}}",
+    "empty": "No invites found.",
+    "emptyHint": "Invite a new user to see it listed here.",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    },
+    "createdBy": "Invited by {{email}}",
+    "expiresOn": "Expires {{date}}",
+    "acceptedOn": "Accepted {{date}}",
+    "revoke": "Revoke",
+    "revoking": "Revoking...",
+    "revoked": "Invite for {{email}} revoked",
+    "revokeConfirmTitle": "Revoke Invite",
+    "revokeConfirmDescription": "Are you sure you want to revoke the invite for \"{{email}}\"? They will no longer be able to use it to register."
+  },
   "settings": {
     "title": "System Settings",
     "subtitle": "Configure the energy monitoring system parameters",

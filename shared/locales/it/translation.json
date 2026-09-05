@@ -655,6 +655,32 @@
     "inviting": "Invio in corso...",
     "sendInvite": "Invia Invito"
   },
+  "invites": {
+    "tabs": {
+      "users": "Utenti",
+      "invites": "Inviti"
+    },
+    "title": "Inviti pendenti e passati",
+    "invite": "Invita Utente",
+    "loading": "Caricamento inviti...",
+    "loadError": "Errore nel caricamento degli inviti: {{message}}",
+    "empty": "Nessun invito trovato.",
+    "emptyHint": "Invita un nuovo utente per vederlo elencato qui.",
+    "status": {
+      "pending": "In attesa",
+      "accepted": "Accettato",
+      "revoked": "Revocato",
+      "expired": "Scaduto"
+    },
+    "createdBy": "Invitato da {{email}}",
+    "expiresOn": "Scade {{date}}",
+    "acceptedOn": "Accettato {{date}}",
+    "revoke": "Revoca",
+    "revoking": "Revoca in corso...",
+    "revoked": "Invito per {{email}} revocato",
+    "revokeConfirmTitle": "Revoca Invito",
+    "revokeConfirmDescription": "Sei sicuro di voler revocare l'invito per \"{{email}}\"? Non potrà più essere usato per registrarsi."
+  },
   "settings": {
     "title": "Impostazioni Sistema",
     "subtitle": "Configura i parametri del sistema di monitoraggio energetico",
