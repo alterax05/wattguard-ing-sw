@@ -655,6 +655,32 @@
     "inviting": "Wird gesendet...",
     "sendInvite": "Einladung senden"
   },
+  "invites": {
+    "tabs": {
+      "users": "Benutzer",
+      "invites": "Einladungen"
+    },
+    "title": "Ausstehende und vergangene Einladungen",
+    "invite": "Benutzer einladen",
+    "loading": "Einladungen werden geladen...",
+    "loadError": "Fehler beim Laden der Einladungen: {{message}}",
+    "empty": "Keine Einladungen gefunden.",
+    "emptyHint": "Laden Sie einen neuen Benutzer ein, um ihn hier zu sehen.",
+    "status": {
+      "pending": "Ausstehend",
+      "accepted": "Angenommen",
+      "revoked": "Widerrufen",
+      "expired": "Abgelaufen"
+    },
+    "createdBy": "Eingeladen von {{email}}",
+    "expiresOn": "Läuft ab {{date}}",
+    "acceptedOn": "Angenommen {{date}}",
+    "revoke": "Widerrufen",
+    "revoking": "Wird widerrufen...",
+    "revoked": "Einladung für {{email}} widerrufen",
+    "revokeConfirmTitle": "Einladung widerrufen",
+    "revokeConfirmDescription": "Möchten Sie die Einladung für \"{{email}}\" wirklich widerrufen? Sie kann dann nicht mehr zur Registrierung verwendet werden."
+  },
   "settings": {
     "title": "Systemeinstellungen",
     "subtitle": "Konfigurieren Sie die Parameter des Energieüberwachungssystems",

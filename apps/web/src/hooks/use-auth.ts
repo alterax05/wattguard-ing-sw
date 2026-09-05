@@ -380,10 +380,13 @@ export function useDeleteUser() {
 }
 
 /**
- * Create a new invite via POST /api/admin/invites (admin only).
+ * Create a new invite via POST /api/v1/invites (admin only).
  * Sends an invitation email to the specified address.
+ * On success, invalidates the invites query so the list refreshes.
  */
 export function useCreateInvite() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (input: CreateInviteRequest) => {
       const res = await client.api.v1.invites.$post({
@@ -396,6 +399,9 @@ export function useCreateInvite() {
 
       const resData = await res.json();
       return resData.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "invites"] });
     },
   });
 }
