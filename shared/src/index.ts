@@ -32,8 +32,7 @@ export * from "./schemas/sensors";
 // Alert schemas
 export * from "./schemas/alerts";
 
-// Dashboard schemas
-export * from "./schemas/dashboard";
+// Metrics & Dashboard schemas
 export * from "./schemas/metrics";
 
 // Export & Readings / Reports schemas
