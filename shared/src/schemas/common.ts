@@ -14,7 +14,8 @@ import { SUPPORTED_LOCALES } from "../i18n";
  */
 export const ErrorDetailsSchema = z
   .record(z.string(), z.union([z.string(), z.number()]))
-  .describe("Interpolation values for the localized error message");
+  .describe("Interpolation values for the localized error message")
+  .meta({ id: "ErrorDetails" });
 
 export type ErrorDetails = z.infer<typeof ErrorDetailsSchema>;
 
@@ -30,7 +31,7 @@ export const ErrorSchema = z.object({
   error_code: z.string().describe("Machine-readable error code"),
   message: z.string().describe("Error message describing what went wrong"),
   details: ErrorDetailsSchema.optional().describe("Interpolation values for the localized error message"),
-});
+}).meta({ id: "Error" });
 
 export type ErrorResponse = z.infer<typeof ErrorSchema>;
 
@@ -44,7 +45,7 @@ export const HealthResponseSchema = z.object({
   data: z.object({
     status: z.string(),
   }),
-});
+}).meta({ id: "HealthResponse" });
 
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 
@@ -83,7 +84,8 @@ export const SelfLinkSchema = z.string().describe("Canonical URI link to this re
 export const ObjectIdSchema = z
   .string()
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId format")
-  .describe("MongoDB ObjectId");
+  .describe("MongoDB ObjectId")
+  .meta({ id: "ObjectId" });
 
 /**
  * Accepts both a raw MongoDB ObjectId and a full resource URI (e.g. /api/v1/buildings/64...)
@@ -105,7 +107,7 @@ export const ResourceIdOrUriSchema = z
 export const IsoDateTimeSchema = z.union([
   z.iso.datetime().describe("ISO 8601 timestamp string"),
   z.date().transform((d) => d.toISOString()),
-]);
+]).meta({ id: "IsoDateTime" });
 
 /**
  * Path parameter schema for a resource identified by an ObjectId
@@ -127,7 +129,7 @@ export const UserSchema = z.object({
   language: LocaleSchema.nullish().transform((v) => v ?? undefined).optional().describe("Preferred UI locale used for emails"),
   lastLoginAt: IsoDateTimeSchema.nullish().transform((v) => v ?? undefined).optional().describe("Timestamp of last login"),
   createdAt: IsoDateTimeSchema.optional().describe("Account creation timestamp"),
-});
+}).meta({ id: "User" });
 
 export type User = z.infer<typeof UserSchema>;
 
@@ -138,7 +140,7 @@ export const PublicUserSchema = UserSchema.omit({
   isDisabled: true,
   lastLoginAt: true,
   createdAt: true
-});
+}).meta({ id: "PublicUser" });
 
 
 export type PublicUser = z.infer<typeof PublicUserSchema>;
@@ -211,7 +213,7 @@ export const PaginationResponseSchema = z.object({
   limit: z.number(),
   offset: z.number(),
   total: z.number(),
-}).describe("Pagination information");
+}).describe("Pagination information").meta({ id: "Pagination" });
 
 export type PaginationResponse = z.infer<typeof PaginationResponseSchema>;
 
@@ -221,7 +223,7 @@ export type PaginationResponse = z.infer<typeof PaginationResponseSchema>;
 export const PeriodSchema = z.object({
   startDate: z.iso.datetime(),
   endDate: z.iso.datetime(),
-});
+}).meta({ id: "Period" });
 
 export type Period = z.infer<typeof PeriodSchema>;
 

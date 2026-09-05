@@ -6,7 +6,7 @@ import { z } from "zod";
  */
 export const CreateRecoveryTokenRequestSchema = z.object({
   email: z.string().email("Invalid email address"),
-});
+}).meta({ id: "CreateRecoveryTokenRequest" });
 
 export type CreateRecoveryTokenRequest = z.infer<typeof CreateRecoveryTokenRequestSchema>;
 
@@ -15,7 +15,7 @@ export const CreateRecoveryTokenResponseSchema = z.object({
   data: z.object({
     message: z.string().describe("Success message"),
   }),
-});
+}).meta({ id: "CreateRecoveryTokenResponse" });
 
 export type CreateRecoveryTokenResponse = z.infer<typeof CreateRecoveryTokenResponseSchema>;
 
@@ -26,7 +26,7 @@ export type CreateRecoveryTokenResponse = z.infer<typeof CreateRecoveryTokenResp
  */
 export const ValidateRecoveryTokenRequestSchema = z.object({
   token: z.string().min(1, "Token is required"),
-});
+}).meta({ id: "ValidateRecoveryTokenRequest" });
 
 export type ValidateRecoveryTokenRequest = z.infer<typeof ValidateRecoveryTokenRequestSchema>;
 
@@ -35,7 +35,7 @@ export const ValidateRecoveryTokenResponseSchema = z.object({
   data: z.object({
     valid: z.literal(true),
   }),
-});
+}).meta({ id: "ValidateRecoveryTokenResponse" });
 
 export type ValidateRecoveryTokenResponse = z.infer<typeof ValidateRecoveryTokenResponseSchema>;
 
@@ -49,7 +49,7 @@ export const ConfirmRecoveryRequestSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .max(128, "Password must not exceed 128 characters"),
-});
+}).meta({ id: "ConfirmRecoveryRequest" });
 
 export type ConfirmRecoveryRequest = z.infer<typeof ConfirmRecoveryRequestSchema>;
 
@@ -58,6 +58,6 @@ export const ConfirmRecoveryResponseSchema = z.object({
   data: z.object({
     message: z.string().describe("Success message"),
   }),
-});
+}).meta({ id: "ConfirmRecoveryResponse" });
 
 export type ConfirmRecoveryResponse = z.infer<typeof ConfirmRecoveryResponseSchema>;

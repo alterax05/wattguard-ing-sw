@@ -15,13 +15,13 @@ export const BackupDataSchema = z.object({
     users: z.array(UserSchema),
     systemConfig: SystemConfigSchema,
   }),
-});
+}).meta({ id: "BackupData" });
 
 export type BackupData = z.infer<typeof BackupDataSchema>;
 
 export const CreateBackupResponseSchema = z.object({
   success: z.literal(true),
   data: BackupDataSchema,
-});
+}).meta({ id: "CreateBackupResponse" });
 
 export type CreateBackupResponse = z.infer<typeof CreateBackupResponseSchema>;

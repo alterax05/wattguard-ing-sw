@@ -14,8 +14,8 @@ const BuildingIdsQuerySchema = z
 export const ReadingsQuerySchema = z
   .object({
     buildingIds: BuildingIdsQuerySchema.optional(),
-    startDate: z.string().date().optional().describe("First date to include (YYYY-MM-DD)"),
-    endDate: z.string().date().optional().describe("Last date to include (YYYY-MM-DD)"),
+    startDate: z.iso.date().optional().describe("First date to include (YYYY-MM-DD)"),
+    endDate: z.iso.date().optional().describe("Last date to include (YYYY-MM-DD)"),
     format: z.enum(["csv", "json"]).optional().describe("Representation format"),
   })
   .refine(

@@ -37,7 +37,7 @@ export const SystemMetricsSchema = z.object({
     electricity: z.number().nullable().describe("Sum of current energy_meter readings (kWh)"),
     gas: z.number().nullable().describe("Sum of current gas_meter readings (m³)"),
   }),
-});
+}).meta({ id: "SystemMetrics" });
 
 export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
 
@@ -47,7 +47,7 @@ export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
 export const MetricsResponseSchema = z.object({
   success: z.literal(true),
   data: SystemMetricsSchema,
-});
+}).meta({ id: "MetricsResponse" });
 
 export type MetricsResponse = z.infer<typeof MetricsResponseSchema>;
 
@@ -60,7 +60,7 @@ export const MetricsHistoryDataPointSchema = z.object({
   date: z.string().describe("Bucket label (ISO date or hour string)"),
   electricity: z.number().nullable().describe("Average energy_meter reading for the bucket (kWh)"),
   gas: z.number().nullable().describe("Average gas_meter reading for the bucket (m³)"),
-});
+}).meta({ id: "MetricsHistoryDataPoint" });
 
 export type MetricsHistoryDataPoint = z.infer<typeof MetricsHistoryDataPointSchema>;
 
@@ -74,7 +74,7 @@ export const MetricsHistoryDataSchema = z.object({
     interval: z.enum(["hour", "day", "week"]),
   }),
   data: z.array(MetricsHistoryDataPointSchema),
-});
+}).meta({ id: "MetricsHistoryData" });
 
 export type MetricsHistoryData = z.infer<typeof MetricsHistoryDataSchema>;
 
@@ -84,6 +84,6 @@ export type MetricsHistoryData = z.infer<typeof MetricsHistoryDataSchema>;
 export const MetricsHistoryResponseSchema = z.object({
   success: z.literal(true),
   data: MetricsHistoryDataSchema,
-});
+}).meta({ id: "MetricsHistoryResponse" });
 
 export type MetricsHistoryResponse = z.infer<typeof MetricsHistoryResponseSchema>;

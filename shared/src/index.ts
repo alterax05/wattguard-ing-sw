@@ -38,6 +38,5 @@ export * from "./schemas/metrics";
 // Export & Readings / Reports schemas
 export * from "./schemas/export";
 export * from "./schemas/readings";
-export * from "./schemas/reports";
 export * from "./schemas/backups";
 
