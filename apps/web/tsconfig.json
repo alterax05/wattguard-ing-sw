@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@wattguard/shared": ["../../shared/src/index.ts"],
+      "@wattguard/shared/assets/*": ["../../shared/assets/*"],
+      "@wattguard/api": ["../../apps/api/src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

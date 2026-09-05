@@ -1,0 +1,83 @@
+import { Navigate, Outlet } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+
+/**
+ * Full-screen loading spinner shown while the auth state is being resolved.
+ */
+function AuthLoading() {
+  return (
+    <div className="flex h-screen w-screen items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+/**
+ * Route guard for authenticated routes.
+ *
+ * - While the `/me` query is loading, shows a spinner.
+ * - If the user is not authenticated, redirects to `/login`.
+ * - If authenticated, renders child routes via `<Outlet />`.
+ */
+export function ProtectedRoute() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AuthLoading />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+}
+
+/**
+ * Route guard for guest-only routes (login, forgot-password, etc.).
+ *
+ * - While the `/me` query is loading, shows a spinner.
+ * - If the user is already authenticated, redirects to `/dashboard`.
+ * - If not authenticated, renders child routes via `<Outlet />`.
+ */
+export function GuestRoute() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AuthLoading />;
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+}
+
+/**
+ * Route guard for admin-only routes (users, settings).
+ *
+ * - While the `/me` query is loading, shows a spinner.
+ * - If not authenticated, redirects to `/login`.
+ * - If authenticated but role is not admin, redirects to `/dashboard`.
+ * - If admin, renders child routes via `<Outlet />`.
+ */
+export function AdminRoute() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AuthLoading />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+}
+

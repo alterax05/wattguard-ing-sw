@@ -1,0 +1,794 @@
+import { Hono } from "hono";
+import { describeRoute, resolver, validator } from "hono-openapi";
+import { Types, type QueryFilter } from "mongoose";
+import type { AuthVariables } from "../middleware/auth";
+import { Building, type BuildingDocument } from "../models/Building";
+import { BuildingType, type HydratedBuildingType } from "../models/BuildingType";
+import { Sensor, type SensorDocument } from "../models/Sensor";
+import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
+import {
+  toBuildingSummaryDTO,
+  toBuildingDetailDTO,
+} from "../lib/buildings";
+
+import { apiError, apiSuccess } from "../lib/api-response";
+import {
+  SearchBuildingsQuerySchema,
+  SearchBuildingsResponseSchema,
+  CreateBuildingRequestSchema,
+  CreateBuildingResponseSchema,
+  GetBuildingParamsSchema,
+  GetBuildingResponseSchema,
+  UpdateBuildingParamsSchema,
+  UpdateBuildingRequestSchema,
+  UpdateBuildingResponseSchema,
+  DeleteBuildingParamsSchema,
+  DeleteBuildingResponseSchema,
+  BuildingReadingsLatestResponseSchema,
+  BuildingReadingsQuerySchema,
+  BuildingReadingsResponseSchema,
+  GetBuildingEfficiencyQuerySchema,
+  GetBuildingEfficiencyResponseSchema,
+  ErrorSchema,
+} from "@wattguard/shared";
+import type {
+  CreateBuildingResponse,
+  DeleteBuildingResponse,
+  GetBuildingEfficiencyResponse,
+  BuildingReadingsResponse,
+  BuildingReadingsLatestResponse,
+  GetBuildingResponse,
+  SearchBuildingsResponse,
+  UpdateBuildingResponse,
+  ErrorResponse,
+} from "@wattguard/shared";
+import { calculateBuildingEfficiency } from "../lib/efficiency";
+import { isDistrictHeatingBuilding } from "../lib/energy";
+import { deleteForBuilding, resolveEfficiencyForBuilding } from "../lib/alerts";
+
+const app = new Hono<{ Variables: AuthVariables }>()
+  .get(
+    "/",
+    describeRoute({
+      summary: "Cerca edifici",
+      description: "Cerca edifici con filtri, paginazione e ordinamento",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Buildings retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(SearchBuildingsResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("query", SearchBuildingsQuerySchema),
+    async (c) => {
+      const query = c.req.valid("query");
+
+      const filter: QueryFilter<BuildingDocument> = {};
+
+      if (query.name) {
+        filter.name = { $regex: query.name, $options: "i" };
+      }
+
+      if (query.address) {
+        filter.address = { $regex: query.address, $options: "i" };
+      }
+
+      if (query.zone) {
+        filter.geographicZone = { $regex: query.zone, $options: "i" };
+      }
+
+      if (query.buildingType) {
+        filter.buildingType = query.buildingType;
+      }
+
+      if (query.status) {
+        filter.status = query.status;
+      }
+
+      // Count total matching documents
+      const total = await Building.countDocuments(filter);
+
+      // Apply sorting
+      const sortBy = query.sortBy || "updatedAt";
+      const sortOrder = query.sortOrder === "asc" ? 1 : -1;
+      const sort = { [sortBy]: sortOrder } satisfies Record<string, 1 | -1>;
+
+      // Execute query with pagination
+      const buildings = await Building.find(filter)
+        .populate<{ buildingType: HydratedBuildingType }>("buildingType", "name description")
+        .sort(sort)
+        .limit(query.limit)
+        .skip(query.offset);
+
+      // Enrich with active sensor counts and current consumption
+      const buildingIds = buildings.map((b) => b._id);
+
+      // Count active sensors per building
+      const sensorCounts = await Sensor.aggregate<{
+        _id: Types.ObjectId;
+        count: number;
+      }>([
+        { $match: { building: { $in: buildingIds }, status: "active" } },
+        { $group: { _id: "$building", count: { $sum: 1 } } },
+      ]);
+
+      const sensorCountMap = new Map(
+        sensorCounts.map((s) => [s._id.toString(), s.count])
+      );
+
+      // Get latest energy_meter reading per building (from sensor lastReading)
+      const energySensors = await Sensor.aggregate<{
+        _id: Types.ObjectId;
+        value: number;
+      }>([
+        {
+          $match: {
+            building: { $in: buildingIds },
+            sensorType: "energy_meter",
+            status: "active",
+            "lastReading.value": { $exists: true },
+          },
+        },
+        { $sort: { "lastReading.timestamp": -1 } },
+        {
+          $group: {
+            _id: "$building",
+            value: { $first: "$lastReading.value" },
+          },
+        },
+      ]);
+
+      const consumptionMap = new Map(
+        energySensors.map((s) => [s._id.toString(), s.value])
+      );
+
+      return c.json(apiSuccess({
+        buildings: buildings.map((b) =>
+          toBuildingSummaryDTO(b, {
+            activeSensors: sensorCountMap.get(b._id.toString()) ?? 0,
+            currentConsumption: consumptionMap.get(b._id.toString()) ?? null,
+          })
+        ),
+        pagination: {
+          limit: query.limit,
+          offset: query.offset,
+          total,
+        },
+      }) satisfies SearchBuildingsResponse);
+    }
+  )
+  .post(
+    "/",
+    describeRoute({
+      summary: "Crea edificio",
+      description: "Crea un nuovo edificio verificando tipo e impianto",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        201: {
+          description: "Building created successfully",
+          content: {
+            "application/json": {
+              schema: resolver(CreateBuildingResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("json", CreateBuildingRequestSchema),
+    async (c) => {
+      const userDoc = c.get("userDoc");
+      const data = c.req.valid("json");
+
+      // Verify building type exists
+      const buildingType = await BuildingType.findById(data.buildingType);
+      if (!buildingType) {
+        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 400);
+      }
+
+      if (isDistrictHeatingBuilding(data.heatingSystemType) && data.efficiencyThresholds?.enabled) {
+        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 400);
+      }
+
+      // Create building
+      const building = new Building({
+        ...data,
+        buildingType: new Types.ObjectId(data.buildingType),
+        efficiencyThresholds: data.efficiencyThresholds ?? { enabled: false, minCop: null },
+        createdBy: userDoc._id,
+        updatedBy: userDoc._id,
+      });
+
+      await building.save();
+      
+      c.header("Location", `${c.req.path}/${building._id.toString()}`);
+
+      return c.json(
+        apiSuccess(toBuildingDetailDTO(building, {
+          activeSensors: 0,
+          currentConsumption: null,
+        })) satisfies CreateBuildingResponse,
+        201
+      );
+    }
+  )
+  .get(
+    "/:id",
+    describeRoute({
+      summary: "Leggi edificio",
+      description: "Restituisce il dettaglio con sensori attivi e consumo",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Building details retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(GetBuildingResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Building not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", GetBuildingParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+
+      const building = await Building.findById(id)
+        .populate<{ buildingType: HydratedBuildingType }>("buildingType", "name description");
+
+      if (!building) {
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
+      }
+
+      // Enrich with active sensor count and current consumption
+      const [activeSensorsCount, energySensor] = await Promise.all([
+        Sensor.countDocuments({
+          building: building._id,
+          status: "active",
+        }),
+        Sensor.findOne({
+          building: building._id,
+          sensorType: "energy_meter",
+          status: "active",
+          "lastReading.value": { $exists: true },
+        }).sort({ "lastReading.timestamp": -1 }),
+      ]);
+
+      return c.json(apiSuccess(toBuildingDetailDTO(building, {
+        activeSensors: activeSensorsCount,
+        currentConsumption: energySensor?.lastReading?.value ?? null,
+      })) satisfies GetBuildingResponse);
+    }
+  )
+  .patch(
+    "/:id",
+    describeRoute({
+      summary: "Aggiorna edificio",
+      description: "Aggiorna i dati e gestisce soglie efficienza/teleriscaldamento",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Building updated successfully",
+          content: {
+            "application/json": {
+              schema: resolver(UpdateBuildingResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Building not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", UpdateBuildingParamsSchema),
+    validator("json", UpdateBuildingRequestSchema),
+    async (c) => {
+      const userDoc = c.get("userDoc");
+      const { id } = c.req.valid("param");
+      const updates = c.req.valid("json");
+
+      const building = await Building.findById(id);
+      if (!building) {
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
+      }
+
+      // If buildingType is being updated, verify it exists
+      if (updates.buildingType) {
+        const buildingType = await BuildingType.findById(updates.buildingType);
+        if (!buildingType) {
+          return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 400);
+        }
+      }
+
+      const resultingDistrictHeating = isDistrictHeatingBuilding(
+        updates.heatingSystemType ?? building.heatingSystemType,
+      );
+
+      if (resultingDistrictHeating && updates.efficiencyThresholds !== undefined) {
+        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 400);
+      }
+
+      if (resultingDistrictHeating && building.efficiencyThresholds.enabled) {
+        // Passaggio a teleriscaldamento: azzera la config e risolve gli alert efficienza.
+        building.efficiencyThresholds = { enabled: false, minCop: null };
+        await resolveEfficiencyForBuilding({
+          buildingId: building._id,
+          actor: userDoc.name || userDoc.email,
+        });
+      }
+
+      // Apply updates cleanly
+      const { buildingType: newType, ...restUpdates } = updates;
+      Object.assign(building, restUpdates);
+      if (newType !== undefined) {
+        building.buildingType = new Types.ObjectId(newType);
+      }
+
+      if (updates.efficiencyThresholds !== undefined && !updates.efficiencyThresholds.enabled) {
+        // Disabilitazione soglie: risolve gli alert efficienza ancora aperti.
+        await resolveEfficiencyForBuilding({
+          buildingId: building._id,
+          actor: userDoc.name || userDoc.email,
+        });
+      }
+
+      building.updatedBy = userDoc._id;
+
+      await building.save();
+
+      // Populate for response
+      const populatedBuilding = await building.populate<{ buildingType: HydratedBuildingType }>(
+        "buildingType",
+        "name description"
+      );
+
+      // Enrich with active sensor count and current consumption
+      const [activeSensorsCount, energySensor] = await Promise.all([
+        Sensor.countDocuments({
+          building: building._id,
+          status: "active",
+        }),
+        Sensor.findOne({
+          building: building._id,
+          sensorType: "energy_meter",
+          status: "active",
+          "lastReading.value": { $exists: true },
+        }).sort({ "lastReading.timestamp": -1 }),
+      ]);
+
+      return c.json(apiSuccess(toBuildingDetailDTO(populatedBuilding, {
+        activeSensors: activeSensorsCount,
+        currentConsumption: energySensor?.lastReading?.value ?? null,
+      })) satisfies UpdateBuildingResponse);
+    }
+  )
+  .delete(
+    "/:id",
+    describeRoute({
+      summary: "Elimina edificio",
+      description: "Elimina edificio con sensori, letture e alert associati",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Building and associated data deleted successfully",
+          content: {
+            "application/json": {
+              schema: resolver(DeleteBuildingResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Building not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", DeleteBuildingParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+
+      const building = await Building.findById(id);
+      if (!building) {
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
+      }
+
+      // Cascade delete readings and alerts for this building
+      await SensorReading.deleteMany({ "metadata.building": id });
+      await deleteForBuilding(new Types.ObjectId(id));
+      await Sensor.deleteMany({
+        building: id,
+      });
+      await Building.findByIdAndDelete(id);
+
+      return c.json(apiSuccess({
+        id,
+        message: "Building and associated data deleted successfully",
+      }) satisfies DeleteBuildingResponse);
+    }
+  )
+  .get(
+    "/:id/readings/latest",
+    describeRoute({
+      summary: "Leggi ultime letture",
+      description: "Restituisce l'istantanea realtime delle ultime letture dei sensori",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Real-time data retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(BuildingReadingsLatestResponseSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Building not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", GetBuildingParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+
+      const building = await Building.findById(id);
+      if (!building) {
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
+      }
+
+      // Get all active sensors for this building
+      const sensors = await Sensor.find({
+        building: id,
+        status: "active",
+      });
+
+      const internalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "internal_temp");
+      const externalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "external_temp");
+      const energyMeterSensor = sensors.find((s: SensorDocument) => s.sensorType === "energy_meter");
+
+      return c.json(apiSuccess({
+        buildingId: building._id.toString(),
+        buildingName: building.name,
+        timestamp: new Date().toISOString(),
+        data: {
+          internalTemperature: {
+            value: internalTempSensor?.lastReading?.value ?? null,
+            unit: internalTempSensor?.lastReading?.unit ?? "°C",
+            timestamp: internalTempSensor?.lastReading?.timestamp?.toISOString() ?? null,
+            sensorId: internalTempSensor?._id.toString() ?? null,
+          },
+          externalTemperature: {
+            value: externalTempSensor?.lastReading?.value ?? null,
+            unit: externalTempSensor?.lastReading?.unit ?? "°C",
+            timestamp: externalTempSensor?.lastReading?.timestamp?.toISOString() ?? null,
+            sensorId: externalTempSensor?._id.toString() ?? null,
+          },
+          energyConsumption: {
+            value: energyMeterSensor?.lastReading?.value ?? null,
+            unit: energyMeterSensor?.lastReading?.unit ?? "kW",
+            timestamp: energyMeterSensor?.lastReading?.timestamp?.toISOString() ?? null,
+            sensorId: energyMeterSensor?._id.toString() ?? null,
+          },
+        },
+      }) satisfies BuildingReadingsLatestResponse);
+    }
+  )
+  .get(
+    "/:id/readings",
+    describeRoute({
+      summary: "Leggi storico letture",
+      description: "Restituisce lo storico per intervallo di date, per i grafici",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Historical readings retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(BuildingReadingsResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid date range",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Building not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", GetBuildingParamsSchema),
+    validator("query", BuildingReadingsQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { startDate, endDate, sensorType } = c.req.valid("query");
+
+      const building = await Building.findById(id);
+      if (!building) {
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
+      }
+
+      // Build query for sensor readings
+      const query: QueryFilter<SensorReadingDocument> = {
+        "metadata.building": id,
+        timestamp: {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
+        },
+      };
+
+      if (sensorType) {
+        query["metadata.sensorType"] = sensorType;
+      }
+
+      // Query historical data from time-series collection
+      const readings = await SensorReading.find(query)
+        .sort({ timestamp: 1 })
+        .limit(1000);
+
+      return c.json(apiSuccess({
+        buildingId: building._id.toString(),
+        buildingName: building.name,
+        period: {
+          startDate,
+          endDate,
+        },
+        data: readings.map((r) => ({
+          timestamp: r.timestamp.toISOString(),
+          value: r.value,
+          unit: r.unit,
+          sensorType: r.metadata.sensorType,
+          sensorId: r.metadata.sensor?.toString(),
+        })),
+      }) satisfies BuildingReadingsResponse);
+    }
+  )
+  .get(
+    "/:id/efficiency",
+    describeRoute({
+      summary: "Calcola efficienza",
+      description: "Calcola l'efficienza termica dell'edificio sul periodo richiesto",
+      tags: ["Buildings"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Efficiency metrics calculated successfully",
+          content: {
+            "application/json": {
+              schema: resolver(GetBuildingEfficiencyResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid request parameters",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Building not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", GetBuildingParamsSchema),
+    validator("query", GetBuildingEfficiencyQuerySchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { startDate, endDate } = c.req.valid("query");
+
+      const building = await Building.findById(id);
+      if (!building) {
+        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
+      }
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      const metrics = await calculateBuildingEfficiency(building, start, end);
+
+      return c.json(apiSuccess({
+        buildingId: building._id.toString(),
+        buildingName: building.name,
+        period: {
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        },
+        metrics,
+      }) satisfies GetBuildingEfficiencyResponse);
+    }
+  );
+
+export default app;
+export type AppType = typeof app;

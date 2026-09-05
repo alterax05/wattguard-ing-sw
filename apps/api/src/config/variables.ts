@@ -1,0 +1,131 @@
+/**
+ * Centralized environment variable access.
+ *
+ * All `process.env` reads, parsing, defaults, and validation live here.
+ */
+
+const LOCAL_APP_URL = "http://localhost:5173";
+const DEV_JWT_SECRET = "dev-secret-change-in-production";
+
+// ── Runtime environment ──────────────────────────────────────────────────────
+
+export const NODE_ENV = process.env.NODE_ENV ?? "development";
+
+export const IS_PRODUCTION = NODE_ENV === "production";
+export const IS_DEVELOPMENT = NODE_ENV !== "production";
+export const IS_TEST = NODE_ENV === "test";
+
+export const debugPrint = (message: string, ...args: unknown[]) => {
+  if (IS_DEVELOPMENT) {
+    console.log(message, ...args);
+  }
+}
+
+// ── MongoDB ──────────────────────────────────────────────────────────────────
+
+export const MONGO_URI = ((): string => {
+  const uri = process.env.MONGO_URI;
+  if (!uri && IS_PRODUCTION) {
+    throw new Error("MONGO_URI environment variable must be set in production");
+  }
+  // Tests never use this value (they connect to an in-memory MongoDB), and
+  // dev falls back to the local default from `.env.example`.
+  return uri ?? "mongodb://localhost:27017/wattguard";
+})();
+
+// ── MQTT ─────────────────────────────────────────────────────────────────────
+
+export const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
+
+export const MQTT_ENABLED = process.env.MQTT_ENABLED === "true";
+
+// ── Server ───────────────────────────────────────────────────────────────────
+
+export const PORT = ((): number => {
+  const raw = process.env.PORT;
+  const port = Number(raw ?? 3000);
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new Error(`Invalid PORT value: ${raw}`);
+  }
+  return port;
+})();
+
+// ── JWT ──────────────────────────────────────────────────────────────────────
+
+const jwtSecret = process.env.JWT_SECRET;
+
+if (!jwtSecret && IS_PRODUCTION) {
+  throw new Error("JWT_SECRET environment variable must be set in production");
+}
+
+// Use a dev secret only in development/test with warning
+export const JWT_SECRET: string = jwtSecret || (() => {
+  console.warn("⚠️  WARNING: Using default JWT_SECRET. Set JWT_SECRET in production!");
+  return DEV_JWT_SECRET;
+})();
+
+// ── Public app URL ───────────────────────────────────────────────────────────
+
+function normalizeAppUrl(value: string): string {
+  const url = new URL(value);
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("PUBLIC_APP_URL must use http or https");
+  }
+
+  return url.origin;
+}
+
+const configuredAppUrl = process.env.PUBLIC_APP_URL || process.env.RENDER_EXTERNAL_URL;
+
+if (IS_PRODUCTION && !configuredAppUrl) {
+  throw new Error(
+    "PUBLIC_APP_URL environment variable must be set in production",
+  );
+}
+
+export const PUBLIC_APP_URL = normalizeAppUrl(configuredAppUrl || LOCAL_APP_URL);
+
+// ── Google OAuth ─────────────────────────────────────────────────────────────
+
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || (IS_TEST ? "test-google-client-id" : "");
+
+// ── Email (Resend) ───────────────────────────────────────────────────────────
+
+export const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
+export const RESEND_API = ((): string => {
+  if (!process.env.RESEND_API && IS_PRODUCTION) {
+    throw new Error("RESEND_API environment variable must be set in production");
+  }
+  // The Resend client is built lazily on first send, and tests mock the
+  // mailer — an empty key is fine outside production.
+  return process.env.RESEND_API ?? "";
+})();
+
+// ── Admin bootstrap script ───────────────────────────────────────────────────
+
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@wattguard.local";
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+
+// ── Simulator ────────────────────────────────────────────────────────────────
+
+export const SIMULATOR_ENABLED = process.env.SIMULATOR_ENABLED === "true";
+
+export const SIM_TIME_SCALE = Number(process.env.SIM_TIME_SCALE ?? 2);
+
+// ── Efficiency alerts ────────────────────────────────────────────────────────
+
+// Default ON: il cron è idempotente e agisce solo su edifici con soglia abilitata.
+export const EFFICIENCY_ALERTS_ENABLED = process.env.EFFICIENCY_ALERTS_ENABLED !== "false";
+
+export const EFFICIENCY_ALERT_INTERVAL_MINUTES = (() => {
+  const raw = Number(process.env.EFFICIENCY_ALERT_INTERVAL_MINUTES ?? 30);
+  // Bun.cron accetta step solo nel campo minuti: range effettivo [5, 59].
+  if (Number.isInteger(raw) && raw >= 5 && raw <= 59) return raw;
+  if (process.env.EFFICIENCY_ALERT_INTERVAL_MINUTES !== undefined) {
+    console.warn(
+      `⚠️ EFFICIENCY_ALERT_INTERVAL_MINUTES non valido ("${process.env.EFFICIENCY_ALERT_INTERVAL_MINUTES}"): uso 30`,
+    );
+  }
+  return 30;
+})();
