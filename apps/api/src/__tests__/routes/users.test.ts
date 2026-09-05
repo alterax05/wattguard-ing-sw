@@ -94,7 +94,7 @@ describe("users api", () => {
       expectTypeOf(data).toExtend<ListUsersResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.length).toBe(2);
       expect(data.data.some((u) => u.email === "admin@test.com")).toBe(true);
@@ -146,7 +146,7 @@ describe("users api", () => {
       expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.role).toBe("admin");
       expect(data.data.isDisabled).toBe(false);
@@ -178,7 +178,7 @@ describe("users api", () => {
       expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.isDisabled).toBe(true);
       expect(data.data.role).toBe("operator");
@@ -211,7 +211,7 @@ describe("users api", () => {
       expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.isDisabled).toBe(false);
 
@@ -241,7 +241,7 @@ describe("users api", () => {
       expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.role).toBe("admin");
       expect(data.data.isDisabled).toBe(true);
@@ -405,7 +405,7 @@ describe("users api", () => {
       const data = await res.json();
       expectTypeOf(data).toExtend<DeleteUserResponse | ErrorResponse>();
       if (!("success" in data)) {
-        throw new Error("Expected response to contain 'success'");
+        return expect.unreachable("Expected response to contain 'success'");
       }
       expect(data.success).toBe(true);
 

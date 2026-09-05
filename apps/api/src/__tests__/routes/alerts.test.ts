@@ -53,7 +53,7 @@ beforeEach(async () => {
 
   const cookie = loginRes.headers.get("set-cookie");
   const tokenMatch = cookie?.match(/access_token=([^;]+)/);
-  if (!tokenMatch) throw new Error("Admin token not found, response status: " + loginRes.status);
+  if (!tokenMatch) return expect.unreachable("Admin token not found, response status: " + loginRes.status);
   // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = tokenMatch[1] as string;
 
@@ -116,7 +116,7 @@ describe("alerts api", () => {
     expectTypeOf(body).toExtend<ListAlertsResponse | ErrorResponse>();
     expect(body.success).toBe(true);
     if (!body.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(body.data.alerts).toBeInstanceOf(Array);
     expect(body.data.alerts.length).toBe(2);
@@ -151,7 +151,7 @@ describe("alerts api", () => {
     expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
     expect(body.success).toBe(true);
     if (!body.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(body.data.status).toBe("acknowledged");
     expect(body.data.acknowledgedBy).toBe("Admin User");
@@ -175,7 +175,7 @@ describe("alerts api", () => {
     const body = await res.json();
     expect(body.success).toBe(false);
     if (body.success) {
-      throw new Error("Expected response success to be false");
+      return expect.unreachable("Expected response success to be false");
     }
     expect(body.message).toBe("Only active alerts can be acknowledged");
     expect(body.error_code).toBe("alert_not_active");
@@ -200,7 +200,7 @@ describe("alerts api", () => {
     expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
     expect(body.success).toBe(true);
     if (!body.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(body.data.status).toBe("resolved");
     expect(body.data.resolvedBy).toBe("Admin User");

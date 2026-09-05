@@ -61,7 +61,7 @@ beforeEach(async () => {
 
   const cookie = loginRes.headers.get("set-cookie");
   const tokenMatch = cookie?.match(/access_token=([^;]+)/);
-  if (!tokenMatch) throw new Error("Admin token not found");
+  if (!tokenMatch) return expect.unreachable("Admin token not found");
   // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = tokenMatch[1] as string;
 
@@ -227,7 +227,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
     expectTypeOf(json).toExtend<GetBuildingEfficiencyResponse | ErrorResponse>();
 
     expect(json.success).toBe(true);
-    if (!json.success) throw new Error("Expected response to be successful");
+    if (!json.success) return expect.unreachable("Expected response to be successful");
 
     // Verify Physics Metrics
 

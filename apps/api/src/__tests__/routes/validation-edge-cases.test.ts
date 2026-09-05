@@ -87,7 +87,7 @@ describe("email validation", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+        return expect.unreachable("Expected response to contain 'error'");
       }
       expect(data.error).toBeDefined();
     }
@@ -135,7 +135,7 @@ describe("email validation", () => {
     expectTypeOf(data).toExtend<SessionResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(data.data.email).toBe("user@test.com");
   });
@@ -221,7 +221,7 @@ describe("password validation", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+        return expect.unreachable("Expected response to contain 'error'");
       }
       const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
       expect(errorText).toMatch(/8|Password/);
@@ -237,7 +237,7 @@ describe("password validation", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     if (!("error" in data)) {
-      throw new Error("Expected response to contain 'error'");
+      return expect.unreachable("Expected response to contain 'error'");
     }
     expect(data.error).toBeDefined();
   });
@@ -262,7 +262,7 @@ describe("password validation", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     if (!("error" in data)) {
-      throw new Error("Expected response to contain 'error'");
+      return expect.unreachable("Expected response to contain 'error'");
     }
     expect(data.error).toBeDefined();
   });
@@ -327,7 +327,7 @@ describe("request body validation", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     if (!("error" in data)) {
-      throw new Error("Expected response to contain 'error'");
+      return expect.unreachable("Expected response to contain 'error'");
     }
     expect(data.error).toBeDefined();
   });
@@ -361,7 +361,7 @@ describe("request body validation", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     if (!("error" in data)) {
-      throw new Error("Expected response to contain 'error'");
+      return expect.unreachable("Expected response to contain 'error'");
     }
     expect(data.error).toBeDefined();
   });
@@ -434,7 +434,7 @@ describe("query parameter validation", () => {
     expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(data.data.valid).toBe(true);
     expect(data.data.email).toBe("user@test.com");

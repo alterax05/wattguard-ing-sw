@@ -115,7 +115,7 @@ describe("auth api", () => {
       const loginData = await loginRes.json();
       expectTypeOf(loginData).toExtend<SessionResponse | ErrorResponse>();
       if (!("success" in loginData)) {
-        throw new Error("Expected response to contain 'success'");
+        return expect.unreachable("Expected response to contain 'success'");
       }
       expect(loginData.success).toBe(true);
 
@@ -144,7 +144,7 @@ describe("auth api", () => {
       const inviteData = await inviteRes.json();
       expect(inviteData.success).toBe(true);
       if (!inviteData.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(inviteData.data.email).toBe("user@test.com");
       expect(inviteData.data.role).toBe("operator");
@@ -182,7 +182,7 @@ describe("auth api", () => {
       expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.valid).toBe(true);
       expect(data.data.email).toBe("user@test.com");
@@ -225,7 +225,7 @@ describe("auth api", () => {
       expectTypeOf(data).toExtend<AcceptInviteResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.email).toBe("user@test.com");
 
@@ -271,7 +271,7 @@ describe("auth api", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
-      if (!data.success) throw new Error("Expected success");
+      if (!data.success) return expect.unreachable("Expected success");
       expect(data.data.email).toBe("googleuser@test.com");
       expect(data.data.name).toBe("Google User");
 
@@ -307,7 +307,7 @@ describe("auth api", () => {
       expectTypeOf(data).toExtend<SessionResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.email).toBe("user@test.com");
 
@@ -337,7 +337,7 @@ describe("auth api", () => {
       const data = await res.json();
       expect(data.success).toBe(false);
       if (data.success) {
-        throw new Error("Expected response success to be false");
+        return expect.unreachable("Expected response success to be false");
       }
       expect(data.error_code).toBe("invalid_credentials");
     });
@@ -359,7 +359,7 @@ describe("auth api", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
-      if (!data.success) throw new Error("Expected success");
+      if (!data.success) return expect.unreachable("Expected success");
       expectTypeOf(data).toExtend<SessionResponse>();
       expect(data.data.email).toBe("googleuser@test.com");
 
@@ -382,7 +382,7 @@ describe("auth api", () => {
       expect(res.status).toBe(404);
       const data = await res.json();
       expect(data.success).toBe(false);
-      if (data.success) throw new Error("Expected error");
+      if (data.success) return expect.unreachable("Expected error");
       expect(data.error_code).toBe("oauth_no_account");
     });
 
@@ -402,7 +402,7 @@ describe("auth api", () => {
       expect(res.status).toBe(403);
       const data = await res.json();
       expect(data.success).toBe(false);
-      if (data.success) throw new Error("Expected error");
+      if (data.success) return expect.unreachable("Expected error");
       expect(data.error_code).toBe("oauth_account_disabled");
     });
 
@@ -426,7 +426,7 @@ describe("auth api", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
-      if (!data.success) throw new Error("Expected success");
+      if (!data.success) return expect.unreachable("Expected success");
       expectTypeOf(data).toExtend<GoogleConfigResponse>();
       expect(data.data.clientId).toBeDefined();
     });
@@ -463,7 +463,7 @@ describe("auth api", () => {
       expectTypeOf(data).toExtend<SessionUserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.email).toBe("user@test.com");
     });
@@ -503,7 +503,7 @@ describe("auth api", () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.language).toBe("it");
       expect(data.data.name).toBe("Updated Name");
@@ -673,7 +673,7 @@ describe("auth api", () => {
       const data = await res.json();
       expect(data.success).toBe(false);
       if (data.success) {
-        throw new Error("Expected response success to be false");
+        return expect.unreachable("Expected response success to be false");
       }
       expect(data.error_code).toContain("expired");
     });

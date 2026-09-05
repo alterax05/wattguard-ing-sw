@@ -56,7 +56,7 @@ beforeEach(async () => {
   });
 
   const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
-  if (!tokenMatch) throw new Error("Admin token not found");
+  if (!tokenMatch) return expect.unreachable("Admin token not found");
   adminToken = tokenMatch[1]!;
 });
 
@@ -68,7 +68,7 @@ describe("GET /api/v1/health", () => {
     const data = await res.json();
     expectTypeOf(data).toExtend<HealthResponse>();
     expect(data.success).toBe(true);
-    if (!data.success) throw new Error("Expected success to be true");
+    if (!data.success) return expect.unreachable("Expected success to be true");
     expect(data.data.status).toBe("ok");
   });
 });
@@ -100,7 +100,7 @@ describe("dashboard api", () => {
     expectTypeOf(data).toExtend<DashboardStatsResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(data.data.sensors.total).toBe(3);
     expect(data.data.sensors.active).toBe(2);
@@ -128,7 +128,7 @@ describe("dashboard api", () => {
     expectTypeOf(data).toExtend<DashboardHistoryResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(data.data.period.interval).toBe("day");
     expect(Array.isArray(data.data.data)).toBe(true);
@@ -159,7 +159,7 @@ describe("settings api", () => {
     expectTypeOf(data).toExtend<GetSettingsResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(data.data.polling.intervalSeconds).toBeGreaterThan(0);
     expect(data.data.notifications.emailEnabled).toBeTypeOf("boolean");
@@ -181,7 +181,7 @@ describe("settings api", () => {
     expectTypeOf(data).toExtend<UpdateSettingsResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(data.data.polling.intervalSeconds).toBe(60);
   });
@@ -209,7 +209,7 @@ describe("settings api", () => {
     const data = await res.json();
     expect(data.success).toBe(true);
     if (!data.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(data.data.polling.intervalSeconds).toBeGreaterThan(0);
   });
@@ -258,7 +258,7 @@ describe("settings api", () => {
     const data = await res.json();
     expect(data.success).toBe(true);
     if (!data.success) {
-      throw new Error("Expected response success to be true");
+      return expect.unreachable("Expected response success to be true");
     }
     expect(data.data.database.dataRetentionDays).toBe(30);
 

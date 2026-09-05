@@ -133,7 +133,7 @@ beforeEach(async () => {
   });
   const cookie = loginRes.headers.get("set-cookie") ?? "";
   const match = cookie.match(/access_token=([^;]+)/);
-  if (!match) throw new Error("Admin token not found in login response");
+  if (!match) return expect.unreachable("Admin token not found in login response");
   adminToken = match[1]!;
 
   // Create a building type
@@ -270,7 +270,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expectTypeOf(json).toExtend<GetBuildingEfficiencyResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.totalEnergyConsumed).toBe(0);
       expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
@@ -328,7 +328,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       expect(json.success).toBe(true);
-      if (!json.success) throw new Error("missing metrics");
+      if (!json.success) return expect.unreachable("missing metrics");
       const m = json.data.metrics;
 
       expect(m.totalEnergyConsumed).toBeGreaterThan(0);
@@ -384,7 +384,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       expect(json.success).toBe(true);
-      if (!json.success) throw new Error("missing metrics");
+      if (!json.success) return expect.unreachable("missing metrics");
       const m = json.data.metrics;
 
       // The weather API must have been called (no sensor data)
@@ -454,7 +454,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       const expectedKWh = (110 - 100) * GAS_LHV_KWH_PER_M3; // 10 × 10.55 = 105.5
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.totalEnergyConsumed).toBeCloseTo(expectedKWh, 1);
     });
@@ -480,7 +480,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       // last (10) < first (500) → consumed = 0
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.totalEnergyConsumed).toBe(0);
     });
@@ -515,7 +515,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expect(status).toBe(200);
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.averageCop).toBeNull();
     });
@@ -547,7 +547,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expect(status).toBe(200);
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.averageCop).toBeNull();
     });
@@ -584,7 +584,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       expect(json.success).toBe(true);
-      if (!json.success) throw new Error("missing metrics");
+      if (!json.success) return expect.unreachable("missing metrics");
       const m = json.data.metrics;
       expect(m.estimatedHeatLossCoefficient).not.toBeNull();
       expect(m.insulationQuality).not.toBeNull();
@@ -608,7 +608,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expect(status).toBe(200);
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
       expect(json.data.metrics.insulationQuality).toBeNull();
@@ -649,7 +649,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       // Sensor data wins
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.averageExternalTemperature).toBeCloseTo(SENSOR_TEMP, 1);
       expect(weatherCallCount).toBe(0);
@@ -681,7 +681,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       // No external temp available → null
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.averageExternalTemperature).toBeNull();
       // Without tempDiff, H and COP remain null
@@ -720,7 +720,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       expect(json.success).toBe(true);
-      if (!json.success) throw new Error("missing metrics");
+      if (!json.success) return expect.unreachable("missing metrics");
       const m = json.data.metrics;
 
       expect(m.estimatedHeatLossCoefficient).not.toBeNull();
@@ -771,7 +771,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
       expect(status).toBe(200);
       expect(json.success).toBe(true);
-      if (!json.success) throw new Error("missing metrics");
+      if (!json.success) return expect.unreachable("missing metrics");
       const m = json.data.metrics;
       expect(m.estimatedHeatLossCoefficient).not.toBeNull();
       // COP requires avgH from the first pass — must be non-null
@@ -798,7 +798,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expect(status).toBe(200);
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
       expect(json.data.metrics.insulationQuality).toBeNull();
@@ -825,7 +825,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expect(status).toBe(200);
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.metrics.estimatedHeatLossCoefficient).toBeNull();
       expect(json.data.metrics.averageCop).toBeNull();
@@ -845,7 +845,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expectTypeOf(json).toExtend<GetBuildingEfficiencyResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.buildingId).toBe(bid);
       expect(json.data.buildingName).toBe("Test Building");
@@ -872,7 +872,7 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
       expect(status).toBe(200);
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(new Date(json.data.period.startDate).toISOString()).toBe(startDate);
       expect(new Date(json.data.period.endDate).toISOString()).toBe(endDate);

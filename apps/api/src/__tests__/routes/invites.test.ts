@@ -109,7 +109,7 @@ describe("invites api", () => {
       expectTypeOf(data).toExtend<CreateInviteResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(res.headers.get("location")).toBe(`/api/v1/invites/${data.data._id}`);
       expect(data.data.email).toBe("newuser@test.com");
@@ -139,7 +139,7 @@ describe("invites api", () => {
       expectTypeOf(data).toExtend<CreateInviteResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.email).toBe("newuser@test.com");
     });
@@ -164,7 +164,7 @@ describe("invites api", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+        return expect.unreachable("Expected response to contain 'error'");
       }
       const errorText = Array.isArray(data.error) ? JSON.stringify(data.error) : data.error;
       expect(errorText).toContain("email");
@@ -191,7 +191,7 @@ describe("invites api", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+        return expect.unreachable("Expected response to contain 'error'");
       }
       expect(data.error).toBeDefined();
     });
@@ -216,7 +216,7 @@ describe("invites api", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+        return expect.unreachable("Expected response to contain 'error'");
       }
       expect(data.error).toBeDefined();
     });
@@ -241,7 +241,7 @@ describe("invites api", () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
-        throw new Error("Expected response to contain 'error'");
+        return expect.unreachable("Expected response to contain 'error'");
       }
       expect(data.error).toBeDefined();
     });
@@ -314,7 +314,7 @@ describe("invites api", () => {
       expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data).toBeArrayOfSize(2);
       expect(data.data[0]!.email).toBeDefined();
@@ -334,7 +334,7 @@ describe("invites api", () => {
       expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data).toBeArrayOfSize(0);
     });
@@ -383,7 +383,7 @@ describe("invites api", () => {
       expectTypeOf(data).toExtend<DeleteInviteResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(data.data.status).toBe("revoked");
 
@@ -445,7 +445,7 @@ describe("invites api", () => {
       const createData = await createRes.json();
       expect(createData.success).toBe(true);
       if (!createData.success) {
-        throw new Error("Expected invite to be created");
+        return expect.unreachable("Expected invite to be created");
       }
       const inviteId = createData.data._id;
 

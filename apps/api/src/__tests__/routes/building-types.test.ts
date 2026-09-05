@@ -108,7 +108,7 @@ describe("building-types api", () => {
       expectTypeOf(json).toExtend<ListBuildingTypesResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data).toEqual([]);
     });
@@ -130,7 +130,7 @@ describe("building-types api", () => {
       expectTypeOf(json).toExtend<ListBuildingTypesResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.length).toBe(3);
       expect(json.data[0]!.name).toBeDefined();
@@ -153,7 +153,7 @@ describe("building-types api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.length).toBe(1);
     });
@@ -180,7 +180,7 @@ describe("building-types api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data[0]!.name).toBe("Ospedale");
       expect(json.data[1]!.name).toBe("Scuola");
@@ -215,7 +215,7 @@ describe("building-types api", () => {
       expectTypeOf(json).toExtend<CreateBuildingTypeResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.name).toBe(buildingTypeData.name);
       expect(json.data.description).toBe(buildingTypeData.description);
@@ -251,7 +251,7 @@ describe("building-types api", () => {
       const json = await res.json();
       expect(json.success).toBe(false);
       if (json.success) {
-        throw new Error("Expected response success to be false");
+        return expect.unreachable("Expected response success to be false");
       }
       expect(json.error_code).toBe("building_type_name_exists");
     });
@@ -327,7 +327,7 @@ describe("building-types api", () => {
       expectTypeOf(json).toExtend<UpdateBuildingTypeResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.name).toBe(updateData.name);
       expect(json.data.description).toBe(updateData.description);
@@ -361,7 +361,7 @@ describe("building-types api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.name).toBe("Updated Name Only");
       expect(json.data.description).toBe("Original Description");
@@ -391,7 +391,7 @@ describe("building-types api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.name).toBe("Original Name");
       expect(json.data.description).toBe("Updated Description Only");
@@ -426,7 +426,7 @@ describe("building-types api", () => {
       const json = await res.json();
       expect(json.success).toBe(false);
       if (json.success) {
-        throw new Error("Expected response success to be false");
+        return expect.unreachable("Expected response success to be false");
       }
       expect(json.error_code).toBe("building_type_name_exists");
     });
@@ -503,7 +503,7 @@ describe("building-types api", () => {
       expectTypeOf(json).toExtend<DeleteBuildingTypeResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.message).toContain("deleted successfully");
 
@@ -546,7 +546,7 @@ describe("building-types api", () => {
       const json = await res.json();
       expect(json.success).toBe(false);
       if (json.success) {
-        throw new Error("Expected response success to be false");
+        return expect.unreachable("Expected response success to be false");
       }
       expect(json.error_code).toBe("building_type_in_use");
 

@@ -23,7 +23,7 @@ async function login(email: string, password: string): Promise<string> {
   const cookie = response.headers.get("set-cookie");
   const token = cookie?.match(/access_token=([^;]+)/)?.[1];
 
-  if (!token) throw new Error(`Token not found for ${email}`);
+  if (!token) return expect.unreachable(`Token not found for ${email}`);
   return token;
 }
 

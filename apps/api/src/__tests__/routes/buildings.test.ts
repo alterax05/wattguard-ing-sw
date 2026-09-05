@@ -79,7 +79,7 @@ beforeEach(async () => {
 
   const adminCookie = adminLoginRes.headers.get("set-cookie");
   const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
-  if (!adminTokenMatch) throw new Error("Admin token not found");
+  if (!adminTokenMatch) return expect.unreachable("Admin token not found");
   // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   adminToken = adminTokenMatch[1] as string;
 
@@ -95,7 +95,7 @@ beforeEach(async () => {
 
   const operatorCookie = operatorLoginRes.headers.get("set-cookie");
   const operatorTokenMatch = operatorCookie?.match(/access_token=([^;]+)/);
-  if (!operatorTokenMatch) throw new Error("Operator token not found");
+  if (!operatorTokenMatch) return expect.unreachable("Operator token not found");
   // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
   operatorToken = operatorTokenMatch[1] as string;
 
@@ -143,7 +143,7 @@ describe("buildings api", () => {
       expectTypeOf(json).toExtend<CreateBuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.name).toBe(buildingData.name);
       expect(json.data.address).toBe(buildingData.address);
@@ -274,7 +274,7 @@ describe("buildings api", () => {
       expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.name).toBe("Updated Name");
       expect(json.data.surface).toBe(1500);
@@ -333,7 +333,7 @@ describe("buildings api", () => {
       expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.efficiencyThresholds).toEqual({ enabled: true, minCop: 2.5 });
     });
@@ -554,7 +554,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expectTypeOf(json).toExtend<DeleteBuildingResponse | ErrorResponse>();
       if (!("success" in json)) {
-        throw new Error("Expected response to contain 'success'");
+        return expect.unreachable("Expected response to contain 'success'");
       }
       expect(json.success).toBe(true);
 
@@ -638,7 +638,7 @@ describe("buildings api", () => {
       expectTypeOf(json).toExtend<SearchBuildingsResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.buildings.length).toBe(2);
       expect(json.data.buildings[0]!.name).toContain("Scuola");
@@ -658,7 +658,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.buildings.length).toBe(1);
       expect(json.data.buildings[0]!.address).toContain("Garibaldi");
@@ -678,7 +678,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.buildings.length).toBe(1);
       expect(json.data.buildings[0]!.geographicZone).toBe("Centro");
@@ -698,7 +698,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.buildings.length).toBe(3); // All test buildings have same type
     });
@@ -717,7 +717,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.buildings.length).toBe(1);
       expect(json.data.buildings[0]!.status).toBe("inactive");
@@ -737,7 +737,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.buildings.length).toBe(1);
       expect(json.data.buildings[0]!.name).toBe("Scuola Primaria Centro");
@@ -757,7 +757,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.buildings.length).toBe(2);
       expect(json.data.pagination.total).toBe(3);
@@ -779,7 +779,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       expect(json.data.buildings.length).toBeGreaterThan(0);
       // Verify ascending order
@@ -800,7 +800,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response success to be true");
+        return expect.unreachable("Expected response success to be true");
       }
       const building = json.data.buildings[0]!;
 
@@ -843,7 +843,7 @@ describe("buildings api", () => {
       expectTypeOf(json).toExtend<GetBuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.name).toBe("Test Building Details");
       expect(json.data.address).toBe("Via Details 1, Milano");
@@ -921,7 +921,7 @@ describe("buildings api", () => {
       expectTypeOf(json).toExtend<GetBuildingRealTimeResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data).toBeDefined();
       expect(json.data.data.internalTemperature).toBeDefined();
@@ -977,7 +977,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data.data.internalTemperature.value).toBe(22.5);
       expect(json.data.data.externalTemperature.value).toBeNull();
@@ -1048,7 +1048,7 @@ describe("buildings api", () => {
       expectTypeOf(json).toExtend<GetBuildingHistoryResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       expect(json.data).toBeDefined();
       expect(json.data.data.length).toBeGreaterThan(0);
@@ -1131,7 +1131,7 @@ describe("buildings api", () => {
       const json = await res.json();
       expect(json.success).toBe(true);
       if (!json.success) {
-        throw new Error("Expected response to be successful");
+        return expect.unreachable("Expected response to be successful");
       }
       // Should only include readings from the last 24 hours
       expect(json.data.data.length).toBeGreaterThan(0);
@@ -1200,7 +1200,7 @@ describe("buildings api", () => {
         const json = await res.json();
         expect(json.success).toBe(true);
         if (!json.success) {
-          throw new Error("Expected response to be successful");
+          return expect.unreachable("Expected response to be successful");
         }
         expect(json.data.data.length).toBeGreaterThan(0);
         expect(json.data.buildingId).toBeDefined();
