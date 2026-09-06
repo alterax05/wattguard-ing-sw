@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "@/components/ui/empty"
 import { formatDistanceToNow } from "date-fns"
 import { getDateFnsLocale } from "@/lib/dates"
-import { composeAlertMessage, getAlertTypeLabel } from "@/lib/alerts"
+import { composeAlertMessage, getAlertBuildingName, getAlertTypeLabel } from "@/lib/alerts"
 
 interface AlertsListProps {
   limit?: number
@@ -99,7 +99,7 @@ export function AlertsList({ limit = 10 }: AlertsListProps) {
           <div className="flex-1 space-y-1">
             <p className="text-sm font-medium leading-none">{composeAlertMessage(alert, t)}</p>
             <p className="text-xs text-muted-foreground">
-              {alert.buildingName} •{" "}
+              {getAlertBuildingName(alert)} •{" "}
               {formatDistanceToNow(new Date(alert.createdAt), {
                 addSuffix: true,
                 locale: dateFnsLocale,

@@ -99,12 +99,9 @@ beforeEach(async () => {
   ]);
 
   await Alert.create({
-    buildingId: building._id,
-    buildingName: building.name,
+    building: building._id,
     type: "threshold",
     severity: "high",
-    sensorType: "energy_meter",
-    location: "Quadro",
     value: 52.75,
     unit: "kWh",
     limit: 50,

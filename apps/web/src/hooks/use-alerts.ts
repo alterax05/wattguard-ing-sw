@@ -4,13 +4,13 @@ import { errorMessageFromResponse } from "@/lib/errors";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-export function useAlerts(params?: { status?: string; buildingId?: string }) {
+export function useAlerts(params?: { status?: string; building?: string }) {
   return useQuery({
     queryKey: ["alerts", params],
     queryFn: async () => {
       const query: Record<string, string> = {};
       if (params?.status) query.status = params.status;
-      if (params?.buildingId) query.buildingId = params.buildingId;
+      if (params?.building) query.building = params.building;
 
       const res = await client.api.v1.alerts.$get({ query });
       if (!res.ok) {
