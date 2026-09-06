@@ -33,8 +33,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Elenca tipi di edificio",
-      description: "Restituisce tutti i tipi di edificio ordinati per nome",
+      summary: "List building types",
+      description: "Returns all building types ordered by name",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -73,8 +73,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id",
     describeRoute({
-      summary: "Leggi tipo di edificio",
-      description: "Restituisce il dettaglio di un tipo di edificio per ID",
+      summary: "Get building type",
+      description: "Returns building type detail by ID",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -134,8 +134,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     requireRole("admin"),
     describeRoute({
-      summary: "Crea tipo di edificio",
-      description: "Crea un nuovo tipo di edificio (solo admin, nome univoco)",
+      summary: "Create building type",
+      description: "Creates a new building type (admin only, unique name)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -206,8 +206,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     requireRole("admin"),
     describeRoute({
-      summary: "Aggiorna tipo di edificio",
-      description: "Aggiorna nome o descrizione di un tipo di edificio (solo admin)",
+      summary: "Update building type",
+      description: "Updates a building type name or description (admin only)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -291,8 +291,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     requireRole("admin"),
     describeRoute({
-      summary: "Elimina tipo di edificio",
-      description: "Elimina il tipo se non è in uso da edifici (solo admin)",
+      summary: "Delete building type",
+      description: "Deletes the type if not used by buildings (admin only)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

@@ -15,9 +15,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     requireRole("admin"),
     describeRoute({
-      summary: "Scarica backup",
+      summary: "Download backup",
       description:
-        "Genera e scarica il backup JSON completo del database (solo admin)",
+        "Generates and downloads the full JSON database backup (admin only)",
       tags: ["Backups"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

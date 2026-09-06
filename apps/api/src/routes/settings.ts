@@ -19,8 +19,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Leggi configurazione",
-      description: "Restituisce la configurazione di sistema corrente",
+      summary: "Get configuration",
+      description: "Returns the current system configuration",
       tags: ["Settings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -51,8 +51,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     requireRole("admin"),
     describeRoute({
-      summary: "Aggiorna configurazione",
-      description: "Aggiorna polling, notifiche e retention (solo admin)",
+      summary: "Update configuration",
+      description: "Updates polling, notifications and retention (admin only)",
       tags: ["Settings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

@@ -46,8 +46,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Elenca alert",
-      description: "Restituisce gli alert paginati con filtri opzionali",
+      summary: "List alerts",
+      description: "Returns paginated alerts with optional filters",
       responses: {
         200: {
           description: "List of alerts retrieved successfully",
@@ -121,8 +121,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Leggi alert",
-      description: "Restituisce il dettaglio di un singolo alert per ID",
+      summary: "Get alert",
+      description: "Returns single alert detail by ID",
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
@@ -173,8 +173,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Aggiorna stato alert",
-      description: "Aggiorna lo stato di un alert (acknowledge o resolve)",
+      summary: "Update alert status",
+      description: "Updates an alert status (acknowledge or resolve)",
       responses: {
         200: {
           description: "Alert status updated successfully",

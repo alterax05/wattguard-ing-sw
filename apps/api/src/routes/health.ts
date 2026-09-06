@@ -11,8 +11,8 @@ import { HealthResponseSchema, type HealthResponse } from "@wattguard/shared";
 const app = new Hono().get(
   "/",
   describeRoute({
-    summary: "Verifica stato server",
-    description: "Controlla che il server sia in esecuzione (pubblico)",
+    summary: "Check server status",
+    description: "Checks that the server is running (public)",
     tags: ["Health"],
     responses: {
       200: {

@@ -29,8 +29,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Elenca utenti",
-      description: "Restituisce tutti gli utenti registrati (solo admin)",
+      summary: "List users",
+      description: "Returns all registered users (admin only)",
       tags: ["Users"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -70,8 +70,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id",
     describeRoute({
-      summary: "Leggi utente",
-      description: "Restituisce i dati di un singolo utente per ID (solo admin)",
+      summary: "Get user",
+      description: "Returns a single user by ID (admin only)",
       tags: ["Users"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -130,8 +130,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .patch(
     "/:id",
     describeRoute({
-      summary: "Aggiorna utente",
-      description: "Aggiorna ruolo o disabilitazione di un utente (solo admin, non sé stesso)",
+      summary: "Update user",
+      description: "Updates a user role or disabled flag (admin only, not self)",
       tags: ["Users"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -218,8 +218,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .delete(
     "/:id",
     describeRoute({
-      summary: "Elimina utente",
-      description: "Elimina un utente (solo admin, non sé stesso)",
+      summary: "Delete user",
+      description: "Deletes a user (admin only, not self)",
       tags: ["Users"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

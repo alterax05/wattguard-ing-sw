@@ -97,9 +97,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Elenca inviti o verifica tramite token",
+      summary: "List invites or verify by token",
       description:
-        "Senza query: lista tutti gli inviti (solo admin). Con ?token=: lookup pubblico del singolo invito per la registrazione",
+        "Without query: lists all invites (admin only). With ?token=: public lookup of a single invite for registration",
       tags: ["Invites"],
       responses: {
         200: {
@@ -180,8 +180,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     ...requireAdmin,
     describeRoute({
-      summary: "Crea invito",
-      description: "Crea un invito e invia l'email di registrazione (solo admin, validità 7 giorni)",
+      summary: "Create invite",
+      description: "Creates an invite and sends the registration email (admin only, valid for 7 days)",
       tags: ["Invites"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -290,8 +290,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     ...requireAdmin,
     describeRoute({
-      summary: "Leggi invito per ID",
-      description: "Restituisce i dati completi di un invito tramite il suo ID canonico (solo admin)",
+      summary: "Get invite by ID",
+      description: "Returns full invite data via its canonical ID (admin only)",
       tags: ["Invites"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -353,8 +353,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     ...requireAdmin,
     describeRoute({
-      summary: "Revoca invito",
-      description: "Revoca un invito in stato pending (solo admin)",
+      summary: "Revoke invite",
+      description: "Revokes a pending invite (admin only)",
       tags: ["Invites"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -425,9 +425,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .patch(
     "/:id",
     describeRoute({
-      summary: "Accetta invito",
+      summary: "Accept invite",
       description:
-        "Transizione pending -> accepted sull'URI canonico. Token nel body (mai nel path). Crea l'account (password o Google) e apre la sessione",
+        "Transitions pending -> accepted on the canonical URI. Token in body (never in path). Creates the account (password or Google) and opens the session",
       tags: ["Invites"],
       responses: {
         200: {
