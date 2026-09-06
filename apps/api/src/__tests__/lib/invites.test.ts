@@ -128,7 +128,7 @@ describe("lib/invites", () => {
       }
     });
 
-    test("returns 400 for revoked or accepted invite", async () => {
+    test("returns 422 for revoked or accepted invite", async () => {
       const rawToken = "already-revoked-token";
       const tokenHash = hashTokenSha256(rawToken);
       const creatorId = new mongoose.Types.ObjectId();
@@ -146,12 +146,12 @@ describe("lib/invites", () => {
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.status).toBe(400);
+        expect(result.status).toBe(422);
         expect(result.code).toBe("invite_invalid_status");
       }
     });
 
-    test("returns 400 for expired invite", async () => {
+    test("returns 422 for expired invite", async () => {
       const rawToken = "expired-token-123";
       const tokenHash = hashTokenSha256(rawToken);
       const creatorId = new mongoose.Types.ObjectId();
@@ -169,7 +169,7 @@ describe("lib/invites", () => {
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.status).toBe(400);
+        expect(result.status).toBe(422);
         expect(result.code).toBe("invite_expired");
       }
     });

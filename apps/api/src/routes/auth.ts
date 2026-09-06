@@ -24,7 +24,6 @@ import {
   SessionResponseSchema,
   SessionUserResponseSchema,
   UpdateSessionRequestSchema,
-  DestroySessionResponseSchema,
   GoogleConfigResponseSchema,
   CreateRecoveryTokenRequestSchema,
   CreateRecoveryTokenResponseSchema,
@@ -37,7 +36,6 @@ import {
 import type {
   SessionResponse,
   SessionUserResponse,
-  DestroySessionResponse,
   GoogleConfigResponse,
   CreateRecoveryTokenResponse,
   ValidateRecoveryTokenResponse,
@@ -51,7 +49,6 @@ const requireAuth = [
 ] as const;
 
 const app = new Hono<{ Variables: AuthVariables }>()
-  /* ── 1. Create Session (Login: local or Google) ────────────────────────── */
   .post(
     "/session",
     describeRoute({
@@ -68,7 +65,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
-          description: "Validation error or unverified email",
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
+          description: "Unverified email or account mismatch",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -151,7 +156,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         if (!payload.email_verified) {
           return c.json(
             apiError("oauth_email_not_verified", "Your Google email is not verified") satisfies ErrorResponse,
-            400,
+            422,
           );
         }
 
@@ -180,7 +185,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         } else if (user.googleSub !== googleSub) {
           return c.json(
             apiError("oauth_account_mismatch", "This Google account is linked to a different user") satisfies ErrorResponse,
-            400,
+            422,
           );
         }
       } else {
@@ -229,8 +234,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(toPublicUserDto(user)) satisfies SessionResponse);
     },
   )
-
-  /* ── 2. Get Current Session / User Info ────────────────────────────────── */
   .get(
     "/session",
     ...requireAuth,
@@ -263,8 +266,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(toUserDto(userDoc)) satisfies SessionUserResponse);
     },
   )
-
-  /* ── 3. Update Current Session / User Profile ─────────────────────────── */
   .patch(
     "/session",
     ...requireAuth,
@@ -279,6 +280,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           content: {
             "application/json": {
               schema: resolver(SessionUserResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -308,8 +317,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(toUserDto(userDoc)) satisfies SessionUserResponse);
     },
   )
-
-  /* ── 4. Destroy Current Session (Logout) ───────────────────────────────── */
   .delete(
     "/session",
     describeRoute({
@@ -317,13 +324,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
       description: "Distrugge la sessione corrente cancellando il cookie di autenticazione",
       tags: ["Authentication"],
       responses: {
-        200: {
+        204: {
           description: "Session destroyed successfully",
-          content: {
-            "application/json": {
-              schema: resolver(DestroySessionResponseSchema),
-            },
-          },
         },
       },
     }),
@@ -333,13 +335,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
         path: "/",
       });
 
-      return c.json(
-        apiSuccess({ message: "Session destroyed successfully" }) satisfies DestroySessionResponse,
-      );
+      return c.body(null, 204);
     },
   )
-
-  /* ── 5. Public Google Client Config ───────────────────────────────────── */
   .get(
     "/google/config",
     describeRoute({
@@ -363,8 +361,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       );
     },
   )
-
-  /* ── 6. Request Password Recovery Token ───────────────────────────────── */
   .post(
     "/recovery-tokens",
     describeRoute({
@@ -377,6 +373,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           content: {
             "application/json": {
               schema: resolver(CreateRecoveryTokenResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -413,8 +417,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       }
     },
   )
-
-  /* ── 7. Validate Password Recovery Token ──────────────────────────────── */
   .post(
     "/recovery-validations",
     describeRoute({
@@ -432,6 +434,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
           description: "Token has expired",
           content: {
             "application/json": {
@@ -465,7 +475,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (resetToken.expiresAt < new Date()) {
         return c.json(
           apiError("reset_token_expired", "Reset token has expired") satisfies ErrorResponse,
-          400,
+          422,
         );
       }
 
@@ -474,8 +484,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       );
     },
   )
-
-  /* ── 8. Confirm Password Recovery ───────────────────────────────────────── */
   .post(
     "/recovery-confirmations",
     describeRoute({
@@ -492,7 +500,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
-          description: "Token has expired or validation error",
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
+          description: "Token has expired",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -526,7 +542,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         await PasswordResetToken.findByIdAndDelete(resetToken._id);
         return c.json(
           apiError("reset_token_expired", "Reset token has expired") satisfies ErrorResponse,
-          400,
+          422,
         );
       }
 

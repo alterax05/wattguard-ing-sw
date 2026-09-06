@@ -218,14 +218,12 @@ export function useLogout() {
   const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<void> => {
       const res = await client.api.v1.auth.session.$delete();
 
       if (!res.ok) {
         throw new Error("Logout failed");
       }
-
-      return res.json();
     },
 
     onSuccess: () => {
@@ -364,7 +362,7 @@ export function useDeleteUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string): Promise<void> => {
       const res = await client.api.v1.users[":id"].$delete({
         param: { id },
       });
@@ -372,9 +370,6 @@ export function useDeleteUser() {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-
-      const resData = await res.json();
-      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });

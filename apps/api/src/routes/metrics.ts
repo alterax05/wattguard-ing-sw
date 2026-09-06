@@ -122,6 +122,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
+          description: "Validation error",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        422: {
           description: "Invalid query parameters",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
@@ -139,7 +143,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const end = new Date(endDate);
 
       if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-        return c.json(apiError("invalid_date_range", "Invalid date range: startDate must be before endDate") satisfies ErrorResponse, 400);
+        return c.json(apiError("invalid_date_range", "Invalid date range: startDate must be before endDate") satisfies ErrorResponse, 422);
       }
 
       // Determine the millisecond bucket size for grouping
