@@ -27,8 +27,7 @@ import type {
   HealthResponse,
   MetricsResponse,
   MetricsHistoryResponse,
-  GetSettingsResponse,
-  UpdateSettingsResponse,
+  SettingsResponse,
   ErrorResponse,
 } from "@wattguard/shared";
 
@@ -141,7 +140,7 @@ describe("dashboard api", () => {
       }
     );
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
   });
 });
 
@@ -153,7 +152,7 @@ describe("settings api", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expectTypeOf(data).toExtend<GetSettingsResponse | ErrorResponse>();
+    expectTypeOf(data).toExtend<SettingsResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
       return expect.unreachable("Expected response success to be true");
@@ -175,7 +174,7 @@ describe("settings api", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expectTypeOf(data).toExtend<UpdateSettingsResponse | ErrorResponse>();
+    expectTypeOf(data).toExtend<SettingsResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
       return expect.unreachable("Expected response success to be true");

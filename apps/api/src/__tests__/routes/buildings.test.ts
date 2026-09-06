@@ -18,11 +18,8 @@ import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
 import { EFFICIENCY_ALERT_TYPE } from "../../lib/alerts";
 import type {
-  CreateBuildingResponse,
-  UpdateBuildingResponse,
-  DeleteBuildingResponse,
+  BuildingResponse,
   SearchBuildingsResponse,
-  GetBuildingResponse,
   GetBuildingHistoryResponse, ErrorResponse } from "@wattguard/shared";
 
 
@@ -142,7 +139,7 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(201);
       const json = await res.json();
-      expectTypeOf(json).toExtend<CreateBuildingResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -202,7 +199,7 @@ describe("buildings api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
     });
 
     test("rejects invalid building type ID", async () => {
@@ -228,7 +225,7 @@ describe("buildings api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
     });
   });
 
@@ -268,7 +265,7 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -326,7 +323,7 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -383,7 +380,7 @@ describe("buildings api", () => {
           headers: { Authorization: `Bearer ${adminToken}` },
         }
       );
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(422);
     });
 
     test("PATCH switching a building to district heating clears thresholds and resolves alerts", async () => {
@@ -541,13 +538,7 @@ describe("buildings api", () => {
         }
       );
 
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<DeleteBuildingResponse | ErrorResponse>();
-      if (!("success" in json)) {
-        return expect.unreachable("Expected response to contain 'success'");
-      }
-      expect(json.success).toBe(true);
+      expect(res.status).toBe(204);
 
       // Verify building deleted
       const deletedBuilding = await Building.findById(building._id);
@@ -829,7 +820,7 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<GetBuildingResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response to be successful");

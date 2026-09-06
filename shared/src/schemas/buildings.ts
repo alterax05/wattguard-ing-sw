@@ -130,28 +130,22 @@ export type CreateBuildingRequest = z.infer<typeof CreateBuildingRequestSchema>;
 
 /**
  * POST /api/v1/buildings - Create building response
+ * GET /api/v1/buildings/:id - Get building response
+ * PATCH /api/v1/buildings/:id - Update building response
  */
-export const CreateBuildingResponseSchema = z.object({
+export const BuildingResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingDetailSchema,
-}).meta({ id: "CreateBuildingResponse" });
+}).meta({ id: "BuildingResponse" });
 
-export type CreateBuildingResponse = z.infer<typeof CreateBuildingResponseSchema>;
+export type BuildingResponse = z.infer<typeof BuildingResponseSchema>;
 
 /**
  * GET /api/v1/buildings/:id - Get building path parameter
  */
 export const GetBuildingParamsSchema = ObjectIdParamSchema;
 
-/**
- * GET /api/v1/buildings/:id - Get building response 
- */
-export const GetBuildingResponseSchema = z.object({
-  success: z.literal(true),
-  data: BuildingDetailSchema,
-}).meta({ id: "GetBuildingResponse" });
 
-export type GetBuildingResponse = z.infer<typeof GetBuildingResponseSchema>;
 
 /**
  * PATCH /api/v1/buildings/:id - Update building path parameter
@@ -170,32 +164,9 @@ export const UpdateBuildingRequestSchema = CreateBuildingRequestSchema.partial()
 export type UpdateBuildingRequest = z.infer<typeof UpdateBuildingRequestSchema>;
 
 /**
- * PATCH /api/v1/buildings/:id - Update building response
- */
-export const UpdateBuildingResponseSchema = z.object({
-  success: z.literal(true),
-  data: BuildingDetailSchema,
-}).meta({ id: "UpdateBuildingResponse" });
-
-export type UpdateBuildingResponse = z.infer<typeof UpdateBuildingResponseSchema>;
-
-/**
  * DELETE /api/v1/buildings/:id - Delete building path parameter
  */
 export const DeleteBuildingParamsSchema = ObjectIdParamSchema;
-
-/**
- * DELETE /api/v1/buildings/:id - Delete building response
- */
-export const DeleteBuildingResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    id: z.string().describe("Deleted building identifier"),
-    message: z.string().optional().describe("Deletion message"),
-  }),
-}).meta({ id: "DeleteBuildingResponse" });
-
-export type DeleteBuildingResponse = z.infer<typeof DeleteBuildingResponseSchema>;
 
 /**
  * GET /api/v1/buildings/:id/readings - Get building historical data query parameters.

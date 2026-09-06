@@ -16,14 +16,11 @@ import {
   SearchBuildingsQuerySchema,
   SearchBuildingsResponseSchema,
   CreateBuildingRequestSchema,
-  CreateBuildingResponseSchema,
+  BuildingResponseSchema,
   GetBuildingParamsSchema,
-  GetBuildingResponseSchema,
   UpdateBuildingParamsSchema,
   UpdateBuildingRequestSchema,
-  UpdateBuildingResponseSchema,
   DeleteBuildingParamsSchema,
-  DeleteBuildingResponseSchema,
   GetBuildingHistoryQuerySchema,
   GetBuildingHistoryResponseSchema,
   GetBuildingEfficiencyQuerySchema,
@@ -31,13 +28,10 @@ import {
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
-  CreateBuildingResponse,
-  DeleteBuildingResponse,
+  BuildingResponse,
   GetBuildingEfficiencyResponse,
   GetBuildingHistoryResponse,
-  GetBuildingResponse,
   SearchBuildingsResponse,
-  UpdateBuildingResponse,
   ErrorResponse,
 } from "@wattguard/shared";
 import { calculateBuildingEfficiency } from "../lib/efficiency";
@@ -58,6 +52,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           content: {
             "application/json": {
               schema: resolver(SearchBuildingsResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid query parameters",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -189,11 +191,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Building created successfully",
           content: {
             "application/json": {
-              schema: resolver(CreateBuildingResponseSchema),
+              schema: resolver(BuildingResponseSchema),
             },
           },
         },
         400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
           description: "Validation error",
           content: {
             "application/json": {
@@ -227,11 +237,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Verify building type exists
       const buildingType = await BuildingType.findById(data.buildingType);
       if (!buildingType) {
-        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 400);
+        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 422);
       }
 
       if (isDistrictHeatingBuilding(data.heatingSystemType) && data.efficiencyThresholds?.enabled) {
-        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 400);
+        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 422);
       }
 
       // Create building
@@ -251,7 +261,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         apiSuccess(toBuildingDetailDTO(building, {
           activeSensors: 0,
           currentConsumption: null,
-        })) satisfies CreateBuildingResponse,
+        })) satisfies BuildingResponse,
         201
       );
     }
@@ -268,7 +278,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Building details retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(GetBuildingResponseSchema),
+              schema: resolver(BuildingResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid ID parameter",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -326,7 +344,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(toBuildingDetailDTO(building, {
         activeSensors: activeSensorsCount,
         currentConsumption: energySensor?.lastReading?.value ?? null,
-      })) satisfies GetBuildingResponse);
+      })) satisfies BuildingResponse);
     }
   )
   .patch(
@@ -341,11 +359,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Building updated successfully",
           content: {
             "application/json": {
-              schema: resolver(UpdateBuildingResponseSchema),
+              schema: resolver(BuildingResponseSchema),
             },
           },
         },
         400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
           description: "Validation error",
           content: {
             "application/json": {
@@ -395,7 +421,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.buildingType) {
         const buildingType = await BuildingType.findById(updates.buildingType);
         if (!buildingType) {
-          return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 400);
+          return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 422);
         }
       }
 
@@ -404,7 +430,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       );
 
       if (resultingDistrictHeating && updates.efficiencyThresholds !== undefined) {
-        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 400);
+        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 422);
       }
 
       if (resultingDistrictHeating && building.efficiencyThresholds.enabled) {
@@ -458,7 +484,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(toBuildingDetailDTO(populatedBuilding, {
         activeSensors: activeSensorsCount,
         currentConsumption: energySensor?.lastReading?.value ?? null,
-      })) satisfies UpdateBuildingResponse);
+      })) satisfies BuildingResponse);
     }
   )
   .delete(
@@ -469,11 +495,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
-        200: {
+        204: {
           description: "Building and associated data deleted successfully",
+        },
+        400: {
+          description: "Invalid ID parameter",
           content: {
             "application/json": {
-              schema: resolver(DeleteBuildingResponseSchema),
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -520,10 +549,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
       await Building.findByIdAndDelete(id);
 
-      return c.json(apiSuccess({
-        id,
-        message: "Building and associated data deleted successfully",
-      }) satisfies DeleteBuildingResponse);
+      return c.body(null, 204);
     }
   )
   .get(

@@ -40,13 +40,15 @@ export type GetBuildingTypeParams = z.infer<typeof GetBuildingTypeParamsSchema>;
 
 /**
  * GET /api/v1/building-types/:id - Get building type by ID response
+ * POST /api/v1/building-types - Create building type response
+ * PATCH /api/v1/building-types/:id - Update building type response
  */
-export const GetBuildingTypeResponseSchema = z.object({
+export const BuildingTypeResponseSchema = z.object({
   success: z.literal(true),
   data: BuildingTypeSchema,
-}).meta({ id: "GetBuildingTypeResponse" });
+}).meta({ id: "BuildingTypeResponse" });
 
-export type GetBuildingTypeResponse = z.infer<typeof GetBuildingTypeResponseSchema>;
+export type BuildingTypeResponse = z.infer<typeof BuildingTypeResponseSchema>;
 
 /**
  * POST /api/v1/building-types - Create building type request
@@ -58,15 +60,7 @@ export const CreateBuildingTypeRequestSchema = z.object({
 
 export type CreateBuildingTypeRequest = z.infer<typeof CreateBuildingTypeRequestSchema>;
 
-/**
- * POST /api/v1/building-types - Create building type response
- */
-export const CreateBuildingTypeResponseSchema = z.object({
-  success: z.literal(true),
-  data: BuildingTypeSchema,
-}).meta({ id: "CreateBuildingTypeResponse" });
 
-export type CreateBuildingTypeResponse = z.infer<typeof CreateBuildingTypeResponseSchema>;
 
 /**
  * PATCH /api/v1/building-types/:id - Update building type path parameter
@@ -81,29 +75,6 @@ export const UpdateBuildingTypeRequestSchema = CreateBuildingTypeRequestSchema.p
 export type UpdateBuildingTypeRequest = z.infer<typeof UpdateBuildingTypeRequestSchema>;
 
 /**
- * PATCH /api/v1/building-types/:id - Update building type response
- */
-export const UpdateBuildingTypeResponseSchema = z.object({
-  success: z.literal(true),
-  data: BuildingTypeSchema,
-}).meta({ id: "UpdateBuildingTypeResponse" });
-
-export type UpdateBuildingTypeResponse = z.infer<typeof UpdateBuildingTypeResponseSchema>;
-
-/**
  * DELETE /api/v1/building-types/:id - Delete building type path parameter
  */
 export const DeleteBuildingTypeParamsSchema = ObjectIdParamSchema;
-
-/**
- * DELETE /api/v1/building-types/:id - Delete building type response
- */
-export const DeleteBuildingTypeResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    id: z.string().describe("Deleted building type identifier"),
-    message: z.string().optional().describe("Deletion message"),
-  }),
-}).meta({ id: "DeleteBuildingTypeResponse" });
-
-export type DeleteBuildingTypeResponse = z.infer<typeof DeleteBuildingTypeResponseSchema>;

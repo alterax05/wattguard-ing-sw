@@ -11,11 +11,11 @@ import { serializeConfig } from "../lib/settings";
 import { ErrorSchema } from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
-  .post(
+  .get(
     "/",
     requireRole("admin"),
     describeRoute({
-      summary: "Crea backup",
+      summary: "Scarica backup",
       description:
         "Genera e scarica il backup JSON completo del database (solo admin)",
       tags: ["Backups"],
@@ -61,6 +61,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       c.header("Content-Type", "application/json");
       c.header("Content-Disposition", `attachment; filename="${filename}"`);
+      c.header("Cache-Control", "no-store");
 
       return c.body(JSON.stringify(backup, null, 2));
     }

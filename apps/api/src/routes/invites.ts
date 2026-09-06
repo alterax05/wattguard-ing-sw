@@ -24,7 +24,6 @@ import {
   CreateInviteRequestSchema,
   CreateInviteResponseSchema,
   DeleteInviteParamsSchema,
-  DeleteInviteResponseSchema,
   AcceptInviteParamsSchema,
   AcceptInviteRequestSchema,
   AcceptInviteResponseSchema,
@@ -34,7 +33,6 @@ import type {
   ListInvitesResponse,
   GetInviteByIdResponse,
   CreateInviteResponse,
-  DeleteInviteResponse,
   ValidateInviteResponse,
   AcceptInviteResponse,
   ErrorResponse,
@@ -113,6 +111,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
           description: "Invite is expired or already used",
           content: {
             "application/json": {
@@ -352,11 +358,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
       tags: ["Invites"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
-        200: {
+        204: {
           description: "Invite revoked successfully",
+        },
+        400: {
+          description: "Validation error",
           content: {
             "application/json": {
-              schema: resolver(DeleteInviteResponseSchema),
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -410,7 +419,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       invite.status = "revoked";
       await invite.save();
 
-      return c.json(apiSuccess(toInviteDto(invite)) satisfies DeleteInviteResponse);
+      return c.body(null, 204);
     }
   )
   .patch(
@@ -430,7 +439,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
-          description: "Invalid or expired invite, or user already exists, or email mismatch",
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
+          description: "Invalid or expired invite or email mismatch",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -454,7 +471,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         409: {
-          description: "Google account already linked to another user",
+          description: "User already exists or Google account already linked to another user",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -497,7 +514,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (invite.status !== "pending") {
         return c.json(
           apiError("invite_invalid_or_used", "Invite is no longer pending") satisfies ErrorResponse,
-          400,
+          422,
         );
       }
 
@@ -506,7 +523,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         await invite.save();
         return c.json(
           apiError("invite_expired", "Invite has expired") satisfies ErrorResponse,
-          400,
+          422,
         );
       }
 
@@ -548,14 +565,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
         if (payload.email_verified === false) {
           return c.json(
             apiError("oauth_email_not_verified", "Google email is not verified") satisfies ErrorResponse,
-            400,
+            422,
           );
         }
 
         if (payload.email.toLowerCase().trim() !== invite.email.toLowerCase().trim()) {
           return c.json(
             apiError("oauth_email_mismatch", "Google email does not match the invitation email") satisfies ErrorResponse,
-            400,
+            422,
           );
         }
 
@@ -587,7 +604,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         if (existingUser) {
           return c.json(
             apiError("user_email_exists", "User already exists") satisfies ErrorResponse,
-            400,
+            409,
           );
         }
 

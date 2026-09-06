@@ -228,7 +228,7 @@ export function useDeleteSensor() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string): Promise<void> => {
       const res = await client.api.v1.sensors[":id"].$delete({
         param: { id },
       });
@@ -236,9 +236,6 @@ export function useDeleteSensor() {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-
-      const data = await res.json();
-      return data.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: SENSORS_QUERY_KEY });

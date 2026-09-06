@@ -16,26 +16,20 @@ import {
   ListSensorsQuerySchema,
   ListSensorsResponseSchema,
   CreateSensorRequestSchema,
-  CreateSensorResponseSchema,
+  SensorResponseSchema,
   GetSensorParamsSchema,
-  GetSensorResponseSchema,
   UpdateSensorParamsSchema,
   UpdateSensorRequestSchema,
-  UpdateSensorResponseSchema,
   DeleteSensorParamsSchema,
-  DeleteSensorResponseSchema,
   GetSensorReadingsQuerySchema,
   GetSensorReadingsResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
-  CreateSensorResponse,
-  DeleteSensorResponse,
+  SensorResponse,
   ErrorResponse,
   GetSensorReadingsResponse,
-  GetSensorResponse,
   ListSensorsResponse,
-  UpdateSensorResponse,
 } from "@wattguard/shared";
 
 const app = new Hono<{ Variables: AuthVariables }>()
@@ -52,6 +46,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           content: {
             "application/json": {
               schema: resolver(ListSensorsResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid query parameters",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -104,7 +106,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Sensor created successfully",
           content: {
             "application/json": {
-              schema: resolver(CreateSensorResponseSchema),
+              schema: resolver(SensorResponseSchema),
             },
           },
         },
@@ -166,7 +168,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       c.header("Location", `${c.req.path.replace(/\/+$/, "")}/${sensor._id.toString()}`);
       return c.json(
-        apiSuccess(toSensorDTO(sensor)) satisfies CreateSensorResponse,
+        apiSuccess(toSensorDTO(sensor)) satisfies SensorResponse,
         201
       );
     }
@@ -183,7 +185,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Sensor details retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(GetSensorResponseSchema),
+              schema: resolver(SensorResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid ID parameter",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -207,7 +217,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json(apiError("sensor_not_found", "Sensor not found") satisfies ErrorResponse, 404);
       }
 
-      return c.json(apiSuccess(toSensorDTO(sensor, { checkInactivity: true })) satisfies GetSensorResponse);
+      return c.json(apiSuccess(toSensorDTO(sensor, { checkInactivity: true })) satisfies SensorResponse);
     }
   )
   .patch(
@@ -222,7 +232,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Sensor updated successfully",
           content: {
             "application/json": {
-              schema: resolver(UpdateSensorResponseSchema),
+              schema: resolver(SensorResponseSchema),
             },
           },
         },
@@ -295,7 +305,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       await pruneForRemovedThresholds({ sensorId: sensor._id, removedThresholdTypes });
 
-      return c.json(apiSuccess(toSensorDTO(updatedSensor!)) satisfies UpdateSensorResponse);
+      return c.json(apiSuccess(toSensorDTO(updatedSensor!)) satisfies SensorResponse);
     }
   )
   .delete(
@@ -306,11 +316,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
       tags: ["Sensors"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
-        200: {
+        204: {
           description: "Sensor deleted successfully",
+        },
+        400: {
+          description: "Invalid ID parameter",
           content: {
             "application/json": {
-              schema: resolver(DeleteSensorResponseSchema),
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -342,10 +355,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Delete sensor
       await Sensor.findByIdAndDelete(id);
 
-      return c.json(apiSuccess({
-        id,
-        message: `Sensor "${sensor.location}" deleted successfully`,
-      }) satisfies DeleteSensorResponse);
+      return c.body(null, 204);
     }
   )
   .get(
@@ -361,6 +371,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           content: {
             "application/json": {
               schema: resolver(GetSensorReadingsResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid query parameters",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },

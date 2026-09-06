@@ -5,14 +5,12 @@ import { requireRole, type AuthVariables } from "../middleware/auth";
 import { SystemConfig } from "../models/SystemConfig";
 import { serializeConfig } from "../lib/settings";
 import {
-  GetSettingsResponseSchema,
+  SettingsResponseSchema,
   UpdateSettingsRequestSchema,
-  UpdateSettingsResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
-  GetSettingsResponse,
-  UpdateSettingsResponse,
+  SettingsResponse,
   ErrorResponse,
 } from "@wattguard/shared";
 import { apiError, apiSuccess } from "../lib/api-response";
@@ -30,7 +28,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "System configuration retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(GetSettingsResponseSchema),
+              schema: resolver(SettingsResponseSchema),
             },
           },
         },
@@ -46,7 +44,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
     }),
     async (c) => {
       const config = await SystemConfig.getOrCreate();
-      return c.json(apiSuccess(serializeConfig(config)) satisfies GetSettingsResponse);
+      return c.json(apiSuccess(serializeConfig(config)) satisfies SettingsResponse);
     },
   )
   .patch(
@@ -62,7 +60,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "System configuration updated successfully",
           content: {
             "application/json": {
-              schema: resolver(UpdateSettingsResponseSchema),
+              schema: resolver(SettingsResponseSchema),
             },
           },
         },
@@ -136,7 +134,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         }
       }
 
-      return c.json(apiSuccess(serializeConfig(updated)) satisfies UpdateSettingsResponse);
+      return c.json(apiSuccess(serializeConfig(updated)) satisfies SettingsResponse);
     },
   );
 
