@@ -46,8 +46,7 @@ export async function evaluateEfficiencyAlerts(): Promise<void> {
 
       if (cop < minCop) {
         const result = await raiseEfficiency({
-          buildingId: building._id,
-          buildingName: building.name,
+          building: building._id,
           cop,
           minCop,
         });
@@ -65,7 +64,7 @@ export async function evaluateEfficiencyAlerts(): Promise<void> {
         }
       } else {
         const result = await resolveEfficiencyForBuilding({
-          buildingId: building._id,
+          building: building._id,
           actor: SYSTEM_RESOLVER,
         });
         if (!result.ok) {

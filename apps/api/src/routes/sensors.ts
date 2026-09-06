@@ -303,7 +303,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       const updatedSensor = await Sensor.findByIdAndUpdate(sensor._id, update, { returnDocument: "after" });
 
-      await pruneForRemovedThresholds({ sensorId: sensor._id, removedThresholdTypes });
+      await pruneForRemovedThresholds({ sensor: sensor._id, removedThresholdTypes });
 
       return c.json(apiSuccess(toSensorDTO(updatedSensor!)) satisfies SensorResponse);
     }

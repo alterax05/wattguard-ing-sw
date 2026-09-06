@@ -437,7 +437,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         // Passaggio a teleriscaldamento: azzera la config e risolve gli alert efficienza.
         building.efficiencyThresholds = { enabled: false, minCop: null };
         await resolveEfficiencyForBuilding({
-          buildingId: building._id,
+          building: building._id,
           actor: userDoc.name || userDoc.email,
         });
       }
@@ -452,7 +452,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.efficiencyThresholds !== undefined && !updates.efficiencyThresholds.enabled) {
         // Disabilitazione soglie: risolve gli alert efficienza ancora aperti.
         await resolveEfficiencyForBuilding({
-          buildingId: building._id,
+          building: building._id,
           actor: userDoc.name || userDoc.email,
         });
       }

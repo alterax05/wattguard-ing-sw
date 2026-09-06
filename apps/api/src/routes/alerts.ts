@@ -73,7 +73,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const {
         limit,
         offset,
-        buildingId,
+        building,
         status,
         severity,
         sortBy = "createdAt",
@@ -81,14 +81,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
       } = query;
 
       const filter: QueryFilter<AlertDocument> = {};
-      if (buildingId) {
-        if (!Types.ObjectId.isValid(buildingId)) {
+      if (building) {
+        if (!Types.ObjectId.isValid(building)) {
           return c.json(
             apiError("invalid_building_id", "Invalid building ID format") satisfies ErrorResponse,
             422,
           );
         }
-        filter.buildingId = buildingId;
+        filter.building = building;
       }
       if (status) filter.status = status;
       if (severity) filter.severity = severity;
@@ -101,6 +101,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
           .sort(sortConfig)
           .skip(offset)
           .limit(limit)
+          .populate("building", "name address")
+          .populate("sensor", "sensorType location")
           .exec(),
         AlertModel.countDocuments(filter),
       ]);
@@ -162,7 +164,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (!Types.ObjectId.isValid(id)) {
         return c.json(apiError("invalid_alert_id", "Invalid alert ID format") satisfies ErrorResponse, 422);
       }
-      const alert = await AlertModel.findById(id);
+      const alert = await AlertModel.findById(id)
+        .populate("building", "name address")
+        .populate("sensor", "sensorType location");
       if (!alert) {
         return c.json(apiError("alert_not_found", "Alert not found") satisfies ErrorResponse, 404);
       }
@@ -219,6 +223,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         const { error, status: errStatus } = getAlertError(result.code);
         return c.json(apiError(result.code, error) satisfies ErrorResponse, errStatus);
       }
+
+      await result.alert.populate([
+        { path: "building", select: "name address" },
+        { path: "sensor", select: "sensorType location" },
+      ]);
 
       return c.json(apiSuccess(toAlertDTO(result.alert, {
         locale: getRequestLocale(c),

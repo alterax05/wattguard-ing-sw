@@ -410,54 +410,42 @@ describe("sensors api", () => {
       });
 
       const minAlert = await Alert.create({
-        buildingId,
-        buildingName: "Test Building",
-        sensorId: sensor._id,
+        building: buildingId,
+        sensor: sensor._id,
         type: "threshold_exceeded",
         thresholdType: "min",
         severity: "high",
-        sensorType: "internal_temp",
-        location: "Sala",
         value: 5,
         unit: "°C",
         limit: 10,
         status: "active",
       });
       const maxAlert = await Alert.create({
-        buildingId,
-        buildingName: "Test Building",
-        sensorId: sensor._id,
+        building: buildingId,
+        sensor: sensor._id,
         type: "threshold_exceeded",
         thresholdType: "max",
         severity: "high",
-        sensorType: "internal_temp",
-        location: "Sala",
         value: 35,
         unit: "°C",
         limit: 30,
         status: "acknowledged",
       });
       const legacyAlert = await Alert.create({
-        buildingId,
-        buildingName: "Test Building",
-        sensorId: sensor._id,
+        building: buildingId,
+        sensor: sensor._id,
         type: "threshold_exceeded",
         severity: "high",
-        sensorType: "internal_temp",
-        location: "Sala",
         value: 40,
         unit: "°C",
         limit: 30,
         status: "active",
       });
       const unrelatedAlert = await Alert.create({
-        buildingId,
-        buildingName: "Test Building",
-        sensorId: sensor._id,
+        building: buildingId,
+        sensor: sensor._id,
         type: "efficiency_below_threshold",
         severity: "medium",
-        sensorType: "energy_meter",
-        location: "Quadro",
         status: "active",
       });
 
@@ -511,14 +499,11 @@ describe("sensors api", () => {
       });
 
       await Alert.create({
-        buildingId,
-        buildingName: "Test Building",
-        sensorId: sensor._id,
+        building: buildingId,
+        sensor: sensor._id,
         type: "threshold_exceeded",
         thresholdType: "max",
         severity: "high",
-        sensorType: "internal_temp",
-        location: "Sala",
         value: 35,
         unit: "°C",
         limit: 30,
@@ -548,7 +533,7 @@ describe("sensors api", () => {
       });
       expect(readings).toBe(0);
 
-      const alerts = await Alert.countDocuments({ sensorId: sensor._id });
+      const alerts = await Alert.countDocuments({ sensor: sensor._id });
       expect(alerts).toBe(0);
 
       

@@ -4,9 +4,11 @@ import {
   ObjectIdSchema,
   PaginationQuerySchema,
   PaginationResponseSchema,
+  SensorTypeSchema,
   SortOrderSchema,
   SelfLinkSchema,
 } from "./common";
+import { PopulatedBuildingSchema } from "./sensors";
 
 export const AlertSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
 export type AlertSeverity = z.infer<typeof AlertSeveritySchema>;
@@ -23,24 +25,34 @@ export const ALERT_TYPES = [THRESHOLD_ALERT_TYPE, EFFICIENCY_ALERT_TYPE] as cons
 export type AlertType = (typeof ALERT_TYPES)[number];
 export const AlertTypeSchema = z.enum(ALERT_TYPES);
 
+export const PopulatedAlertSensorSchema = z.object({
+  self: SelfLinkSchema.optional(),
+  _id: ObjectIdSchema.describe("Sensor identifier"),
+  sensorType: SensorTypeSchema.describe("Type of the sensor"),
+  location: z.string().describe("Physical location of the sensor in the building"),
+}).meta({ id: "PopulatedAlertSensor" });
+
+export type PopulatedAlertSensor = z.infer<typeof PopulatedAlertSensorSchema>;
+
 export const AlertSchema = z.object({
   self: SelfLinkSchema.optional(),
   id: ObjectIdSchema.describe("Unique alert identifier"),
-  buildingId: ObjectIdSchema.describe("Building identifier this alert belongs to"),
-  buildingName: z.string().describe("Name of the building"),
-  building: z.object({
-    self: SelfLinkSchema,
-    name: z.string().optional(),
-  }).optional().describe("Building relation with canonical URI"),
-  sensorId: ObjectIdSchema.nullish().transform((v) => v ?? undefined).describe("Optional sensor identifier this alert relates to"),
-  sensor: z.object({
-    self: SelfLinkSchema,
-  }).optional().describe("Sensor relation with canonical URI"),
+  building: z
+    .union([
+      ObjectIdSchema.describe("Building identifier"),
+      PopulatedBuildingSchema.describe("Populated building details"),
+    ])
+    .describe("Building reference (ObjectId or populated object)"),
+  sensor: z
+    .union([
+      ObjectIdSchema.describe("Sensor identifier"),
+      PopulatedAlertSensorSchema.describe("Populated sensor details"),
+    ])
+    .optional()
+    .describe("Sensor reference (ObjectId or populated object)"),
   type: AlertTypeSchema.describe("Type of the alert"),
   thresholdType: AlertThresholdTypeSchema.nullish().transform((v) => v ?? undefined).describe("Threshold direction for threshold alerts"),
   severity: AlertSeveritySchema.describe("Severity level"),
-  sensorType: z.string().nullish().transform((v) => v ?? undefined).describe("Sensor type the alert relates to"),
-  location: z.string().nullish().transform((v) => v ?? undefined).describe("Physical location of the sensor"),
   value: z.number().nullish().transform((v) => v ?? undefined).describe("Measured value that triggered the alert"),
   unit: z.string().nullish().transform((v) => v ?? undefined).describe("Unit of the measured value"),
   limit: z.number().nullish().transform((v) => v ?? undefined).describe("Threshold limit that was exceeded"),
@@ -59,7 +71,7 @@ export type Alert = z.infer<typeof AlertSchema>;
  * GET /api/alerts - List alerts query parameters
  */
 export const ListAlertsQuerySchema = PaginationQuerySchema.extend({
-  buildingId: ObjectIdSchema.optional().describe("Filter by building ID"),
+  building: ObjectIdSchema.optional().describe("Filter by building ID"),
   status: AlertStatusSchema.optional().describe("Filter by alert status"),
   severity: AlertSeveritySchema.optional().describe("Filter by severity"),
   sortBy: z

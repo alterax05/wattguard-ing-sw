@@ -48,11 +48,8 @@ describe("lib/alerts", () => {
     try {
       await session.withTransaction(async () => {
         result = await raiseThreshold({
-          sensorId,
-          buildingId,
-          buildingName: "Test Building",
-          sensorType: "internal_temp",
-          location: "Sala Principale",
+          sensor: sensorId,
+          building: buildingId,
           value: 35,
           unit: "°C",
           thresholdType: "max",
@@ -66,7 +63,7 @@ describe("lib/alerts", () => {
 
     expect(result!).toEqual({ ok: true, created: true });
 
-    const alert = await Alert.findOne({ sensorId });
+    const alert = await Alert.findOne({ sensor: sensorId });
     expect(alert).not.toBeNull();
     expect(alert!.type).toBe(THRESHOLD_ALERT_TYPE);
     expect(alert!.thresholdType).toBe("max");
@@ -74,16 +71,15 @@ describe("lib/alerts", () => {
     expect(alert!.severity).toBe("medium");
     expect(alert!.limit).toBe(30);
     expect(alert!.status).toBe("active");
-    expect(alert!.buildingName).toBe("Test Building");
+    expect(alert!.building.toString()).toBe(buildingId.toString());
 
     let second: { ok: true; created: boolean } | { ok: false; code: string };
     const session2 = await mongoose.startSession();
     try {
       await session2.withTransaction(async () => {
         second = await raiseThreshold({
-          sensorId,
-          buildingId,
-          buildingName: "Test Building",
+          sensor: sensorId,
+          building: buildingId,
           value: 36,
           unit: "°C",
           thresholdType: "max",
@@ -96,7 +92,7 @@ describe("lib/alerts", () => {
     }
 
     expect(second!).toEqual({ ok: true, created: false });
-    expect(await Alert.countDocuments({ sensorId })).toBe(1);
+    expect(await Alert.countDocuments({ sensor: sensorId })).toBe(1);
   });
 
   test("raiseThreshold defaults severity to high and limit to null", async () => {
@@ -105,9 +101,8 @@ describe("lib/alerts", () => {
     try {
       await session.withTransaction(async () => {
         result = await raiseThreshold({
-          sensorId,
-          buildingId,
-          buildingName: "Test Building",
+          sensor: sensorId,
+          building: buildingId,
           value: 12,
           unit: "°C",
           thresholdType: "min",
@@ -121,21 +116,20 @@ describe("lib/alerts", () => {
 
     expect(result!).toEqual({ ok: true, created: true });
 
-    const alert = await Alert.findOne({ sensorId });
+    const alert = await Alert.findOne({ sensor: sensorId });
     expect(alert!.severity).toBe("high");
     expect(alert!.limit).toBeNull();
   });
 
   test("raiseEfficiency creates an efficiency alert with rounded value and dedupes", async () => {
     const res = await raiseEfficiency({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       cop: 2.567,
       minCop: 2.5,
     });
     expect(res).toEqual({ ok: true, created: true });
 
-    const alert = await Alert.findOne({ buildingId, type: EFFICIENCY_ALERT_TYPE });
+    const alert = await Alert.findOne({ building: buildingId, type: EFFICIENCY_ALERT_TYPE });
     expect(alert).not.toBeNull();
     expect(alert!.value).toBe(2.57);
     expect(alert!.unit).toBe("COP");
@@ -143,25 +137,21 @@ describe("lib/alerts", () => {
     // 2.567 against a 2.5 limit = 2.7% deviation -> low band
     expect(alert!.severity).toBe("low");
     expect(alert!.limit).toBe(2.5);
-    expect(alert!.location).toBe("Test Building");
-    expect(alert!.buildingName).toBe("Test Building");
     expect(alert!.status).toBe("active");
-    expect(alert!.sensorId).toBeUndefined();
+    expect(alert!.sensor).toBeUndefined();
 
     const second = await raiseEfficiency({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       cop: 2.1,
       minCop: 2.5,
     });
     expect(second).toEqual({ ok: true, created: false });
-    expect(await Alert.countDocuments({ buildingId, type: EFFICIENCY_ALERT_TYPE })).toBe(1);
+    expect(await Alert.countDocuments({ building: buildingId, type: EFFICIENCY_ALERT_TYPE })).toBe(1);
   });
 
   test("acknowledge stamps actor and now, then rejects repeat, missing and invalid ids", async () => {
     const alert = await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "active",
@@ -191,15 +181,13 @@ describe("lib/alerts", () => {
 
   test("resolveManually resolves active and acknowledged alerts", async () => {
     const active = await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "active",
     });
     const acknowledged = await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "acknowledged",
@@ -221,8 +209,7 @@ describe("lib/alerts", () => {
 
   test("resolveManually rejects already-resolved and missing alerts", async () => {
     const resolved = await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "resolved",
@@ -245,22 +232,19 @@ describe("lib/alerts", () => {
 
   test("resolveEfficiencyForBuilding resolves only active and acknowledged efficiency alerts", async () => {
     await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: EFFICIENCY_ALERT_TYPE,
       severity: "high",
       status: "active",
     });
     await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: EFFICIENCY_ALERT_TYPE,
       severity: "high",
       status: "acknowledged",
     });
     await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: EFFICIENCY_ALERT_TYPE,
       severity: "high",
       status: "resolved",
@@ -268,21 +252,20 @@ describe("lib/alerts", () => {
       resolvedAt: new Date("2024-05-01T12:00:00Z"),
     });
     await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "active",
     });
 
     const res = await resolveEfficiencyForBuilding({
-      buildingId,
+      building: buildingId,
       actor: SYSTEM_RESOLVER,
       now: new Date("2024-06-01T12:00:00Z"),
     });
     expect(res).toEqual({ ok: true, resolved: 2 });
 
-    const efficiencyAlerts = await Alert.find({ buildingId, type: EFFICIENCY_ALERT_TYPE });
+    const efficiencyAlerts = await Alert.find({ building: buildingId, type: EFFICIENCY_ALERT_TYPE });
     expect(efficiencyAlerts).toHaveLength(3);
     const newlyResolved = efficiencyAlerts.filter((a) => a.resolvedBy === SYSTEM_RESOLVER);
     expect(newlyResolved).toHaveLength(2);
@@ -294,11 +277,11 @@ describe("lib/alerts", () => {
     expect(alreadyResolved!.status).toBe("resolved");
     expect(alreadyResolved!.resolvedAt).toEqual(new Date("2024-05-01T12:00:00Z"));
 
-    const threshold = await Alert.findOne({ buildingId, type: THRESHOLD_ALERT_TYPE });
+    const threshold = await Alert.findOne({ building: buildingId, type: THRESHOLD_ALERT_TYPE });
     expect(threshold!.status).toBe("active");
 
     const zero = await resolveEfficiencyForBuilding({
-      buildingId,
+      building: buildingId,
       actor: SYSTEM_RESOLVER,
     });
     expect(zero).toEqual({ ok: true, resolved: 0 });
@@ -306,41 +289,36 @@ describe("lib/alerts", () => {
 
   test("pruneForRemovedThresholds deletes matching and legacy alerts, keeps others", async () => {
     const minAlert = await Alert.create({
-      buildingId,
-      sensorId,
-      buildingName: "Test Building",
+      building: buildingId,
+      sensor: sensorId,
       type: THRESHOLD_ALERT_TYPE,
       thresholdType: "min",
       severity: "high",
       status: "active",
     });
     const maxAlert = await Alert.create({
-      buildingId,
-      sensorId,
-      buildingName: "Test Building",
+      building: buildingId,
+      sensor: sensorId,
       type: THRESHOLD_ALERT_TYPE,
       thresholdType: "max",
       severity: "high",
       status: "active",
     });
     const legacyAlert = await Alert.create({
-      buildingId,
-      sensorId,
-      buildingName: "Test Building",
+      building: buildingId,
+      sensor: sensorId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "active",
     });
     const efficiencyAlert = await Alert.create({
-      buildingId,
-      sensorId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: EFFICIENCY_ALERT_TYPE,
       severity: "high",
       status: "active",
     });
 
-    const res = await pruneForRemovedThresholds({ sensorId, removedThresholdTypes: ["min"] });
+    const res = await pruneForRemovedThresholds({ sensor: sensorId, removedThresholdTypes: ["min"] });
     expect(res).toEqual({ ok: true, deleted: 2 });
 
     expect(await Alert.findById(minAlert._id)).toBeNull();
@@ -348,9 +326,10 @@ describe("lib/alerts", () => {
     expect((await Alert.findById(maxAlert._id))!.status).toBe("active");
     expect((await Alert.findById(efficiencyAlert._id))!.status).toBe("active");
 
-    const empty = await pruneForRemovedThresholds({ sensorId, removedThresholdTypes: [] });
+    const empty = await pruneForRemovedThresholds({ sensor: sensorId, removedThresholdTypes: [] });
     expect(empty).toEqual({ ok: true, deleted: 0 });
-    expect(await Alert.countDocuments({ sensorId })).toBe(2);
+    expect(await Alert.countDocuments({ sensor: sensorId })).toBe(1);
+    expect(await Alert.countDocuments({})).toBe(2);
   });
 
   test("deleteForBuilding and deleteForSensor delete only matching docs", async () => {
@@ -358,25 +337,22 @@ describe("lib/alerts", () => {
     const otherBuildingId = new Types.ObjectId();
 
     await Alert.create({
-      buildingId,
-      sensorId,
-      buildingName: "Test Building",
+      building: buildingId,
+      sensor: sensorId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "active",
     });
     await Alert.create({
-      buildingId,
-      sensorId: otherSensorId,
-      buildingName: "Test Building",
+      building: buildingId,
+      sensor: otherSensorId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "active",
     });
     await Alert.create({
-      buildingId: otherBuildingId,
-      sensorId,
-      buildingName: "Other Building",
+      building: otherBuildingId,
+      sensor: sensorId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "active",
@@ -393,14 +369,11 @@ describe("lib/alerts", () => {
 
   test("toAlertDTO serializes the full alert shape", async () => {
     const alert = await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
-      sensorId,
+      building: buildingId,
+      sensor: sensorId,
       type: THRESHOLD_ALERT_TYPE,
       thresholdType: "max",
       severity: "high",
-      sensorType: "internal_temp",
-      location: "Sala Principale",
       value: 35,
       unit: "°C",
       limit: 30,
@@ -412,14 +385,11 @@ describe("lib/alerts", () => {
     const dto = toAlertDTO(alert);
 
     expect(dto.id).toBe(alert._id.toString());
-    expect(dto.buildingId).toBe(buildingId.toString());
-    expect(dto.buildingName).toBe("Test Building");
-    expect(dto.sensorId).toBe(sensorId.toString());
+    expect(dto.building).toBe(buildingId.toString());
+    expect(dto.sensor).toBe(sensorId.toString());
     expect(dto.type).toBe(THRESHOLD_ALERT_TYPE);
     expect(dto.thresholdType).toBe("max");
     expect(dto.severity).toBe("high");
-    expect(dto.sensorType).toBe("internal_temp");
-    expect(dto.location).toBe("Sala Principale");
     expect(dto.value).toBe(35);
     expect(dto.unit).toBe("°C");
     expect(dto.limit).toBe(30);
@@ -434,8 +404,7 @@ describe("lib/alerts", () => {
 
   test("toAlertDTO localizes the system resolver and passes user names through", async () => {
     const systemAlert = await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "resolved",
@@ -448,8 +417,7 @@ describe("lib/alerts", () => {
     expect(toAlertDTO(systemAlert).resolvedBy).toBe(SYSTEM_RESOLVER);
 
     const userAlert = await Alert.create({
-      buildingId,
-      buildingName: "Test Building",
+      building: buildingId,
       type: THRESHOLD_ALERT_TYPE,
       severity: "high",
       status: "resolved",
