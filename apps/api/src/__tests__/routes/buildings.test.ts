@@ -399,15 +399,13 @@ describe("buildings api", () => {
       });
 
       await Alert.create({
-        buildingId: building._id,
-        buildingName: building.name,
+        building: building._id,
         type: EFFICIENCY_ALERT_TYPE,
         thresholdType: "min",
         severity: "high",
         value: 2.1,
         unit: "COP",
         limit: 2.5,
-        location: building.name,
         status: "active",
       });
 
@@ -426,7 +424,7 @@ describe("buildings api", () => {
       expect(reloaded!.efficiencyThresholds.enabled).toBe(false);
       expect(reloaded!.efficiencyThresholds.minCop).toBeNull();
 
-      const alert = await Alert.findOne({ buildingId: building._id, type: EFFICIENCY_ALERT_TYPE });
+      const alert = await Alert.findOne({ building: building._id, type: EFFICIENCY_ALERT_TYPE });
       expect(alert!.status).toBe("resolved");
     });
 
@@ -446,15 +444,13 @@ describe("buildings api", () => {
       });
 
       await Alert.create({
-        buildingId: building._id,
-        buildingName: building.name,
+        building: building._id,
         type: EFFICIENCY_ALERT_TYPE,
         thresholdType: "min",
         severity: "high",
         value: 2.1,
         unit: "COP",
         limit: 2.5,
-        location: building.name,
         status: "active",
       });
 
@@ -469,7 +465,7 @@ describe("buildings api", () => {
       );
       expect(res.status).toBe(200);
 
-      const alert = await Alert.findOne({ buildingId: building._id, type: EFFICIENCY_ALERT_TYPE });
+      const alert = await Alert.findOne({ building: building._id, type: EFFICIENCY_ALERT_TYPE });
       expect(alert!.status).toBe("resolved");
     });
   });
@@ -513,14 +509,11 @@ describe("buildings api", () => {
       });
 
       await Alert.create({
-        buildingId: building._id,
-        buildingName: building.name,
-        sensorId: sensor._id,
+        building: building._id,
+        sensor: sensor._id,
         type: "threshold_exceeded",
         thresholdType: "max",
         severity: "high",
-        sensorType: "internal_temp",
-        location: "Sala",
         value: 35,
         unit: "°C",
         limit: 30,
@@ -552,7 +545,7 @@ describe("buildings api", () => {
       const readings = await SensorReading.find({ "metadata.building": building._id });
       expect(readings.length).toBe(0);
 
-      const alerts = await Alert.countDocuments({ buildingId: building._id });
+      const alerts = await Alert.countDocuments({ building: building._id });
       expect(alerts).toBe(0);
     });
   });

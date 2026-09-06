@@ -1,15 +1,33 @@
 import type { TFunction } from "i18next";
-import { EFFICIENCY_ALERT_TYPE, type Alert } from "@wattguard/shared";
+import {
+  EFFICIENCY_ALERT_TYPE,
+  PopulatedAlertSensorSchema,
+  PopulatedBuildingSchema,
+  type Alert,
+} from "@wattguard/shared";
 
 /**
  * Minimal structured fields used to compose a localized alert message.
  * The API stopped sending a pre-rendered `message` string; the frontend
- * composes it from these fields instead.
+ * composes it from these fields instead. Names come live from the populated
+ * `building`/`sensor` relations.
  */
 export type AlertMessageData = Pick<
   Alert,
-  "type" | "sensorType" | "location" | "value" | "unit" | "limit" | "buildingName"
+  "type" | "building" | "sensor" | "value" | "unit" | "limit"
 >;
+
+/** Building display name, or a placeholder when unpopulated. */
+export function getAlertBuildingName(alert: Pick<Alert, "building">): string {
+  const parsed = PopulatedBuildingSchema.safeParse(alert.building);
+  return parsed.success ? parsed.data.name : "—";
+}
+
+function getAlertSensor(alert: AlertMessageData) {
+  if (!alert.sensor) return undefined;
+  const parsed = PopulatedAlertSensorSchema.safeParse(alert.sensor);
+  return parsed.success ? parsed.data : undefined;
+}
 
 /**
  * Compose a localized, human-readable message for an alert.
@@ -23,16 +41,18 @@ export function composeAlertMessage(
   alert: AlertMessageData,
   t: TFunction,
 ): string {
-  const sensorType = alert.sensorType
-    ? t(`sensors.type.${alert.sensorType}`, {
-        defaultValue: alert.sensorType,
+  const buildingName = getAlertBuildingName(alert);
+  const populatedSensor = getAlertSensor(alert);
+  const sensorType = populatedSensor
+    ? t(`sensors.type.${populatedSensor.sensorType}`, {
+        defaultValue: populatedSensor.sensorType,
       })
-    : alert.buildingName ?? "—";
-  const location = alert.location ?? alert.buildingName ?? "—";
+    : buildingName;
+  const location = populatedSensor?.location ?? buildingName;
 
   if (alert.type === EFFICIENCY_ALERT_TYPE) {
     return t("alerts.efficiencyBelowThreshold", {
-      building: alert.buildingName ?? "—",
+      building: buildingName,
       value: alert.value != null ? Number(alert.value).toFixed(2) : "—",
       limit: alert.limit != null ? Number(alert.limit).toFixed(2) : "—",
     });

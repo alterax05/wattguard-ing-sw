@@ -25,7 +25,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
-  UserPlus,
   Shield,
   UserIcon,
   Mail,
@@ -39,14 +38,12 @@ import {
   UserCheck,
   Ban,
 } from "lucide-react"
-import { AddUserDialog } from "./add-user-dialog"
 import { format } from "date-fns"
 import { getDateFnsLocale } from "@/lib/dates"
 import { toast } from "sonner"
 import type { User } from "@wattguard/shared"
 
 export function UsersManagement() {
-  const [showAddDialog, setShowAddDialog] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const [userToToggle, setUserToToggle] = useState<User | null>(null)
   const { data: users, isLoading, error } = useUsers()
@@ -132,13 +129,7 @@ export function UsersManagement() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>{t("users.title")}</CardTitle>
-            <Button onClick={() => { setShowAddDialog(true) }}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              {t("users.add")}
-            </Button>
-          </div>
+        <CardTitle>{t("users.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading && (
@@ -267,8 +258,6 @@ export function UsersManagement() {
           )}
         </CardContent>
       </Card>
-
-      {showAddDialog && <AddUserDialog onClose={() => { setShowAddDialog(false) }} />}
 
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => { if (!open) setUserToDelete(null) }}>
         <AlertDialogContent>

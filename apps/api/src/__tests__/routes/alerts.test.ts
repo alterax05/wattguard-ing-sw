@@ -9,6 +9,7 @@ import { testClient } from "hono/testing";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 import type { ListAlertsResponse, AlertResponse, ErrorResponse} from "@wattguard/shared";
+import { PopulatedAlertSensorSchema, PopulatedBuildingSchema } from "@wattguard/shared";
 
 
 
@@ -17,6 +18,7 @@ import { Alert } from "../../models/Alert";
 import { User } from "../../models/User";
 import { Building } from "../../models/Building";
 import { BuildingType } from "../../models/BuildingType";
+import { Sensor } from "../../models/Sensor";
 
 let adminToken: string;
 
@@ -72,27 +74,31 @@ beforeEach(async () => {
   });
   buildingId = building._id.toString();
 
+  const sensor = await Sensor.create({
+    building: building._id,
+    sensorType: "internal_temp",
+    location: "Sala Principale",
+    installationDate: new Date(),
+    transmissionInterval: 90,
+    createdBy: admin._id,
+    updatedBy: admin._id,
+  });
   // Seed some alerts
   await Alert.create([
     {
-      buildingId,
-      buildingName: "Test Building",
+      building: building._id,
+      sensor: sensor._id,
       type: "threshold_exceeded",
       severity: "critical",
-      sensorType: "internal_temp",
-      location: "Sala Principale",
       value: 31.5,
       unit: "°C",
       limit: 30,
       status: "active",
     },
     {
-      buildingId,
-      buildingName: "Test Building",
+      building: building._id,
       type: "efficiency_below_threshold",
       severity: "medium",
-      sensorType: "energy_meter",
-      location: "Quadro Elettrico",
       status: "acknowledged",
       acknowledgedBy: "Test User",
       acknowledgedAt: new Date(),
@@ -122,12 +128,27 @@ describe("alerts api", () => {
       (alert) => alert.type === "threshold_exceeded",
     );
     expect(thresholdAlert).toBeDefined();
-    expect(thresholdAlert!.sensorType).toBe("internal_temp");
-    expect(thresholdAlert!.location).toBe("Sala Principale");
     expect(thresholdAlert!.value).toBe(31.5);
     expect(thresholdAlert!.unit).toBe("°C");
     expect(thresholdAlert!.limit).toBe(30);
     expect(thresholdAlert).not.toHaveProperty("message");
+    expect(thresholdAlert).not.toHaveProperty("buildingName");
+    const parsedBuilding = PopulatedBuildingSchema.safeParse(thresholdAlert!.building);
+    if (!parsedBuilding.success) {
+      return expect.unreachable("Expected building to be populated");
+    }
+    expect(parsedBuilding.data.name).toBe("Test Building");
+    const parsedSensor = PopulatedAlertSensorSchema.safeParse(thresholdAlert!.sensor);
+    if (!parsedSensor.success) {
+      return expect.unreachable("Expected sensor to be populated");
+    }
+    expect(parsedSensor.data.sensorType).toBe("internal_temp");
+    expect(parsedSensor.data.location).toBe("Sala Principale");
+    const efficiencyAlert = body.data.alerts.find(
+      (alert) => alert.type === "efficiency_below_threshold",
+    );
+    expect(efficiencyAlert).toBeDefined();
+    expect(efficiencyAlert!.sensor).toBeUndefined();
   });
 
   it("should acknowledge an active alert", async () => {
@@ -226,7 +247,12 @@ describe("alerts api", () => {
     }
     expect(body.data.id).toBe(alert!._id.toString());
     expect(body.data.self).toBe(`/api/v1/alerts/${alert!._id.toString()}`);
-    expect(body.data.building?.self).toBe(`/api/v1/buildings/${buildingId}`);
+    const parsedBuilding = PopulatedBuildingSchema.safeParse(body.data.building);
+    if (!parsedBuilding.success) {
+      return expect.unreachable("Expected building to be populated");
+    }
+    expect(parsedBuilding.data.self).toBe(`/api/v1/buildings/${buildingId}`);
+    expect(parsedBuilding.data.name).toBe("Test Building");
   });
 
   it("should return 404 for non-existent alert id", async () => {

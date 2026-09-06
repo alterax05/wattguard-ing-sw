@@ -4,6 +4,8 @@ import {
   THRESHOLD_ALERT_TYPE,
   EFFICIENCY_ALERT_TYPE,
   AlertSchema,
+  PopulatedAlertSensorSchema,
+  PopulatedBuildingSchema,
   type Alert as AlertDTO,
   type AlertStatus,
   type ErrorCode,
@@ -24,27 +26,27 @@ export type AlertResult<T> =
 
 export type RaiseThresholdInput = Pick<
   AlertDocument,
-  "sensorId" | "buildingId" | "buildingName" | "unit" | "thresholdType"
+  "sensor" | "building" | "unit" | "thresholdType"
 > &
-  Partial<Pick<AlertDocument, "sensorType" | "location" | "limit" | "severity">> & {
+  Partial<Pick<AlertDocument, "limit" | "severity">> & {
     value: number;
     session?: ClientSession;
   };
 
-export type RaiseEfficiencyInput = Pick<AlertDocument, "buildingId" | "buildingName"> & {
+export type RaiseEfficiencyInput = Pick<AlertDocument, "building"> & {
   cop: number;
   minCop: number;
 };
 
 async function raiseAlert(
   data: Partial<AlertDocument> &
-    Pick<AlertDocument, "buildingId" | "buildingName" | "type"> & { value: number },
+    Pick<AlertDocument, "building" | "type"> & { value: number },
   session?: ClientSession,
 ): Promise<AlertResult<{ created: boolean }>> {
   try {
-    const dedupeFilter: QueryFilter<AlertDocument> = data.sensorId
-      ? { sensorId: data.sensorId, type: data.type, status: "active" }
-      : { buildingId: data.buildingId, type: data.type, status: "active" };
+    const dedupeFilter: QueryFilter<AlertDocument> = data.sensor
+      ? { sensor: data.sensor, type: data.type, status: "active" }
+      : { building: data.building, type: data.type, status: "active" };
 
     const query = Alert.findOne(dedupeFilter);
     if (session) query.session(session);
@@ -68,16 +70,14 @@ export function raiseThreshold({ session, ...data }: RaiseThresholdInput) {
   return raiseAlert({ ...data, type: THRESHOLD_ALERT_TYPE }, session);
 }
 
-export function raiseEfficiency({ buildingId, buildingName, cop, minCop }: RaiseEfficiencyInput) {
+export function raiseEfficiency({ building, cop, minCop }: RaiseEfficiencyInput) {
   return raiseAlert({
-    buildingId,
-    buildingName,
+    building,
     type: EFFICIENCY_ALERT_TYPE,
     thresholdType: "min",
     value: Number(cop.toFixed(2)),
     unit: "COP",
     limit: minCop,
-    location: buildingName,
   });
 }
 
@@ -132,20 +132,20 @@ export function resolveManually(input: AlertActionInput) {
 }
 
 export interface ResolveEfficiencyForBuildingInput {
-  buildingId: Types.ObjectId;
+  building: Types.ObjectId;
   actor: string;
   now?: Date;
 }
 
 export async function resolveEfficiencyForBuilding({
-  buildingId,
+  building,
   actor,
   now = new Date(),
 }: ResolveEfficiencyForBuildingInput): Promise<AlertResult<{ resolved: number }>> {
   try {
     const result = await Alert.updateMany(
       {
-        buildingId,
+        building,
         type: EFFICIENCY_ALERT_TYPE,
         status: { $in: ["active", "acknowledged"] },
       },
@@ -166,12 +166,12 @@ export async function resolveEfficiencyForBuilding({
 }
 
 export interface PruneForRemovedThresholdsInput {
-  sensorId: Types.ObjectId;
+  sensor: Types.ObjectId;
   removedThresholdTypes: readonly ("min" | "max")[];
 }
 
 export async function pruneForRemovedThresholds({
-  sensorId,
+  sensor,
   removedThresholdTypes,
 }: PruneForRemovedThresholdsInput): Promise<AlertResult<{ deleted: number }>> {
   if (removedThresholdTypes.length === 0) {
@@ -180,7 +180,7 @@ export async function pruneForRemovedThresholds({
 
   try {
     const result = await Alert.deleteMany({
-      sensorId,
+      sensor,
       type: THRESHOLD_ALERT_TYPE,
       $or: [
         { thresholdType: { $in: removedThresholdTypes } },
@@ -196,10 +196,10 @@ export async function pruneForRemovedThresholds({
 }
 
 export async function deleteForBuilding(
-  buildingId: Types.ObjectId,
+  building: Types.ObjectId,
 ): Promise<AlertResult<{ deleted: number }>> {
   try {
-    const result = await Alert.deleteMany({ buildingId });
+    const result = await Alert.deleteMany({ building });
     return { ok: true, deleted: result.deletedCount };
   } catch (error) {
     console.error("Error deleting alerts for building:", error);
@@ -208,10 +208,10 @@ export async function deleteForBuilding(
 }
 
 export async function deleteForSensor(
-  sensorId: Types.ObjectId,
+  sensor: Types.ObjectId,
 ): Promise<AlertResult<{ deleted: number }>> {
   try {
-    const result = await Alert.deleteMany({ sensorId });
+    const result = await Alert.deleteMany({ sensor });
     return { ok: true, deleted: result.deletedCount };
   } catch (error) {
     console.error("Error deleting alerts for sensor:", error);
@@ -234,18 +234,27 @@ export function toAlertDTO(
     obj.resolvedBy = translate("alerts.systemResolver");
   }
   const idStr = obj._id.toString();
+  const parsedBuilding = PopulatedBuildingSchema.safeParse(obj.building);
+  const building = parsedBuilding.success
+    ? {
+        ...parsedBuilding.data,
+        self: `/api/v1/buildings/${parsedBuilding.data._id}`,
+      }
+    : obj.building;
+  const parsedSensor = obj.sensor
+    ? PopulatedAlertSensorSchema.safeParse(obj.sensor)
+    : null;
+  const sensor = parsedSensor?.success
+    ? {
+        ...parsedSensor.data,
+        self: `/api/v1/sensors/${parsedSensor.data._id}`,
+      }
+    : (obj.sensor ?? undefined);
   return AlertSchema.parse({
     ...obj,
     id: idStr,
     self: `/api/v1/alerts/${idStr}`,
-    building: {
-      self: `/api/v1/buildings/${String(obj.buildingId)}`,
-      name: obj.buildingName,
-    },
-    sensor: obj.sensorId
-      ? {
-          self: `/api/v1/sensors/${String(obj.sensorId)}`,
-        }
-      : undefined,
+    building,
+    sensor,
   });
 }

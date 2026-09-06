@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, AlertCircle, Info, CheckCircle, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getDateFnsLocale } from "@/lib/dates";
-import { composeAlertMessage, getAlertSeverityLabel, getAlertTypeLabel } from "@/lib/alerts";
+import { composeAlertMessage, getAlertBuildingName, getAlertSeverityLabel, getAlertTypeLabel } from "@/lib/alerts";
 
 const STATUS_LABEL_KEYS = {
   active: "alerts.statusActive",
@@ -171,7 +171,7 @@ export function AlertsManagement() {
                         </div>
 
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{alert.buildingName}</span>
+                          <span>{getAlertBuildingName(alert)}</span>
                           <span>•</span>
                           <span>
                             {formatDistanceToNow(new Date(alert.createdAt), {

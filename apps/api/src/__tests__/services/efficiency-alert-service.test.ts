@@ -201,9 +201,9 @@ describe("evaluateEfficiencyAlerts", () => {
 
     await evaluateEfficiencyAlerts();
 
-    const alerts = await Alert.find({ buildingId: building._id, type: EFFICIENCY_ALERT_TYPE });
+    const alerts = await Alert.find({ building: building._id, type: EFFICIENCY_ALERT_TYPE });
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]!.buildingId.toString()).toBe(bid);
+    expect(alerts[0]!.building.toString()).toBe(bid);
     expect(alerts[0]!.status).toBe("active");
     expect(alerts[0]!.thresholdType).toBe("min");
     // Severity is now derived from the deviation between value and limit
@@ -215,8 +215,7 @@ describe("evaluateEfficiencyAlerts", () => {
     expect(alerts[0]!.value).toBeLessThan(10);
     expect(alerts[0]!.limit).toBe(10);
     expect(alerts[0]!.unit).toBe("COP");
-    expect(alerts[0]!.location).toBe(building.name);
-    expect(alerts[0]!.sensorType).toBeUndefined();
+    expect(alerts[0]!.sensor).toBeUndefined();
   });
 
   test("dedupes: second evaluation does not create a second active alert", async () => {
@@ -243,7 +242,7 @@ describe("evaluateEfficiencyAlerts", () => {
     await evaluateEfficiencyAlerts();
 
     const count = await Alert.countDocuments({
-      buildingId: building._id,
+      building: building._id,
       type: EFFICIENCY_ALERT_TYPE,
       status: "active",
     });
@@ -272,7 +271,7 @@ describe("evaluateEfficiencyAlerts", () => {
 
     await evaluateEfficiencyAlerts();
     const active = await Alert.findOne({
-      buildingId: building._id,
+      building: building._id,
       type: EFFICIENCY_ALERT_TYPE,
       status: "active",
     });
@@ -285,7 +284,7 @@ describe("evaluateEfficiencyAlerts", () => {
 
     await evaluateEfficiencyAlerts();
 
-    const alert = await Alert.findOne({ buildingId: building._id, type: EFFICIENCY_ALERT_TYPE });
+    const alert = await Alert.findOne({ building: building._id, type: EFFICIENCY_ALERT_TYPE });
     expect(alert!.status).toBe("resolved");
     expect(alert!.resolvedBy).toBe("system");
     expect(alert!.resolvedAt).toBeDefined();

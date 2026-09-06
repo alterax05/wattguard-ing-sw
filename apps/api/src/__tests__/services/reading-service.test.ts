@@ -126,7 +126,7 @@ describe("readingService", () => {
       timestamp: new Date(),
     });
 
-    expect(await Alert.countDocuments({ sensorId: sensor._id })).toBe(0);
+    expect(await Alert.countDocuments({ sensor: sensor._id })).toBe(0);
   });
 
   test("creates a single active max-threshold alert", async () => {
@@ -145,15 +145,13 @@ describe("readingService", () => {
       timestamp: new Date(),
     });
 
-    const alerts = await Alert.find({ sensorId: sensor._id });
+    const alerts = await Alert.find({ sensor: sensor._id });
     expect(alerts).toHaveLength(1);
     expect(alerts[0]!.thresholdType).toBe("max");
     // 35 over a limit of 30 = 16.7% deviation -> medium band
     expect(alerts[0]!.severity).toBe("medium");
     expect(alerts[0]!.status).toBe("active");
-    expect(alerts[0]!.buildingName).toBe("Test Building");
-    expect(alerts[0]!.sensorType).toBe("internal_temp");
-    expect(alerts[0]!.location).toBe("Sala Principale");
+    expect(alerts[0]!.building.toString()).toBe(buildingId.toString());
     expect(alerts[0]!.value).toBe(35);
     expect(alerts[0]!.unit).toBe("°C");
     expect(alerts[0]!.limit).toBe(30);
@@ -170,7 +168,7 @@ describe("readingService", () => {
       timestamp: new Date(),
     });
 
-    const alert = await Alert.findOne({ sensorId: sensor._id });
+    const alert = await Alert.findOne({ sensor: sensor._id });
     expect(alert).not.toBeNull();
     expect(alert!.thresholdType).toBe("min");
   });
@@ -213,7 +211,7 @@ describe("readingService", () => {
 
     readingCreateSpy.mockRestore();
 
-    expect(await Alert.countDocuments({ sensorId: sensor._id })).toBe(0);
+    expect(await Alert.countDocuments({ sensor: sensor._id })).toBe(0);
     expect(await SensorReading.countDocuments({ "metadata.sensor": sensor._id })).toBe(0);
 
     const updated = await Sensor.findById(sensor._id);
@@ -246,7 +244,7 @@ describe("readingService", () => {
 
     // The reading is already stored (time-series inserts cannot run inside
     // transactions); the alert and lastReading update must be rolled back.
-    expect(await Alert.countDocuments({ sensorId: sensor._id })).toBe(0);
+    expect(await Alert.countDocuments({ sensor: sensor._id })).toBe(0);
     expect(await SensorReading.countDocuments({ "metadata.sensor": sensor._id })).toBe(1);
 
     const updated = await Sensor.findById(sensor._id);

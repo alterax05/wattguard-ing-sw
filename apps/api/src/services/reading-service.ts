@@ -43,7 +43,7 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
   }
 
   const building = sensor.building;
-  const buildingId = building instanceof mongoose.Types.ObjectId ? building : building._id;
+  const buildingRef = building instanceof mongoose.Types.ObjectId ? building : building._id;
   const buildingName = building instanceof mongoose.Types.ObjectId ? "Edificio Sconosciuto" : building.name;
 
   // Create the reading document
@@ -54,7 +54,7 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
       unit: input.unit,
       metadata: {
         sensor: sensor._id,
-        building: buildingId,
+        building: buildingRef,
         sensorType: sensor.sensorType,
       },
     },
@@ -85,11 +85,8 @@ export async function ingestReading(input: IngestReadingInput): Promise<void> {
         const limit = isMin ? current.minThreshold : current.maxThreshold;
 
         const result = await raiseThreshold({
-          sensorId: current._id,
-          buildingId,
-          buildingName,
-          sensorType: current.sensorType,
-          location: current.location,
+          sensor: current._id,
+          building: buildingRef,
           thresholdType,
           value: input.value,
           unit: input.unit,

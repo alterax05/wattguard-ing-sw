@@ -78,12 +78,9 @@ describe("dashboard api", () => {
       { building: "507f1f77bcf86cd799439011", sensorType: "external_temp", location: "Facciata", installationDate: new Date(), status: "inactive", transmissionInterval: 90, createdBy: admin!._id, updatedBy: admin!._id },
     ]);
     await Alert.create({
-      buildingId: "507f1f77bcf86cd799439011",
-      buildingName: "Test",
+      building: "507f1f77bcf86cd799439011",
       type: "efficiency_below_threshold",
       severity: "medium",
-      sensorType: "energy_meter",
-      location: "Quadro",
       status: "active",
     });
 
