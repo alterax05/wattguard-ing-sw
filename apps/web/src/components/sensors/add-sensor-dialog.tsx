@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type {CreateSensorRequest} from "@wattguard/shared"
 import { useTranslation } from "react-i18next"
 import {
   Dialog,
@@ -9,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { useCreateSensor, type CreateSensorRequest } from "@/hooks/use-sensors"
+import { useCreateSensor } from "@/hooks/use-sensors"
 import { SensorForm, type SensorFormValues } from "./sensor-form/SensorForm"
 
 interface AddSensorDialogProps {

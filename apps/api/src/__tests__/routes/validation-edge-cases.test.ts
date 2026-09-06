@@ -11,18 +11,16 @@ import {
 } from "bun:test";
 
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
-import { ErrorSchema } from "@wattguard/shared";
+import { expectValidationError } from "../helpers/validation";
 import type {
   SessionResponse,
   AcceptInviteResponse,
   ValidateInviteResponse,
-  CreateInviteResponse,
-} from "@wattguard/shared";
+  CreateInviteResponse, ErrorResponse} from "@wattguard/shared";
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 import { User } from "../../models/User";
@@ -84,7 +82,7 @@ describe("email validation", () => {
         json: { email, password: "password123" },
       });
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
         return expect.unreachable("Expected response to contain 'error'");
@@ -171,7 +169,7 @@ describe("password validation", () => {
       const newToken = randomToken(32);
       const newTokenHash = hashTokenSha256(newToken);
 
-      await Invite.create({
+      const newInvite = await Invite.create({
         email: `test${Math.random()}@test.com`,
         role: "operator",
         tokenHash: newTokenHash,
@@ -180,9 +178,9 @@ describe("password validation", () => {
         createdBy: admin._id,
       });
 
-      const res = await client.api.v1.invites[":token"].acceptance.$post({
-        param: { token: newToken },
-        json: { password, name: "Test User" },
+      const res = await client.api.v1.invites[":id"].$patch({
+        param: { id: newInvite._id.toString() },
+        json: { token: newToken, password, name: "Test User" },
       });
 
       expect(res.status).toBe(200);
@@ -213,13 +211,23 @@ describe("password validation", () => {
     const shortPasswords = ["", "a", "ab", "abc", "1234567"];
 
     for (const password of shortPasswords) {
-      const res = await client.api.v1.invites[":token"].acceptance.$post({
-        param: { token },
-        json: { password, name: "Test User" },
+      const res = await client.api.v1.invites.$get({
+        query: { token },
+      });
+      expect(res.status).toBe(200);
+      // SAFETY: callers supply the documented response schema of the endpoint under test.
+      const lookup = (await res.json()) as ValidateInviteResponse | ErrorResponse;
+      if (!lookup.success) {
+        return expect.unreachable("Expected invite lookup to succeed");
+      }
+
+      const acceptRes = await client.api.v1.invites[":id"].$patch({
+        param: { id: lookup.data._id },
+        json: { token, password, name: "Test User" },
       });
 
-      expect(res.status).toBe(400);
-      const data = await res.json();
+      expect(acceptRes.status).toBe(400);
+      const data = await acceptRes.json();
       if (!("error" in data)) {
         return expect.unreachable("Expected response to contain 'error'");
       }
@@ -283,7 +291,7 @@ describe("request body validation", () => {
         json: body as never,
       });
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
     }
   });
 
@@ -299,6 +307,7 @@ describe("request body validation", () => {
       },
     );
 
+    // Empty raw body is rejected by the framework's JSON parser (400) before schema validation runs.
     expect(res.status).toBe(400);
   });
 
@@ -346,7 +355,7 @@ describe("request body validation", () => {
         json: body,
       });
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
     }
   });
 
@@ -387,19 +396,20 @@ describe("query parameter validation", () => {
       createdBy: admin._id,
     });
 
-    const res = await client.api.v1.invites[":token"].$get({
-      param: { token },
+    const res = await client.api.v1.invites.$get({
+      query: { token },
     });
     expect(res.status).toBe(200);
-    const data = await res.json();
+    // SAFETY: callers supply the documented response schema of the endpoint under test.
+    const data = (await res.json()) as ValidateInviteResponse | ErrorResponse;
     expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
   });
 
-  test("rejects invalid invite token with 404 or 400", async () => {
-    const res = await client.api.v1.invites[":token"].$get({
-      param: { token: "nonexistent-token" },
+  test("rejects invalid invite token with 404 or 422", async () => {
+    const res = await client.api.v1.invites.$get({
+      query: { token: "nonexistent-token" },
     });
-    expect([400, 404]).toContain(res.status);
+    expect([404, 422]).toContain(res.status);
   });
 
   test("returns the lowercased invite email for a valid token", async () => {
@@ -426,11 +436,12 @@ describe("query parameter validation", () => {
     });
 
     // Validate invite
-    const res = await client.api.v1.invites[":token"].$get({
-      param: { token },
+    const res = await client.api.v1.invites.$get({
+      query: { token },
     });
     expect(res.status).toBe(200);
-    const data = await res.json();
+    // SAFETY: callers supply the documented response schema of the endpoint under test.
+    const data = (await res.json()) as ValidateInviteResponse | ErrorResponse;
     expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
@@ -485,7 +496,7 @@ describe("role validation", () => {
         },
       );
 
-      expect(res.status).toBe(400);
+      expectValidationError({ data: await res.json(), status: res.status });
     }
   });
 
@@ -504,7 +515,7 @@ describe("role validation", () => {
       },
     );
 
-    expect(res.status).toBe(400);
+    expectValidationError({ data: await res.json(), status: res.status });
   });
 });
 

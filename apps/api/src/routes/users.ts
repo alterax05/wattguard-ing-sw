@@ -11,18 +11,17 @@ import { toUserDto } from "../lib/users";
 import { apiError, apiSuccess } from "../lib/api-response";
 import {
   ListUsersResponseSchema,
+  GetUserParamsSchema,
+  UserResponseSchema,
   UpdateUserParamsSchema,
   UpdateUserRequestSchema,
-  UpdateUserResponseSchema,
   DeleteUserParamsSchema,
-  DeleteUserResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 
 import type {
-  DeleteUserResponse,
   ListUsersResponse,
-  UpdateUserResponse,
+  UserResponse,
   ErrorResponse,
 } from "@wattguard/shared";
 
@@ -30,8 +29,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Elenca utenti",
-      description: "Restituisce tutti gli utenti registrati (solo admin)",
+      summary: "List users",
+      description: "Returns all registered users (admin only)",
       tags: ["Users"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -68,11 +67,71 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(users.map(toUserDto)) satisfies ListUsersResponse);
     }
   )
+  .get(
+    "/:id",
+    describeRoute({
+      summary: "Get user",
+      description: "Returns a single user by ID (admin only)",
+      tags: ["Users"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "User details retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(UserResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid user ID parameter",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "User not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", GetUserParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const user = await User.findById(id);
+      if (!user) {
+        return c.json(apiError("user_not_found", "User not found") satisfies ErrorResponse, 404);
+      }
+      return c.json(apiSuccess(toUserDto(user)) satisfies UserResponse);
+    }
+  )
   .patch(
     "/:id",
     describeRoute({
-      summary: "Aggiorna utente",
-      description: "Aggiorna ruolo o disabilitazione di un utente (solo admin, non sé stesso)",
+      summary: "Update user",
+      description: "Updates a user role or disabled flag (admin only, not self)",
       tags: ["Users"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -80,11 +139,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "User updated successfully",
           content: {
             "application/json": {
-              schema: resolver(UpdateUserResponseSchema),
+              schema: resolver(UserResponseSchema),
             },
           },
         },
         400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
           description: "Cannot update your own account or empty update body",
           content: {
             "application/json": {
@@ -127,7 +194,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Prevent admin from modifying their own role or disabling themselves
       if (payload.sub === id) {
-        return c.json(apiError("cannot_update_own_account", "Cannot update your own account") satisfies ErrorResponse, 400);
+        return c.json(apiError("cannot_update_own_account", "Cannot update your own account") satisfies ErrorResponse, 422);
       }
 
       const user = await User.findById(id);
@@ -145,26 +212,29 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       await user.save();
 
-      return c.json(apiSuccess(toUserDto(user)) satisfies UpdateUserResponse);
+      return c.json(apiSuccess(toUserDto(user)) satisfies UserResponse);
     }
   )
   .delete(
     "/:id",
     describeRoute({
-      summary: "Elimina utente",
-      description: "Elimina un utente (solo admin, non sé stesso)",
+      summary: "Delete user",
+      description: "Deletes a user (admin only, not self)",
       tags: ["Users"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
-        200: {
+        204: {
           description: "User deleted successfully",
+        },
+        400: {
+          description: "Validation error",
           content: {
             "application/json": {
-              schema: resolver(DeleteUserResponseSchema),
+              schema: resolver(ErrorSchema),
             },
           },
         },
-        400: {
+        422: {
           description: "Cannot delete your own account",
           content: {
             "application/json": {
@@ -205,7 +275,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       // Prevent admin from deleting themselves
       if (payload.sub === id) {
-        return c.json(apiError("cannot_delete_own_account", "Cannot delete your own account") satisfies ErrorResponse, 400);
+        return c.json(apiError("cannot_delete_own_account", "Cannot delete your own account") satisfies ErrorResponse, 422);
       }
 
       const user = await User.findByIdAndDelete(id);
@@ -213,7 +283,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         return c.json(apiError("user_not_found", "User not found") satisfies ErrorResponse, 404);
       }
 
-      return c.json(apiSuccess({ id }) satisfies DeleteUserResponse);
+      return c.body(null, 204);
     }
   );
 

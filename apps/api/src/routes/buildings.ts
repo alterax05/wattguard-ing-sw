@@ -4,7 +4,7 @@ import { Types, type QueryFilter } from "mongoose";
 import type { AuthVariables } from "../middleware/auth";
 import { Building, type BuildingDocument } from "../models/Building";
 import { BuildingType, type HydratedBuildingType } from "../models/BuildingType";
-import { Sensor, type SensorDocument } from "../models/Sensor";
+import { Sensor } from "../models/Sensor";
 import { SensorReading, type SensorReadingDocument } from "../models/SensorReading";
 import {
   toBuildingSummaryDTO,
@@ -16,30 +16,22 @@ import {
   SearchBuildingsQuerySchema,
   SearchBuildingsResponseSchema,
   CreateBuildingRequestSchema,
-  CreateBuildingResponseSchema,
+  BuildingResponseSchema,
   GetBuildingParamsSchema,
-  GetBuildingResponseSchema,
   UpdateBuildingParamsSchema,
   UpdateBuildingRequestSchema,
-  UpdateBuildingResponseSchema,
   DeleteBuildingParamsSchema,
-  DeleteBuildingResponseSchema,
-  BuildingReadingsLatestResponseSchema,
-  BuildingReadingsQuerySchema,
-  BuildingReadingsResponseSchema,
+  GetBuildingHistoryQuerySchema,
+  GetBuildingHistoryResponseSchema,
   GetBuildingEfficiencyQuerySchema,
   GetBuildingEfficiencyResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
-  CreateBuildingResponse,
-  DeleteBuildingResponse,
+  BuildingResponse,
   GetBuildingEfficiencyResponse,
-  BuildingReadingsResponse,
-  BuildingReadingsLatestResponse,
-  GetBuildingResponse,
+  GetBuildingHistoryResponse,
   SearchBuildingsResponse,
-  UpdateBuildingResponse,
   ErrorResponse,
 } from "@wattguard/shared";
 import { calculateBuildingEfficiency } from "../lib/efficiency";
@@ -50,8 +42,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Cerca edifici",
-      description: "Cerca edifici con filtri, paginazione e ordinamento",
+      summary: "Search buildings",
+      description: "Searches buildings with filters, pagination and sorting",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -60,6 +52,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           content: {
             "application/json": {
               schema: resolver(SearchBuildingsResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid query parameters",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -182,8 +182,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .post(
     "/",
     describeRoute({
-      summary: "Crea edificio",
-      description: "Crea un nuovo edificio verificando tipo e impianto",
+      summary: "Create building",
+      description: "Creates a new building after validating type and plant",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -191,11 +191,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Building created successfully",
           content: {
             "application/json": {
-              schema: resolver(CreateBuildingResponseSchema),
+              schema: resolver(BuildingResponseSchema),
             },
           },
         },
         400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
           description: "Validation error",
           content: {
             "application/json": {
@@ -229,11 +237,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
       // Verify building type exists
       const buildingType = await BuildingType.findById(data.buildingType);
       if (!buildingType) {
-        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 400);
+        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 422);
       }
 
       if (isDistrictHeatingBuilding(data.heatingSystemType) && data.efficiencyThresholds?.enabled) {
-        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 400);
+        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 422);
       }
 
       // Create building
@@ -253,7 +261,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         apiSuccess(toBuildingDetailDTO(building, {
           activeSensors: 0,
           currentConsumption: null,
-        })) satisfies CreateBuildingResponse,
+        })) satisfies BuildingResponse,
         201
       );
     }
@@ -261,8 +269,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/:id",
     describeRoute({
-      summary: "Leggi edificio",
-      description: "Restituisce il dettaglio con sensori attivi e consumo",
+      summary: "Get building",
+      description: "Returns detail with active sensors and consumption",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -270,7 +278,15 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Building details retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(GetBuildingResponseSchema),
+              schema: resolver(BuildingResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid ID parameter",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -328,14 +344,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(toBuildingDetailDTO(building, {
         activeSensors: activeSensorsCount,
         currentConsumption: energySensor?.lastReading?.value ?? null,
-      })) satisfies GetBuildingResponse);
+      })) satisfies BuildingResponse);
     }
   )
   .patch(
     "/:id",
     describeRoute({
-      summary: "Aggiorna edificio",
-      description: "Aggiorna i dati e gestisce soglie efficienza/teleriscaldamento",
+      summary: "Update building",
+      description: "Updates data and handles efficiency/district-heating thresholds",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -343,11 +359,19 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Building updated successfully",
           content: {
             "application/json": {
-              schema: resolver(UpdateBuildingResponseSchema),
+              schema: resolver(BuildingResponseSchema),
             },
           },
         },
         400: {
+          description: "Validation error",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        422: {
           description: "Validation error",
           content: {
             "application/json": {
@@ -397,7 +421,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       if (updates.buildingType) {
         const buildingType = await BuildingType.findById(updates.buildingType);
         if (!buildingType) {
-          return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 400);
+          return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 422);
         }
       }
 
@@ -406,7 +430,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       );
 
       if (resultingDistrictHeating && updates.efficiencyThresholds !== undefined) {
-        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 400);
+        return c.json(apiError("generic", "Efficiency thresholds are not available for district heating buildings") satisfies ErrorResponse, 422);
       }
 
       if (resultingDistrictHeating && building.efficiencyThresholds.enabled) {
@@ -460,22 +484,25 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(toBuildingDetailDTO(populatedBuilding, {
         activeSensors: activeSensorsCount,
         currentConsumption: energySensor?.lastReading?.value ?? null,
-      })) satisfies UpdateBuildingResponse);
+      })) satisfies BuildingResponse);
     }
   )
   .delete(
     "/:id",
     describeRoute({
-      summary: "Elimina edificio",
-      description: "Elimina edificio con sensori, letture e alert associati",
+      summary: "Delete building",
+      description: "Deletes building with associated sensors, readings and alerts",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
-        200: {
+        204: {
           description: "Building and associated data deleted successfully",
+        },
+        400: {
+          description: "Invalid ID parameter",
           content: {
             "application/json": {
-              schema: resolver(DeleteBuildingResponseSchema),
+              schema: resolver(ErrorSchema),
             },
           },
         },
@@ -522,105 +549,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
       });
       await Building.findByIdAndDelete(id);
 
-      return c.json(apiSuccess({
-        id,
-        message: "Building and associated data deleted successfully",
-      }) satisfies DeleteBuildingResponse);
-    }
-  )
-  .get(
-    "/:id/readings/latest",
-    describeRoute({
-      summary: "Leggi ultime letture",
-      description: "Restituisce l'istantanea realtime delle ultime letture dei sensori",
-      tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
-      responses: {
-        200: {
-          description: "Real-time data retrieved successfully",
-          content: {
-            "application/json": {
-              schema: resolver(BuildingReadingsLatestResponseSchema),
-            },
-          },
-        },
-        401: {
-          description: "Unauthorized",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-        403: {
-          description: "Forbidden",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-        404: {
-          description: "Building not found",
-          content: {
-            "application/json": {
-              schema: resolver(ErrorSchema),
-            },
-          },
-        },
-      },
-    }),
-    validator("param", GetBuildingParamsSchema),
-    async (c) => {
-      const { id } = c.req.valid("param");
-
-      const building = await Building.findById(id);
-      if (!building) {
-        return c.json(apiError("building_not_found", "Building not found") satisfies ErrorResponse, 404);
-      }
-
-      // Get all active sensors for this building
-      const sensors = await Sensor.find({
-        building: id,
-        status: "active",
-      });
-
-      const internalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "internal_temp");
-      const externalTempSensor = sensors.find((s: SensorDocument) => s.sensorType === "external_temp");
-      const energyMeterSensor = sensors.find((s: SensorDocument) => s.sensorType === "energy_meter");
-
-      return c.json(apiSuccess({
-        buildingId: building._id.toString(),
-        buildingName: building.name,
-        timestamp: new Date().toISOString(),
-        data: {
-          internalTemperature: {
-            value: internalTempSensor?.lastReading?.value ?? null,
-            unit: internalTempSensor?.lastReading?.unit ?? "°C",
-            timestamp: internalTempSensor?.lastReading?.timestamp?.toISOString() ?? null,
-            sensorId: internalTempSensor?._id.toString() ?? null,
-          },
-          externalTemperature: {
-            value: externalTempSensor?.lastReading?.value ?? null,
-            unit: externalTempSensor?.lastReading?.unit ?? "°C",
-            timestamp: externalTempSensor?.lastReading?.timestamp?.toISOString() ?? null,
-            sensorId: externalTempSensor?._id.toString() ?? null,
-          },
-          energyConsumption: {
-            value: energyMeterSensor?.lastReading?.value ?? null,
-            unit: energyMeterSensor?.lastReading?.unit ?? "kW",
-            timestamp: energyMeterSensor?.lastReading?.timestamp?.toISOString() ?? null,
-            sensorId: energyMeterSensor?._id.toString() ?? null,
-          },
-        },
-      }) satisfies BuildingReadingsLatestResponse);
+      return c.body(null, 204);
     }
   )
   .get(
     "/:id/readings",
     describeRoute({
-      summary: "Leggi storico letture",
-      description: "Restituisce lo storico per intervallo di date, per i grafici",
+      summary: "Get reading history",
+      description: "Returns history for a date range, for charts. Use limit=1&sortOrder=desc for the latest reading",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -628,7 +564,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Historical readings retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(BuildingReadingsResponseSchema),
+              schema: resolver(GetBuildingHistoryResponseSchema),
             },
           },
         },
@@ -667,10 +603,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
       },
     }),
     validator("param", GetBuildingParamsSchema),
-    validator("query", BuildingReadingsQuerySchema),
+    validator("query", GetBuildingHistoryQuerySchema),
     async (c) => {
       const { id } = c.req.valid("param");
-      const { startDate, endDate, sensorType } = c.req.valid("query");
+      const { startDate, endDate, sensorType, limit, sortOrder } = c.req.valid("query");
 
       const building = await Building.findById(id);
       if (!building) {
@@ -690,10 +626,11 @@ const app = new Hono<{ Variables: AuthVariables }>()
         query["metadata.sensorType"] = sensorType;
       }
 
-      // Query historical data from time-series collection
+      // Query historical data from time-series collection.
+      // limit=1&sortOrder=desc returns the latest point (replaces readings/latest).
       const readings = await SensorReading.find(query)
-        .sort({ timestamp: 1 })
-        .limit(1000);
+        .sort({ timestamp: sortOrder === "desc" ? -1 : 1 })
+        .limit(limit);
 
       return c.json(apiSuccess({
         buildingId: building._id.toString(),
@@ -709,14 +646,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
           sensorType: r.metadata.sensorType,
           sensorId: r.metadata.sensor?.toString(),
         })),
-      }) satisfies BuildingReadingsResponse);
+      }) satisfies GetBuildingHistoryResponse);
     }
   )
   .get(
     "/:id/efficiency",
     describeRoute({
-      summary: "Calcola efficienza",
-      description: "Calcola l'efficienza termica dell'edificio sul periodo richiesto",
+      summary: "Calculate efficiency",
+      description: "Calculates the building thermal efficiency over the requested period",
       tags: ["Buildings"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {

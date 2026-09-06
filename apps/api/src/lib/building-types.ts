@@ -3,5 +3,9 @@ import type { HydratedDocument } from "mongoose";
 import type { BuildingTypeDocument } from "../models/BuildingType";
 
 export const toBuildingTypeDTO = (bt: HydratedDocument<BuildingTypeDocument>) => {
-  return BuildingTypeSchema.parse(bt.toObject());
+  const obj = bt.toObject();
+  return BuildingTypeSchema.parse({
+    ...obj,
+    self: `/api/v1/building-types/${String(obj._id)}`,
+  });
 };

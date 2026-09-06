@@ -1,22 +1,15 @@
 import type { TFunction } from "i18next";
-import { EFFICIENCY_ALERT_TYPE } from "@wattguard/shared";
-
-export { EFFICIENCY_ALERT_TYPE };
+import { EFFICIENCY_ALERT_TYPE, type Alert } from "@wattguard/shared";
 
 /**
  * Minimal structured fields used to compose a localized alert message.
  * The API stopped sending a pre-rendered `message` string; the frontend
  * composes it from these fields instead.
  */
-export interface AlertMessageData {
-  type?: string;
-  sensorType?: string;
-  location?: string;
-  value?: number;
-  unit?: string;
-  limit?: number;
-  buildingName?: string;
-}
+export type AlertMessageData = Pick<
+  Alert,
+  "type" | "sensorType" | "location" | "value" | "unit" | "limit" | "buildingName"
+>;
 
 /**
  * Compose a localized, human-readable message for an alert.

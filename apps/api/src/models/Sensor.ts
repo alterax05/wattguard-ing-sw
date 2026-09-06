@@ -5,6 +5,11 @@ import mongoose, {
 } from "mongoose";
 import { Building } from "./Building";
 import { User } from "./User";
+import {
+  SensorStatusSchema,
+  SensorTypeSchema,
+  type SensorStatus,
+} from "@wattguard/shared";
 
 const lastReadingSchema = new Schema(
   {
@@ -36,7 +41,7 @@ const sensorSchema = new Schema(
     },
     sensorType: {
       type: String,
-      enum: ["internal_temp", "external_temp", "energy_meter", "gas_meter"],
+      enum: SensorTypeSchema.options,
       required: true,
       index: true,
     },
@@ -58,7 +63,7 @@ const sensorSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive", "maintenance", "error"],
+      enum: SensorStatusSchema.options,
       default: "active",
       index: true,
     },
@@ -122,10 +127,6 @@ sensorSchema.methods.updateStatus = async function (
 };
 
 export type SensorDocument = InferSchemaType<typeof sensorSchema>;
-
-export type SensorStatus = SensorDocument["status"];
-
-export type SensorType = SensorDocument["sensorType"];
 
 interface ISensorMethods {
   isActive(): boolean;

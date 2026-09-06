@@ -10,36 +10,15 @@ export const BUILDINGS_QUERY_KEY = ["buildings"] as const;
 // Building-type queries/mutations live in their own deep module; re-exported
 // here so existing `use-buildings` imports keep working.
 export { BUILDING_TYPES_QUERY_KEY, useBuildingTypes } from "./use-building-types";
-export type { BuildingType } from "./use-building-types";
 
 import type {
-  BuildingSummary,
-  BuildingDetail,
-  RealTimeData,
-  HistoricalDataPoint,
-  EfficiencyMetrics,
   SearchBuildingsQuery,
   GetBuildingHistoryQuery,
   GetBuildingEfficiencyQuery,
   CreateBuildingRequest,
   UpdateBuildingRequest,
+  WithId,
 } from "@wattguard/shared";
-
-// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
-
-export type {
-  BuildingSummary,
-  BuildingDetail,
-  RealTimeData,
-  HistoricalDataPoint,
-  EfficiencyMetrics,
-  CreateBuildingRequest,
-  UpdateBuildingRequest,
-};
-
-export type SearchBuildingsParams = SearchBuildingsQuery;
-export type HistoryParams = GetBuildingHistoryQuery;
-export type EfficiencyParams = GetBuildingEfficiencyQuery;
 
 // ── Queries ─────────────────────────────────────────────────────────────────
 
@@ -47,11 +26,11 @@ export type EfficiencyParams = GetBuildingEfficiencyQuery;
  * Fetch buildings list with optional search/filter params.
  * GET /api/buildings
  */
-export function useBuildings(params?: SearchBuildingsParams) {
+export function useBuildings(params?: SearchBuildingsQuery) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "list", params ?? {}],
     queryFn: async () => {
-      const query: SearchBuildingsParams = {};
+      const query: SearchBuildingsQuery = {};
       if (params?.name) query.name = params.name;
       if (params?.address) query.address = params.address;
       if (params?.zone) query.zone = params.zone;
@@ -100,25 +79,87 @@ export function useBuilding(id: string | undefined) {
 }
 
 /**
- * Fetch real-time data for a building.
- * GET /api/buildings/:id/real-time
+ * Latest-point snapshot for a building, built client-side from
+ * GET /api/v1/buildings/:id/readings?limit=1&sortOrder=desc per sensor type.
+ */
+export interface BuildingRealTimeSnapshot {
+  buildingId: string;
+  buildingName: string;
+  timestamp: string;
+  data: {
+    internalTemperature: { value: number | null; unit: string; timestamp: string | null; sensorId: string | null };
+    externalTemperature: { value: number | null; unit: string; timestamp: string | null; sensorId: string | null };
+    energyConsumption: { value: number | null; unit: string; timestamp: string | null; sensorId: string | null };
+  };
+}
+
+/**
+ * Fetch latest reading per sensor type for a building.
+ * GET /api/v1/buildings/:id/readings?limit=1&sortOrder=desc
  */
 export function useBuildingRealTime(id: string | undefined) {
   const refetchInterval = usePollingInterval();
 
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "real-time", id],
-    queryFn: async () => {
-      const res = await client.api.v1.buildings[":id"].readings.latest.$get({
+    queryFn: async (): Promise<BuildingRealTimeSnapshot> => {
+      const endDate = new Date().toISOString();
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      const fetchLatest = async (sensorType: "internal_temp" | "external_temp" | "energy_meter") => {
+        const res = await client.api.v1.buildings[":id"].readings.$get({
+          param: { id: id! },
+          query: { startDate, endDate, sensorType, limit: "1", sortOrder: "desc" },
+        });
+
+        if (!res.ok) {
+          throw new Error(await errorMessageFromResponse(res));
+        }
+
+        const resData = await res.json();
+        return resData.data.data[0];
+      };
+
+      const [internal, external, energy] = await Promise.all([
+        fetchLatest("internal_temp"),
+        fetchLatest("external_temp"),
+        fetchLatest("energy_meter"),
+      ]);
+
+      const buildingRes = await client.api.v1.buildings[":id"].$get({
         param: { id: id! },
       });
-
-      if (!res.ok) {
-        throw new Error(await errorMessageFromResponse(res));
+      let buildingName = "";
+      if (buildingRes.ok) {
+        const buildingData = await buildingRes.json();
+        buildingName = buildingData.data.name ?? "";
       }
 
-      const resData = await res.json();
-      return resData.data;
+      return {
+        buildingId: id!,
+        buildingName,
+        timestamp: new Date().toISOString(),
+        data: {
+          internalTemperature: {
+            value: internal?.value ?? null,
+            unit: internal?.unit ?? "°C",
+            timestamp: internal?.timestamp ?? null,
+            sensorId: internal?.sensorId ?? null,
+          },
+          externalTemperature: {
+            value: external?.value ?? null,
+            unit: external?.unit ?? "°C",
+            timestamp: external?.timestamp ?? null,
+            sensorId: external?.sensorId ?? null,
+          },
+          energyConsumption: {
+            value: energy?.value ?? null,
+            unit: energy?.unit ?? "kW",
+            timestamp: energy?.timestamp ?? null,
+            sensorId: energy?.sensorId ?? null,
+          },
+        },
+      };
     },
     enabled: !!id,
     refetchInterval,
@@ -130,16 +171,18 @@ export function useBuildingRealTime(id: string | undefined) {
  * Fetch historical data for a building.
  * GET /api/v1/buildings/:id/readings
  */
-export function useBuildingHistory(id: string | undefined, params: HistoryParams | undefined) {
+export function useBuildingHistory(id: string | undefined, params: GetBuildingHistoryQuery | undefined) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "history", id, params],
     queryFn: async () => {
-      const query: HistoryParams = {
+      const query: GetBuildingHistoryQuery = {
         startDate: params!.startDate,
         endDate: params!.endDate,
       };
       if (params!.sensorType) query.sensorType = params!.sensorType;
       if (params!.interval) query.interval = params!.interval;
+      if (params!.limit !== undefined) query.limit = String(params!.limit);
+      if (params!.sortOrder) query.sortOrder = params!.sortOrder;
 
       const res = await client.api.v1.buildings[":id"].readings.$get({
         param: { id: id! },
@@ -162,7 +205,7 @@ export function useBuildingHistory(id: string | undefined, params: HistoryParams
  * Fetch efficiency metrics for a building.
  * GET /api/buildings/:id/efficiency
  */
-export function useBuildingEfficiency(id: string | undefined, params: EfficiencyParams | undefined) {
+export function useBuildingEfficiency(id: string | undefined, params: GetBuildingEfficiencyQuery | undefined) {
   return useQuery({
     queryKey: [...BUILDINGS_QUERY_KEY, "efficiency", id, params],
     queryFn: async () => {
@@ -222,7 +265,7 @@ export function useUpdateBuilding() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: UpdateBuildingRequest & { id: string }) => {
+    mutationFn: async (input: WithId<UpdateBuildingRequest>) => {
       const { id, ...body } = input;
       const res = await client.api.v1.buildings[":id"].$patch({
         param: { id },
@@ -250,7 +293,7 @@ export function useDeleteBuilding() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string): Promise<void> => {
       const res = await client.api.v1.buildings[":id"].$delete({
         param: { id },
       });
@@ -258,9 +301,6 @@ export function useDeleteBuilding() {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-
-      const resData = await res.json();
-      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });

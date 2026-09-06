@@ -14,7 +14,8 @@ import { SUPPORTED_LOCALES } from "../i18n";
  */
 export const ErrorDetailsSchema = z
   .record(z.string(), z.union([z.string(), z.number()]))
-  .describe("Interpolation values for the localized error message");
+  .describe("Interpolation values for the localized error message")
+  .meta({ id: "ErrorDetails" });
 
 export type ErrorDetails = z.infer<typeof ErrorDetailsSchema>;
 
@@ -30,15 +31,9 @@ export const ErrorSchema = z.object({
   error_code: z.string().describe("Machine-readable error code"),
   message: z.string().describe("Error message describing what went wrong"),
   details: ErrorDetailsSchema.optional().describe("Interpolation values for the localized error message"),
-});
+}).meta({ id: "Error" });
 
 export type ErrorResponse = z.infer<typeof ErrorSchema>;
-
-export const SuccessEnvelopeSchema = <T extends z.ZodType>(dataSchema: T) =>
-  z.object({
-    success: z.literal(true),
-    data: dataSchema,
-  });
 
 export type SuccessEnvelope<T> = {
   success: true;
@@ -50,34 +45,9 @@ export const HealthResponseSchema = z.object({
   data: z.object({
     status: z.string(),
   }),
-});
+}).meta({ id: "HealthResponse" });
 
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
-
-/**
- * Standard success response schema
- */
-export const SuccessSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    message: z.string().optional().describe("Optional success message"),
-  }),
-});
-
-export type SuccessResponse = z.infer<typeof SuccessSchema>;
-
-/**
- * Standard delete response schema
- */
-export const DeleteResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    id: z.string().optional().describe("Deleted resource identifier"),
-    message: z.string().optional().describe("Confirmation message"),
-  }),
-});
-
-export type DeleteResponse = z.infer<typeof DeleteResponseSchema>;
 
 /**
  * Email validation schema with normalization
@@ -86,14 +56,6 @@ export const EmailSchema = z
   .email("Invalid email format")
   .transform((email) => email.toLowerCase().trim())
   .describe("Email address");
-
-/**
- * Password validation schema
- */
-export const PasswordSchema = z
-  .string()
-  .min(8, "Password must be at least 8 characters")
-  .describe("User password (minimum 8 characters)");
 
 /**
  * Supported UI locale enum (see shared/src/i18n.ts)
@@ -112,12 +74,31 @@ export const UserRoleSchema = z
 export type UserRole = z.infer<typeof UserRoleSchema>;
 
 /**
+ * Canonical URI link to this resource
+ */
+export const SelfLinkSchema = z.string().describe("Canonical URI link to this resource");
+
+/**
  * MongoDB ObjectId validation schema
  */
 export const ObjectIdSchema = z
   .string()
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId format")
-  .describe("MongoDB ObjectId");
+  .describe("MongoDB ObjectId")
+  .meta({ id: "ObjectId" });
+
+/**
+ * Accepts both a raw MongoDB ObjectId and a full resource URI (e.g. /api/v1/buildings/64...)
+ * extracting the trailing ID segment.
+ */
+export const ResourceIdOrUriSchema = z
+  .string()
+  .transform((val) => {
+    const parts = val.trim().split("/");
+    return parts[parts.length - 1];
+  })
+  .pipe(ObjectIdSchema)
+  .describe("MongoDB ObjectId or resource URI");
 
 /**
  * ISO 8601 DateTime schema
@@ -126,7 +107,7 @@ export const ObjectIdSchema = z
 export const IsoDateTimeSchema = z.union([
   z.iso.datetime().describe("ISO 8601 timestamp string"),
   z.date().transform((d) => d.toISOString()),
-]);
+]).meta({ id: "IsoDateTime" });
 
 /**
  * Path parameter schema for a resource identified by an ObjectId
@@ -139,6 +120,7 @@ export const ObjectIdParamSchema = z.object({
  * User response schema
  */
 export const UserSchema = z.object({
+  self: SelfLinkSchema.optional(),
   _id: ObjectIdSchema.describe("Unique user identifier"),
   email: z.email().describe("User email address"),
   name: z.string().nullish().transform((v) => v ?? undefined).optional().describe("User display name"),
@@ -147,7 +129,7 @@ export const UserSchema = z.object({
   language: LocaleSchema.nullish().transform((v) => v ?? undefined).optional().describe("Preferred UI locale used for emails"),
   lastLoginAt: IsoDateTimeSchema.nullish().transform((v) => v ?? undefined).optional().describe("Timestamp of last login"),
   createdAt: IsoDateTimeSchema.optional().describe("Account creation timestamp"),
-});
+}).meta({ id: "User" });
 
 export type User = z.infer<typeof UserSchema>;
 
@@ -158,26 +140,10 @@ export const PublicUserSchema = UserSchema.omit({
   isDisabled: true,
   lastLoginAt: true,
   createdAt: true
-});
+}).meta({ id: "PublicUser" });
 
 
 export type PublicUser = z.infer<typeof PublicUserSchema>;
-
-/**
- * Request body to update the current user's preferred language
- */
-export const UpdateLanguageRequestSchema = z.object({
-  language: LocaleSchema.describe("New preferred locale"),
-});
-
-export type UpdateLanguageRequest = z.infer<typeof UpdateLanguageRequestSchema>;
-
-/**
- * Query token parameter schema
- */
-export const TokenQuerySchema = z.object({
-  token: z.string().min(1, "Token is required").describe("Authentication or validation token"),
-});
 
 /**
  * Building status enum
@@ -247,7 +213,7 @@ export const PaginationResponseSchema = z.object({
   limit: z.number(),
   offset: z.number(),
   total: z.number(),
-}).describe("Pagination information");
+}).describe("Pagination information").meta({ id: "Pagination" });
 
 export type PaginationResponse = z.infer<typeof PaginationResponseSchema>;
 
@@ -257,6 +223,9 @@ export type PaginationResponse = z.infer<typeof PaginationResponseSchema>;
 export const PeriodSchema = z.object({
   startDate: z.iso.datetime(),
   endDate: z.iso.datetime(),
-});
+}).meta({ id: "Period" });
 
 export type Period = z.infer<typeof PeriodSchema>;
+
+/** Adds a string `id` param to a request payload (e.g. update mutations). */
+export type WithId<T> = T & { id: string };

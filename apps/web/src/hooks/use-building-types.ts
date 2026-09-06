@@ -6,9 +6,8 @@ import type {
   BuildingType,
   CreateBuildingTypeRequest,
   UpdateBuildingTypeRequest,
+  WithId,
 } from "@wattguard/shared";
-
-export type { BuildingType, CreateBuildingTypeRequest, UpdateBuildingTypeRequest };
 
 export const BUILDING_TYPES_QUERY_KEY = ["building-types"] as const;
 
@@ -70,7 +69,7 @@ export function useUpdateBuildingType() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: UpdateBuildingTypeRequest & { id: string }): Promise<BuildingType> => {
+    mutationFn: async (input: WithId<UpdateBuildingTypeRequest>): Promise<BuildingType> => {
       const { id, ...body } = input;
       const res = await client.api.v1["building-types"][":id"].$patch({
         param: { id },
@@ -98,7 +97,7 @@ export function useDeleteBuildingType() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string): Promise<void> => {
       const res = await client.api.v1["building-types"][":id"].$delete({
         param: { id },
       });
@@ -106,9 +105,6 @@ export function useDeleteBuildingType() {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-
-      const resData = await res.json();
-      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BUILDING_TYPES_QUERY_KEY });

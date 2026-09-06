@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type {BuildingDetail} from "@wattguard/shared"
 import { useTranslation } from "react-i18next"
 import { useWatch } from "react-hook-form"
 import {
@@ -20,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
-import { useUpdateBuilding, type BuildingDetail } from "@/hooks/use-buildings"
+import { useUpdateBuilding } from "@/hooks/use-buildings"
 import { useBuildingForm, toBuildingPayload, type BuildingFormValues } from "@/hooks/use-building-form"
 import { BuildingForm } from "./building-form/BuildingForm"
 
@@ -32,7 +33,7 @@ interface EditBuildingDialogProps {
 export function EditBuildingDialog({ building, onClose }: EditBuildingDialogProps) {
   const updateBuilding = useUpdateBuilding()
   const { t } = useTranslation()
-  const buildingForm = useBuildingForm({ mode: "edit", building })
+  const buildingForm = useBuildingForm({ building })
   const { form } = buildingForm
 
   const [confirmDecommission, setConfirmDecommission] = useState(false)

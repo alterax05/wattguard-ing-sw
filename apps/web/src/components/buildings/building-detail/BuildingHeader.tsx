@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { BuildingStatusBadge } from "../building-status-badge"
 import { getBuildingTypeName } from "./helpers"
-import type { BuildingDetail } from "@/hooks/use-buildings"
+import type {BuildingDetail} from "@wattguard/shared"
 
 export interface BuildingHeaderProps {
   building: BuildingDetail

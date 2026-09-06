@@ -7,7 +7,6 @@ import {
 } from "bun:test";
 
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
@@ -18,18 +17,12 @@ import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
 import { EFFICIENCY_ALERT_TYPE } from "../../lib/alerts";
-import { ErrorSchema } from "@wattguard/shared";
 import type {
-  CreateBuildingResponse,
-  UpdateBuildingResponse,
-  DeleteBuildingResponse,
+  BuildingResponse,
   SearchBuildingsResponse,
-  GetBuildingResponse,
-  GetBuildingRealTimeResponse,
-  GetBuildingHistoryResponse,
-} from "@wattguard/shared";
+  GetBuildingHistoryResponse, ErrorResponse } from "@wattguard/shared";
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 
@@ -41,6 +34,13 @@ let adminUserId: mongoose.Types.ObjectId;
 let buildingTypeId: mongoose.Types.ObjectId;
 
 setupIntegrationTests();
+
+// Single validated GeoJSON point for Trento used across building fixtures.
+const TRENTO_POINT = {
+  type: 'Point' as const,
+  // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
+  coordinates: [11.1167, 46.0667] as [number, number],
+};
 
 
 beforeEach(async () => {
@@ -110,7 +110,6 @@ beforeEach(async () => {
 describe("buildings api", () => {
   describe("POST /api/v1/buildings", () => {
     test("creates a new building with valid data (admin)", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Scuola Primaria Test",
         address: "Via Test 123, Milano",
@@ -119,7 +118,7 @@ describe("buildings api", () => {
         surface: 2500,
         constructionYear: 1985,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
       };
 
       const res = await client.api.v1.buildings.$post(
@@ -140,7 +139,7 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(201);
       const json = await res.json();
-      expectTypeOf(json).toExtend<CreateBuildingResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -156,7 +155,6 @@ describe("buildings api", () => {
     });
 
     test("creates building with operator role", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Biblioteca Test",
         address: "Via Test 456, Milano",
@@ -165,7 +163,7 @@ describe("buildings api", () => {
         surface: 1500,
         constructionYear: 2010,
         heatingSystemType: "pompa_calore",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
       };
 
       const res = await client.api.v1.buildings.$post(
@@ -201,12 +199,10 @@ describe("buildings api", () => {
         }
       );
 
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(400);
+      expect(Number(res.status)).toBe(400);
     });
 
     test("rejects invalid building type ID", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildingData = {
         name: "Test Building",
         address: "Via Test 123",
@@ -215,7 +211,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
       };
 
       const res = await client.api.v1.buildings.$post(
@@ -229,15 +225,13 @@ describe("buildings api", () => {
         }
       );
 
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(400);
+      expect(Number(res.status)).toBe(400);
     });
   });
 
   describe("PATCH /api/v1/buildings/:id", () => {
     test("updates building", async () => {
       // Create a building first
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -246,7 +240,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -271,7 +265,7 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -304,7 +298,6 @@ describe("buildings api", () => {
       // name, address, geographicZone, buildingType: buildingTypeId, surface,
       // constructionYear, heatingSystemType: "caldaia_gas",
       // location GeoJSON Point [11.1167, 46.0667], createdBy/updatedBy: adminUserId)
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -313,7 +306,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -330,7 +323,7 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<UpdateBuildingResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -339,7 +332,6 @@ describe("buildings api", () => {
     });
 
     test("PATCH rejects enabled threshold without minCop", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -348,7 +340,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -366,7 +358,6 @@ describe("buildings api", () => {
     });
 
     test("PATCH rejects efficiencyThresholds for district heating buildings", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -375,7 +366,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "Teleriscaldamento urbano",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -389,11 +380,10 @@ describe("buildings api", () => {
           headers: { Authorization: `Bearer ${adminToken}` },
         }
       );
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(422);
     });
 
     test("PATCH switching a building to district heating clears thresholds and resolves alerts", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -402,7 +392,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
         efficiencyThresholds: { enabled: true, minCop: 2.5 },
@@ -441,7 +431,6 @@ describe("buildings api", () => {
     });
 
     test("PATCH disabling efficiency thresholds resolves active efficiency alerts", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Original Name",
         address: "Via Original",
@@ -450,7 +439,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
         efficiencyThresholds: { enabled: true, minCop: 2.5 },
@@ -488,7 +477,6 @@ describe("buildings api", () => {
   describe("DELETE /api/v1/buildings/:id", () => {
     test("deletes building with cascade delete of sensors and readings", async () => {
       // Create building with sensors and readings
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building to Delete",
         address: "Via Delete 1",
@@ -497,7 +485,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -550,13 +538,7 @@ describe("buildings api", () => {
         }
       );
 
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<DeleteBuildingResponse | ErrorResponse>();
-      if (!("success" in json)) {
-        return expect.unreachable("Expected response to contain 'success'");
-      }
-      expect(json.success).toBe(true);
+      expect(res.status).toBe(204);
 
       // Verify building deleted
       const deletedBuilding = await Building.findById(building._id);
@@ -578,7 +560,6 @@ describe("buildings api", () => {
   describe("GET /api/v1/buildings", () => {
     beforeEach(async () => {
       // Create multiple buildings for search testing
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const buildings = [
         {
           name: "Scuola Primaria Centro",
@@ -588,7 +569,7 @@ describe("buildings api", () => {
           surface: 2500,
           constructionYear: 1985,
           heatingSystemType: "caldaia_gas",
-          location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+          location: { ...TRENTO_POINT },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "active",
@@ -601,7 +582,7 @@ describe("buildings api", () => {
           surface: 3000,
           constructionYear: 1995,
           heatingSystemType: "teleriscaldamento",
-          location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+          location: { ...TRENTO_POINT },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "active",
@@ -614,7 +595,7 @@ describe("buildings api", () => {
           surface: 1500,
           constructionYear: 2010,
           heatingSystemType: "pompa_calore",
-          location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+          location: { ...TRENTO_POINT },
           createdBy: adminUserId,
           updatedBy: adminUserId,
           status: "inactive",
@@ -815,7 +796,6 @@ describe("buildings api", () => {
 
   describe("GET /api/v1/buildings/:id", () => {
     test("returns complete building details", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Test Building Details",
         address: "Via Details 1, Milano",
@@ -824,7 +804,7 @@ describe("buildings api", () => {
         surface: 2000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -840,7 +820,7 @@ describe("buildings api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<GetBuildingResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response to be successful");
@@ -853,106 +833,22 @@ describe("buildings api", () => {
     });
   });
 
-  describe("GET /api/v1/buildings/:id/real-time", () => {
-    test("returns real-time data for all sensor types", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
+  describe("GET /api/v1/buildings/:id/readings latest point", () => {
+    test("returns the latest point with limit=1&sortOrder=desc", async () => {
       const building = await Building.create({
-        name: "Building Real-time",
-        address: "Via Real-time 1",
+        name: "Building Latest",
+        address: "Via Latest 1",
         geographicZone: "Centro",
         buildingType: buildingTypeId,
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
 
-      const now = new Date();
-
-      await Sensor.create([
-        {
-          building: building._id,
-          sensorType: "internal_temp",
-          location: "Piano 1",
-          status: "active",
-          installationDate: new Date(),
-          transmissionInterval: 90,
-          createdBy: adminUserId,
-          updatedBy: adminUserId,
-          lastReading: { value: 22.5, unit: "°C", timestamp: now },
-        },
-        {
-          building: building._id,
-          sensorType: "external_temp",
-          location: "Facciata",
-          status: "active",
-          installationDate: new Date(),
-          transmissionInterval: 90,
-          createdBy: adminUserId,
-          updatedBy: adminUserId,
-          lastReading: { value: 10.2, unit: "°C", timestamp: now },
-        },
-        {
-          building: building._id,
-          sensorType: "energy_meter",
-          location: "Locale tecnico",
-          status: "active",
-          installationDate: new Date(),
-          transmissionInterval: 90,
-          createdBy: adminUserId,
-          updatedBy: adminUserId,
-          lastReading: { value: 150.5, unit: "kW", timestamp: now },
-        },
-      ]);
-
-      const res = await client.api.v1.buildings[":id"].readings.latest.$get(
-        {
-          param: { id: building._id.toString() },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<GetBuildingRealTimeResponse | ErrorResponse>();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response to be successful");
-      }
-      expect(json.data).toBeDefined();
-      expect(json.data.data.internalTemperature).toBeDefined();
-      expect(json.data.data.internalTemperature.value).toBe(22.5);
-      expect(json.data.data.internalTemperature.unit).toBe("°C");
-
-      expect(json.data.data.externalTemperature).toBeDefined();
-      expect(json.data.data.externalTemperature.value).toBe(10.2);
-
-      expect(json.data.data.energyConsumption).toBeDefined();
-      expect(json.data.data.energyConsumption.value).toBe(150.5);
-      expect(json.data.data.energyConsumption.unit).toBe("kW");
-    });
-
-    test("handles missing sensors gracefully", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
-      const building = await Building.create({
-        name: "Building Partial Sensors",
-        address: "Via Partial 1",
-        geographicZone: "Centro",
-        buildingType: buildingTypeId,
-        surface: 1000,
-        constructionYear: 2000,
-        heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      // Only create one sensor
-      await Sensor.create({
+      const sensor = await Sensor.create({
         building: building._id,
         sensorType: "internal_temp",
         location: "Piano 1",
@@ -961,12 +857,92 @@ describe("buildings api", () => {
         transmissionInterval: 90,
         createdBy: adminUserId,
         updatedBy: adminUserId,
-        lastReading: { value: 22.5, unit: "°C", timestamp: new Date() },
       });
 
-      const res = await client.api.v1.buildings[":id"].readings.latest.$get(
+      const now = new Date();
+      await SensorReading.insertMany([
+        {
+          timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+          value: 20.0,
+          unit: "°C",
+          metadata: { sensor: sensor._id, building: building._id, sensorType: "internal_temp" },
+        },
+        {
+          timestamp: now,
+          value: 22.5,
+          unit: "°C",
+          metadata: { sensor: sensor._id, building: building._id, sensorType: "internal_temp" },
+        },
+      ]);
+
+      const res = await client.api.v1.buildings[":id"].readings.$get(
         {
           param: { id: building._id.toString() },
+          query: {
+            startDate: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+            endDate: now.toISOString(),
+            sensorType: "internal_temp",
+            limit: "1",
+            sortOrder: "desc",
+          },
+        },
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expectTypeOf(json).toExtend<GetBuildingHistoryResponse | ErrorResponse>();
+      expect(json.success).toBe(true);
+      if (!json.success) {
+        return expect.unreachable("Expected response to be successful");
+      }
+      expect(json.data.data).toBeArrayOfSize(1);
+      expect(json.data.data[0]!.value).toBe(22.5);
+    });
+
+    test("respects limit for history queries", async () => {
+      const building = await Building.create({
+        name: "Building Partial Sensors",
+        address: "Via Partial 1",
+        geographicZone: "Centro",
+        buildingType: buildingTypeId,
+        surface: 1000,
+        constructionYear: 2000,
+        heatingSystemType: "caldaia_gas",
+        location: { ...TRENTO_POINT },
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const sensor = await Sensor.create({
+        building: building._id,
+        sensorType: "internal_temp",
+        location: "Piano 1",
+        status: "active",
+        installationDate: new Date(),
+        transmissionInterval: 90,
+        createdBy: adminUserId,
+        updatedBy: adminUserId,
+      });
+
+      const now = new Date();
+      await SensorReading.insertMany([0, 1, 2].map((i) => ({
+        timestamp: new Date(now.getTime() - i * 60 * 60 * 1000),
+        value: 20 + i,
+        unit: "°C",
+        metadata: { sensor: sensor._id, building: building._id, sensorType: "internal_temp" },
+      })));
+
+      const res = await client.api.v1.buildings[":id"].readings.$get(
+        {
+          param: { id: building._id.toString() },
+          query: {
+            startDate: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+            endDate: now.toISOString(),
+            limit: "2",
+          },
         },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -979,15 +955,12 @@ describe("buildings api", () => {
       if (!json.success) {
         return expect.unreachable("Expected response to be successful");
       }
-      expect(json.data.data.internalTemperature.value).toBe(22.5);
-      expect(json.data.data.externalTemperature.value).toBeNull();
-      expect(json.data.data.energyConsumption.value).toBeNull();
+      expect(json.data.data.length).toBeLessThanOrEqual(2);
     });
   });
 
   describe("GET /api/v1/buildings/:id/history", () => {
     test("returns historical data with time aggregation", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building History",
         address: "Via History 1",
@@ -996,7 +969,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -1063,7 +1036,6 @@ describe("buildings api", () => {
     });
 
     test("filters by date range", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Date Filter",
         address: "Via Date 1",
@@ -1072,7 +1044,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -1142,7 +1114,6 @@ describe("buildings api", () => {
     });
 
     test("supports different interval types", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Building Intervals",
         address: "Via Intervals 1",
@@ -1151,7 +1122,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });
@@ -1215,8 +1186,8 @@ describe("buildings api", () => {
   describe("authorization", () => {
     test("denies access without token", async () => {
       const res = await client.api.v1.buildings.$get({ query: {} });
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(401);
+
+      expect(res.status).toBe(401);
     });
 
     test("denies access with invalid token", async () => {
@@ -1229,12 +1200,10 @@ describe("buildings api", () => {
         }
       );
 
-      // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-      expect(res.status as number).toBe(401);
+      expect(res.status).toBe(401);
     });
 
     test("allows both admin and operator to read buildings", async () => {
-      // SAFETY: GeoJSON Point positions are exactly two numeric coordinates [longitude, latitude].
       const building = await Building.create({
         name: "Test Auth",
         address: "Via Auth 1",
@@ -1243,7 +1212,7 @@ describe("buildings api", () => {
         surface: 1000,
         constructionYear: 2000,
         heatingSystemType: "caldaia_gas",
-        location: { type: "Point" as const, coordinates: [11.1167, 46.0667] as [number, number] },
+        location: { ...TRENTO_POINT },
         createdBy: adminUserId,
         updatedBy: adminUserId,
       });

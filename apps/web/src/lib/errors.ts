@@ -7,7 +7,7 @@ import i18n from "./i18n";
  * used for localization. `details` carries interpolation values for
  * localized messages that contain placeholders (e.g. `{ count }`).
  */
-export interface ApiErrorBody {
+interface ApiErrorBody {
   success?: boolean;
   error_code?: string;
   message?: string;

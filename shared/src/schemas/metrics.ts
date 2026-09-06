@@ -1,7 +1,7 @@
 /**
  * System-wide metrics and KPIs schemas
  *
- * Routes: /api/v1/metrics, /api/v1/metrics/history
+ * Routes: /api/v1/metrics, /api/v1/metrics/timeseries
  */
 
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { z } from "zod";
 // ── Query Schemas ────────────────────────────────────────────────────────────
 
 /**
- * Query params for GET /api/v1/metrics/history
+ * Query params for GET /api/v1/metrics/timeseries
  */
 export const MetricsHistoryQuerySchema = z.object({
   startDate: z.iso.datetime({ offset: true }).or(z.string().date()).describe("Start of the time range (ISO 8601)"),
@@ -37,7 +37,7 @@ export const SystemMetricsSchema = z.object({
     electricity: z.number().nullable().describe("Sum of current energy_meter readings (kWh)"),
     gas: z.number().nullable().describe("Sum of current gas_meter readings (m³)"),
   }),
-});
+}).meta({ id: "SystemMetrics" });
 
 export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
 
@@ -47,7 +47,7 @@ export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
 export const MetricsResponseSchema = z.object({
   success: z.literal(true),
   data: SystemMetricsSchema,
-});
+}).meta({ id: "MetricsResponse" });
 
 export type MetricsResponse = z.infer<typeof MetricsResponseSchema>;
 
@@ -60,12 +60,12 @@ export const MetricsHistoryDataPointSchema = z.object({
   date: z.string().describe("Bucket label (ISO date or hour string)"),
   electricity: z.number().nullable().describe("Average energy_meter reading for the bucket (kWh)"),
   gas: z.number().nullable().describe("Average gas_meter reading for the bucket (m³)"),
-});
+}).meta({ id: "MetricsHistoryDataPoint" });
 
 export type MetricsHistoryDataPoint = z.infer<typeof MetricsHistoryDataPointSchema>;
 
 /**
- * Data payload for GET /api/v1/metrics/history
+ * Data payload for GET /api/v1/metrics/timeseries
  */
 export const MetricsHistoryDataSchema = z.object({
   period: z.object({
@@ -74,32 +74,16 @@ export const MetricsHistoryDataSchema = z.object({
     interval: z.enum(["hour", "day", "week"]),
   }),
   data: z.array(MetricsHistoryDataPointSchema),
-});
+}).meta({ id: "MetricsHistoryData" });
 
 export type MetricsHistoryData = z.infer<typeof MetricsHistoryDataSchema>;
 
 /**
- * Response for GET /api/v1/metrics/history
+ * Response for GET /api/v1/metrics/timeseries
  */
 export const MetricsHistoryResponseSchema = z.object({
   success: z.literal(true),
   data: MetricsHistoryDataSchema,
-});
+}).meta({ id: "MetricsHistoryResponse" });
 
 export type MetricsHistoryResponse = z.infer<typeof MetricsHistoryResponseSchema>;
-
-// ── Backward-compatibility Aliases ───────────────────────────────────────────
-
-export const DashboardStatsSchema = SystemMetricsSchema;
-export type DashboardStats = SystemMetrics;
-export const DashboardStatsResponseSchema = MetricsResponseSchema;
-export type DashboardStatsResponse = MetricsResponse;
-
-export const DashboardHistoryQuerySchema = MetricsHistoryQuerySchema;
-export type DashboardHistoryQuery = MetricsHistoryQuery;
-export const DashboardHistoryDataPointSchema = MetricsHistoryDataPointSchema;
-export type DashboardHistoryDataPoint = MetricsHistoryDataPoint;
-export const DashboardHistoryDataSchema = MetricsHistoryDataSchema;
-export type DashboardHistory = MetricsHistoryData;
-export const DashboardHistoryResponseSchema = MetricsHistoryResponseSchema;
-export type DashboardHistoryResponse = MetricsHistoryResponse;

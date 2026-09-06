@@ -15,20 +15,17 @@ import { toBuildingTypeDTO } from "../lib/building-types";
 import { apiError, apiSuccess } from "../lib/api-response";
 import {
   ListBuildingTypesResponseSchema,
+  GetBuildingTypeParamsSchema,
+  BuildingTypeResponseSchema,
   CreateBuildingTypeRequestSchema,
-  CreateBuildingTypeResponseSchema,
   UpdateBuildingTypeParamsSchema,
   UpdateBuildingTypeRequestSchema,
-  UpdateBuildingTypeResponseSchema,
   DeleteBuildingTypeParamsSchema,
-  DeleteBuildingTypeResponseSchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type {
   ListBuildingTypesResponse,
-  CreateBuildingTypeResponse,
-  UpdateBuildingTypeResponse,
-  DeleteBuildingTypeResponse,
+  BuildingTypeResponse,
   ErrorResponse,
 } from "@wattguard/shared";
 
@@ -36,8 +33,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Elenca tipi di edificio",
-      description: "Restituisce tutti i tipi di edificio ordinati per nome",
+      summary: "List building types",
+      description: "Returns all building types ordered by name",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -73,12 +70,72 @@ const app = new Hono<{ Variables: AuthVariables }>()
       return c.json(apiSuccess(buildingTypes.map((bt) => toBuildingTypeDTO(bt))) satisfies ListBuildingTypesResponse);
     }
   )
+  .get(
+    "/:id",
+    describeRoute({
+      summary: "Get building type",
+      description: "Returns building type detail by ID",
+      tags: ["Building Types"],
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      responses: {
+        200: {
+          description: "Building type retrieved successfully",
+          content: {
+            "application/json": {
+              schema: resolver(BuildingTypeResponseSchema),
+            },
+          },
+        },
+        400: {
+          description: "Invalid ID parameter",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        401: {
+          description: "Unauthorized - Invalid or missing JWT token",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        403: {
+          description: "Forbidden - Requires admin or operator role",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        404: {
+          description: "Building type not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", GetBuildingTypeParamsSchema),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const buildingType = await BuildingType.findById(id);
+      if (!buildingType) {
+        return c.json(apiError("building_type_not_found", "Building type not found") satisfies ErrorResponse, 404);
+      }
+      return c.json(apiSuccess(toBuildingTypeDTO(buildingType)) satisfies BuildingTypeResponse);
+    }
+  )
   .post(
     "/",
     requireRole("admin"),
     describeRoute({
-      summary: "Crea tipo di edificio",
-      description: "Crea un nuovo tipo di edificio (solo admin, nome univoco)",
+      summary: "Create building type",
+      description: "Creates a new building type (admin only, unique name)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -86,12 +143,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Building type created successfully",
           content: {
             "application/json": {
-              schema: resolver(CreateBuildingTypeResponseSchema),
+              schema: resolver(BuildingTypeResponseSchema),
             },
           },
         },
         400: {
-          description: "Validation error or duplicate name",
+          description: "Validation error",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -114,6 +171,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
             },
           },
         },
+        409: {
+          description: "Duplicate building type name",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
       },
     }),
     validator("json", CreateBuildingTypeRequestSchema),
@@ -128,10 +193,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
         c.header("Location", `${c.req.path}/${buildingType._id.toString()}`);
 
-        return c.json(apiSuccess(toBuildingTypeDTO(buildingType)) satisfies CreateBuildingTypeResponse, 201);
+        return c.json(apiSuccess(toBuildingTypeDTO(buildingType)) satisfies BuildingTypeResponse, 201);
       } catch (err: unknown) {
         if (err instanceof mongo.MongoServerError && err.code === 11000) {
-          return c.json(apiError("building_type_name_exists", "Building type with this name already exists") satisfies ErrorResponse, 400);
+          return c.json(apiError("building_type_name_exists", "Building type with this name already exists") satisfies ErrorResponse, 409);
         }
         throw err;
       }
@@ -141,8 +206,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     requireRole("admin"),
     describeRoute({
-      summary: "Aggiorna tipo di edificio",
-      description: "Aggiorna nome o descrizione di un tipo di edificio (solo admin)",
+      summary: "Update building type",
+      description: "Updates a building type name or description (admin only)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -150,12 +215,12 @@ const app = new Hono<{ Variables: AuthVariables }>()
           description: "Building type updated successfully",
           content: {
             "application/json": {
-              schema: resolver(UpdateBuildingTypeResponseSchema),
+              schema: resolver(BuildingTypeResponseSchema),
             },
           },
         },
         400: {
-          description: "Validation error or duplicate name",
+          description: "Validation error",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -180,6 +245,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
         404: {
           description: "Building type not found",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
+        409: {
+          description: "Building type with this name already exists",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -206,33 +279,28 @@ const app = new Hono<{ Variables: AuthVariables }>()
         await buildingType.save();
       } catch (err: unknown) {
         if (err instanceof mongo.MongoServerError && err.code === 11000) {
-          return c.json(apiError("building_type_name_exists", "Building type with this name already exists") satisfies ErrorResponse, 400);
+          return c.json(apiError("building_type_name_exists", "Building type with this name already exists") satisfies ErrorResponse, 409);
         }
         throw err;
       }
 
-      return c.json(apiSuccess(toBuildingTypeDTO(buildingType)) satisfies UpdateBuildingTypeResponse);
+      return c.json(apiSuccess(toBuildingTypeDTO(buildingType)) satisfies BuildingTypeResponse);
     }
   )
   .delete(
     "/:id",
     requireRole("admin"),
     describeRoute({
-      summary: "Elimina tipo di edificio",
-      description: "Elimina il tipo se non è in uso da edifici (solo admin)",
+      summary: "Delete building type",
+      description: "Deletes the type if not used by buildings (admin only)",
       tags: ["Building Types"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
-        200: {
+        204: {
           description: "Building type deleted successfully",
-          content: {
-            "application/json": {
-              schema: resolver(DeleteBuildingTypeResponseSchema),
-            },
-          },
         },
         400: {
-          description: "Cannot delete - building type is in use",
+          description: "Validation error",
           content: {
             "application/json": {
               schema: resolver(ErrorSchema),
@@ -263,6 +331,14 @@ const app = new Hono<{ Variables: AuthVariables }>()
             },
           },
         },
+        409: {
+          description: "Cannot delete - building type is in use",
+          content: {
+            "application/json": {
+              schema: resolver(ErrorSchema),
+            },
+          },
+        },
       },
     }),
     validator("param", DeleteBuildingTypeParamsSchema),
@@ -283,16 +359,13 @@ const app = new Hono<{ Variables: AuthVariables }>()
             `Cannot delete building type: ${buildingsUsingType} building(s) are using it`,
             { count: buildingsUsingType }
           ) satisfies ErrorResponse,
-          400
+          409
         );
       }
 
       await BuildingType.findByIdAndDelete(id);
 
-      return c.json(apiSuccess({
-        id,
-        message: `Building type "${buildingType.name}" deleted successfully`,
-      }) satisfies DeleteBuildingTypeResponse);
+      return c.body(null, 204);
     }
   );
 

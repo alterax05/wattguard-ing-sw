@@ -12,23 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Bell, Clock, Database, Download, HardDrive } from "lucide-react"
 import { toast } from "sonner"
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings"
-import type { SystemConfig } from "@/hooks/use-settings"
+import type {SystemConfig} from "@wattguard/shared"
 import { downloadFromEndpoint } from "@/lib/download"
 
 // ── Form shape ────────────────────────────────────────────────────────────────
 
-type SettingsFormValues = {
-  polling: {
-    intervalSeconds: number
-    autoPollingEnabled: boolean
-  }
-  notifications: {
-    emailEnabled: boolean
-  }
-  database: {
-    dataRetentionDays: number
-  }
-}
+type SettingsFormValues = SystemConfig
 
 function toFormValues(config: SystemConfig): SettingsFormValues {
   return {
@@ -132,7 +121,7 @@ export function SettingsPanel() {
       const date = new Date().toISOString().slice(0, 10)
       const res = await fetch(
         "/api/v1/backups",
-        { method: "POST", credentials: "include" },
+        { method: "GET", credentials: "include" },
       )
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res, "settings.backupError"))

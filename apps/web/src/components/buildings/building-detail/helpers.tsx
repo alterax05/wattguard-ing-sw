@@ -1,8 +1,7 @@
-import type { BuildingDetail as BuildingDetailType } from "@/hooks/use-buildings"
-import type { Sensor } from "@/hooks/use-sensors"
+import type { BuildingDetail as BuildingDetailType } from "@wattguard/shared"
+import type { Sensor, GetBuildingHistoryQuery } from "@wattguard/shared"
 import type { DateRange } from "react-day-picker"
 import { Zap, Thermometer, Wind, Flame } from "lucide-react"
-import type { HistoryParams } from "@/hooks/use-buildings"
 
 export function getBuildingTypeName(bt: BuildingDetailType["buildingType"]): string {
   if (!(bt instanceof Object)) return bt
@@ -34,7 +33,7 @@ export function getDefaultDateRange(): DateRange {
   return { from: start, to: end }
 }
 
-export type SensorTypeKey = HistoryParams["sensorType"] & string
+export type SensorTypeKey = GetBuildingHistoryQuery["sensorType"] & string
 
 export const SENSOR_TYPE_CONFIG = {
   energy_meter: {

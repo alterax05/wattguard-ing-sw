@@ -10,7 +10,7 @@ import {
   serializeReportXlsx,
 } from "../lib/report";
 import {
-  ReportsQuerySchema,
+  ExportReportQuerySchema,
   ErrorSchema,
 } from "@wattguard/shared";
 import type { ErrorResponse } from "@wattguard/shared";
@@ -26,9 +26,9 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Scarica report energetico",
+      summary: "Download energy report",
       description:
-        "Genera il report aggregato per edifici e periodo in PDF o Excel (solo admin)",
+        "Generates the aggregated report for buildings and period as PDF or Excel (admin only)",
       tags: ["Reports"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -59,7 +59,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         },
       },
     }),
-    validator("query", ReportsQuerySchema),
+    validator("query", ExportReportQuerySchema),
     async (c) => {
       const { buildingIds, startDate, endDate, format: queryFormat } = c.req.valid("query");
       const acceptHeader = c.req.header("accept") || "";

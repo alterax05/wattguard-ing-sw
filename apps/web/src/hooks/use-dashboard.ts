@@ -6,27 +6,13 @@ import { usePollingInterval } from "./use-settings";
 
 export const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
 
-import type {
-  DashboardStats,
-  DashboardHistoryDataPoint,
-  DashboardHistory,
-  DashboardHistoryQuery as DashboardHistoryParams,
-} from "@wattguard/shared";
-
-// ── Types (derived from @wattguard/shared schemas) ───────────────────────────
-
-export type {
-  DashboardStats,
-  DashboardHistoryDataPoint,
-  DashboardHistory,
-  DashboardHistoryParams,
-};
+import type { MetricsHistoryQuery as MetricsHistoryParams } from "@wattguard/shared";
 
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
 /**
  * Fetch aggregated dashboard statistics.
- * GET /api/dashboard/stats
+ * GET /api/v1/metrics
  *
  * The refetch interval is driven by the system configuration's polling settings.
  * Falls back to 2 minutes if settings have not yet loaded.
@@ -51,20 +37,20 @@ export function useDashboardStats() {
 
 /**
  * Fetch aggregated historical energy/gas data for the dashboard chart.
- * GET /api/v1/metrics/history
+ * GET /api/v1/metrics/timeseries
  */
-export function useDashboardHistory(params: DashboardHistoryParams) {
+export function useDashboardHistory(params: MetricsHistoryParams) {
   return useQuery({
     queryKey: [...DASHBOARD_QUERY_KEY, "history", params],
     queryFn: async () => {
-      const query: DashboardHistoryParams = {
+      const query: MetricsHistoryParams = {
         startDate: params.startDate,
         endDate: params.endDate,
       };
       if (params.interval) {
         query.interval = params.interval;
       }
-      const res = await client.api.v1.metrics.history.$get({ query });
+      const res = await client.api.v1.metrics.timeseries.$get({ query });
       if (!res.ok) {
         throw new Error("Failed to fetch dashboard history");
       }

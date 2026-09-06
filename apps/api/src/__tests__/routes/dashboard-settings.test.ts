@@ -16,7 +16,6 @@ import {
   expectTypeOf,
 } from "bun:test";
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
@@ -24,16 +23,13 @@ import { User } from "../../models/User";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
-import { ErrorSchema } from "@wattguard/shared";
 import type {
   HealthResponse,
-  DashboardStatsResponse,
-  DashboardHistoryResponse,
-  GetSettingsResponse,
-  UpdateSettingsResponse,
+  MetricsResponse,
+  MetricsHistoryResponse,
+  SettingsResponse,
+  ErrorResponse,
 } from "@wattguard/shared";
-
-type ErrorResponse = z.infer<typeof ErrorSchema>;
 
 const client = testClient(app);
 
@@ -97,7 +93,7 @@ describe("dashboard api", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expectTypeOf(data).toExtend<DashboardStatsResponse | ErrorResponse>();
+    expectTypeOf(data).toExtend<MetricsResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
       return expect.unreachable("Expected response success to be true");
@@ -109,12 +105,12 @@ describe("dashboard api", () => {
     expect(data.data.consumption.gas).toBeNull();
   });
 
-  test("GET /api/dashboard/history returns bucketed data", async () => {
+  test("GET /api/v1/metrics/timeseries returns bucketed data", async () => {
     const now = new Date();
     const startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = now.toISOString();
 
-    const res = await client.api.v1.metrics.history.$get(
+    const res = await client.api.v1.metrics.timeseries.$get(
       {
         query: { startDate, endDate, interval: "day" },
       },
@@ -125,7 +121,7 @@ describe("dashboard api", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expectTypeOf(data).toExtend<DashboardHistoryResponse | ErrorResponse>();
+    expectTypeOf(data).toExtend<MetricsHistoryResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
       return expect.unreachable("Expected response success to be true");
@@ -134,8 +130,8 @@ describe("dashboard api", () => {
     expect(Array.isArray(data.data.data)).toBe(true);
   });
 
-  test("GET /api/dashboard/history rejects invalid date range", async () => {
-    const res = await client.api.v1.metrics.history.$get(
+  test("GET /api/v1/metrics/timeseries rejects invalid date range", async () => {
+    const res = await client.api.v1.metrics.timeseries.$get(
       {
         query: { startDate: "2026-01-02T00:00:00.000Z", endDate: "2026-01-01T00:00:00.000Z" },
       },
@@ -144,7 +140,7 @@ describe("dashboard api", () => {
       }
     );
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
   });
 });
 
@@ -156,7 +152,7 @@ describe("settings api", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expectTypeOf(data).toExtend<GetSettingsResponse | ErrorResponse>();
+    expectTypeOf(data).toExtend<SettingsResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
       return expect.unreachable("Expected response success to be true");
@@ -178,7 +174,7 @@ describe("settings api", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    expectTypeOf(data).toExtend<UpdateSettingsResponse | ErrorResponse>();
+    expectTypeOf(data).toExtend<SettingsResponse | ErrorResponse>();
     expect(data.success).toBe(true);
     if (!data.success) {
       return expect.unreachable("Expected response success to be true");
@@ -238,8 +234,7 @@ describe("settings api", () => {
       }
     );
 
-    // SAFETY: res.status is the actual numeric HTTP status code returned by the endpoint.
-    expect(res.status as number).toBe(403);
+    expect(res.status).toBe(403);
   });
 
   test("PATCH /api/settings updates retention and sets expireAfterSeconds via collMod", async () => {

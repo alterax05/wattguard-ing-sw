@@ -1,4 +1,5 @@
 import * as React from "react"
+import type {BuildingDetail, EfficiencyMetrics} from "@wattguard/shared"
 import { useMemo, useState } from "react"
 import { endOfDay } from "date-fns"
 import { useTranslation } from "react-i18next"
@@ -11,8 +12,6 @@ import { errorMessageFromResponse } from "@/lib/errors"
 import { DateRangePicker } from "@/components/shared"
 import {
   BUILDINGS_QUERY_KEY,
-  type BuildingDetail,
-  type EfficiencyMetrics,
 } from "@/hooks/use-buildings"
 import { useWeather, type WeatherData } from "@/hooks/use-weather"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -99,13 +98,15 @@ function BuildingsCompareProvider({
     })),
   })
 
-  // SAFETY: map yields null for missing queries; filter(Boolean) drops nulls so remaining are typed
   const buildings = buildingQueries
     .map((q, i) => {
       if (!q.data) return null
       return { building: q.data, efficiency: efficiencyQueries[i]?.data ?? null }
     })
-    .filter(Boolean) as Array<{ building: BuildingDetail; efficiency: EfficiencyMetrics | null }>
+    .filter(
+      (x): x is { building: BuildingDetail; efficiency: EfficiencyMetrics | null } =>
+        x !== null
+    )
 
   const isLoading = buildingQueries.some((q) => q.isLoading)
   const efficiencyLoading = efficiencyQueries.some((q) => q.isLoading)
@@ -490,16 +491,4 @@ export function BuildingsCompare({ buildingIds }: BuildingsCompareProps) {
       <BuildingsCompareInner buildingIds={buildingIds} />
     </BuildingsCompareProvider>
   )
-}
-
-// Compound export — explicit variants via composition, no booleans
-export const BuildingsCompareCompound = {
-  Provider: BuildingsCompareProvider,
-  Header: BuildingsCompareHeader,
-  DateRange: BuildingsCompareDateRange,
-  SummaryCards: BuildingsCompareSummaryCards,
-  Efficiency: BuildingsCompareEfficiency,
-  Table: BuildingsCompareTable,
-  Layout: BuildingsCompareLayout,
-  Context: BuildingsCompareContext,
 }

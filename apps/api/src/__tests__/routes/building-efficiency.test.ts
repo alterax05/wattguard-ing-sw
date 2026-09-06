@@ -12,7 +12,7 @@
  * -----------------
  *  1.  Authentication — 401 without token
  *  2.  Not Found — 404 for unknown building ID
- *  3.  Bad request — 400 for missing / malformed query params
+  *  3.  Bad request — 400 for missing / malformed query params
  *  4.  No sensor data at all — 200 with zeroed / null metrics, no crash
  *  5.  Electric building — full sensor suite → COP + H computed
  *  6.  Electric building without external_temp sensor →
@@ -56,9 +56,7 @@ await mock.module("../../lib/weather", () => ({
 import { app } from "../../index";
 import { testClient } from "hono/testing";
 import { expectTypeOf } from "bun:test";
-import { z } from "zod";
-import { ErrorSchema } from "@wattguard/shared";
-import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
+import type { GetBuildingEfficiencyResponse, ErrorResponse} from "@wattguard/shared";
 import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { BuildingType } from "../../models/BuildingType";
@@ -95,7 +93,7 @@ function mkReading(
   return { timestamp, value, unit, metadata: { sensor: sensorId, building: buildingId, sensorType } };
 }
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 

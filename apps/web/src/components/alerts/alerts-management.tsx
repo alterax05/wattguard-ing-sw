@@ -1,4 +1,5 @@
-import { useAlerts, useAcknowledgeAlert, useResolveAlert, type Alert } from "@/hooks/use-alerts";
+import { useAlerts, useAcknowledgeAlert, useResolveAlert } from "@/hooks/use-alerts";
+import type {Alert} from "@wattguard/shared"
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";

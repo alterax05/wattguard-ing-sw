@@ -27,6 +27,7 @@ describe("lib/invites", () => {
 
       const dto = toInviteDto(invite);
 
+      expect(dto.self).toBe(`/api/v1/invites/${invite._id.toString()}`);
       expect(dto._id).toBe(invite._id.toString());
       expect(dto.email).toBe("invited@example.com");
       expect(dto.role).toBe("operator");
@@ -58,6 +59,7 @@ describe("lib/invites", () => {
 
       const dto = toInviteDto(populatedInvite!);
 
+      expect(dto.self).toBe(`/api/v1/invites/${invite._id.toString()}`);
       expect(dto._id).toBe(invite._id.toString());
       expect(dto.email).toBe("operator@example.com");
       expect(dto.createdBy).toEqual({ email: "admin-creator@example.com" });
@@ -79,6 +81,7 @@ describe("lib/invites", () => {
       const dto = toCreateInviteDto(invite);
 
       expect(dto).toEqual({
+        self: `/api/v1/invites/${invite._id.toString()}`,
         _id: invite._id.toString(),
         email: "newlycreated@example.com",
         role: "operator",
@@ -125,7 +128,7 @@ describe("lib/invites", () => {
       }
     });
 
-    test("returns 400 for revoked or accepted invite", async () => {
+    test("returns 422 for revoked or accepted invite", async () => {
       const rawToken = "already-revoked-token";
       const tokenHash = hashTokenSha256(rawToken);
       const creatorId = new mongoose.Types.ObjectId();
@@ -143,12 +146,12 @@ describe("lib/invites", () => {
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.status).toBe(400);
+        expect(result.status).toBe(422);
         expect(result.code).toBe("invite_invalid_status");
       }
     });
 
-    test("returns 400 for expired invite", async () => {
+    test("returns 422 for expired invite", async () => {
       const rawToken = "expired-token-123";
       const tokenHash = hashTokenSha256(rawToken);
       const creatorId = new mongoose.Types.ObjectId();
@@ -166,7 +169,7 @@ describe("lib/invites", () => {
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.status).toBe(400);
+        expect(result.status).toBe(422);
         expect(result.code).toBe("invite_expired");
       }
     });

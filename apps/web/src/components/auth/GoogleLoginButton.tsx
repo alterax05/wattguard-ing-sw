@@ -56,6 +56,7 @@ function loadGsiScript(onLoad: () => void) {
 
 interface GoogleLoginButtonProps {
   inviteToken?: string;
+  inviteId?: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;
   text?: "signin_with" | "signup_with" | "continue_with";
@@ -64,6 +65,7 @@ interface GoogleLoginButtonProps {
 
 export function GoogleLoginButton({
   inviteToken,
+  inviteId,
   onSuccess,
   onError,
   text = "continue_with",
@@ -106,9 +108,9 @@ export function GoogleLoginButton({
         client_id: clientId,
         callback: (response) => {
           if (response.credential) {
-            if (inviteToken) {
+            if (inviteToken && inviteId) {
               setup.mutate(
-                { token: inviteToken, idToken: response.credential },
+                { id: inviteId, token: inviteToken, idToken: response.credential },
                 {
                   onSuccess: () => {
                     handleSuccess();
@@ -151,7 +153,7 @@ export function GoogleLoginButton({
     } catch (e) {
       console.error("Failed to initialize Google Sign-In button:", e);
     }
-  }, [scriptLoaded, clientId, resolvedTheme, inviteToken, text, googleLogin, setup, handleSuccess, handleError]);
+  }, [scriptLoaded, clientId, resolvedTheme, inviteToken, inviteId, text, googleLogin, setup, handleSuccess, handleError]);
 
   if (!clientId) {
     return null;

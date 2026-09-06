@@ -21,8 +21,8 @@ import {
   computeSensorReading,
   type BuildingState,
   type SimulatorHandle,
-  type SimulatorReading,
 } from "../../services/simulator";
+import type { IngestReadingInput } from "../../services/reading-service";
 
 function makeState(overrides: Partial<BuildingState> = {}): BuildingState {
   const profile = getHeatingProfile("pompa_calore");
@@ -237,7 +237,7 @@ describe("computeSensorReading", () => {
 
 describe("startSimulator", () => {
   let handle: SimulatorHandle | undefined;
-  const readings: SimulatorReading[] = [];
+  const readings: IngestReadingInput[] = [];
   let hpBuildingId: string;
   let hpSensorIds: Set<string>;
   let hpIntId: string;
@@ -406,7 +406,7 @@ setupIntegrationTests();
   test("picks up sensors added while the simulator is running", async () => {
     handle!.stop();
 
-    const newReadings: SimulatorReading[] = [];
+    const newReadings: IngestReadingInput[] = [];
     handle = await startSimulator({
       discoveryIntervalMs: 200,
       onReading: (reading) => {

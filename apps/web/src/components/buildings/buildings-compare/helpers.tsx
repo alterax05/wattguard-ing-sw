@@ -1,7 +1,7 @@
 import { Cloud, CloudRain, CloudSnow, Sun } from "lucide-react"
 import type { TFunction } from "i18next"
 import type { DateRange } from "react-day-picker"
-import type { BuildingDetail } from "@/hooks/use-buildings"
+import type {BuildingDetail} from "@wattguard/shared"
 
 export function getWeatherIcon(code: number) {
   if (code === 0 || code === 1)

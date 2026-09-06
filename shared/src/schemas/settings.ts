@@ -17,13 +17,13 @@ export const PollingConfigSchema = z.object({
   autoPollingEnabled: z
     .boolean()
     .describe("Whether automatic polling is enabled"),
-});
+}).meta({ id: "PollingConfig" });
 
 export type PollingConfig = z.infer<typeof PollingConfigSchema>;
 
 export const NotificationsConfigSchema = z.object({
   emailEnabled: z.boolean().describe("Whether email notifications are enabled"),
-});
+}).meta({ id: "NotificationsConfig" });
 
 export type NotificationsConfig = z.infer<typeof NotificationsConfigSchema>;
 
@@ -33,7 +33,7 @@ export const DatabaseConfigSchema = z.object({
     .int()
     .min(1)
     .describe("Number of days to retain historical sensor readings"),
-});
+}).meta({ id: "DatabaseConfig" });
 
 export type DatabaseConfig = z.infer<typeof DatabaseConfigSchema>;
 
@@ -43,16 +43,16 @@ export const SystemConfigSchema = z.object({
   polling: PollingConfigSchema,
   notifications: NotificationsConfigSchema,
   database: DatabaseConfigSchema,
-});
+}).meta({ id: "SystemConfig" });
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 
-export const GetSettingsResponseSchema = z.object({
+export const SettingsResponseSchema = z.object({
   success: z.literal(true),
   data: SystemConfigSchema,
-});
+}).meta({ id: "SettingsResponse" });
 
-export type GetSettingsResponse = z.infer<typeof GetSettingsResponseSchema>;
+export type SettingsResponse = z.infer<typeof SettingsResponseSchema>;
 
 // ── Update schema (used for PATCH request — all fields optional) ─────────────
 
@@ -68,13 +68,8 @@ export const UpdateSettingsRequestSchema = z
         (v) => v !== undefined && Object.keys(v).length > 0,
       ),
     { message: "At least one setting must be provided" },
-  );
+  ).meta({ id: "UpdateSettingsRequest" });
 
 export type UpdateSettingsRequest = z.infer<typeof UpdateSettingsRequestSchema>;
 
-export const UpdateSettingsResponseSchema = z.object({
-  success: z.literal(true),
-  data: SystemConfigSchema,
-});
 
-export type UpdateSettingsResponse = z.infer<typeof UpdateSettingsResponseSchema>;

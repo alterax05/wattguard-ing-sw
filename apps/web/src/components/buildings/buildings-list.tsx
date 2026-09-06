@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom"
+import type {BuildingSummary} from "@wattguard/shared"
 import { useTranslation } from "react-i18next"
-import { useBuildings, type BuildingSummary } from "@/hooks/use-buildings"
+import { useBuildings } from "@/hooks/use-buildings"
 import { Building2, Activity, Zap, Radio } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty"

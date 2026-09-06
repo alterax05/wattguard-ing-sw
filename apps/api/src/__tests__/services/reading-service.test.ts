@@ -8,7 +8,8 @@ import {
 } from "bun:test";
 import { Types } from "mongoose";
 import { setupIntegrationTests } from "../helpers/db";
-import { Sensor, type SensorStatus } from "../../models/Sensor";
+import { Sensor } from "../../models/Sensor";
+import type { SensorStatus } from "@wattguard/shared";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
 import { Building } from "../../models/Building";

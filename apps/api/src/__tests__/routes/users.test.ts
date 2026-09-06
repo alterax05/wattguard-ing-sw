@@ -9,18 +9,14 @@ import {
 } from "bun:test";
 
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
-import { ErrorSchema } from "@wattguard/shared";
 import type {
-  DeleteUserResponse,
   ListUsersResponse,
-  UpdateUserResponse,
-} from "@wattguard/shared";
+  UserResponse, ErrorResponse} from "@wattguard/shared";
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 
@@ -123,6 +119,71 @@ describe("users api", () => {
     });
   });
 
+  describe("GET /api/v1/users/:id", () => {
+    test("returns user details for admin with self link", async () => {
+      const token = await getAdminToken();
+      await getOperatorToken();
+      const operator = await User.findOne({ email: "operator@test.com" });
+
+      const res = await client.api.v1.users[":id"].$get(
+        {
+          param: { id: operator!._id.toString() },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
+      expect(data.success).toBe(true);
+      if (!data.success) {
+        return expect.unreachable("Expected success");
+      }
+      expect(data.data.email).toBe("operator@test.com");
+      expect(data.data.role).toBe("operator");
+      expect(data.data.self).toBe(`/api/v1/users/${operator!._id.toString()}`);
+    });
+
+    test("returns 404 for non-existent user", async () => {
+      const token = await getAdminToken();
+      const res = await client.api.v1.users[":id"].$get(
+        {
+          param: { id: "507f1f77bcf86cd799439011" },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      expect(res.status).toBe(404);
+    });
+
+    test("rejects non-admin users", async () => {
+      await getAdminToken();
+      const operatorToken = await getOperatorToken();
+      const admin = await User.findOne({ email: "admin@test.com" });
+
+      const res = await client.api.v1.users[":id"].$get(
+        {
+          param: { id: admin!._id.toString() },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${operatorToken}`,
+          },
+        },
+      );
+
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe("PATCH /api/v1/users/:id", () => {
     test("updates user role", async () => {
       const token = await getAdminToken();
@@ -143,7 +204,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -175,7 +236,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -208,7 +269,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -238,7 +299,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -283,7 +344,7 @@ describe("users api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(422);
     });
 
     test("returns 404 for non-existent user", async () => {
@@ -401,13 +462,7 @@ describe("users api", () => {
         }
       );
 
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<DeleteUserResponse | ErrorResponse>();
-      if (!("success" in data)) {
-        return expect.unreachable("Expected response to contain 'success'");
-      }
-      expect(data.success).toBe(true);
+      expect(res.status).toBe(204);
 
       const found = await User.findById(operator!._id);
       expect(found).toBeNull();
@@ -428,7 +483,7 @@ describe("users api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(422);
     });
 
     test("returns 404 for non-existent user", async () => {

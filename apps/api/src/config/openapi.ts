@@ -13,13 +13,10 @@ export const openapiConfig = {
     title: 'WattGuard API',
     version: '1.0.0',
     description: 'Energy monitoring and management API for WattGuard',
-    contact: {
-      name: 'WattGuard Team',
-    },
   },
   servers: [
     {
-      url: PUBLIC_APP_URL,
+      url: `${PUBLIC_APP_URL}/api/v1`,
       description: 'WattGuard application',
     },
   ],

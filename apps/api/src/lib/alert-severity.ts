@@ -1,4 +1,4 @@
-import type { AlertSeverity } from "../models/Alert";
+import type { AlertSeverity } from "@wattguard/shared";
 
 const LOW_MAX_DEVIATION_PCT = 10;
 const MEDIUM_MAX_DEVIATION_PCT = 25;

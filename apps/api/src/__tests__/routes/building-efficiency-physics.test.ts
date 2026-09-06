@@ -7,14 +7,12 @@ import {
 } from "bun:test";
 
 import { testClient } from "hono/testing";
-import { z } from "zod";
 import mongoose from "mongoose";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
-import { ErrorSchema } from "@wattguard/shared";
-import type { GetBuildingEfficiencyResponse } from "@wattguard/shared";
+import type { GetBuildingEfficiencyResponse, ErrorResponse} from "@wattguard/shared";
 
-type ErrorResponse = z.infer<typeof ErrorSchema>;
+
 
 const client = testClient(app);
 import { User } from "../../models/User";

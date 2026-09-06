@@ -3,7 +3,8 @@ import { format } from "date-fns"
 import { useTranslation } from "react-i18next"
 import type { DateRange } from "react-day-picker"
 import { useNavigate } from "react-router-dom"
-import { useBuildings, useBuildingTypes } from "@/hooks/use-buildings"
+import { useBuildings } from "@/hooks/use-buildings"
+import { useBuildingTypes } from "@/hooks/use-building-types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -33,8 +34,8 @@ import { MAX_COMPARE_BUILDINGS } from "@/lib/constants"
 import { downloadFromEndpoint } from "@/lib/download"
 import {
   getBuildingStatusLabel,
-  type BuildingStatus,
 } from "@/lib/building-status"
+import type { BuildingStatus } from "@wattguard/shared"
 import { BuildingCard } from "./building-search/BuildingCard"
 import {
   DropdownMenu,

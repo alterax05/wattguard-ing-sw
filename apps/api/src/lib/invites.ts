@@ -6,16 +6,23 @@ import {
   type ErrorCode,
   type ValidateInviteData,
 } from "@wattguard/shared";
-import type { Document } from "mongoose";
 import { Invite, type HydratedInvite } from "../models/Invite";
 import { hashTokenSha256 } from "../utils/crypto";
 
-export const toInviteDto = (invite: Document | HydratedInvite): InviteDto => {
-  return InviteSchema.parse(invite.toObject());
+export const toInviteDto = (invite: HydratedInvite): InviteDto => {
+  const obj = invite.toObject();
+  return InviteSchema.parse({
+    ...obj,
+    self: `/api/v1/invites/${String(obj._id)}`,
+  });
 };
 
-export const toCreateInviteDto = (invite: Document | HydratedInvite): CreateInviteDto => {
-  return CreateInviteSchema.parse(invite.toObject());
+export const toCreateInviteDto = (invite: HydratedInvite): CreateInviteDto => {
+  const obj = invite.toObject();
+  return CreateInviteSchema.parse({
+    ...obj,
+    self: `/api/v1/invites/${String(obj._id)}`,
+  });
 };
 
 export type ValidateInviteResult =
@@ -25,7 +32,7 @@ export type ValidateInviteResult =
     }
   | {
       ok: false;
-      status: 400 | 404;
+      status: 422 | 404;
       error: string;
       code: ErrorCode;
     };
@@ -53,7 +60,7 @@ export async function validateInviteToken(
       ok: false,
       error: `Invite is ${invite.status}`,
       code: "invite_invalid_status",
-      status: 400,
+      status: 422,
     };
   }
 
@@ -62,14 +69,16 @@ export async function validateInviteToken(
       ok: false,
       error: "Invite has expired",
       code: "invite_expired",
-      status: 400,
+      status: 422,
     };
   }
 
   return {
     ok: true,
     data: {
-      valid: true,
+      valid: true as const,
+      _id: invite._id.toString(),
+      self: `/api/v1/invites/${invite._id.toString()}`,
       email: invite.email,
       role: invite.role,
       expiresAt: invite.expiresAt.toISOString(),

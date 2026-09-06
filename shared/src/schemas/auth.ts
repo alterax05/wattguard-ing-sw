@@ -13,7 +13,7 @@ import { SUPPORTED_LOCALES } from "../i18n";
 export const LocalSessionRequestSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
-});
+}).meta({ id: "LocalSessionRequest" });
 
 export type LocalSessionRequest = z.infer<typeof LocalSessionRequestSchema>;
 
@@ -22,7 +22,7 @@ export type LocalSessionRequest = z.infer<typeof LocalSessionRequestSchema>;
  */
 export const GoogleSessionRequestSchema = z.object({
   idToken: z.string().min(1, "Google ID token is required"),
-});
+}).meta({ id: "GoogleSessionRequest" });
 
 export type GoogleSessionRequest = z.infer<typeof GoogleSessionRequestSchema>;
 
@@ -32,7 +32,7 @@ export type GoogleSessionRequest = z.infer<typeof GoogleSessionRequestSchema>;
 export const SessionRequestSchema = z.union([
   LocalSessionRequestSchema,
   GoogleSessionRequestSchema,
-]);
+]).meta({ id: "SessionRequest" });
 
 export type SessionRequest = z.infer<typeof SessionRequestSchema>;
 
@@ -42,7 +42,7 @@ export type SessionRequest = z.infer<typeof SessionRequestSchema>;
 export const SessionResponseSchema = z.object({
   success: z.literal(true),
   data: PublicUserSchema,
-});
+}).meta({ id: "SessionResponse" });
 
 export type SessionResponse = z.infer<typeof SessionResponseSchema>;
 
@@ -52,7 +52,7 @@ export type SessionResponse = z.infer<typeof SessionResponseSchema>;
 export const SessionUserResponseSchema = z.object({
   success: z.literal(true),
   data: UserSchema,
-});
+}).meta({ id: "SessionUserResponse" });
 
 export type SessionUserResponse = z.infer<typeof SessionUserResponseSchema>;
 
@@ -62,21 +62,9 @@ export type SessionUserResponse = z.infer<typeof SessionUserResponseSchema>;
 export const UpdateSessionRequestSchema = z.object({
   language: z.enum(SUPPORTED_LOCALES).optional().describe("User preferred language for email alerts and UI"),
   name: z.string().min(2).max(64).optional().describe("User display name"),
-});
+}).meta({ id: "UpdateSessionRequest" });
 
 export type UpdateSessionRequest = z.infer<typeof UpdateSessionRequestSchema>;
-
-/**
- * DELETE /api/v1/auth/session - Destroy session response
- */
-export const DestroySessionResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    message: z.string().optional().describe("Success message"),
-  }),
-});
-
-export type DestroySessionResponse = z.infer<typeof DestroySessionResponseSchema>;
 
 /**
  * GET /api/v1/auth/google/config - Public Google Client ID response
@@ -86,6 +74,6 @@ export const GoogleConfigResponseSchema = z.object({
   data: z.object({
     clientId: z.string().describe("Configured Google OAuth Client ID"),
   }),
-});
+}).meta({ id: "GoogleConfigResponse" });
 
 export type GoogleConfigResponse = z.infer<typeof GoogleConfigResponseSchema>;

@@ -7,7 +7,7 @@ import { getIntlLocale } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { getSensorIcon, getSensorUnit, getLastUpdate } from "./helpers"
 import { PopulatedBuildingSchema } from "@wattguard/shared"
-import type { Sensor } from "@/hooks/use-sensors"
+import type { Sensor } from "@wattguard/shared"
 import type { KeyboardEvent } from "react"
 
 export function SensorTableRow({

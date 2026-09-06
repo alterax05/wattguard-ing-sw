@@ -1,13 +1,14 @@
 import { createContext, use } from "react";
-import { useCurrentUser, type AuthUser } from "@/hooks/use-auth";
+import { useCurrentUser } from "@/hooks/use-auth";
+import type { User } from "@wattguard/shared";
 
 interface AuthContextValue {
-  user: AuthUser | null;
+  user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
 
-export const AuthContext = createContext<AuthContextValue>({user: null, isLoading: false, isAuthenticated: false});
+const AuthContext = createContext<AuthContextValue>({user: null, isLoading: false, isAuthenticated: false});
 
 export function useAuth(): AuthContextValue {
   return use(AuthContext);
