@@ -23,7 +23,6 @@ import type {
   AcceptInviteResponse,
   SessionResponse,
   SessionUserResponse,
-  DestroySessionResponse,
   CreateRecoveryTokenResponse,
   ValidateRecoveryTokenResponse,
   ConfirmRecoveryResponse,
@@ -410,10 +409,7 @@ describe("auth api", () => {
     test("destroys session and clears cookie via DELETE /auth/session", async () => {
       const res = await client.api.v1.auth.session.$delete();
 
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<DestroySessionResponse | ErrorResponse>();
-      expect(data.success).toBe(true);
+      expect(res.status).toBe(204);
 
       const setCookieHeader = res.headers.get("set-cookie");
       expect(setCookieHeader).toBeDefined();
@@ -672,7 +668,7 @@ describe("auth api", () => {
         },
       });
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(422);
       const data = await res.json();
       expect(data.success).toBe(false);
       if (data.success) {

@@ -87,28 +87,22 @@ export type CreateSensorRequest = z.infer<typeof CreateSensorRequestSchema>;
 
 /**
  * POST /api/v1/sensors - Create sensor response
+ * GET /api/v1/sensors/:id - Get sensor response
+ * PATCH /api/v1/sensors/:id - Update sensor response
  */
-export const CreateSensorResponseSchema = z.object({
+export const SensorResponseSchema = z.object({
   success: z.literal(true),
   data: SensorSchema,
-}).meta({ id: "CreateSensorResponse" });
+}).meta({ id: "SensorResponse" });
 
-export type CreateSensorResponse = z.infer<typeof CreateSensorResponseSchema>;
+export type SensorResponse = z.infer<typeof SensorResponseSchema>;
 
 /**
  * GET /api/v1/sensors/:id - Get sensor path parameter
  */
 export const GetSensorParamsSchema = ObjectIdParamSchema;
 
-/**
- * GET /api/v1/sensors/:id - Get sensor response
- */
-export const GetSensorResponseSchema = z.object({
-  success: z.literal(true),
-  data: SensorSchema,
-}).meta({ id: "GetSensorResponse" });
 
-export type GetSensorResponse = z.infer<typeof GetSensorResponseSchema>;
 
 /**
  * PATCH /api/v1/sensors/:id - Update sensor path parameter
@@ -130,32 +124,9 @@ export const UpdateSensorRequestSchema = CreateSensorInputSchema.omit({
 export type UpdateSensorRequest = z.infer<typeof UpdateSensorRequestSchema>;
 
 /**
- * PATCH /api/v1/sensors/:id - Update sensor response
- */
-export const UpdateSensorResponseSchema = z.object({
-  success: z.literal(true),
-  data: SensorSchema,
-}).meta({ id: "UpdateSensorResponse" });
-
-export type UpdateSensorResponse = z.infer<typeof UpdateSensorResponseSchema>;
-
-/**
  * DELETE /api/v1/sensors/:id - Delete sensor path parameter
  */
 export const DeleteSensorParamsSchema = ObjectIdParamSchema;
-
-/**
- * DELETE /api/v1/sensors/:id - Delete sensor response
- */
-export const DeleteSensorResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    id: z.string().describe("Deleted sensor identifier"),
-    message: z.string().optional().describe("Deletion message"),
-  }),
-}).meta({ id: "DeleteSensorResponse" });
-
-export type DeleteSensorResponse = z.infer<typeof DeleteSensorResponseSchema>;
 
 /**
  * SensorReading schema (for historical data)

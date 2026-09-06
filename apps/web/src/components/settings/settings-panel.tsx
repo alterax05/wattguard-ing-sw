@@ -121,7 +121,7 @@ export function SettingsPanel() {
       const date = new Date().toISOString().slice(0, 10)
       const res = await fetch(
         "/api/v1/backups",
-        { method: "POST", credentials: "include" },
+        { method: "GET", credentials: "include" },
       )
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res, "settings.backupError"))

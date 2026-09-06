@@ -82,7 +82,7 @@ describe("email validation", () => {
         json: { email, password: "password123" },
       });
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
       const data = await res.json();
       if (!("error" in data)) {
         return expect.unreachable("Expected response to contain 'error'");
@@ -291,7 +291,7 @@ describe("request body validation", () => {
         json: body as never,
       });
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
     }
   });
 
@@ -307,6 +307,7 @@ describe("request body validation", () => {
       },
     );
 
+    // Empty raw body is rejected by the framework's JSON parser (400) before schema validation runs.
     expect(res.status).toBe(400);
   });
 
@@ -354,7 +355,7 @@ describe("request body validation", () => {
         json: body,
       });
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
     }
   });
 
@@ -404,11 +405,11 @@ describe("query parameter validation", () => {
     expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
   });
 
-  test("rejects invalid invite token with 404 or 400", async () => {
+  test("rejects invalid invite token with 404 or 422", async () => {
     const res = await client.api.v1.invites.$get({
       query: { token: "nonexistent-token" },
     });
-    expect([400, 404]).toContain(res.status);
+    expect([404, 422]).toContain(res.status);
   });
 
   test("returns the lowercased invite email for a valid token", async () => {
@@ -495,7 +496,7 @@ describe("role validation", () => {
         },
       );
 
-      await expectValidationError(res);
+      expectValidationError({ data: await res.json(), status: res.status });
     }
   });
 
@@ -514,7 +515,7 @@ describe("role validation", () => {
       },
     );
 
-    await expectValidationError(res);
+    expectValidationError({ data: await res.json(), status: res.status });
   });
 });
 

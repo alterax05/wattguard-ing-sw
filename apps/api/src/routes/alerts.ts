@@ -7,20 +7,18 @@ import {
   ListAlertsResponseSchema,
   AlertIdParamSchema,
   GetAlertParamsSchema,
-  GetAlertResponseSchema,
+  AlertResponseSchema,
   UpdateAlertStatusRequestSchema,
-  UpdateAlertStatusResponseSchema,
 } from "@wattguard/shared";
 
 import type {
   ListAlertsResponse,
-  GetAlertResponse,
-  UpdateAlertStatusResponse,
+  AlertResponse,
   ErrorResponse,
 } from "@wattguard/shared";
 import { ErrorSchema, type ErrorCode } from "@wattguard/shared";
 import type { AuthVariables } from "../middleware/auth";
-import { apiError, apiSuccess } from "../lib/api-response";
+import { apiError, apiSuccess} from "../lib/api-response";
 import {
   acknowledge,
   resolveManually,
@@ -31,7 +29,7 @@ import { getRequestLocale } from "../lib/i18n";
 function getAlertError(code: ErrorCode) {
   switch (code) {
     case "invalid_alert_id":
-      return { error: "Invalid alert ID format", status: 400 as const };
+      return { error: "Invalid alert ID format", status: 422 as const };
     case "alert_not_found":
       return { error: "Alert not found", status: 404 as const };
     case "alert_not_active":
@@ -48,8 +46,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Elenca alert",
-      description: "Restituisce gli alert paginati con filtri opzionali",
+      summary: "List alerts",
+      description: "Returns paginated alerts with optional filters",
       responses: {
         200: {
           description: "List of alerts retrieved successfully",
@@ -60,6 +58,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
+          description: "Validation error",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        422: {
           description: "Invalid query parameters",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
@@ -83,7 +85,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         if (!Types.ObjectId.isValid(buildingId)) {
           return c.json(
             apiError("invalid_building_id", "Invalid building ID format") satisfies ErrorResponse,
-            400,
+            422,
           );
         }
         filter.buildingId = buildingId;
@@ -119,19 +121,23 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/:id",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Leggi alert",
-      description: "Restituisce il dettaglio di un singolo alert per ID",
+      summary: "Get alert",
+      description: "Returns single alert detail by ID",
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
         200: {
           description: "Alert retrieved successfully",
           content: {
             "application/json": {
-              schema: resolver(GetAlertResponseSchema),
+              schema: resolver(AlertResponseSchema),
             },
           },
         },
         400: {
+          description: "Validation error",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        422: {
           description: "Invalid alert ID format",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
@@ -152,33 +158,38 @@ const app = new Hono<{ Variables: AuthVariables }>()
     validator("param", GetAlertParamsSchema),
     async (c) => {
       const { id } = c.req.valid("param");
+      
       if (!Types.ObjectId.isValid(id)) {
-        return c.json(apiError("invalid_alert_id", "Invalid alert ID format") satisfies ErrorResponse, 400);
+        return c.json(apiError("invalid_alert_id", "Invalid alert ID format") satisfies ErrorResponse, 422);
       }
       const alert = await AlertModel.findById(id);
       if (!alert) {
         return c.json(apiError("alert_not_found", "Alert not found") satisfies ErrorResponse, 404);
       }
-      return c.json(apiSuccess(toAlertDTO(alert, { locale: getRequestLocale(c) })) satisfies GetAlertResponse);
+      return c.json(apiSuccess(toAlertDTO(alert, { locale: getRequestLocale(c) })) satisfies AlertResponse);
     },
   )
   .patch(
     "/:id",
     describeRoute({
       tags: ["Alerts"],
-      summary: "Aggiorna stato alert",
-      description: "Aggiorna lo stato di un alert (acknowledge o resolve)",
+      summary: "Update alert status",
+      description: "Updates an alert status (acknowledge or resolve)",
       responses: {
         200: {
           description: "Alert status updated successfully",
           content: {
             "application/json": {
-              schema: resolver(UpdateAlertStatusResponseSchema),
+              schema: resolver(AlertResponseSchema),
             },
           },
         },
         400: {
-          description: "Invalid ID format or validation error",
+          description: "Validation error",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        422: {
+          description: "Invalid alert ID format",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
         404: {
@@ -211,7 +222,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
 
       return c.json(apiSuccess(toAlertDTO(result.alert, {
         locale: getRequestLocale(c),
-      })) satisfies UpdateAlertStatusResponse);
+      })) satisfies AlertResponse);
     },
   );
 

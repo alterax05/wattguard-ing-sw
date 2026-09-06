@@ -13,10 +13,8 @@ import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import type {
-  DeleteUserResponse,
   ListUsersResponse,
-  GetUserResponse,
-  UpdateUserResponse, ErrorResponse} from "@wattguard/shared";
+  UserResponse, ErrorResponse} from "@wattguard/shared";
 
 
 
@@ -140,7 +138,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<GetUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected success");
@@ -206,7 +204,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -238,7 +236,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -271,7 +269,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -301,7 +299,7 @@ describe("users api", () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      expectTypeOf(data).toExtend<UpdateUserResponse | ErrorResponse>();
+      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -346,7 +344,7 @@ describe("users api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(422);
     });
 
     test("returns 404 for non-existent user", async () => {
@@ -464,13 +462,7 @@ describe("users api", () => {
         }
       );
 
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<DeleteUserResponse | ErrorResponse>();
-      if (!("success" in data)) {
-        return expect.unreachable("Expected response to contain 'success'");
-      }
-      expect(data.success).toBe(true);
+      expect(res.status).toBe(204);
 
       const found = await User.findById(operator!._id);
       expect(found).toBeNull();
@@ -491,7 +483,7 @@ describe("users api", () => {
         }
       );
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(422);
     });
 
     test("returns 404 for non-existent user", async () => {

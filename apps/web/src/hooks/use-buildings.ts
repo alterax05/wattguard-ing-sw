@@ -293,7 +293,7 @@ export function useDeleteBuilding() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string): Promise<void> => {
       const res = await client.api.v1.buildings[":id"].$delete({
         param: { id },
       });
@@ -301,9 +301,6 @@ export function useDeleteBuilding() {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-
-      const resData = await res.json();
-      return resData.data;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BUILDINGS_QUERY_KEY });

@@ -8,7 +8,7 @@ import {
 import { testClient } from "hono/testing";
 import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
-import type { ListAlertsResponse, UpdateAlertStatusResponse, GetAlertResponse, ErrorResponse} from "@wattguard/shared";
+import type { ListAlertsResponse, AlertResponse, ErrorResponse} from "@wattguard/shared";
 
 
 
@@ -146,7 +146,7 @@ describe("alerts api", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
+    expectTypeOf(body).toExtend<AlertResponse | ErrorResponse>();
     expect(body.success).toBe(true);
     if (!body.success) {
       return expect.unreachable("Expected response success to be true");
@@ -195,7 +195,7 @@ describe("alerts api", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expectTypeOf(body).toExtend<UpdateAlertStatusResponse | ErrorResponse>();
+    expectTypeOf(body).toExtend<AlertResponse | ErrorResponse>();
     expect(body.success).toBe(true);
     if (!body.success) {
       return expect.unreachable("Expected response success to be true");
@@ -219,7 +219,7 @@ describe("alerts api", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expectTypeOf(body).toExtend<GetAlertResponse | ErrorResponse>();
+    expectTypeOf(body).toExtend<AlertResponse | ErrorResponse>();
     expect(body.success).toBe(true);
     if (!body.success) {
       return expect.unreachable("Expected response success to be true");

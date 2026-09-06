@@ -21,10 +21,7 @@ import { setupIntegrationTests } from "../helpers/db";
 import { expectValidationError } from "../helpers/validation";
 import type {
   ListBuildingTypesResponse,
-  GetBuildingTypeResponse,
-  CreateBuildingTypeResponse,
-  UpdateBuildingTypeResponse,
-  DeleteBuildingTypeResponse, ErrorResponse} from "@wattguard/shared";
+  BuildingTypeResponse, ErrorResponse} from "@wattguard/shared";
 
 
 
@@ -204,7 +201,7 @@ describe("building-types api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<GetBuildingTypeResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingTypeResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected success");
@@ -230,7 +227,7 @@ describe("building-types api", () => {
         { headers: { Authorization: `Bearer ${adminToken}` } }
       );
 
-      expect(res.status).toBe(400);
+      expect(Number(res.status)).toBe(400);
     });
 
     test("returns 401 when unauthenticated", async () => {
@@ -266,7 +263,7 @@ describe("building-types api", () => {
 
       expect(res.status).toBe(201);
       const json = await res.json();
-      expectTypeOf(json).toExtend<CreateBuildingTypeResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingTypeResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -325,7 +322,7 @@ describe("building-types api", () => {
         }
       );
 
-      await expectValidationError(res, "name");
+      expectValidationError({ data: await res.json(), status: res.status, fieldName: "name" });
     });
 
     test("rejects request from operator (403)", async () => {
@@ -377,7 +374,7 @@ describe("building-types api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<UpdateBuildingTypeResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<BuildingTypeResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -550,14 +547,7 @@ describe("building-types api", () => {
         }
       );
 
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<DeleteBuildingTypeResponse | ErrorResponse>();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.message).toContain("deleted successfully");
+      expect(res.status).toBe(204);
 
       // Verify deletion in database
       const deleted = await BuildingType.findById(buildingType._id);
@@ -595,7 +585,8 @@ describe("building-types api", () => {
       );
 
       expect(res.status).toBe(409);
-      const json = await res.json();
+      // SAFETY: 409 responses always carry the JSON error envelope.
+      const json = (await res.json()) as ErrorResponse;
       expect(json.success).toBe(false);
       if (json.success) {
         return expect.unreachable("Expected response success to be false");
@@ -642,7 +633,7 @@ describe("building-types api", () => {
         }
       );
 
-      expect(res.status).toBe(403);
+      expect(Number(res.status)).toBe(403);
     });
   });
 });

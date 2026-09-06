@@ -22,8 +22,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/",
     describeRoute({
-      summary: "Leggi metriche di sistema",
-      description: "Restituisce i KPI aggregati: sensori, alert attivi e consumi",
+      summary: "Get system metrics",
+      description: "Returns aggregated KPIs: sensors, active alerts and consumption",
       tags: ["Metrics"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -108,8 +108,8 @@ const app = new Hono<{ Variables: AuthVariables }>()
   .get(
     "/timeseries",
     describeRoute({
-      summary: "Leggi serie temporale metriche",
-      description: "Restituisce energia e gas aggregati per intervallo (ora/giorno/settimana)",
+      summary: "Get metrics timeseries",
+      description: "Returns aggregated electricity and gas per interval (hour/day/week)",
       tags: ["Metrics"],
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       responses: {
@@ -122,6 +122,10 @@ const app = new Hono<{ Variables: AuthVariables }>()
           },
         },
         400: {
+          description: "Validation error",
+          content: { "application/json": { schema: resolver(ErrorSchema) } },
+        },
+        422: {
           description: "Invalid query parameters",
           content: { "application/json": { schema: resolver(ErrorSchema) } },
         },
@@ -139,7 +143,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       const end = new Date(endDate);
 
       if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-        return c.json(apiError("invalid_date_range", "Invalid date range: startDate must be before endDate") satisfies ErrorResponse, 400);
+        return c.json(apiError("invalid_date_range", "Invalid date range: startDate must be before endDate") satisfies ErrorResponse, 422);
       }
 
       // Determine the millisecond bucket size for grouping

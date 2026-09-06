@@ -98,12 +98,16 @@ export const UpdateAlertStatusRequestSchema = z.object({
 
 export type UpdateAlertStatusRequest = z.infer<typeof UpdateAlertStatusRequestSchema>;
 
-export const UpdateAlertStatusResponseSchema = z.object({
+/**
+ * PATCH /api/alerts/:id - Update alert status response
+ * GET /api/v1/alerts/:id - Get alert by ID response
+ */
+export const AlertResponseSchema = z.object({
   success: z.literal(true),
   data: AlertSchema,
-}).meta({ id: "UpdateAlertStatusResponse" });
+}).meta({ id: "AlertResponse" });
 
-export type UpdateAlertStatusResponse = z.infer<typeof UpdateAlertStatusResponseSchema>;
+export type AlertResponse = z.infer<typeof AlertResponseSchema>;
 
 /**
  * GET /api/v1/alerts/:id - Get alert by ID
@@ -111,10 +115,6 @@ export type UpdateAlertStatusResponse = z.infer<typeof UpdateAlertStatusResponse
 export const GetAlertParamsSchema = AlertIdParamSchema;
 export type GetAlertParams = z.infer<typeof GetAlertParamsSchema>;
 
-export const GetAlertResponseSchema = z.object({
-  success: z.literal(true),
-  data: AlertSchema,
-}).meta({ id: "GetAlertResponse" });
-export type GetAlertResponse = z.infer<typeof GetAlertResponseSchema>;
+
 
 

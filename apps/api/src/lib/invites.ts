@@ -32,7 +32,7 @@ export type ValidateInviteResult =
     }
   | {
       ok: false;
-      status: 400 | 404;
+      status: 422 | 404;
       error: string;
       code: ErrorCode;
     };
@@ -60,7 +60,7 @@ export async function validateInviteToken(
       ok: false,
       error: `Invite is ${invite.status}`,
       code: "invite_invalid_status",
-      status: 400,
+      status: 422,
     };
   }
 
@@ -69,7 +69,7 @@ export async function validateInviteToken(
       ok: false,
       error: "Invite has expired",
       code: "invite_expired",
-      status: 400,
+      status: 422,
     };
   }
 

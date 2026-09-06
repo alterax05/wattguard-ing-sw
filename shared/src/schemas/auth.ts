@@ -67,18 +67,6 @@ export const UpdateSessionRequestSchema = z.object({
 export type UpdateSessionRequest = z.infer<typeof UpdateSessionRequestSchema>;
 
 /**
- * DELETE /api/v1/auth/session - Destroy session response
- */
-export const DestroySessionResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    message: z.string().optional().describe("Success message"),
-  }),
-}).meta({ id: "DestroySessionResponse" });
-
-export type DestroySessionResponse = z.infer<typeof DestroySessionResponseSchema>;
-
-/**
  * GET /api/v1/auth/google/config - Public Google Client ID response
  */
 export const GoogleConfigResponseSchema = z.object({

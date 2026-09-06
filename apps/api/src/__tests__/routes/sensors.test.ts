@@ -24,10 +24,7 @@ import { setupIntegrationTests } from "../helpers/db";
 import { expectValidationError } from "../helpers/validation";
 import { PopulatedBuildingSchema } from "@wattguard/shared";
 import type {
-  CreateSensorResponse,
-  GetSensorResponse,
-  UpdateSensorResponse,
-  DeleteSensorResponse,
+  SensorResponse,
   ListSensorsResponse,
   GetSensorReadingsResponse, ErrorResponse} from "@wattguard/shared";
 
@@ -150,7 +147,7 @@ describe("sensors api", () => {
       expect(res.status).toBe(201);
       const json = await res.json();
 
-      expectTypeOf(json).toExtend<CreateSensorResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<SensorResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -261,7 +258,7 @@ describe("sensors api", () => {
         }
       );
 
-      await expectValidationError(res);
+      expectValidationError({ data: await res.json(), status: res.status });
     });
   });
 
@@ -299,7 +296,7 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<GetSensorResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<SensorResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Property 'success' is not true");
@@ -367,7 +364,7 @@ describe("sensors api", () => {
 
       expect(res.status).toBe(200);
       const json = await res.json();
-      expectTypeOf(json).toExtend<UpdateSensorResponse | ErrorResponse>();
+      expectTypeOf(json).toExtend<SensorResponse | ErrorResponse>();
       expect(json.success).toBe(true);
       if (!json.success) {
         return expect.unreachable("Expected response success to be true");
@@ -539,13 +536,7 @@ describe("sensors api", () => {
         }
       );
 
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<DeleteSensorResponse | ErrorResponse>();
-      if (!("success" in json)) {
-        return expect.unreachable("Expected response to contain 'success'");
-      }
-      expect(json.success).toBe(true);
+      expect(res.status).toBe(204);
 
       // Verify deletion
       const deletedSensor = await Sensor.findById(sensor._id);

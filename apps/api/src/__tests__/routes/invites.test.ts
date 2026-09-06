@@ -19,7 +19,6 @@ import { randomToken, hashTokenSha256 } from "../../utils/crypto";
 import type {
   CreateInviteResponse,
   ListInvitesResponse,
-  DeleteInviteResponse,
   ValidateInviteResponse,
   GetInviteByIdResponse, ErrorResponse} from "@wattguard/shared";
 
@@ -231,7 +230,7 @@ describe("invites api", () => {
         }
       );
 
-      await expectValidationError(res, "email");
+      expectValidationError({ data: await res.json(), status: res.status, fieldName: "email" });
     });
 
     test("rejects invalid role", async () => {
@@ -252,7 +251,7 @@ describe("invites api", () => {
         }
       );
 
-      await expectValidationError(res);
+      expectValidationError({ data: await res.json(), status: res.status });
     });
 
     test("rejects missing email field", async () => {
@@ -272,7 +271,7 @@ describe("invites api", () => {
         }
       );
 
-      await expectValidationError(res);
+      expectValidationError({ data: await res.json(), status: res.status });
     });
 
     test("rejects missing role field", async () => {
@@ -292,7 +291,7 @@ describe("invites api", () => {
         }
       );
 
-      await expectValidationError(res);
+      expectValidationError({ data: await res.json(), status: res.status });
     });
 
     test("rejects operator from creating invites", async () => {
@@ -499,7 +498,8 @@ describe("invites api", () => {
       );
 
       expect(res.status).toBe(409);
-      const data = await res.json();
+      // SAFETY: 409 responses always carry the JSON error envelope.
+      const data = (await res.json()) as ErrorResponse;
       expect(data.success).toBe(false);
       if (data.success) {
         return expect.unreachable("Expected error");
@@ -528,14 +528,7 @@ describe("invites api", () => {
         }
       );
 
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<DeleteInviteResponse | ErrorResponse>();
-      expect(data.success).toBe(true);
-      if (!data.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(data.data.status).toBe("revoked");
+      expect(res.status).toBe(204);
 
       // Verify in database
       const revokedInvite = await Invite.findById(invite._id);
@@ -569,8 +562,8 @@ describe("invites api", () => {
         }
       );
 
-      // May return 400 (validation) or 500 (mongoose cast error)
-      expect([400, 500]).toContain(res.status);
+      // Invalid ObjectIds are rejected by param validation (400)
+      expect(Number(res.status)).toBe(400);
     });
 
     test("rejects operator from revoking invites", async () => {
@@ -609,7 +602,7 @@ describe("invites api", () => {
         }
       );
 
-      expect(res.status).toBe(403);
+      expect(Number(res.status)).toBe(403);
     });
 
     test("rejects unauthenticated requests", async () => {
@@ -617,7 +610,7 @@ describe("invites api", () => {
         param: { id: "507f1f77bcf86cd799439011" },
       });
 
-      expect(res.status).toBe(401);
+      expect(Number(res.status)).toBe(401);
     });
   });
 

@@ -12,7 +12,7 @@
  * -----------------
  *  1.  Authentication — 401 without token
  *  2.  Not Found — 404 for unknown building ID
- *  3.  Bad request — 400 for missing / malformed query params
+  *  3.  Bad request — 400 for missing / malformed query params
  *  4.  No sensor data at all — 200 with zeroed / null metrics, no crash
  *  5.  Electric building — full sensor suite → COP + H computed
  *  6.  Electric building without external_temp sensor →

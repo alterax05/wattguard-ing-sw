@@ -97,21 +97,9 @@ export type CreateInviteResponse = z.infer<typeof CreateInviteResponseSchema>;
 /**
  * DELETE /api/v1/invites/:id - Delete / revoke invite path parameter
  */
-export const DeleteInviteParamsSchema = z.object({
-  id: z.string().min(1, "Invite ID is required").describe("Invite identifier"),
-});
+export const DeleteInviteParamsSchema = ObjectIdParamSchema;
 
 export type DeleteInviteParams = z.infer<typeof DeleteInviteParamsSchema>;
-
-/**
- * DELETE /api/v1/invites/:id - Revoke invite response
- */
-export const DeleteInviteResponseSchema = z.object({
-  success: z.literal(true),
-  data: InviteSchema,
-}).meta({ id: "DeleteInviteResponse" });
-
-export type DeleteInviteResponse = z.infer<typeof DeleteInviteResponseSchema>;
 
 /**
  * Public invite lookup by token now uses GET /api/v1/invites?token=xxx.

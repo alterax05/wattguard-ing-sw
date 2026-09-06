@@ -37,7 +37,7 @@ export function useRevokeInvite() {
   const { t } = useTranslation();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string): Promise<void> => {
       const res = await client.api.v1.invites[":id"].$delete({
         param: { id },
       });
@@ -45,12 +45,9 @@ export function useRevokeInvite() {
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res));
       }
-
-      const resData = await res.json();
-      return resData.data;
     },
-    onSuccess: (data) => {
-      toast.success(t("invites.revoked", { email: data.email }));
+    onSuccess: () => {
+      toast.success(t("invites.status.revoked"));
       void queryClient.invalidateQueries({ queryKey: INVITES_QUERY_KEY });
     },
     onError: (error) => {
