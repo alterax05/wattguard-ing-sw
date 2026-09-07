@@ -135,7 +135,7 @@ describe("email validation", () => {
     if (!data.success) {
       return expect.unreachable("Expected response success to be true");
     }
-    expect(data.data.email).toBe("user@test.com");
+    expect(data.data.user.email).toBe("user@test.com");
   });
 });
 
@@ -534,7 +534,6 @@ async function getAdminToken() {
     },
   });
 
-  const setCookieHeader = loginRes.headers.get("set-cookie");
-  const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
-  return tokenMatch![1];
+  // SAFETY: helper seeds the user then logs in with valid credentials, so the body is SessionResponse.
+  return ((await loginRes.json()) as SessionResponse).data.token;
 }

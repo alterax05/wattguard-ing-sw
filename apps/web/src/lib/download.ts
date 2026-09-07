@@ -1,10 +1,14 @@
+import { TOKEN_KEY } from "./api";
 import { errorMessageFromResponse } from "./errors";
 
 export async function downloadFromEndpoint(
   url: string,
   filename: string,
 ): Promise<void> {
-  const response = await fetch(url, { credentials: "include" });
+  const token = localStorage.getItem(TOKEN_KEY);
+  const response = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!response.ok) {
     throw new Error(
       await errorMessageFromResponse(response, "errors.download_failed"),

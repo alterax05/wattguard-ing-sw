@@ -28,7 +28,7 @@ import { JWT_SECRET } from "../config/variables";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@wattguard/shared";
 
 const requireAuth = [
-  jwt({ secret: JWT_SECRET, cookie: "access_token", alg: "HS256" }),
+  jwt({ secret: JWT_SECRET, alg: "HS256" }),
   loadUserDoc(),
 ] as const;
 

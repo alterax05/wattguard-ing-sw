@@ -37,11 +37,14 @@ export const SessionRequestSchema = z.union([
 export type SessionRequest = z.infer<typeof SessionRequestSchema>;
 
 /**
- * Successful session creation response
+ * Successful session creation response (stateless Bearer)
  */
 export const SessionResponseSchema = z.object({
   success: z.literal(true),
-  data: PublicUserSchema,
+  data: z.object({
+    user: PublicUserSchema,
+    token: z.string().min(1),
+  }),
 }).meta({ id: "SessionResponse" });
 
 export type SessionResponse = z.infer<typeof SessionResponseSchema>;

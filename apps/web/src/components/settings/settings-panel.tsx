@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { useSettings, useUpdateSettings } from "@/hooks/use-settings"
 import type {SystemConfig} from "@wattguard/shared"
 import { downloadFromEndpoint } from "@/lib/download"
+import { TOKEN_KEY } from "@/lib/api"
 
 // ── Form shape ────────────────────────────────────────────────────────────────
 
@@ -119,9 +120,10 @@ export function SettingsPanel() {
     const toastId = toast.loading(t("settings.backingUp"))
     try {
       const date = new Date().toISOString().slice(0, 10)
+      const token = localStorage.getItem(TOKEN_KEY)
       const res = await fetch(
         "/api/v1/backups",
-        { method: "GET", credentials: "include" },
+        { method: "GET", headers: token ? { Authorization: `Bearer ${token}` } : {} },
       )
       if (!res.ok) {
         throw new Error(await errorMessageFromResponse(res, "settings.backupError"))

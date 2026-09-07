@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { client } from "@/lib/api";
+import { client, TOKEN_KEY } from "@/lib/api";
 import { errorMessageFromResponse } from "@/lib/errors";
 import i18n from "@/lib/i18n";
 import {
@@ -36,6 +36,7 @@ export function useCurrentUser() {
       const res = await client.api.v1.auth.session.$get();
 
       if (res.status === 401) {
+        localStorage.removeItem(TOKEN_KEY);
         return null;
       }
 
@@ -135,7 +136,8 @@ export function useLogin() {
       }
 
       const resData = await res.json();
-      return resData.data;
+      localStorage.setItem(TOKEN_KEY, resData.data.token);
+      return resData.data.user;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
@@ -176,7 +178,8 @@ export function useGoogleLogin() {
       }
 
       const resData = await res.json();
-      return resData.data;
+      localStorage.setItem(TOKEN_KEY, resData.data.token);
+      return resData.data.user;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
@@ -210,20 +213,16 @@ export function useUpdateSession() {
 }
 
 /**
- * Logout via DELETE /api/v1/auth/session.
- * Clears the entire query cache so no stale authenticated data remains.
+ * Logout is client-only (stateless Bearer): drops the token and cached data.
  */
 export function useLogout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: async (): Promise<void> => {
-      const res = await client.api.v1.auth.session.$delete();
-
-      if (!res.ok) {
-        throw new Error("Logout failed");
-      }
+    mutationFn: (): Promise<void> => {
+      localStorage.removeItem(TOKEN_KEY);
+      return Promise.resolve();
     },
 
     onSuccess: () => {
@@ -254,7 +253,8 @@ export function useSetup() {
       }
 
       const resData = await res.json();
-      return resData.data;
+      localStorage.setItem(TOKEN_KEY, resData.data.token);
+      return resData.data.user;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });

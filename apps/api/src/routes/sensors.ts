@@ -39,7 +39,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "List sensors",
       description: "Returns sensors filtered by building, type and status",
       tags: ["Sensors"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Sensors retrieved successfully",
@@ -100,7 +100,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Create sensor",
       description: "Creates a new sensor for an existing building",
       tags: ["Sensors"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         201: {
           description: "Sensor created successfully",
@@ -179,7 +179,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get sensor",
       description: "Returns sensor detail with building data",
       tags: ["Sensors"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Sensor details retrieved successfully",
@@ -226,7 +226,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Update sensor",
       description: "Updates sensor configuration and thresholds",
       tags: ["Sensors"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Sensor updated successfully",
@@ -314,7 +314,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Delete sensor",
       description: "Deletes sensor with associated readings and alerts",
       tags: ["Sensors"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         204: {
           description: "Sensor deleted successfully",
@@ -364,7 +364,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get sensor readings",
       description: "Returns sensor reading history with pagination",
       tags: ["Sensors"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Readings retrieved successfully",

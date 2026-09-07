@@ -1,5 +1,4 @@
 import { Hono, type Context } from "hono";
-import { setCookie, getCookie } from "hono/cookie";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { OAuth2Client } from "google-auth-library";
 import { verify } from "hono/jwt";
@@ -13,7 +12,7 @@ import { getRequestLocale } from "../lib/i18n";
 import { validateInviteToken, toInviteDto, toCreateInviteDto } from "../lib/invites";
 import { inviteRateLimiter } from "../middleware/rate-limit";
 import { jwt } from "hono/jwt";
-import { GOOGLE_CLIENT_ID, IS_PRODUCTION, JWT_SECRET } from "../config/variables";
+import { GOOGLE_CLIENT_ID, JWT_SECRET } from "../config/variables";
 import { loadUserDoc, requireRole, type AuthVariables } from "../middleware/auth";
 import { apiError, apiSuccess } from "../lib/api-response";
 import {
@@ -39,7 +38,7 @@ import type {
 } from "@wattguard/shared";
 
 const requireAdmin = [
-  jwt({ secret: JWT_SECRET, cookie: "access_token", alg: "HS256" }),
+  jwt({ secret: JWT_SECRET, alg: "HS256" }),
   loadUserDoc(),
   requireRole("admin"),
 ] as const;
@@ -53,9 +52,7 @@ async function ensureAdminForList(
   c: Context<{ Variables: AuthVariables }>,
 ): Promise<Response | null> {
   const auth = c.req.header("Authorization") ?? "";
-  const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-  const cookieToken = getCookie(c, "access_token");
-  const token = bearer ?? cookieToken;
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
   if (!token) {
     return c.json(
       apiError("unauthorized_invalid_token", "Unauthorized - Invalid or missing JWT token") satisfies ErrorResponse,
@@ -183,7 +180,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Create invite",
       description: "Creates an invite and sends the registration email (admin only, valid for 7 days)",
       tags: ["Invites"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         201: {
           description: "Invite created and email sent successfully",
@@ -293,7 +290,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get invite by ID",
       description: "Returns full invite data via its canonical ID (admin only)",
       tags: ["Invites"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Invite details retrieved successfully",
@@ -356,7 +353,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Revoke invite",
       description: "Revokes a pending invite (admin only)",
       tags: ["Invites"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         204: {
           description: "Invite revoked successfully",
@@ -636,15 +633,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         role: user.role,
       });
 
-      setCookie(c, "access_token", jwtToken, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: "Lax",
-        maxAge: 7 * 24 * 60 * 60,
-        path: "/",
-      });
-
-      return c.json(apiSuccess(toPublicUserDto(user)) satisfies AcceptInviteResponse);
+      return c.json(apiSuccess({ user: toPublicUserDto(user), token: jwtToken }) satisfies AcceptInviteResponse);
     },
   );
 

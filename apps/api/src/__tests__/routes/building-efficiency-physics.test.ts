@@ -57,11 +57,8 @@ beforeEach(async () => {
     },
   });
 
-  const cookie = loginRes.headers.get("set-cookie");
-  const tokenMatch = cookie?.match(/access_token=([^;]+)/);
-  if (!tokenMatch) return expect.unreachable("Admin token not found");
-  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
-  adminToken = tokenMatch[1] as string;
+  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+  adminToken = ((await loginRes.json()) as { data: { token: string } }).data.token;
 
   // Create Fixtures
   const buildingType = await BuildingType.create({ name: "Residential" });

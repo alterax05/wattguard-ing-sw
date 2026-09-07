@@ -36,7 +36,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "List building types",
       description: "Returns all building types ordered by name",
       tags: ["Building Types"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Building types retrieved successfully",
@@ -76,7 +76,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get building type",
       description: "Returns building type detail by ID",
       tags: ["Building Types"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Building type retrieved successfully",
@@ -137,7 +137,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Create building type",
       description: "Creates a new building type (admin only, unique name)",
       tags: ["Building Types"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         201: {
           description: "Building type created successfully",
@@ -209,7 +209,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Update building type",
       description: "Updates a building type name or description (admin only)",
       tags: ["Building Types"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Building type updated successfully",
@@ -294,7 +294,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Delete building type",
       description: "Deletes the type if not used by buildings (admin only)",
       tags: ["Building Types"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         204: {
           description: "Building type deleted successfully",

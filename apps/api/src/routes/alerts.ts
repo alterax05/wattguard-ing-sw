@@ -125,7 +125,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       tags: ["Alerts"],
       summary: "Get alert",
       description: "Returns single alert detail by ID",
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Alert retrieved successfully",
