@@ -45,7 +45,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Search buildings",
       description: "Searches buildings with filters, pagination and sorting",
       tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Buildings retrieved successfully",
@@ -185,7 +185,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Create building",
       description: "Creates a new building after validating type and plant",
       tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         201: {
           description: "Building created successfully",
@@ -272,7 +272,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get building",
       description: "Returns detail with active sensors and consumption",
       tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Building details retrieved successfully",
@@ -353,7 +353,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Update building",
       description: "Updates data and handles efficiency/district-heating thresholds",
       tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Building updated successfully",
@@ -493,7 +493,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Delete building",
       description: "Deletes building with associated sensors, readings and alerts",
       tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         204: {
           description: "Building and associated data deleted successfully",
@@ -558,7 +558,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get reading history",
       description: "Returns history for a date range, for charts. Use limit=1&sortOrder=desc for the latest reading",
       tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Historical readings retrieved successfully",
@@ -655,7 +655,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Calculate efficiency",
       description: "Calculates the building thermal efficiency over the requested period",
       tags: ["Buildings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Efficiency metrics calculated successfully",

@@ -115,12 +115,10 @@ describe("auth api", () => {
         return expect.unreachable("Expected response to contain 'success'");
       }
       expect(loginData.success).toBe(true);
-
-      const setCookieHeader = loginRes.headers.get("set-cookie");
-      expect(setCookieHeader).toBeDefined();
-      const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
-      expect(tokenMatch).toBeDefined();
-      const token = tokenMatch![1];
+      if (!loginData.success) {
+        return expect.unreachable("Expected login to succeed");
+      }
+      const token = loginData.data.token;
 
       // Create invite
       const inviteRes = await client.api.v1.invites.$post(
@@ -226,7 +224,7 @@ describe("auth api", () => {
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
       }
-      expect(data.data.email).toBe("user@test.com");
+      expect(data.data.user.email).toBe("user@test.com");
 
       // Verify user was created
       const user = await User.findOne({ email: "user@test.com" });
@@ -272,8 +270,8 @@ describe("auth api", () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       if (!data.success) return expect.unreachable("Expected success");
-      expect(data.data.email).toBe("googleuser@test.com");
-      expect(data.data.name).toBe("Google User");
+      expect(data.data.user.email).toBe("googleuser@test.com");
+      expect(data.data.user.name).toBe("Google User");
 
       const user = await User.findOne({ email: "googleuser@test.com" });
       expect(user).toBeDefined();
@@ -309,11 +307,10 @@ describe("auth api", () => {
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
       }
-      expect(data.data.email).toBe("user@test.com");
+      expect(data.data.user.email).toBe("user@test.com");
 
-      const setCookieHeader = res.headers.get("set-cookie");
-      expect(setCookieHeader).toBeDefined();
-      expect(setCookieHeader).toContain("access_token=");
+      expect(data.data.token.length).toBeGreaterThan(0);
+      expect(res.headers.get("set-cookie")).toBeNull();
     });
 
     test("rejects login with invalid credentials", async () => {
@@ -361,15 +358,14 @@ describe("auth api", () => {
       expect(data.success).toBe(true);
       if (!data.success) return expect.unreachable("Expected success");
       expectTypeOf(data).toExtend<SessionResponse>();
-      expect(data.data.email).toBe("googleuser@test.com");
+      expect(data.data.user.email).toBe("googleuser@test.com");
 
       const user = await User.findOne({ email: "googleuser@test.com" });
       expect(user!.googleSub).toBe("google-12345");
       expect(user!.lastLoginAt).toBeDefined();
 
-      const setCookie = res.headers.get("set-cookie");
-      expect(setCookie).toBeDefined();
-      expect(setCookie).toContain("access_token=");
+      expect(data.data.token.length).toBeGreaterThan(0);
+      expect(res.headers.get("set-cookie")).toBeNull();
     });
 
     test("rejects Google login when user does not exist", async () => {
@@ -406,15 +402,6 @@ describe("auth api", () => {
       expect(data.error_code).toBe("oauth_account_disabled");
     });
 
-    test("destroys session and clears cookie via DELETE /auth/session", async () => {
-      const res = await client.api.v1.auth.session.$delete();
-
-      expect(res.status).toBe(204);
-
-      const setCookieHeader = res.headers.get("set-cookie");
-      expect(setCookieHeader).toBeDefined();
-      expect(setCookieHeader).toContain("access_token=");
-    });
   });
 
   describe("Google OAuth config", () => {
@@ -447,9 +434,8 @@ describe("auth api", () => {
         },
       });
 
-      const setCookieHeader = loginRes.headers.get("set-cookie");
-      const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
-      const token = tokenMatch![1];
+      // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+      const token = ((await loginRes.json()) as SessionResponse).data.token;
 
       const res = await client.api.v1.auth.session.$get(undefined, {
         headers: { Authorization: `Bearer ${token}` },
@@ -483,9 +469,8 @@ describe("auth api", () => {
       const loginRes = await client.api.v1.auth.session.$post({
         json: { email: "lang@test.com", password: "password123" },
       });
-      const setCookieHeader = loginRes.headers.get("set-cookie");
-      const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
-      const token = tokenMatch![1];
+      // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+      const token = ((await loginRes.json()) as SessionResponse).data.token;
       const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
 
       const meBefore = await client.api.v1.auth.session.$get(undefined, authHeaders);
@@ -534,9 +519,8 @@ describe("auth api", () => {
         },
       });
 
-      const setCookieHeader = loginRes.headers.get("set-cookie");
-      const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
-      const token = tokenMatch![1];
+      // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+      const token = ((await loginRes.json()) as SessionResponse).data.token;
 
       const res = await client.api.v1.invites.$get({
         query: {},

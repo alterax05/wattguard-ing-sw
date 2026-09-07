@@ -32,7 +32,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "List users",
       description: "Returns all registered users (admin only)",
       tags: ["Users"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "List of users retrieved successfully",
@@ -73,7 +73,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get user",
       description: "Returns a single user by ID (admin only)",
       tags: ["Users"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "User details retrieved successfully",
@@ -133,7 +133,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Update user",
       description: "Updates a user role or disabled flag (admin only, not self)",
       tags: ["Users"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "User updated successfully",
@@ -221,7 +221,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Delete user",
       description: "Deletes a user (admin only, not self)",
       tags: ["Users"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         204: {
           description: "User deleted successfully",

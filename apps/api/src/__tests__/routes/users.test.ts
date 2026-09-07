@@ -41,9 +41,8 @@ async function getAdminToken() {
     },
   });
 
-  const setCookieHeader = loginRes.headers.get("set-cookie");
-  const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
-  return tokenMatch![1];
+  // SAFETY: helper seeds the user then logs in with valid credentials, so the body is SessionResponse.
+  return ((await loginRes.json()) as { data: { token: string } }).data.token;
 }
 
 // Helper function to create operator user and get token
@@ -65,9 +64,8 @@ async function getOperatorToken() {
     },
   });
 
-  const setCookieHeader = loginRes.headers.get("set-cookie");
-  const tokenMatch = setCookieHeader!.match(/access_token=([^;]+)/);
-  return tokenMatch![1];
+  // SAFETY: helper seeds the user then logs in with valid credentials, so the body is SessionResponse.
+  return ((await loginRes.json()) as { data: { token: string } }).data.token;
 }
 
 describe("users api", () => {

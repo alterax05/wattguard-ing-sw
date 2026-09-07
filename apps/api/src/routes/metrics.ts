@@ -25,7 +25,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get system metrics",
       description: "Returns aggregated KPIs: sensors, active alerts and consumption",
       tags: ["Metrics"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "System metrics retrieved successfully",
@@ -111,7 +111,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get metrics timeseries",
       description: "Returns aggregated electricity and gas per interval (hour/day/week)",
       tags: ["Metrics"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Historical metrics data retrieved successfully",

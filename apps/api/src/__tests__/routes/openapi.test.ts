@@ -83,7 +83,7 @@ describe("openapi api", () => {
       expect(spec.components).toBeDefined();
       expect(spec.components?.securitySchemes).toBeDefined();
       expect(spec.components?.securitySchemes?.bearerAuth).toBeDefined();
-      expect(spec.components?.securitySchemes?.cookieAuth).toBeDefined();
+      expect(spec.components?.securitySchemes?.cookieAuth).toBeUndefined();
     });
 
     test("includes documented authentication routes", async () => {

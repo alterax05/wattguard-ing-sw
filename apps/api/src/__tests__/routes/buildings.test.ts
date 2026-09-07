@@ -77,11 +77,8 @@ beforeEach(async () => {
     },
   });
 
-  const adminCookie = adminLoginRes.headers.get("set-cookie");
-  const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
-  if (!adminTokenMatch) return expect.unreachable("Admin token not found");
-  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
-  adminToken = adminTokenMatch[1] as string;
+  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+  adminToken = ((await adminLoginRes.json()) as { data: { token: string } }).data.token;
 
   console.log("Admin login status:", adminLoginRes.status);
   console.log("Admin token:", adminToken ? "exists" : "missing");
@@ -93,11 +90,8 @@ beforeEach(async () => {
     },
   });
 
-  const operatorCookie = operatorLoginRes.headers.get("set-cookie");
-  const operatorTokenMatch = operatorCookie?.match(/access_token=([^;]+)/);
-  if (!operatorTokenMatch) return expect.unreachable("Operator token not found");
-  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
-  operatorToken = operatorTokenMatch[1] as string;
+  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+  operatorToken = ((await operatorLoginRes.json()) as { data: { token: string } }).data.token;
 
   // Create a test building type
   const buildingType = await BuildingType.create({

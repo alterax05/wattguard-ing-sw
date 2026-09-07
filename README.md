@@ -5,7 +5,7 @@ Energy monitoring and management API built with Bun, Hono, React, and MongoDB.
 ## Features
 
 - ⚡ **Fast Runtime**: Built on Bun for blazing-fast performance
-- 🔒 **Authentication**: JWT-based auth with cookie support
+- 🔒 **Authentication**: stateless JWT Bearer auth
 - 📚 **OpenAPI Documentation**: Interactive API docs with Scalar UI
 - ✅ **Type-Safe Validation**: Zod schemas with automatic validation
 - 🎨 **Modern UI**: React 19 + TailwindCSS + Shadcn UI
@@ -124,14 +124,12 @@ Interactive API documentation is available when the server is running:
 
 ### Authentication
 
-The API supports two authentication methods:
-
-1. **Bearer Token**: Include JWT in the `Authorization` header
-   ```
-   Authorization: Bearer <your-jwt-token>
-   ```
-
-2. **Cookie**: JWT is automatically stored in `access_token` httpOnly cookie upon login
+The API is stateless and uses Bearer tokens only.
+`POST /api/v1/auth/session` (and invite accept) returns `{ user, token }`;
+include the JWT in the `Authorization` header, persisted in `localStorage`:
+```
+Authorization: Bearer <your-jwt-token>
+```
 
 ### Available Endpoints
 

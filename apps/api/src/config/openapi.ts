@@ -28,12 +28,6 @@ export const openapiConfig = {
         bearerFormat: 'JWT',
         description: 'JWT token in Authorization header',
       },
-      cookieAuth: {
-        type: 'apiKey' as const,
-        in: 'cookie' as const,
-        name: 'access_token',
-        description: 'JWT token in httpOnly cookie (automatically set on login)',
-      },
     },
   },
   tags: [
