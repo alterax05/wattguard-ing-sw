@@ -30,7 +30,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       description:
         "Generates the aggregated report for buildings and period as PDF or Excel (admin only)",
       tags: ["Reports"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Report file (PDF or Excel) containing aggregated consumption data",

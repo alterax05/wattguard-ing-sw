@@ -19,7 +19,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       description:
         "Generates and downloads the full JSON database backup (admin only)",
       tags: ["Backups"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "JSON backup file download",

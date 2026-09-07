@@ -22,7 +22,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get configuration",
       description: "Returns the current system configuration",
       tags: ["Settings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "System configuration retrieved successfully",
@@ -54,7 +54,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Update configuration",
       description: "Updates polling, notifications and retention (admin only)",
       tags: ["Settings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "System configuration updated successfully",

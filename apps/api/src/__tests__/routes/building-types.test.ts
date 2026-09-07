@@ -72,9 +72,8 @@ beforeEach(async () => {
     },
   });
   
-  const adminCookie = adminLoginRes.headers.get("set-cookie");
-  const adminTokenMatch = adminCookie?.match(/access_token=([^;]+)/);
-  adminToken = adminTokenMatch?.[1] ?? "";
+  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+  adminToken = ((await adminLoginRes.json()) as { data: { token: string } }).data.token;
 
   const operatorLoginRes = await client.api.v1.auth.session.$post({
     json: {
@@ -83,9 +82,8 @@ beforeEach(async () => {
     },
   });
   
-  const operatorCookie = operatorLoginRes.headers.get("set-cookie");
-  const operatorTokenMatch = operatorCookie?.match(/access_token=([^;]+)/);
-  operatorToken = operatorTokenMatch?.[1] ?? "";
+  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+  operatorToken = ((await operatorLoginRes.json()) as { data: { token: string } }).data.token;
 });
 
 describe("building-types api", () => {

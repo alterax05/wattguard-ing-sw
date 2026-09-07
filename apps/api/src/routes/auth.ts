@@ -4,7 +4,6 @@
  * RESTful session management, password recovery, and client auth configuration.
  */
 import { Hono } from "hono";
-import { setCookie } from "hono/cookie";
 import { jwt } from "hono/jwt";
 import { describeRoute, resolver, validator } from "hono-openapi";
 import { OAuth2Client } from "google-auth-library";
@@ -16,7 +15,7 @@ import { toUserDto, toPublicUserDto } from "../lib/users";
 import { sendPasswordResetEmail } from "../email/mailer";
 import { getRequestLocale } from "../lib/i18n";
 import { loginRateLimiter, passwordResetRateLimiter } from "../middleware/rate-limit";
-import { GOOGLE_CLIENT_ID, IS_PRODUCTION, JWT_SECRET } from "../config/variables";
+import { GOOGLE_CLIENT_ID, JWT_SECRET } from "../config/variables";
 import { loadUserDoc, type AuthVariables } from "../middleware/auth";
 import { apiError, apiSuccess } from "../lib/api-response";
 import {
@@ -44,7 +43,7 @@ import type {
 } from "@wattguard/shared";
 
 const requireAuth = [
-  jwt({ secret: JWT_SECRET, cookie: "access_token", alg: "HS256" }),
+  jwt({ secret: JWT_SECRET, alg: "HS256" }),
   loadUserDoc(),
 ] as const;
 
@@ -53,7 +52,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
     "/session",
     describeRoute({
       summary: "Create session",
-      description: "Creates a session via email+password or Google ID token; sets the access_token cookie",
+      description: "Creates a session via email+password or Google ID token; returns a Bearer token",
       tags: ["Authentication"],
       responses: {
         200: {
@@ -223,15 +222,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
         role: user.role,
       });
 
-      setCookie(c, "access_token", token, {
-        httpOnly: true,
-        secure: IS_PRODUCTION,
-        sameSite: "Lax",
-        maxAge: 8 * 60 * 60,
-        path: "/",
-      });
-
-      return c.json(apiSuccess(toPublicUserDto(user)) satisfies SessionResponse);
+      return c.json(apiSuccess({ user: toPublicUserDto(user), token }) satisfies SessionResponse);
     },
   )
   .get(
@@ -241,7 +232,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Get current session",
       description: "Returns the authenticated user and session data",
       tags: ["Authentication"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Current user and session information",
@@ -273,7 +264,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       summary: "Update current profile",
       description: "Updates the authenticated user's name and preferences (e.g. language)",
       tags: ["Authentication"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Updated user information",
@@ -315,27 +306,6 @@ const app = new Hono<{ Variables: AuthVariables }>()
       await userDoc.save();
 
       return c.json(apiSuccess(toUserDto(userDoc)) satisfies SessionUserResponse);
-    },
-  )
-  .delete(
-    "/session",
-    describeRoute({
-      summary: "Close session",
-      description: "Destroys the current session by clearing the authentication cookie",
-      tags: ["Authentication"],
-      responses: {
-        204: {
-          description: "Session destroyed successfully",
-        },
-      },
-    }),
-    (c) => {
-      setCookie(c, "access_token", "", {
-        maxAge: 0,
-        path: "/",
-      });
-
-      return c.body(null, 204);
     },
   )
   .get(

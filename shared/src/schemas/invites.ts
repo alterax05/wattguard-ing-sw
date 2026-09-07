@@ -165,7 +165,10 @@ export type AcceptInviteRequest = z.infer<typeof AcceptInviteRequestSchema>;
 
 export const AcceptInviteResponseSchema = z.object({
   success: z.literal(true),
-  data: PublicUserSchema,
+  data: z.object({
+    user: PublicUserSchema,
+    token: z.string().min(1),
+  }),
 }).meta({ id: "AcceptInviteResponse" });
 
 export type AcceptInviteResponse = z.infer<typeof AcceptInviteResponseSchema>;

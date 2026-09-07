@@ -51,11 +51,8 @@ beforeEach(async () => {
     },
   });
 
-  const cookie = loginRes.headers.get("set-cookie");
-  const tokenMatch = cookie?.match(/access_token=([^;]+)/);
-  if (!tokenMatch) return expect.unreachable("Admin token not found, response status: " + loginRes.status);
-  // SAFETY: the access_token regex has a capture group, so group 1 is present once the match succeeds.
-  adminToken = tokenMatch[1] as string;
+  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+  adminToken = ((await loginRes.json()) as { data: { token: string } }).data.token;
 
   // Create building type and building
   const type = await BuildingType.create({ name: "Test Type" });
@@ -111,7 +108,7 @@ describe("alerts api", () => {
     const res = await client.api.v1.alerts.$get(
       { query: {} },
       {
-        headers: { Cookie: `access_token=${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}` },
       }
     );
 
@@ -161,7 +158,7 @@ describe("alerts api", () => {
         json: { status: "acknowledged" },
       },
       {
-        headers: { Cookie: `access_token=${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}` },
       }
     );
 
@@ -186,7 +183,7 @@ describe("alerts api", () => {
         json: { status: "acknowledged" },
       },
       {
-        headers: { Cookie: `access_token=${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}` },
       }
     );
 
@@ -210,7 +207,7 @@ describe("alerts api", () => {
         json: { status: "resolved" },
       },
       {
-        headers: { Cookie: `access_token=${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}` },
       }
     );
 
@@ -234,7 +231,7 @@ describe("alerts api", () => {
         param: { id: alert!._id.toString() },
       },
       {
-        headers: { Cookie: `access_token=${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}` },
       }
     );
 
@@ -261,7 +258,7 @@ describe("alerts api", () => {
         param: { id: "507f1f77bcf86cd799439011" },
       },
       {
-        headers: { Cookie: `access_token=${adminToken}` },
+        headers: { Authorization: `Bearer ${adminToken}` },
       }
     );
 

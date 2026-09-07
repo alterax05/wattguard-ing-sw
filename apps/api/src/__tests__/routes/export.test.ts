@@ -19,8 +19,8 @@ async function login(email: string, password: string): Promise<string> {
   const response = await client.api.v1.auth.session.$post({
     json: { email, password },
   });
-  const cookie = response.headers.get("set-cookie");
-  const token = cookie?.match(/access_token=([^;]+)/)?.[1];
+  // SAFETY: login with valid credentials returns SessionResponse.
+  const token = ((await response.json()) as { data: { token: string } }).data.token;
 
   if (!token) return expect.unreachable(`Token not found for ${email}`);
   return token;
@@ -130,7 +130,7 @@ describe("GET /api/v1/readings", () => {
           endDate: "2026-01-31",
         },
       },
-      { headers: { Cookie: `access_token=${operatorToken}` } },
+      { headers: { Authorization: `Bearer ${operatorToken}` } },
     );
 
     expect(response.status).toBe(403);
@@ -143,7 +143,7 @@ describe("GET /api/v1/readings", () => {
           buildingIds: buildingId,
         },
       },
-      { headers: { Cookie: `access_token=${adminToken}` } },
+      { headers: { Authorization: `Bearer ${adminToken}` } },
     );
     expect(missingDateResponse.status).toBe(400);
 
@@ -155,7 +155,7 @@ describe("GET /api/v1/readings", () => {
           endDate: "2026-01-01",
         },
       },
-      { headers: { Cookie: `access_token=${adminToken}` } },
+      { headers: { Authorization: `Bearer ${adminToken}` } },
     );
     expect(reversedDateResponse.status).toBe(400);
   });
@@ -170,7 +170,7 @@ describe("GET /api/v1/readings", () => {
           format: "csv",
         },
       },
-      { headers: { Cookie: `access_token=${adminToken}` } },
+      { headers: { Authorization: `Bearer ${adminToken}` } },
     );
     const csv = await response.text();
     const rows = csv.trimEnd().split("\r\n");
@@ -200,7 +200,7 @@ describe("GET /api/v1/readings", () => {
           endDate: "2026-01-31",
         },
       },
-      { headers: { Cookie: `access_token=${adminToken}` } },
+      { headers: { Authorization: `Bearer ${adminToken}` } },
     );
 
     expect(response.status).toBe(404);

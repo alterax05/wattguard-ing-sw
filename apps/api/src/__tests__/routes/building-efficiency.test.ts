@@ -129,10 +129,8 @@ beforeEach(async () => {
   const loginRes = await client.api.v1.auth.session.$post({
     json: { email: "admin@test.com", password: "admin123" },
   });
-  const cookie = loginRes.headers.get("set-cookie") ?? "";
-  const match = cookie.match(/access_token=([^;]+)/);
-  if (!match) return expect.unreachable("Admin token not found in login response");
-  adminToken = match[1]!;
+  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+  adminToken = ((await loginRes.json()) as { data: { token: string } }).data.token;
 
   // Create a building type
   const bt = await BuildingType.create({ name: "TestType", description: "For testing" });

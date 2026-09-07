@@ -51,9 +51,8 @@ beforeEach(async () => {
     json: { email: "admin@test.com", password: "admin123" },
   });
 
-  const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
-  if (!tokenMatch) return expect.unreachable("Admin token not found");
-  adminToken = tokenMatch[1]!;
+  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+  adminToken = ((await loginRes.json()) as { data: { token: string } }).data.token;
 });
 
 describe("GET /api/v1/health", () => {
@@ -191,8 +190,8 @@ describe("settings api", () => {
       json: { email: "operator@test.com", password: "operator123" },
     });
 
-    const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
-    const operatorToken = tokenMatch![1]!;
+    // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+    const operatorToken = ((await loginRes.json()) as { data: { token: string } }).data.token;
 
     const res = await client.api.v1.settings.$get(undefined, {
       headers: { Authorization: `Bearer ${operatorToken}` },
@@ -219,8 +218,8 @@ describe("settings api", () => {
       json: { email: "operator-patch@test.com", password: "operator123" },
     });
 
-    const tokenMatch = loginRes.headers.get("set-cookie")!.match(/access_token=([^;]+)/);
-    const operatorToken = tokenMatch![1]!;
+    // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
+    const operatorToken = ((await loginRes.json()) as { data: { token: string } }).data.token;
 
     const res = await client.api.v1.settings.$patch(
       {

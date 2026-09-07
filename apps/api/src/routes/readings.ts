@@ -37,7 +37,7 @@ const app = new Hono<{ Variables: AuthVariables }>()
       description:
         "Exports filtered readings for buildings and period as CSV or JSON (admin only)",
       tags: ["Readings"],
-      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      security: [{ bearerAuth: [] }],
       responses: {
         200: {
           description: "Readings in requested format (CSV or JSON)",
