@@ -58,6 +58,15 @@ const FRESH_TICK_THRESHOLD_SEC = 0.5;
 const MAX_REAL_ELAPSED_SEC = 35;
 // How often the simulator re-queries the DB for new sensors while running.
 const DEFAULT_DISCOVERY_INTERVAL_MS = 60_000;
+// Cold-start (e.g. Render free-tier wake with a slow Atlas connection) can
+// make the very first discovery fail. Retry a few times with a short delay
+// so the simulator recovers in seconds instead of waiting a full discovery
+// interval, and always arm the periodic timer afterwards so it self-heals
+// even if every boot attempt fails.
+const BOOT_DISCOVERY_ATTEMPTS = 5;
+const BOOT_DISCOVERY_RETRY_DELAY_MS = 2_000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ── Heating system profiles ───────────────────────────────────────────────────
 // Nominal heating power (kW) and natural-cooling coefficient H (W/K) per system type.
@@ -582,7 +591,31 @@ export async function startSimulator(opts: SimulatorOptions): Promise<SimulatorH
   };
 
   debugPrint("🔎 Discovering active sensors...");
-  await rediscover();
+  let bootError: unknown;
+  for (let attempt = 1; attempt <= BOOT_DISCOVERY_ATTEMPTS; attempt++) {
+    try {
+      await rediscover();
+      bootError = undefined;
+      break;
+    } catch (err) {
+      bootError = err;
+      console.error(
+        `❌ Simulator discovery attempt ${attempt}/${BOOT_DISCOVERY_ATTEMPTS} failed:`,
+        err,
+      );
+      if (attempt < BOOT_DISCOVERY_ATTEMPTS) {
+        await sleep(BOOT_DISCOVERY_RETRY_DELAY_MS);
+      }
+    }
+  }
+  if (bootError !== undefined) {
+    // Don't throw: the periodic rediscovery below keeps retrying, so a slow
+    // DB at boot (Render cold start) self-heals instead of killing the
+    // simulator forever.
+    console.error(
+      "❌ Simulator initial discovery failed after retries — periodic rediscovery will keep trying.",
+    );
+  }
 
   let discoveryTimer: ReturnType<typeof setInterval> | undefined;
   if (discoveryIntervalMs > 0) {
@@ -592,7 +625,11 @@ export async function startSimulator(opts: SimulatorOptions): Promise<SimulatorH
         ? `🔎 Rediscovering sensors every ${discoverySec}s`
         : `🔎 Rediscovering sensors every ${discoveryIntervalMs}ms`,
     );
-    discoveryTimer = setInterval(() => void rediscover(), discoveryIntervalMs);
+    discoveryTimer = setInterval(() => {
+      rediscover().catch((err) => {
+        console.error("❌ Simulator periodic rediscovery failed:", err);
+      });
+    }, discoveryIntervalMs);
   }
 
   return {

@@ -113,6 +113,18 @@ export const SIMULATOR_ENABLED = process.env.SIMULATOR_ENABLED === "true";
 
 export const SIM_TIME_SCALE = Number(process.env.SIM_TIME_SCALE ?? 2);
 
+// How often (ms) the in-process simulator re-queries the DB for new sensors.
+export const SIM_DISCOVERY_INTERVAL_MS = ((): number => {
+  const raw = process.env.SIM_DISCOVERY_INTERVAL_MS;
+  if (raw === undefined || raw === "") return 60_000;
+  const parsed = Number(raw);
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  console.warn(
+    `⚠️ SIM_DISCOVERY_INTERVAL_MS non valido ("${raw}"): uso 60000`,
+  );
+  return 60_000;
+})();
+
 // ── Efficiency alerts ────────────────────────────────────────────────────────
 
 // Default ON: il cron è idempotente e agisce solo su edifici con soglia abilitata.

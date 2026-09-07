@@ -27,6 +27,7 @@ import {
   MQTT_ENABLED,
   PORT,
   SIMULATOR_ENABLED,
+  SIM_DISCOVERY_INTERVAL_MS,
 } from "./config/variables";
 
 const app = new Hono().route("/api/v1", routes);
@@ -40,34 +41,31 @@ export { app };
 export type AppType = typeof app;
 
 async function startServer() {
-  mongoose
-    .connect(MONGO_URI)
-    .then(() => {
-      console.log("✅ Connected to MongoDB");
-    })
-    .catch((error) => {
-      console.error("❌ Failed to connect to MongoDB:", error);
-      process.exit(1);
-    });
+  try {
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ Connected to MongoDB");
+  } catch (error) {
+    console.error("❌ Failed to connect to MongoDB:", error);
+    process.exit(1);
+  }
 
-  // Warm up the translation catalogs (emails/reports) before serving traffic.
   await ensureI18nReady();
 
   if (MQTT_ENABLED) void connectAndSubscribe();
 
-  // Run the simulator in-process, feeding readings straight into the reading
-  // service. Both flags are independent: MQTT and SIMULATOR_ENABLED may be on
-  // at the same time. Auto-seeds demo data only in development.
   if (SIMULATOR_ENABLED) {
-    void startSimulator({
-      autoSeed: IS_DEVELOPMENT,
-      onReading: (reading) => ingestReading(reading),
-    }).then(() => {
+    try {
+      await startSimulator({
+        autoSeed: IS_DEVELOPMENT,
+        discoveryIntervalMs: SIM_DISCOVERY_INTERVAL_MS,
+        onReading: (reading) => ingestReading(reading),
+      });
       console.log("✅ In-process simulator started");
-    });
+    } catch (error) {
+      console.error("❌ In-process simulator failed to start:", error);
+    }
   }
 
-  // Schedule periodic evaluation of efficiency alert thresholds (Bun.cron).
   if (EFFICIENCY_ALERTS_ENABLED) {
     const run = async () => {
       await evaluateEfficiencyAlerts().catch((error) => {
@@ -98,7 +96,6 @@ async function startServer() {
   console.log(`🚀 Server running at ${server.url}`);
 }
 
-// Tests import the Hono app without opening a network server or database connection.
 if (!IS_TEST) {
   startServer().catch((error) => {
     console.error("❌ Server startup failed:", error);
