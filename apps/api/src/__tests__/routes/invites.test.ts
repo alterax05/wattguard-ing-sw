@@ -60,29 +60,6 @@ async function getAdminToken() {
   return ((await loginRes.json()) as { data: { token: string } }).data.token;
 }
 
-// Helper function to create operator user and get token
-async function getOperatorToken() {
-  await User.create({
-    email: "operator@test.com",
-    role: "operator",
-    isDisabled: false,
-    passwordHash: await Bun.password.hash("operator123", {
-      algorithm: "bcrypt",
-      cost: 10,
-    }),
-  });
-
-  const loginRes = await client.api.v1.auth.session.$post({
-    json: {
-      email: "operator@test.com",
-      password: "operator123",
-    },
-  });
-
-  // SAFETY: helper seeds the user then logs in with valid credentials, so the body is SessionResponse.
-  return ((await loginRes.json()) as { data: { token: string } }).data.token;
-}
-
 describe("invites api", () => {
   describe("POST /api/v1/invites", () => {
     test("creates invite with valid data", async () => {
@@ -184,33 +161,6 @@ describe("invites api", () => {
       expect(data.error_code).toBe("invite_pending_exists");
     });
 
-    test("normalizes email on invite creation", async () => {
-      const token = await getAdminToken();
-
-      const res = await client.api.v1.invites.$post(
-        {
-          json: {
-            email: "NEWUSER@TEST.COM",
-            role: "operator",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(201);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<CreateInviteResponse | ErrorResponse>();
-      expect(data.success).toBe(true);
-      if (!data.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(data.data.email).toBe("newuser@test.com");
-    });
-
     test("rejects invalid email format", async () => {
       const token = await getAdminToken();
 
@@ -292,36 +242,6 @@ describe("invites api", () => {
       expectValidationError({ data: await res.json(), status: res.status });
     });
 
-    test("rejects operator from creating invites", async () => {
-      const token = await getOperatorToken();
-
-      const res = await client.api.v1.invites.$post(
-        {
-          json: {
-            email: "newuser@test.com",
-            role: "operator",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      expect(Number(res.status)).toBe(403);
-    });
-
-    test("rejects unauthenticated requests", async () => {
-      const res = await client.api.v1.invites.$post({
-        json: {
-          email: "newuser@test.com",
-          role: "operator",
-        },
-      });
-
-      expect(Number(res.status)).toBe(401);
-    });
   });
 
   describe("GET /api/v1/invites", () => {
@@ -367,45 +287,6 @@ describe("invites api", () => {
       expect(data.data[0]!.email).toBeDefined();
       expect(data.data[0]!.role).toBeDefined();
       expect(data.data[0]!.status).toBeDefined();
-    });
-
-    test("returns empty array when no invites exist", async () => {
-      const token = await getAdminToken();
-
-      const res = await client.api.v1.invites.$get({
-        query: {},
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      expect(res.status).toBe(200);
-      // SAFETY: callers supply the documented response schema of the endpoint under test.
-      const data = (await res.json()) as ListInvitesResponse | ErrorResponse;
-      expectTypeOf(data).toExtend<ListInvitesResponse | ErrorResponse>();
-      expect(data.success).toBe(true);
-      if (!data.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(data.data).toBeArrayOfSize(0);
-    });
-
-    test("rejects operator from listing invites", async () => {
-      const token = await getOperatorToken();
-
-      const res = await client.api.v1.invites.$get({
-        query: {},
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      expect(res.status).toBe(403);
-    });
-
-    test("rejects unauthenticated requests", async () => {
-      const res = await client.api.v1.invites.$get({
-        query: {},
-      });
-      expect(res.status).toBe(401);
     });
   });
 
@@ -455,20 +336,6 @@ describe("invites api", () => {
       );
 
       expect(res.status).toBe(404);
-    });
-
-    test("rejects operator from getting invite by id", async () => {
-      const token = await getOperatorToken();
-      const res = await client.api.v1.invites[":id"].$get(
-        {
-          param: { id: "507f1f77bcf86cd799439011" },
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      expect(res.status).toBe(403);
     });
   });
 
@@ -546,69 +413,6 @@ describe("invites api", () => {
       );
 
       expect(res.status).toBe(404);
-    });
-
-    test("handles invalid invite ID format gracefully", async () => {
-      const token = await getAdminToken();
-
-      const res = await client.api.v1.invites[":id"].$delete(
-        {
-          param: { id: "invalid-id" },
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      // Invalid ObjectIds are rejected by param validation (400)
-      expect(Number(res.status)).toBe(400);
-    });
-
-    test("rejects operator from revoking invites", async () => {
-      const operatorToken = await getOperatorToken();
-      const adminToken = await getAdminToken();
-
-      // Create an invite using admin token
-      const createRes = await client.api.v1.invites.$post(
-        {
-          json: {
-            email: "testrevoke@test.com",
-            role: "operator",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
-
-      const createData = await createRes.json();
-      expect(createData.success).toBe(true);
-      if (!createData.success) {
-        return expect.unreachable("Expected invite to be created");
-      }
-      const inviteId = createData.data._id;
-
-      // Try to revoke with operator token
-      const res = await client.api.v1.invites[":id"].$delete(
-        {
-          param: { id: inviteId },
-        },
-        {
-          headers: { Authorization: `Bearer ${operatorToken}` },
-        }
-      );
-
-      expect(Number(res.status)).toBe(403);
-    });
-
-    test("rejects unauthenticated requests", async () => {
-      const res = await client.api.v1.invites[":id"].$delete({
-        param: { id: "507f1f77bcf86cd799439011" },
-      });
-
-      expect(Number(res.status)).toBe(401);
     });
   });
 

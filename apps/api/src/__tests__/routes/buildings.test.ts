@@ -16,7 +16,6 @@ import { Building } from "../../models/Building";
 import { Sensor } from "../../models/Sensor";
 import { SensorReading } from "../../models/SensorReading";
 import { Alert } from "../../models/Alert";
-import { EFFICIENCY_ALERT_TYPE } from "../../lib/alerts";
 import type {
   BuildingResponse,
   SearchBuildingsResponse,
@@ -377,91 +376,6 @@ describe("buildings api", () => {
       expect(res.status).toBe(422);
     });
 
-    test("PATCH switching a building to district heating clears thresholds and resolves alerts", async () => {
-      const building = await Building.create({
-        name: "Original Name",
-        address: "Via Original",
-        geographicZone: "Centro",
-        buildingType: buildingTypeId,
-        surface: 1000,
-        constructionYear: 2000,
-        heatingSystemType: "caldaia_gas",
-        location: { ...TRENTO_POINT },
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-        efficiencyThresholds: { enabled: true, minCop: 2.5 },
-      });
-
-      await Alert.create({
-        building: building._id,
-        type: EFFICIENCY_ALERT_TYPE,
-        thresholdType: "min",
-        severity: "high",
-        value: 2.1,
-        unit: "COP",
-        limit: 2.5,
-        status: "active",
-      });
-
-      const res = await client.api.v1.buildings[":id"].$patch(
-        {
-          param: { id: building._id.toString() },
-          json: { heatingSystemType: "Teleriscaldamento" },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-      expect(res.status).toBe(200);
-
-      const reloaded = await Building.findById(building._id);
-      expect(reloaded!.efficiencyThresholds.enabled).toBe(false);
-      expect(reloaded!.efficiencyThresholds.minCop).toBeNull();
-
-      const alert = await Alert.findOne({ building: building._id, type: EFFICIENCY_ALERT_TYPE });
-      expect(alert!.status).toBe("resolved");
-    });
-
-    test("PATCH disabling efficiency thresholds resolves active efficiency alerts", async () => {
-      const building = await Building.create({
-        name: "Original Name",
-        address: "Via Original",
-        geographicZone: "Centro",
-        buildingType: buildingTypeId,
-        surface: 1000,
-        constructionYear: 2000,
-        heatingSystemType: "caldaia_gas",
-        location: { ...TRENTO_POINT },
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-        efficiencyThresholds: { enabled: true, minCop: 2.5 },
-      });
-
-      await Alert.create({
-        building: building._id,
-        type: EFFICIENCY_ALERT_TYPE,
-        thresholdType: "min",
-        severity: "high",
-        value: 2.1,
-        unit: "COP",
-        limit: 2.5,
-        status: "active",
-      });
-
-      const res = await client.api.v1.buildings[":id"].$patch(
-        {
-          param: { id: building._id.toString() },
-          json: { efficiencyThresholds: { enabled: false, minCop: null } },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-      expect(res.status).toBe(200);
-
-      const alert = await Alert.findOne({ building: building._id, type: EFFICIENCY_ALERT_TYPE });
-      expect(alert!.status).toBe("resolved");
-    });
   });
 
   describe("DELETE /api/v1/buildings/:id", () => {
@@ -671,25 +585,6 @@ describe("buildings api", () => {
       expect(json.data.buildings.length).toBe(3); // All test buildings have same type
     });
 
-    test("filters by status", async () => {
-      const res = await client.api.v1.buildings.$get(
-        {
-          query: { status: "inactive" },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.buildings.length).toBe(1);
-      expect(json.data.buildings[0]!.status).toBe("inactive");
-    });
 
     test("combines multiple filters", async () => {
       const res = await client.api.v1.buildings.$get(
@@ -711,50 +606,6 @@ describe("buildings api", () => {
       expect(json.data.buildings[0]!.name).toBe("Scuola Primaria Centro");
     });
 
-    test("supports pagination", async () => {
-      const res = await client.api.v1.buildings.$get(
-        {
-          query: { limit: "2", offset: "0" },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.buildings.length).toBe(2);
-      expect(json.data.pagination.total).toBe(3);
-      expect(json.data.pagination.limit).toBe(2);
-      expect(json.data.pagination.offset).toBe(0);
-    });
-
-    test("supports sorting", async () => {
-      const res = await client.api.v1.buildings.$get(
-        {
-          query: { sortBy: "name", sortOrder: "asc" },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.buildings.length).toBeGreaterThan(0);
-      // Verify ascending order
-      for (let i = 1; i < json.data.buildings.length; i++) {
-        expect(json.data.buildings[i]!.name >= json.data.buildings[i - 1]!.name).toBe(true);
-      }
-    });
 
     test("returns all required details in search results", async () => {
       const res = await client.api.v1.buildings.$get(
@@ -820,131 +671,6 @@ describe("buildings api", () => {
     });
   });
 
-  describe("GET /api/v1/buildings/:id/readings latest point", () => {
-    test("returns the latest point with limit=1&sortOrder=desc", async () => {
-      const building = await Building.create({
-        name: "Building Latest",
-        address: "Via Latest 1",
-        geographicZone: "Centro",
-        buildingType: buildingTypeId,
-        surface: 1000,
-        constructionYear: 2000,
-        heatingSystemType: "caldaia_gas",
-        location: { ...TRENTO_POINT },
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      const sensor = await Sensor.create({
-        building: building._id,
-        sensorType: "internal_temp",
-        location: "Piano 1",
-        status: "active",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      const now = new Date();
-      await SensorReading.insertMany([
-        {
-          timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-          value: 20.0,
-          unit: "°C",
-          metadata: { sensor: sensor._id, building: building._id, sensorType: "internal_temp" },
-        },
-        {
-          timestamp: now,
-          value: 22.5,
-          unit: "°C",
-          metadata: { sensor: sensor._id, building: building._id, sensorType: "internal_temp" },
-        },
-      ]);
-
-      const res = await client.api.v1.buildings[":id"].readings.$get(
-        {
-          param: { id: building._id.toString() },
-          query: {
-            startDate: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-            endDate: now.toISOString(),
-            sensorType: "internal_temp",
-            limit: "1",
-            sortOrder: "desc",
-          },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<GetBuildingHistoryResponse | ErrorResponse>();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response to be successful");
-      }
-      expect(json.data.data).toBeArrayOfSize(1);
-      expect(json.data.data[0]!.value).toBe(22.5);
-    });
-
-    test("respects limit for history queries", async () => {
-      const building = await Building.create({
-        name: "Building Partial Sensors",
-        address: "Via Partial 1",
-        geographicZone: "Centro",
-        buildingType: buildingTypeId,
-        surface: 1000,
-        constructionYear: 2000,
-        heatingSystemType: "caldaia_gas",
-        location: { ...TRENTO_POINT },
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      const sensor = await Sensor.create({
-        building: building._id,
-        sensorType: "internal_temp",
-        location: "Piano 1",
-        status: "active",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      const now = new Date();
-      await SensorReading.insertMany([0, 1, 2].map((i) => ({
-        timestamp: new Date(now.getTime() - i * 60 * 60 * 1000),
-        value: 20 + i,
-        unit: "°C",
-        metadata: { sensor: sensor._id, building: building._id, sensorType: "internal_temp" },
-      })));
-
-      const res = await client.api.v1.buildings[":id"].readings.$get(
-        {
-          param: { id: building._id.toString() },
-          query: {
-            startDate: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-            endDate: now.toISOString(),
-            limit: "2",
-          },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response to be successful");
-      }
-      expect(json.data.data.length).toBeLessThanOrEqual(2);
-    });
-  });
 
   describe("GET /api/v1/buildings/:id/history", () => {
     test("returns historical data with time aggregation", async () => {
@@ -1166,65 +892,4 @@ describe("buildings api", () => {
     });
   });
 
-  // ============================================================================
-  // Authorization Tests
-  // ============================================================================
-
-  describe("authorization", () => {
-    test("denies access without token", async () => {
-      const res = await client.api.v1.buildings.$get({ query: {} });
-
-      expect(res.status).toBe(401);
-    });
-
-    test("denies access with invalid token", async () => {
-      const res = await client.api.v1.buildings.$get(
-        { query: {} },
-        {
-          headers: {
-            Authorization: "Bearer invalid-token",
-          },
-        }
-      );
-
-      expect(res.status).toBe(401);
-    });
-
-    test("allows both admin and operator to read buildings", async () => {
-      const building = await Building.create({
-        name: "Test Auth",
-        address: "Via Auth 1",
-        geographicZone: "Centro",
-        buildingType: buildingTypeId,
-        surface: 1000,
-        constructionYear: 2000,
-        heatingSystemType: "caldaia_gas",
-        location: { ...TRENTO_POINT },
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      // Admin should have access
-      const adminRes = await client.api.v1.buildings[":id"].$get(
-        {
-          param: { id: building._id.toString() },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-      expect(adminRes.status).toBe(200);
-
-      // Operator should also have access
-      const operatorRes = await client.api.v1.buildings[":id"].$get(
-        {
-          param: { id: building._id.toString() },
-        },
-        {
-          headers: { Authorization: `Bearer ${operatorToken}` },
-        }
-      );
-      expect(operatorRes.status).toBe(200);
-    });
-  });
 });

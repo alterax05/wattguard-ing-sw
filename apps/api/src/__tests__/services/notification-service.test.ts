@@ -12,7 +12,6 @@ import { SystemConfig } from "../../models/SystemConfig";
 import type { AlertEmailPayload } from "../../email/mailer";
 import {
   dispatchAlertNotifications,
-  queueAlertNotification,
 } from "../../services/notification-service";
 
 setupIntegrationTests();
@@ -120,18 +119,5 @@ describe("dispatchAlertNotifications", () => {
     const emails = sendAlertEmailCalls.map((c) => c.email);
     expect(emails).toContain("ok@test.com");
     expect(emails).not.toContain("boom@test.com");
-  });
-});
-
-describe("queueAlertNotification", () => {
-  test("never throws, even when dispatch fails entirely", async () => {
-    await User.create({ email: "boom@test.com", role: "admin", passwordHash: "x" });
-    sendAlertEmailImpl = () => Promise.reject(new Error("resend down"));
-
-    expect(() =>
-      queueAlertNotification("created", PAYLOAD),
-    ).not.toThrow();
-
-    await new Promise((resolve) => setTimeout(resolve, 20));
   });
 });

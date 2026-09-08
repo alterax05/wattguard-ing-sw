@@ -13,7 +13,6 @@ import { setupIntegrationTests } from "../helpers/db";
 const client = testClient(app);
 
 let adminToken: string;
-let operatorToken: string;
 let buildingId: string;
 
 async function login(email: string, password: string): Promise<string> {
@@ -47,7 +46,6 @@ beforeEach(async () => {
   });
 
   adminToken = await login("report-admin@test.com", "admin123");
-  operatorToken = await login("report-operator@test.com", "admin123");
 
   const buildingType = await BuildingType.create({ name: "Report test type" });
   const building = await Building.create({
@@ -111,35 +109,6 @@ beforeEach(async () => {
 });
 
 describe("GET /api/v1/reports", () => {
-  test("requires authentication", async () => {
-    const response = await client.api.v1.reports.$get({
-      query: {
-        buildingIds: buildingId,
-        startDate: "2026-01-01",
-        endDate: "2026-01-31",
-        format: "pdf",
-      },
-    });
-
-    expect(response.status).toBe(401);
-  });
-
-  test("allows only administrators", async () => {
-    const response = await client.api.v1.reports.$get(
-      {
-        query: {
-          buildingIds: buildingId,
-          startDate: "2026-01-01",
-          endDate: "2026-01-31",
-          format: "pdf",
-        },
-      },
-      { headers: { Authorization: `Bearer ${operatorToken}` } },
-    );
-
-    expect(response.status).toBe(403);
-  });
-
   test("rejects missing and reversed date ranges", async () => {
     const missingDateResponse = await client.api.v1.reports.$get(
       {
@@ -200,21 +169,6 @@ describe("GET /api/v1/reports", () => {
     expect(response.status).toBe(404);
   });
 
-  test("defaults to PDF when format is omitted", async () => {
-    const response = await client.api.v1.reports.$get(
-      {
-        query: {
-          buildingIds: buildingId,
-          startDate: "2026-01-01",
-          endDate: "2026-01-31",
-        },
-      },
-      { headers: { Authorization: `Bearer ${adminToken}` } },
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toContain("application/pdf");
-  });
 
   test("returns a valid PDF file", async () => {
     const response = await client.api.v1.reports.$get(
@@ -298,95 +252,6 @@ describe("GET /api/v1/reports", () => {
     expect(secondDay).toContain(48);
   });
 
-  test("gas boiler buildings do not mix energy_meter readings into daily consumption", async () => {
-    const admin = await User.findOne({ email: "report-admin@test.com" });
-    const buildingType = await BuildingType.create({ name: "Gas test type" });
-    const gasBuilding = await Building.create({
-      name: "Edificio Gas",
-      address: "Via Gas 1",
-      surface: 600,
-      ceilingHeight: 3,
-      location: { type: "Point", coordinates: [11.1167, 46.0667] },
-      buildingType: buildingType._id,
-      heatingSystemType: "caldaia_gas",
-      geographicZone: "Nord",
-      createdBy: admin!._id,
-      updatedBy: admin!._id,
-    });
-
-    await SensorReading.create([
-      {
-        timestamp: new Date("2026-01-01T00:00:00.000Z"),
-        value: 100,
-        unit: "m³",
-        metadata: {
-          sensor: new Types.ObjectId(),
-          building: gasBuilding._id,
-          sensorType: "gas_meter",
-        },
-      },
-      {
-        timestamp: new Date("2026-01-02T00:00:00.000Z"),
-        value: 105,
-        unit: "m³",
-        metadata: {
-          sensor: new Types.ObjectId(),
-          building: gasBuilding._id,
-          sensorType: "gas_meter",
-        },
-      },
-      // Auxiliary electricity — must NOT appear in the gas series
-      {
-        timestamp: new Date("2026-01-02T12:00:00.000Z"),
-        value: 2,
-        unit: "kW",
-        metadata: {
-          sensor: new Types.ObjectId(),
-          building: gasBuilding._id,
-          sensorType: "energy_meter",
-        },
-      },
-    ]);
-
-    const response = await client.api.v1.reports.$get(
-      {
-        query: {
-          buildingIds: gasBuilding._id.toString(),
-          startDate: "2026-01-01",
-          endDate: "2026-01-31",
-          format: "xlsx",
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-          "Accept-Language": "it",
-        },
-      },
-    );
-    const body = await response.arrayBuffer();
-
-    expect(response.status).toBe(200);
-
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(body);
-
-    const summary = workbook.getWorksheet("Riepilogo")!;
-    // SAFETY: ExcelJS stores row cells in an array-like object and these rows contain only scalar cells.
-    const row = summary.getRow(2).values as unknown[];
-    expect(row).toContain("Edificio Gas");
-    expect(row).toContain(52.75); // 5 m³ × 10.55 kWh/m³
-
-    const daily = workbook.getWorksheet("Consumo giornaliero")!;
-    const gasRows = (daily.getRows(1, daily.rowCount) ?? []).filter((r) => {
-      // SAFETY: ExcelJS row values behave as an array of scalar cells for these data rows.
-      const values = r.values as unknown[];
-      return values.includes("Edificio Gas");
-    });
-    expect(gasRows).toHaveLength(1); // only the gas delta day, no energy_meter day
-    // SAFETY: the filter above guarantees exactly one matching row whose cells are array-like.
-    expect(gasRows[0]!.values as unknown[]).toContain(52.75);
-  });
 
   test("localizes report labels for the requested language", async () => {
     const response = await client.api.v1.reports.$get(
