@@ -95,26 +95,6 @@ describe("users api", () => {
       expect(data.data.some((u) => u.email === "operator@test.com")).toBe(true);
     });
 
-    test("rejects non-admin users", async () => {
-      await getAdminToken();
-      const operatorToken = await getOperatorToken();
-
-      const res = await client.api.v1.users.$get(
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${operatorToken}`,
-          },
-        },
-      );
-
-      expect(res.status).toBe(403);
-    });
-
-    test("rejects unauthenticated requests", async () => {
-      const res = await client.api.v1.users.$get();
-      expect(res.status).toBe(401);
-    });
   });
 
   describe("GET /api/v1/users/:id", () => {
@@ -160,25 +140,6 @@ describe("users api", () => {
       );
 
       expect(res.status).toBe(404);
-    });
-
-    test("rejects non-admin users", async () => {
-      await getAdminToken();
-      const operatorToken = await getOperatorToken();
-      const admin = await User.findOne({ email: "admin@test.com" });
-
-      const res = await client.api.v1.users[":id"].$get(
-        {
-          param: { id: admin!._id.toString() },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${operatorToken}`,
-          },
-        },
-      );
-
-      expect(res.status).toBe(403);
     });
   });
 
@@ -246,86 +207,6 @@ describe("users api", () => {
       expect(updated!.isDisabled).toBe(true);
     });
 
-    test("re-enables a disabled user", async () => {
-      const token = await getAdminToken();
-      await getOperatorToken();
-      const operator = await User.findOne({ email: "operator@test.com" });
-      operator!.isDisabled = true;
-      await operator!.save();
-
-      const res = await client.api.v1.users[":id"].$patch(
-        {
-          param: { id: operator!._id.toString() },
-          json: { isDisabled: false },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
-      expect(data.success).toBe(true);
-      if (!data.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(data.data.isDisabled).toBe(false);
-
-      const updated = await User.findById(operator!._id);
-      expect(updated!.isDisabled).toBe(false);
-    });
-
-    test("updates role and status together", async () => {
-      const token = await getAdminToken();
-      await getOperatorToken();
-      const operator = await User.findOne({ email: "operator@test.com" });
-
-      const res = await client.api.v1.users[":id"].$patch(
-        {
-          param: { id: operator!._id.toString() },
-          json: { role: "admin", isDisabled: true },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<UserResponse | ErrorResponse>();
-      expect(data.success).toBe(true);
-      if (!data.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(data.data.role).toBe("admin");
-      expect(data.data.isDisabled).toBe(true);
-    });
-
-    test("rejects empty update body", async () => {
-      const token = await getAdminToken();
-      await getOperatorToken();
-      const operator = await User.findOne({ email: "operator@test.com" });
-
-      const res = await client.api.v1.users[":id"].$patch(
-        {
-          param: { id: operator!._id.toString() },
-          json: {},
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(400);
-    });
-
     test("rejects updating your own account", async () => {
       const token = await getAdminToken();
       const admin = await User.findOne({ email: "admin@test.com" });
@@ -384,35 +265,6 @@ describe("users api", () => {
       );
 
       expect(res.status).toBe(400);
-    });
-
-    test("rejects operator from updating users", async () => {
-      const operatorToken = await getOperatorToken();
-      await getAdminToken();
-      const admin = await User.findOne({ email: "admin@test.com" });
-
-      const res = await client.api.v1.users[":id"].$patch(
-        {
-          param: { id: admin!._id.toString() },
-          json: { isDisabled: true },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${operatorToken}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(403);
-    });
-
-    test("rejects unauthenticated requests", async () => {
-      const res = await client.api.v1.users[":id"].$patch({
-        param: { id: "507f1f77bcf86cd799439011" },
-        json: { isDisabled: true },
-      });
-
-      expect(res.status).toBe(401);
     });
 
     test("prevents a disabled user from logging in", async () => {

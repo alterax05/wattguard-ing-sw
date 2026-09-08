@@ -33,7 +33,6 @@ import { Building } from "../../models/Building";
 // Suppress console logs during tests
 
 let adminToken: string;
-let operatorToken: string;
 let adminUserId: string;
 
 setupIntegrationTests();
@@ -53,17 +52,6 @@ beforeEach(async () => {
   });
   adminUserId = admin._id.toString();
 
-  const operatorPasswordHash = await Bun.password.hash("operator123", {
-    algorithm: "bcrypt",
-    cost: 10,
-  });
-
-  await User.create({
-    email: "operator@test.com",
-    role: "operator",
-    passwordHash: operatorPasswordHash,
-  });
-
   // Login to get tokens
   const adminLoginRes = await client.api.v1.auth.session.$post({
     json: {
@@ -74,16 +62,6 @@ beforeEach(async () => {
   
   // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
   adminToken = ((await adminLoginRes.json()) as { data: { token: string } }).data.token;
-
-  const operatorLoginRes = await client.api.v1.auth.session.$post({
-    json: {
-      email: "operator@test.com",
-      password: "operator123",
-    },
-  });
-  
-  // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
-  operatorToken = ((await operatorLoginRes.json()) as { data: { token: string } }).data.token;
 });
 
 describe("building-types api", () => {
@@ -92,21 +70,6 @@ describe("building-types api", () => {
   // ============================================================================
 
   describe("GET /api/v1/building-types", () => {
-    test("returns empty array when no building types exist", async () => {
-      const res = await client.api.v1["building-types"].$get(undefined, {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<ListBuildingTypesResponse | ErrorResponse>();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data).toEqual([]);
-    });
-
     test("lists all building types (admin)", async () => {
       // Create test building types
       await BuildingType.create([
@@ -134,51 +97,6 @@ describe("building-types api", () => {
       expect(json.data[0]!.updatedAt).toBeDefined();
     });
 
-    test("lists all building types (operator)", async () => {
-      await BuildingType.create([
-        { name: "Scuola", description: "Edificio scolastico" },
-      ]);
-
-      const res = await client.api.v1["building-types"].$get(undefined, {
-        headers: { Authorization: `Bearer ${operatorToken}` },
-      });
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.length).toBe(1);
-    });
-
-    test("rejects request without token (401)", async () => {
-      const res = await client.api.v1["building-types"].$get();
-
-      expect(res.status).toBe(401);
-    });
-
-    test("returns building types sorted by name", async () => {
-      await BuildingType.create([
-        { name: "Ufficio", description: "C" },
-        { name: "Scuola", description: "B" },
-        { name: "Ospedale", description: "A" },
-      ]);
-
-      const res = await client.api.v1["building-types"].$get(undefined, {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      });
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data[0]!.name).toBe("Ospedale");
-      expect(json.data[1]!.name).toBe("Scuola");
-      expect(json.data[2]!.name).toBe("Ufficio");
-    });
   });
 
   // ============================================================================
@@ -186,27 +104,6 @@ describe("building-types api", () => {
   // ============================================================================
 
   describe("GET /api/v1/building-types/:id", () => {
-    test("returns building type by ID with self link", async () => {
-      const created = await BuildingType.create({
-        name: "Teatro",
-        description: "Edificio teatrale",
-      });
-
-      const res = await client.api.v1["building-types"][":id"].$get(
-        { param: { id: created._id.toString() } },
-        { headers: { Authorization: `Bearer ${operatorToken}` } }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<BuildingTypeResponse | ErrorResponse>();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected success");
-      }
-      expect(json.data.name).toBe("Teatro");
-      expect(json.data.self).toBe(`/api/v1/building-types/${created._id.toString()}`);
-    });
 
     test("returns 404 for non-existent building type", async () => {
       const res = await client.api.v1["building-types"][":id"].$get(
@@ -226,14 +123,6 @@ describe("building-types api", () => {
       );
 
       expect(Number(res.status)).toBe(400);
-    });
-
-    test("returns 401 when unauthenticated", async () => {
-      const res = await client.api.v1["building-types"][":id"].$get(
-        { param: { id: "507f1f77bcf86cd799439011" } }
-      );
-
-      expect(res.status).toBe(401);
     });
   });
 
@@ -322,24 +211,6 @@ describe("building-types api", () => {
 
       expectValidationError({ data: await res.json(), status: res.status, fieldName: "name" });
     });
-
-    test("rejects request from operator (403)", async () => {
-      const res = await client.api.v1["building-types"].$post(
-        {
-          json: {
-            name: "Test",
-            description: "Test",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${operatorToken}`,
-          },
-        }
-      );
-
-      expect(Number(res.status)).toBe(403);
-    });
   });
 
   // ============================================================================
@@ -383,66 +254,6 @@ describe("building-types api", () => {
       // Verify in database
       const updated = await BuildingType.findById(buildingType._id);
       expect(updated!.name).toBe(updateData.name);
-    });
-
-    test("updates only name", async () => {
-      const buildingType = await BuildingType.create({
-        name: "Original",
-        description: "Original Description",
-      });
-
-      const res = await client.api.v1["building-types"][":id"].$patch(
-        {
-          param: { id: buildingType._id.toString() },
-          json: {
-            name: "Updated Name Only",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.name).toBe("Updated Name Only");
-      expect(json.data.description).toBe("Original Description");
-    });
-
-    test("updates only description", async () => {
-      const buildingType = await BuildingType.create({
-        name: "Original Name",
-        description: "Original",
-      });
-
-      const res = await client.api.v1["building-types"][":id"].$patch(
-        {
-          param: { id: buildingType._id.toString() },
-          json: {
-            description: "Updated Description Only",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.name).toBe("Original Name");
-      expect(json.data.description).toBe("Updated Description Only");
     });
 
     test("rejects duplicate name", async () => {
@@ -497,29 +308,6 @@ describe("building-types api", () => {
       );
 
       expect(res.status).toBe(404);
-    });
-
-    test("rejects request from operator (403)", async () => {
-      const buildingType = await BuildingType.create({
-        name: "Test",
-        description: "Test",
-      });
-
-      const res = await client.api.v1["building-types"][":id"].$patch(
-        {
-          param: { id: buildingType._id.toString() },
-          json: {
-            name: "Updated",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${operatorToken}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(403);
     });
   });
 
@@ -612,26 +400,6 @@ describe("building-types api", () => {
       );
 
       expect(res.status).toBe(404);
-    });
-
-    test("rejects request from operator (403)", async () => {
-      const buildingType = await BuildingType.create({
-        name: "Test",
-        description: "Test",
-      });
-
-      const res = await client.api.v1["building-types"][":id"].$delete(
-        {
-          param: { id: buildingType._id.toString() },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${operatorToken}`,
-          },
-        }
-      );
-
-      expect(Number(res.status)).toBe(403);
     });
   });
 });

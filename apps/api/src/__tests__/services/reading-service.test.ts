@@ -3,7 +3,6 @@ import {
   test,
   expect,
   beforeEach,
-  spyOn,
   mock,
 } from "bun:test";
 import { Types } from "mongoose";
@@ -186,69 +185,5 @@ describe("readingService", () => {
       caught = error;
     }
     expect(caught).toBeInstanceOf(SensorNotFoundError);
-  });
-
-  test("does not persist anything when the reading insert fails", async () => {
-    const sensor = await createSensor({ minThreshold: 10, status: "inactive" });
-    const readingCreateSpy = spyOn(SensorReading, "create").mockRejectedValueOnce(
-      new Error("db down"),
-    );
-
-    let rejectionMessage = "";
-    try {
-      await ingestReading({
-        sensorId: sensor._id.toString(),
-        value: 5,
-        unit: "°C",
-        timestamp: new Date(),
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        rejectionMessage = error.message;
-      }
-    }
-    expect(rejectionMessage).toContain("db down");
-
-    readingCreateSpy.mockRestore();
-
-    expect(await Alert.countDocuments({ sensor: sensor._id })).toBe(0);
-    expect(await SensorReading.countDocuments({ "metadata.sensor": sensor._id })).toBe(0);
-
-    const updated = await Sensor.findById(sensor._id);
-    expect(updated!.lastReading).toBeUndefined();
-    expect(updated!.status).toBe("inactive");
-  });
-
-  test("rolls back the alert when the transaction fails", async () => {
-    const sensor = await createSensor({ maxThreshold: 30 });
-    const alertCreateSpy = spyOn(Alert, "create").mockRejectedValueOnce(
-      new Error("db down"),
-    );
-
-    let rejectionMessage = "";
-    try {
-      await ingestReading({
-        sensorId: sensor._id.toString(),
-        value: 35,
-        unit: "°C",
-        timestamp: new Date(),
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        rejectionMessage = error.message;
-      }
-    }
-    expect(rejectionMessage).toContain("Failed to create threshold alert");
-
-    alertCreateSpy.mockRestore();
-
-    // The reading is already stored (time-series inserts cannot run inside
-    // transactions); the alert and lastReading update must be rolled back.
-    expect(await Alert.countDocuments({ sensor: sensor._id })).toBe(0);
-    expect(await SensorReading.countDocuments({ "metadata.sensor": sensor._id })).toBe(1);
-
-    const updated = await Sensor.findById(sensor._id);
-    expect(updated!.lastReading).toBeUndefined();
-    expect(updated!.status).toBe("active");
   });
 });

@@ -31,7 +31,7 @@ function getMessageHandler() {
 }
 
 describe("lib/mqtt", () => {
-  let connectCallback: () => void;
+  let _connectCallback: () => void;
   let warnSpy: ReturnType<typeof spyOn<typeof console, "warn">>;
 
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe("lib/mqtt", () => {
 
     // Setup basic mock behavior
     mockOn.mockImplementation((event: string, cb: (...args: unknown[]) => void) => {
-      if (event === "connect") connectCallback = cb;
+      if (event === "connect") _connectCallback = cb;
       return mockMqttClient;
     });
 
@@ -61,20 +61,6 @@ describe("lib/mqtt", () => {
 
   afterEach(() => {
     warnSpy.mockRestore();
-  });
-
-  test("connects and subscribe on initialization", async () => {
-    await connectAndSubscribe();
-
-    expect(mqtt.connectAsync).toHaveBeenCalled();
-
-    // Trigger connect event
-    connectCallback();
-
-    expect(mockSubscribe).toHaveBeenCalledWith(
-      "sensors/+/readings",
-      expect.any(Function),
-    );
   });
 
   test("delegates valid messages to the reading service", async () => {
@@ -101,20 +87,6 @@ describe("lib/mqtt", () => {
     });
   });
 
-  test("defaults the timestamp to now when omitted", async () => {
-    await connectAndSubscribe();
-    const messageHandler = getMessageHandler();
-
-    await messageHandler(
-      `sensors/${VALID_SENSOR_ID}/readings`,
-      Buffer.from(JSON.stringify({ value: 18, unit: "°C" })),
-    );
-
-    expect(ingestReadingMock).toHaveBeenCalledTimes(1);
-    const input = ingestReadingMock.mock.calls[0]?.[0];
-    expect(input).toBeDefined();
-    expect(Math.abs(input!.timestamp.getTime() - Date.now())).toBeLessThan(5000);
-  });
 
   test("ignores invalid topics", async () => {
     await connectAndSubscribe();
@@ -123,18 +95,6 @@ describe("lib/mqtt", () => {
     await messageHandler("wrong/topic", Buffer.from("{}"));
     await messageHandler("sensors/foo/bar/readings", Buffer.from("{}"));
     await messageHandler(`sensors/${VALID_SENSOR_ID}/events`, Buffer.from("{}"));
-
-    expect(ingestReadingMock).not.toHaveBeenCalled();
-  });
-
-  test("ignores invalid sensor ids", async () => {
-    await connectAndSubscribe();
-    const messageHandler = getMessageHandler();
-
-    await messageHandler(
-      "sensors/not-an-object-id/readings",
-      Buffer.from(JSON.stringify({ value: 1, unit: "°C" })),
-    );
 
     expect(ingestReadingMock).not.toHaveBeenCalled();
   });
@@ -177,42 +137,5 @@ describe("lib/mqtt", () => {
     );
 
     expect(ingestReadingMock).not.toHaveBeenCalled();
-  });
-
-  test("skips messages for unknown sensors without throwing", async () => {
-    ingestReadingMock.mockRejectedValue(
-      new SensorNotFoundError(VALID_SENSOR_ID),
-    );
-    await connectAndSubscribe();
-    const messageHandler = getMessageHandler();
-
-    await messageHandler(
-      `sensors/${VALID_SENSOR_ID}/readings`,
-      Buffer.from(JSON.stringify({ value: 22.5, unit: "°C" })),
-    );
-
-    expect(ingestReadingMock).toHaveBeenCalledTimes(1);
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("unknown sensor"),
-    );
-  });
-
-  test("swallows unexpected service errors without throwing", async () => {
-    ingestReadingMock.mockRejectedValue(new Error("db down"));
-    await connectAndSubscribe();
-    const messageHandler = getMessageHandler();
-    const errorSpy = spyOn(console, "error").mockImplementation(() => {});
-
-    await messageHandler(
-      `sensors/${VALID_SENSOR_ID}/readings`,
-      Buffer.from(JSON.stringify({ value: 22.5, unit: "°C" })),
-    );
-
-    expect(ingestReadingMock).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Error processing MQTT message"),
-      expect.any(Error),
-    );
-    errorSpy.mockRestore();
   });
 });

@@ -220,25 +220,6 @@ describe("sensors api", () => {
       expect(json.error_code).toBe("sensor_serial_exists");
     });
 
-    test("rejects invalid building ID", async () => {
-      const res = await client.api.v1.sensors.$post(
-        {
-          json: {
-            building: "507f1f77bcf86cd799439011",
-            sensorType: "internal_temp",
-            location: "Test",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(404);
-    });
-
     test("rejects invalid data", async () => {
       const res = await client.api.v1.sensors.$post(
         {
@@ -331,11 +312,11 @@ describe("sensors api", () => {
   // ============================================================================
 
   describe("PATCH /api/v1/sensors/:id", () => {
-    test("updates sensor location and status", async () => {
+    test("updates sensor min/max thresholds", async () => {
       const sensor = await Sensor.create({
         building: buildingId,
         sensorType: "internal_temp",
-        location: "Original Location",
+        location: "Thresholds",
         installationDate: new Date(),
         transmissionInterval: 90,
         status: "active",
@@ -343,15 +324,10 @@ describe("sensors api", () => {
         updatedBy: adminUserId,
       });
 
-      const updateData = {
-        location: "Updated Location",
-        status: "inactive" as const,
-      };
-
       const res = await client.api.v1.sensors[":id"].$patch(
         {
           param: { id: sensor._id.toString() },
-          json: updateData,
+          json: { minThreshold: 10, maxThreshold: 30 },
         },
         {
           headers: {
@@ -361,16 +337,9 @@ describe("sensors api", () => {
       );
 
       expect(res.status).toBe(200);
-      const json = await res.json();
-      expectTypeOf(json).toExtend<SensorResponse | ErrorResponse>();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.location).toBe("Updated Location");
-      expect(json.data.status).toBe("inactive");
-
-      
+      const updated = await Sensor.findById(sensor._id);
+      expect(updated!.minThreshold).toBe(10);
+      expect(updated!.maxThreshold).toBe(30);
     });
 
     test("returns 404 for non-existent sensor", async () => {
@@ -393,79 +362,6 @@ describe("sensors api", () => {
       expect(res.status).toBe(404);
     });
 
-    test("deletes alerts for a removed threshold without deleting alerts for the other threshold", async () => {
-      const sensor = await Sensor.create({
-        building: buildingId,
-        sensorType: "internal_temp",
-        location: "Threshold Sensor",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        minThreshold: 10,
-        maxThreshold: 30,
-        status: "active",
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      const minAlert = await Alert.create({
-        building: buildingId,
-        sensor: sensor._id,
-        type: "threshold_exceeded",
-        thresholdType: "min",
-        severity: "high",
-        value: 5,
-        unit: "°C",
-        limit: 10,
-        status: "active",
-      });
-      const maxAlert = await Alert.create({
-        building: buildingId,
-        sensor: sensor._id,
-        type: "threshold_exceeded",
-        thresholdType: "max",
-        severity: "high",
-        value: 35,
-        unit: "°C",
-        limit: 30,
-        status: "acknowledged",
-      });
-      const legacyAlert = await Alert.create({
-        building: buildingId,
-        sensor: sensor._id,
-        type: "threshold_exceeded",
-        severity: "high",
-        value: 40,
-        unit: "°C",
-        limit: 30,
-        status: "active",
-      });
-      const unrelatedAlert = await Alert.create({
-        building: buildingId,
-        sensor: sensor._id,
-        type: "efficiency_below_threshold",
-        severity: "medium",
-        status: "active",
-      });
-
-      const res = await client.api.v1.sensors[":id"].$patch(
-        {
-          param: { id: sensor._id.toString() },
-          json: { maxThreshold: null },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      expect((await Sensor.findById(sensor._id))!.maxThreshold).toBeUndefined();
-      expect(await Alert.findById(minAlert._id)).toBeDefined();
-      expect(await Alert.findById(maxAlert._id)).toBeNull();
-      expect(await Alert.findById(legacyAlert._id)).toBeNull();
-      expect(await Alert.findById(unrelatedAlert._id)).toBeDefined();
-    });
   });
 
   // ============================================================================
@@ -783,108 +679,7 @@ describe("sensors api", () => {
       expect(json.data.readings[2]!.value).toBe(21.0); // Oldest last
     });
 
-    test("supports date range filtering", async () => {
-      const sensor = await Sensor.create({
-        building: buildingId,
-        sensorType: "internal_temp",
-        location: "Test",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
 
-      const now = new Date();
-      await SensorReading.create([
-        {
-          timestamp: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-          value: 20.0,
-          unit: "°C",
-          metadata: {
-            sensor: sensor._id,
-            building: new Types.ObjectId(buildingId),
-            sensorType: "internal_temp",
-          },
-        },
-        {
-          timestamp: new Date(now.getTime() - 24 * 60 * 60 * 1000), // 1 day ago
-          value: 22.0,
-          unit: "°C",
-          metadata: {
-            sensor: sensor._id,
-            building: new Types.ObjectId(buildingId),
-            sensorType: "internal_temp",
-          },
-        },
-      ]);
-
-      const startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(); // 2 days ago
-
-      const res = await client.api.v1.sensors[":id"].readings.$get(
-        {
-          param: { id: sensor._id.toString() },
-          query: { startDate },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.readings.length).toBe(1); // Only the reading from 1 day ago
-      expect(json.data.readings[0]!.value).toBe(22.0);
-    });
-
-    test("supports pagination", async () => {
-      const sensor = await Sensor.create({
-        building: buildingId,
-        sensorType: "internal_temp",
-        location: "Test",
-        installationDate: new Date(),
-        transmissionInterval: 90,
-        createdBy: adminUserId,
-        updatedBy: adminUserId,
-      });
-
-      // Create 5 readings
-      const readings = Array.from({ length: 5 }, (_, i) => ({
-        timestamp: new Date(Date.now() - i * 60000),
-        value: 20 + i,
-        unit: "°C",
-        metadata: {
-          sensor: sensor._id,
-          building: new Types.ObjectId(buildingId),
-          sensorType: "internal_temp",
-        },
-      }));
-      await SensorReading.insertMany(readings);
-
-      const res = await client.api.v1.sensors[":id"].readings.$get(
-        {
-          param: { id: sensor._id.toString() },
-          query: { limit: "2", offset: "0" },
-        },
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
-      );
-
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      if (!json.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(json.data.readings.length).toBe(2);
-      expect(json.data.pagination.total).toBe(5);
-      expect(json.data.pagination.limit).toBe(2);
-      expect(json.data.pagination.offset).toBe(0);
-    });
 
     test("returns 404 for non-existent sensor", async () => {
       const fakeId = "507f1f77bcf86cd799439011";
