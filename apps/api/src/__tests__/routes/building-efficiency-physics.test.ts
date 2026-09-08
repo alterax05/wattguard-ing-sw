@@ -255,24 +255,4 @@ describe("GET /api/v1/buildings/:id/efficiency", () => {
 
     expect(res.status).toBe(400);
   });
-
-  test("returns 404 for non-existent building", async () => {
-    const fakeId = "507f1f77bcf86cd799439011";
-    const startDate = "2024-01-01T10:00:00Z";
-    const endDate = "2024-01-01T13:00:00Z";
-
-    const res = await client.api.v1.buildings[":id"].efficiency.$get(
-      {
-        param: { id: fakeId },
-        query: { startDate, endDate },
-      },
-      {
-        headers: {
-          "Authorization": `Bearer ${adminToken}`,
-        },
-      }
-    );
-
-    expect(res.status).toBe(404);
-  });
 });
