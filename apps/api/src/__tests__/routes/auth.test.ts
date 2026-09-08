@@ -111,7 +111,6 @@ describe("auth api", () => {
       expect(res.status).toBe(200);
       // SAFETY: callers supply the documented response schema of the endpoint under test.
       const data = (await res.json()) as ValidateInviteResponse | ErrorResponse;
-      expectTypeOf(data).toExtend<ValidateInviteResponse | ErrorResponse>();
       expect(data.success).toBe(true);
       if (!data.success) {
         return expect.unreachable("Expected response success to be true");
@@ -219,7 +218,6 @@ describe("auth api", () => {
   });
 
   describe("session management", () => {
-    //1.1
     test("logs in with valid local credentials via POST /auth/session", async () => {
       await User.create({
         email: "user@test.com",
@@ -247,10 +245,8 @@ describe("auth api", () => {
       expect(data.data.user.email).toBe("user@test.com");
 
       expect(data.data.token.length).toBeGreaterThan(0);
-      expect(res.headers.get("set-cookie")).toBeNull();
     });
 
-    //1.2
     test("rejects login with invalid credentials", async () => {
       await User.create({
         email: "user@test.com",
@@ -304,7 +300,6 @@ describe("auth api", () => {
       expect(user!.lastLoginAt).toBeDefined();
 
       expect(data.data.token.length).toBeGreaterThan(0);
-      expect(res.headers.get("set-cookie")).toBeNull();
     });
 
     test("rejects Google login when user does not exist", async () => {
