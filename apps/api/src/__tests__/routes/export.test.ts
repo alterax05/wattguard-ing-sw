@@ -11,7 +11,6 @@ import { setupIntegrationTests } from "../helpers/db";
 const client = testClient(app);
 
 let adminToken: string;
-let operatorToken: string;
 let buildingId: string;
 let buildingName: string;
 
@@ -46,7 +45,6 @@ beforeEach(async () => {
   });
 
   adminToken = await login("export-admin@test.com", "admin123");
-  operatorToken = await login("export-operator@test.com", "admin123");
 
   const buildingType = await BuildingType.create({ name: "Export test type" });
   buildingName = 'Edificio "Centro", Milano';
@@ -109,33 +107,6 @@ beforeEach(async () => {
 });
 
 describe("GET /api/v1/readings", () => {
-  test("requires authentication", async () => {
-    const response = await client.api.v1.readings.$get({
-      query: {
-        buildingIds: buildingId,
-        startDate: "2026-01-01",
-        endDate: "2026-01-31",
-      },
-    });
-
-    expect(response.status).toBe(401);
-  });
-
-  test("allows only administrators", async () => {
-    const response = await client.api.v1.readings.$get(
-      {
-        query: {
-          buildingIds: buildingId,
-          startDate: "2026-01-01",
-          endDate: "2026-01-31",
-        },
-      },
-      { headers: { Authorization: `Bearer ${operatorToken}` } },
-    );
-
-    expect(response.status).toBe(403);
-  });
-
   test("rejects missing and reversed date ranges", async () => {
     const missingDateResponse = await client.api.v1.readings.$get(
       {

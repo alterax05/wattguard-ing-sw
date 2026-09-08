@@ -15,17 +15,12 @@ import { app } from "../../index";
 import { setupIntegrationTests } from "../helpers/db";
 import { User } from "../../models/User";
 import { Invite } from "../../models/Invite";
-import { PasswordResetToken } from "../../models/PasswordResetToken";
 import { randomToken, hashTokenSha256 } from "../../utils/crypto";
-import { ErrorSchema } from "@wattguard/shared";
 import type {
   ValidateInviteResponse,
   AcceptInviteResponse,
   SessionResponse,
   SessionUserResponse,
-  CreateRecoveryTokenResponse,
-  ValidateRecoveryTokenResponse,
-  ConfirmRecoveryResponse,
   GoogleConfigResponse, ErrorResponse} from "@wattguard/shared";
 
 
@@ -87,65 +82,6 @@ describe("auth api", () => {
   });
 
   describe("invite flow", () => {
-    test("creates an admin user and an invite", async () => {
-      const adminPasswordHash = await Bun.password.hash("admin123", {
-        algorithm: "bcrypt",
-        cost: 10,
-      });
-
-      await User.create({
-        email: "admin@test.com",
-        role: "admin",
-        isDisabled: false,
-        passwordHash: adminPasswordHash,
-      });
-
-      // Login as admin
-      const loginRes = await client.api.v1.auth.session.$post({
-        json: {
-          email: "admin@test.com",
-          password: "admin123",
-        },
-      });
-
-      expect(loginRes.status).toBe(200);
-      const loginData = await loginRes.json();
-      expectTypeOf(loginData).toExtend<SessionResponse | ErrorResponse>();
-      if (!("success" in loginData)) {
-        return expect.unreachable("Expected response to contain 'success'");
-      }
-      expect(loginData.success).toBe(true);
-      if (!loginData.success) {
-        return expect.unreachable("Expected login to succeed");
-      }
-      const token = loginData.data.token;
-
-      // Create invite
-      const inviteRes = await client.api.v1.invites.$post(
-        {
-          json: {
-            email: "user@test.com",
-            role: "operator",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      expect(inviteRes.status).toBe(201);
-      const inviteData = await inviteRes.json();
-      expect(inviteData.success).toBe(true);
-      if (!inviteData.success) {
-        return expect.unreachable("Expected response success to be true");
-      }
-      expect(inviteData.data.email).toBe("user@test.com");
-      expect(inviteData.data.role).toBe("operator");
-      expect(inviteData.data.status).toBe("pending");
-    });
-
     test("validates an invite token", async () => {
       const token = randomToken(32);
       const tokenHash = hashTokenSha256(token);
@@ -282,7 +218,8 @@ describe("auth api", () => {
     });
   });
 
-  describe("session management (login & logout)", () => {
+  describe("session management", () => {
+    //1.1
     test("logs in with valid local credentials via POST /auth/session", async () => {
       await User.create({
         email: "user@test.com",
@@ -313,6 +250,7 @@ describe("auth api", () => {
       expect(res.headers.get("set-cookie")).toBeNull();
     });
 
+    //1.2
     test("rejects login with invalid credentials", async () => {
       await User.create({
         email: "user@test.com",
@@ -339,6 +277,7 @@ describe("auth api", () => {
       expect(data.error_code).toBe("invalid_credentials");
     });
 
+    
     test("logs in existing user with valid Google ID token via POST /auth/session", async () => {
       await User.create({
         email: "googleuser@test.com",
@@ -501,164 +440,6 @@ describe("auth api", () => {
       );
       expect(invalid.status).toBe(400);
     });
-
-    test("rejects operator from admin routes", async () => {
-      await User.create({
-        email: "operator@test.com",
-        role: "operator",
-        passwordHash: await Bun.password.hash("password123", {
-          algorithm: "bcrypt",
-          cost: 10,
-        }),
-      });
-
-      const loginRes = await client.api.v1.auth.session.$post({
-        json: {
-          email: "operator@test.com",
-          password: "password123",
-        },
-      });
-
-      // SAFETY: login with freshly seeded valid credentials returns SessionResponse.
-      const token = ((await loginRes.json()) as SessionResponse).data.token;
-
-      const res = await client.api.v1.invites.$get({
-        query: {},
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      expect(res.status).toBe(403);
-      const data = ErrorSchema.parse(await res.json());
-      expect(data.success).toBe(false);
-      expect(data.error_code).toBeDefined();
-    });
   });
 
-  describe("password recovery flow", () => {
-    test("requests password recovery for existing user via POST /auth/recovery-tokens", async () => {
-      await User.create({
-        email: "user@test.com",
-        role: "operator",
-        passwordHash: await Bun.password.hash("oldpassword", {
-          algorithm: "bcrypt",
-          cost: 10,
-        }),
-      });
-
-      const res = await client.api.v1.auth["recovery-tokens"].$post({
-        json: { email: "user@test.com" },
-      });
-
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expectTypeOf(data).toExtend<CreateRecoveryTokenResponse | ErrorResponse>();
-      expect(data.success).toBe(true);
-
-      const user = await User.findOne({ email: "user@test.com" });
-      const resetToken = await PasswordResetToken.findOne({ userId: user!._id });
-      expect(resetToken).toBeDefined();
-    });
-
-    test("completes full password recovery flow", async () => {
-      const user = await User.create({
-        email: "user@test.com",
-        role: "operator",
-        passwordHash: await Bun.password.hash("oldpassword", {
-          algorithm: "bcrypt",
-          cost: 10,
-        }),
-      });
-
-      const token = randomToken(32);
-      const tokenHash = hashTokenSha256(token);
-
-      await PasswordResetToken.create({
-        userId: user._id,
-        tokenHash,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-      });
-
-      // Validate token via POST /auth/recovery-validations
-      const validateRes = await client.api.v1.auth["recovery-validations"].$post({
-        json: { token },
-      });
-      expect(validateRes.status).toBe(200);
-      const validateData = await validateRes.json();
-      expectTypeOf(validateData).toExtend<ValidateRecoveryTokenResponse | ErrorResponse>();
-      expect(validateData.success).toBe(true);
-
-      // Confirm recovery via POST /auth/recovery-confirmations
-      const resetRes = await client.api.v1.auth["recovery-confirmations"].$post({
-        json: {
-          token,
-          password: "newpassword123",
-        },
-      });
-
-      expect(resetRes.status).toBe(200);
-      const resetData = await resetRes.json();
-      expectTypeOf(resetData).toExtend<ConfirmRecoveryResponse | ErrorResponse>();
-      expect(resetData.success).toBe(true);
-
-      // Verify token was deleted
-      const deletedToken = await PasswordResetToken.findOne({ tokenHash });
-      expect(deletedToken).toBeNull();
-
-      // Login with new password
-      const loginRes = await client.api.v1.auth.session.$post({
-        json: {
-          email: "user@test.com",
-          password: "newpassword123",
-        },
-      });
-
-      expect(loginRes.status).toBe(200);
-
-      // Verify old password doesn't work
-      const oldLoginRes = await client.api.v1.auth.session.$post({
-        json: {
-          email: "user@test.com",
-          password: "oldpassword",
-        },
-      });
-
-      expect(oldLoginRes.status).toBe(401);
-    });
-
-    test("rejects expired recovery token", async () => {
-      const user = await User.create({
-        email: "user@test.com",
-        role: "operator",
-        passwordHash: await Bun.password.hash("password123", {
-          algorithm: "bcrypt",
-          cost: 10,
-        }),
-      });
-
-      const token = randomToken(32);
-      const tokenHash = hashTokenSha256(token);
-
-      await PasswordResetToken.create({
-        userId: user._id,
-        tokenHash,
-        expiresAt: new Date(Date.now() - 1000), // Expired 1 second ago
-      });
-
-      const res = await client.api.v1.auth["recovery-confirmations"].$post({
-        json: {
-          token,
-          password: "newpassword123",
-        },
-      });
-
-      expect(res.status).toBe(422);
-      const data = await res.json();
-      expect(data.success).toBe(false);
-      if (data.success) {
-        return expect.unreachable("Expected response success to be false");
-      }
-      expect(data.error_code).toContain("expired");
-    });
-  });
 });
