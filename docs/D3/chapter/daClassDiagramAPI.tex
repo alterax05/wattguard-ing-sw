@@ -1,0 +1,138 @@
+\section{Dal Class Diagram alle API}
+\label{ch:dalClassDiagramAlleAPI}
+
+Riportiamo di seguito una tabella con la mappatura tra i metodi presenti nel diagramma delle classi del capitolo precedente e le API individuate nel documento D3.
+L'uso del simbolo \textbf{*} indica che esso è un parametro di percorso.
+Nei parametri query invece il simbolo \textbf{!} indica che il parametro è obbligatorio mentre \textbf{?} è facoltativo.
+
+{\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{>{\raggedright\arraybackslash}p{2.6cm}>{\centering\arraybackslash}p{1.5cm}>{\raggedright\ttfamily\arraybackslash}p{5.6cm}>{\raggedright\arraybackslash}p{2.4cm}>{\raggedright\arraybackslash}p{2.2cm}}
+\toprule
+\textbf{Metodo} & \textbf{HTTP} & \textbf{URI + query} & \textbf{Request} & \textbf{Response} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Metodo} & \textbf{HTTP} & \textbf{URI + query} & \textbf{Request} & \textbf{Response} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\multicolumn{5}{l}{\textbf{Classe Utente --- autenticazione}} \\
+\midrule
+login() & POST & /auth/session & \texttt{\{email,} \allowbreak\texttt{password} \allowbreak\textbar{} \texttt{idToken\}} & \texttt{\{user,} \allowbreak\texttt{token\}} \\
+get\allowbreak{}Current\allowbreak{}Session() & GET & /auth/session & - & \texttt{User} \\
+update\allowbreak{}Own\allowbreak{}Profile() & PATCH & /auth/session & \texttt{\{name,} \allowbreak\texttt{language\}} & \texttt{User} \\
+get\allowbreak{}Google\allowbreak{}Client\allowbreak{}Id() & GET & /auth/google/\allowbreak{}config & - & \texttt{\{clientId\}} \\
+logout() & - & - & - & - \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe Utente --- gestione account (solo admin)}} \\
+\midrule
+listUsers() & GET & /users/ & - & \texttt{User[]} \\
+getUser() & GET & /users/:id* & - & \texttt{User} \\
+updateUser() & PATCH & /users/:id* & \texttt{\{role,} \allowbreak\texttt{isDisabled\}} & \texttt{User} \\
+deleteUser() & DELETE & /users/:id* & - & 204 \\
+acceptInvite() & PATCH & /invites/:id* & vedi Invito & \texttt{\{user,} \allowbreak\texttt{token\}} \\
+toUserDto() & - & - & - & \texttt{User} \\
+to\allowbreak{}Public\allowbreak{}User\allowbreak{}Dto() & - & - & - & \texttt{User} \\
+pre('save') & - & - & - & - \\
+seed\allowbreak{}Initial\allowbreak{}Records() & - & - & - & - \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe Invito}} \\
+\midrule
+createInvite() & POST & /invites/ & \texttt{\{email,} \allowbreak\texttt{role\}} & \texttt{Invite} \\
+list\allowbreak{}Or\allowbreak{}Validate() & GET & /invites/ [?token=] & \texttt{?token=} & \texttt{Invite} \allowbreak\textbar{} \texttt{Invite[]} \\
+getInvite() & GET & /invites/:id* & - & \texttt{Invite} \\
+revokeInvite() & DELETE & /invites/:id* & - & 204 \\
+acceptInvite() & PATCH & /invites/:id* & \texttt{\{token,} \allowbreak\texttt{password} \allowbreak\textbar{} \texttt{idToken\}} & \texttt{\{user,} \allowbreak\texttt{token\}} \\
+validate\allowbreak{}Invite\allowbreak{}Token() & - & - & - & - \\
+toInviteDto() & - & - & - & \texttt{Invite} \\
+to\allowbreak{}Create\allowbreak{}Invite\allowbreak{}Dto() & - & - & - & \texttt{Invite} \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe TokenResetPassword}} \\
+\midrule
+requestReset() & POST & /auth/recovery-tokens & \texttt{\{email\}} & 200 generica \\
+verifyToken() & POST & /auth/recovery-validations & \texttt{\{token\}} & \texttt{\{valid\}} \\
+confirmReset() & POST & /auth/recovery-confirmations & \texttt{\{token,} \allowbreak\texttt{password\}} & 200 \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe Edificio}} \\
+\midrule
+search\allowbreak{}Buildings() & GET & /buildings/ & filtri + paginazione & \texttt{Building[]} \\
+create\allowbreak{}Building() & POST & /buildings/ & anagrafica edificio & \texttt{Building} \\
+getBuilding() & GET & /buildings/:id* & - & \texttt{Building} \\
+update\allowbreak{}Building() & PATCH & /buildings/:id* & campi edificio & \texttt{Building} \\
+delete\allowbreak{}Building() & DELETE & /buildings/:id* & - & 204 \\
+getHistory() & GET & /buildings/:id*/\allowbreak{}readings \allowbreak{}?startDate!, \allowbreak{}endDate!, \allowbreak{}sensorType?, \allowbreak{}interval?, \allowbreak{}limit?, \allowbreak{}sortOrder? & - & \texttt{Reading[]} \\
+getRealtime() & - & - & - & - \\
+calculate\allowbreak{}Building\allowbreak{}Efficiency() & GET & /buildings/:id*/\allowbreak{}efficiency \allowbreak{}?startDate!, \allowbreak{}endDate! & - & \texttt{\{COP, ...\}} \\
+build\allowbreak{}Report\allowbreak{}Data() & GET & /reports/ \allowbreak{}?buildingIds!, \allowbreak{}startDate!, \allowbreak{}endDate!, \allowbreak{}format? & - & PDF \textbar{} XLSX \\
+to\allowbreak{}Building\allowbreak{}Summary\allowbreak{}DTO() & - & - & - & \texttt{Building} \\
+to\allowbreak{}Building\allowbreak{}Detail\allowbreak{}DTO() & - & - & - & \texttt{Building} \\
+classify\allowbreak{}Heating\allowbreak{}System() & - & - & - & - \\
+aggregate\allowbreak{}Daily\allowbreak{}Consumption() & - & - & - & - \\
+getCoordinates() & - & - & - & - \\
+get\allowbreak{}Avg\allowbreak{}Hist\allowbreak{}Temperature() & - & - & - & - \\
+evaluate\allowbreak{}Efficiency\allowbreak{}Alerts() & - & - & - & - \\
+advance\allowbreak{}Thermostat() & - & - & - & - \\
+compute\allowbreak{}Sensor\allowbreak{}Reading() & - & - & - & - \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe TipologiaEdificio}} \\
+\midrule
+list\allowbreak{}Building\allowbreak{}Types() & GET & /building-types/ & - & \texttt{BuildingType[]} \\
+get\allowbreak{}Building\allowbreak{}Type() & GET & /building-types/:id* & - & \texttt{BuildingType} \\
+create\allowbreak{}Building\allowbreak{}Type() & POST & /building-types/ & \texttt{\{name,} \allowbreak\texttt{description\}} & \texttt{BuildingType} \\
+update\allowbreak{}Building\allowbreak{}Type() & PATCH & /building-types/:id* & \texttt{\{name,} \allowbreak\texttt{description\}} & \texttt{BuildingType} \\
+delete\allowbreak{}Building\allowbreak{}Type() & DELETE & /building-types/:id* & - & 204 \\
+to\allowbreak{}Building\allowbreak{}Type\allowbreak{}DTO() & - & - & - & \texttt{BuildingType} \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe Sensore}} \\
+\midrule
+listSensors() & GET & /sensors/ \allowbreak{}?building?, \allowbreak{}sensorType?, \allowbreak{}status? & - & \texttt{Sensor[]} \\
+createSensor() & POST & /sensors/ & config. sensore & \texttt{Sensor} \\
+getSensor() & GET & /sensors/:id* & - & \texttt{Sensor} \\
+updateSensor() & PATCH & /sensors/:id* & config. + soglie & \texttt{Sensor} \\
+deleteSensor() & DELETE & /sensors/:id* & - & 204 \\
+get\allowbreak{}Sensor\allowbreak{}History() & GET & /sensors/:id*/\allowbreak{}readings \allowbreak{}?startDate?, \allowbreak{}endDate?, \allowbreak{}limit?, \allowbreak{}offset?, \allowbreak{}sortOrder? & - & \texttt{Reading[]} \\
+connect\allowbreak{}And\allowbreak{}Subscribe() & MQTT & sensors/+/readings & - & - \\
+isActive() & - & - & - & Boolean \\
+updateStatus() & - & - & - & - \\
+toSensorDTO() & - & - & - & \texttt{Sensor} \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe Rilevazione}} \\
+\midrule
+ingestReading() & MQTT & sensors/+/readings & \texttt{\{value,} \allowbreak\texttt{unit,} \allowbreak\texttt{timestamp\}} & - \\
+listBySensor() & GET & /sensors/:id*/\allowbreak{}readings \allowbreak{}?startDate?, \allowbreak{}endDate?, \allowbreak{}limit?, \allowbreak{}offset?, \allowbreak{}sortOrder? & - & \texttt{Reading[]} \\
+listByBuilding() & GET & /buildings/:id*/\allowbreak{}readings \allowbreak{}?startDate!, \allowbreak{}endDate!, \allowbreak{}sensorType?, \allowbreak{}interval?, \allowbreak{}limit?, \allowbreak{}sortOrder? & - & \texttt{Reading[]} \\
+exportReadings() & GET & /readings/ \allowbreak{}?buildingIds?, \allowbreak{}startDate?, \allowbreak{}endDate?, \allowbreak{}format? & - & CSV \textbar{} JSON \\
+getTimeseries() & GET & /metrics/\allowbreak{}timeseries \allowbreak{}?startDate!, \allowbreak{}endDate!, \allowbreak{}interval? & - & serie aggregate \\
+getKpi() & GET & /metrics/ & - & KPI \\
+handle\allowbreak{}Mqtt\allowbreak{}Message() & - & - & - & - \\
+to\allowbreak{}Sensor\allowbreak{}Reading\allowbreak{}DTO() & - & - & - & \texttt{Reading} \\
+serializeCsv() & - & - & - & CSV \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe Allarme}} \\
+\midrule
+listAlerts() & GET & /alerts/ \allowbreak{}?building?, \allowbreak{}status?, \allowbreak{}severity? & - & \texttt{Alert[]} \\
+getAlert() & GET & /alerts/:id* & - & \texttt{Alert} \\
+acknowledge() & PATCH & /alerts/:id* & \texttt{\{status:} \allowbreak\texttt{acknowledged\}} & \texttt{Alert} \\
+resolve\allowbreak{}Manually() & PATCH & /alerts/:id* & \texttt{\{status:} \allowbreak\texttt{resolved\}} & \texttt{Alert} \\
+raise\allowbreak{}Threshold() & - & - & - & \texttt{Alert} \\
+raise\allowbreak{}Efficiency() & - & - & - & \texttt{Alert} \\
+resolve\allowbreak{}Efficiency\allowbreak{}ForBuilding() & - & - & - & - \\
+prune\allowbreak{}ForRemoved\allowbreak{}Thresholds() & - & - & - & - \\
+delete\allowbreak{}ForBuilding() & - & - & - & - \\
+delete\allowbreak{}ForSensor() & - & - & - & - \\
+compute\allowbreak{}Deviation\allowbreak{}Severity() & - & - & - & \texttt{severity} \\
+toAlertDTO() & - & - & - & \texttt{Alert} \\
+dispatch\allowbreak{}Alert\allowbreak{}Notifications() & - & - & - & - \\
+\midrule
+\multicolumn{5}{l}{\textbf{Classe ConfigurazioneSistema}} \\
+\midrule
+getConfig() & GET & /settings/ & - & \texttt{Config} \\
+updateConfig() & PATCH & /settings/ & \texttt{\{polling,} \allowbreak\texttt{notif.,} \allowbreak\texttt{database\}} & \texttt{Config} \\
+downloadBackup() & GET & /backups/ & - & JSON download \\
+get\allowbreak{}Or\allowbreak{}Create() & - & - & - & \texttt{Config} \\
+serialize\allowbreak{}Config() & - & - & - & \texttt{Config} \\
+\end{longtable}
+}

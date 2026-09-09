@@ -1,0 +1,125 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[italian]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=2cm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage[table]{xcolor} 
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage[bottom]{footmisc}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\tcbuselibrary{skins,breakable}
+\usepackage{soul}
+
+\definecolor{WattOrange}{RGB}{230, 76, 40}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textbf{\textcolor{WattOrange}{WattGuard}}}
+\fancyhead[R]{\textbf{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\ProjectTitle}{WattGuard}
+
+\newenvironment{rfList}{\begin{itemize}[leftmargin=2cm, label={}]}{\end{itemize}}
+\newcommand{\rfItem}[1]{\item \textbf{#1:}}
+
+\newenvironment{rnfList}{\begin{itemize}[leftmargin=2cm, label={}]}{\end{itemize}}
+\newcommand{\rnfItem}[1]{\item \textbf{#1:}}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red!50!black},
+    tabsize=2
+}
+
+\begin{document}
+
+\begin{titlepage}
+    \noindent\includegraphics[width=0.25\textwidth]{../images/logoUni.png}
+    
+    \vspace{2cm}
+    
+    \noindent\textbf{Progetto:}
+    \vspace{0.5cm}
+    \begin{center}
+        {\huge \textbf{\ProjectTitle}}
+    \end{center}
+    
+    \vspace{2cm}
+    
+    \noindent\textbf{Titolo del documento:}
+    \vspace{0.5cm}
+    \begin{center}
+        {\LARGE \textbf{Analisi e Progettazione}}
+    \end{center}
+    
+    \vspace{2cm}
+    
+    \noindent\textbf{Document Info}\\[0.5cm]
+    \begingroup
+    \renewcommand{\arraystretch}{1.5}
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{|p{2.8cm}|p{6.5cm}|p{3cm}|p{2.5cm}|}
+        \hline
+        \cellcolor{WattOrange!60}\textbf{Doc. Name} & 
+        D3-\ProjectTitle-DescrizioneProgetto & 
+        \cellcolor{WattOrange!60}\textbf{Doc. Number} & 
+        D3 V1.0 \\
+        \hline
+        \cellcolor{WattOrange!60}\textbf{Description} & 
+        \multicolumn{3}{l|}{Documento di analisi e progettazzione} \\
+        \hline
+    \end{tabular}
+    \endgroup
+    
+    \vfill
+    
+    \hfill
+    \begin{minipage}{0.35\textwidth}
+        \centering
+        \textbf{Authors}\\[0.3cm]
+        \begin{tabular}{c c}
+            Alessio Pesaresi & 251783 \\
+            Michele Porcellato & 254581 \\
+            Marco Piovesan & 255380 \\
+        \end{tabular}
+    \end{minipage}
+\end{titlepage}
+
+
+\tableofcontents
+\newpage
+\include{chapter/analisiComponenti}
+\include{chapter/definizioneClassi}
+\include{chapter/daClassDiagramAPI}
+
+\end{document}

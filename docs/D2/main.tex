@@ -1,0 +1,150 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+\usepackage{textcomp}
+
+\usepackage{geometry}
+\geometry{a4paper, margin=2cm}
+\usepackage{fancyhdr}
+
+\usepackage[table]{xcolor} 
+\usepackage{soul}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{xltabular}
+
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[bottom]{footmisc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{listings}
+\usepackage{dirtree}
+
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\renewcommand*\DTstyle{\ttfamily} 
+\renewcommand*\DTcomment[1]{\dotfill\mbox{\rmfamily\itshape #1}} 
+\setlength{\DTbaselineskip}{14pt} 
+
+
+\definecolor{WattOrange}{RGB}{230, 76, 40}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textbf{\textcolor{WattOrange}{WattGuard}}}
+\fancyhead[R]{\textbf{\thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\ProjectTitle}{WattGuard}
+
+\newenvironment{rfList}{\begin{itemize}[leftmargin=2cm, label={}]}{\end{itemize}}
+\newcommand{\rfItem}[1]{\item \textbf{#1:}}
+
+\newenvironment{rnfList}{\begin{itemize}[leftmargin=2cm, label={}]}{\end{itemize}}
+\newcommand{\rnfItem}[1]{\item \textbf{#1:}}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red!50!black},
+    tabsize=2
+}
+
+\usepackage{minted}
+\setminted{
+    fontsize=\small,           
+    fontfamily=tt,             
+    breaklines=true,           
+    frame=single,              
+    framesep=2mm,              
+    numbers=left,              
+    numbersep=5pt             
+}
+\begin{document}
+
+\begin{titlepage}
+    \noindent\includegraphics[width=0.25\textwidth]{../images/logoUni.png}
+    
+    \vspace{2cm}
+    
+    \noindent\textbf{Progetto:}
+    \vspace{0.5cm}
+    \begin{center}
+        {\huge \textbf{\ProjectTitle}}
+    \end{center}
+    
+    \vspace{2cm}
+    
+    \noindent\textbf{Titolo del documento:}
+    \vspace{0.5cm}
+    \begin{center}
+        {\LARGE \textbf{Sviluppo}}
+    \end{center}   
+    \vspace{0.5cm}
+
+    \vspace{2cm}
+    
+ \noindent\textbf{Document Info}\\[0.5cm]
+    \begingroup
+    \renewcommand{\arraystretch}{1.5}
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{|p{2.8cm}|p{6.5cm}|p{3cm}|p{2.5cm}|}
+        \hline
+        \cellcolor{WattOrange!60}\textbf{Doc. Name} & 
+        D2-\ProjectTitle-sviluppo & 
+        \cellcolor{WattOrange!60}\textbf{Doc. Number} & 
+        D2 V0.3 \\
+        \hline
+        \cellcolor{WattOrange!60}\textbf{Description} & 
+        \multicolumn{3}{p{12cm}|}{Documento di sviluppo dell’applicazione} \\
+        \hline
+    \end{tabular}
+    \endgroup
+    
+    \vfill
+    
+    \hfill
+    \begin{minipage}{0.35\textwidth}
+        \centering
+        \textbf{Autori}\\[0.3cm]
+        \begin{tabular}{c c}
+            Alessio Pesaresi & 251783 \\
+            Michele Porcellato & 254581 \\
+            Marco Piovesan & 255380 \\
+        \end{tabular}
+    \end{minipage}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+\include{chapter/webApi}
+\include{chapter/implementation}
+\include{chapter/frontend}
+\include{chapter/deployment}
+\end{document}
