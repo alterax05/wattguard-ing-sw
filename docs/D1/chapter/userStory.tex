@@ -1,0 +1,882 @@
+\section{User Stories}
+\label{chap:userStories}
+
+Di seguito vengono presentate le User Story del progetto \textbf{WattGuard}, sviluppate a partire dai requisiti funzionali individuati nei capitoli precedenti.
+
+\subsection{User Story 0 – Cambio lingua dell'interfaccia}
+\label{us:cambioLingua}
+
+\textbf{Selezione della lingua e localizzazione dell'interfaccia} \\
+Come operatore tecnico o amministratore comunale, voglio poter selezionare la lingua dell'interfaccia tra italiano, inglese e tedesco, in modo da utilizzare il sistema nella mia lingua madre e facilitare la comprensione di tutti i contenuti.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item Il sistema supporta tre lingue: italiano (IT), inglese (EN) e tedesco (DE).
+    \item È presente un selettore lingua (ad esempio, un menu a tendina o bandierine) in una posizione facilmente accessibile in tutte le pagine dell'applicazione.
+    \item La selezione della lingua viene memorizzata e persiste tra le sessioni dell'utente.
+    \item Tutte le stringhe visibili all'utente (etichette, messaggi, pulsanti, notifiche, ecc.) vengono tradotte nella lingua selezionata.
+    \item I contenuti generati lato server (email, report, notifiche) rispettano la lingua selezionata dall'utente.
+    \item Date, numeri e formati orari seguono le convenzioni della locale selezionata.
+    \item La lingua di riferimento predefinita è l'inglese (EN).
+\end{itemize}
+
+\paragraph*{TASKS – User Story 0:}
+\begin{enumerate}
+    \item \textbf{Configurare il sistema di localizzazione}
+    \begin{itemize}
+        \item Integrare una libreria di internazionalizzazione nel frontend.
+        \item Creare i cataloghi di traduzione per le tre lingue supportate (IT, EN, DE).
+        \item Organizzare i file di traduzione per moduli/componenti per facilitarne la manutenzione.
+    \end{itemize}
+
+    \item \textbf{Implementare il selettore lingua nell'interfaccia}
+    \begin{itemize}
+        \item Aggiungere un controllo di selezione lingua (dropdown o bandierine) nell'header dell'applicazione.
+        \item Assicurare che il selettore sia visibile in tutte le pagine protette e nella pagina di login.
+        \item Gestire il cambio lingua con ricarica dinamica dell'interfaccia.
+    \end{itemize}
+
+    \item \textbf{Implementare la persistenza della preferenza lingua}
+    \begin{itemize}
+        \item Memorizzare la lingua selezionata nel localStorage o in un cookie.
+        \item Recuperare la preferenza al successivo accesso dell'utente.
+        \item Se l'utente non ha una preferenza salvata, utilizzare la lingua di default (EN) o rilevare quella del browser.
+    \end{itemize}
+
+    \item \textbf{Adattare il backend per la localizzazione}
+    \begin{itemize}
+        \item Configurare il backend per rilevare la lingua richiesta.
+        \item Localizzare i contenuti generati dal server (email di invito, notifiche, report PDF/Excel).
+        \item Formattare date, numeri e orari secondo la locale selezionata.
+    \end{itemize}
+
+    \item \textbf{Verificare e testare la localizzazione}
+    \begin{itemize}
+        \item Testare il cambio lingua in tutte le sezioni dell'applicazione.
+        \item Verificare la corretta visualizzazione dei caratteri speciali (es. ä, ö, ü per il tedesco).
+        \item Testare la persistenza della preferenza tra sessioni diverse.
+        \item Verificare che email e report vengano generati nella lingua corretta.
+        \item Testare il comportamento su dispositivi diversi (desktop, tablet).
+    \end{itemize}
+\end{enumerate}
+
+\subsection{User Story 1 – Autenticazione e gestione sessione (Login e Logout)}
+\label{us:login}
+
+\textbf{Accesso flessibile e terminazione sicura della sessione} \\
+Come operatore tecnico o amministratore comunale, voglio poter accedere al sistema tramite credenziali locali o autenticazione federata Google ed effettuare il logout al termine delle attività, in modo da operare secondo le mie autorizzazioni e garantire la sicurezza dei dati.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item Entrambi i ruoli (operatori e amministratori) possono scegliere se autenticarsi inserendo email e password oppure cliccando sul pulsante ``Accedi con Google''.
+    \item A seguito di un'autenticazione riuscita, il sistema reindirizza l'utente alla dashboard generale comune.
+    \item Se il login fallisce (per credenziali errate, account inesistente o errore del provider esterno), il sistema mostra un messaggio di errore chiaro e non bloccante.
+    \item L'utente autenticato può terminare la sessione in qualsiasi momento tramite il comando di logout presente nel menù profilo; l'operazione rimuove il token di accesso dal dispositivo, ripulisce lo stato locale e reindirizza alla schermata di login.
+    \item Il sistema gestisce la scadenza automatica della sessione (validità del token di accesso, 8 ore).
+    \item Tutte le fasi di autenticazione e scambio dati avvengono su protocollo cifrato HTTPS.
+\end{itemize}
+
+\paragraph*{TASKS – User Story 1:}
+\begin{enumerate}
+    \item \textbf{Integrazione delle opzioni di login}
+    \begin{itemize}
+        \item Integrare nella pagina di login sia il form per le credenziali locali sia il pulsante SSO Google.
+        \item Gestire il recupero password tramite apposito link contestuale.
+    \end{itemize}
+
+    \item \textbf{Configurazione dell'autenticazione federata}
+    \begin{itemize}
+        \item Configurare l'integrazione con Google.
+        \item Mappare i token restituiti dal provider con le utenze censite a sistema.
+    \end{itemize}
+
+    \item \textbf{Gestione del routing e della sessione}
+    \begin{itemize}
+        \item Reindirizzare l'utente alla dashboard generale post-autenticazione.
+        \item Implementare la procedura di logout con rimozione del token di accesso dal dispositivo (localStorage) e redirect al login.
+    \end{itemize}
+
+    \item \textbf{Sicurezza delle credenziali}
+    \begin{itemize}
+        \item Cifrare le password memorizzate localmente tramite hashing robusto (bcrypt o Argon2 con salt individuale).
+        \item Proteggere le rotte applicative impedendo l'accesso ad utenti non autenticati o disconnessi.
+    \end{itemize}
+
+    \item \textbf{Verifica e test}
+    \begin{itemize}
+        \item Testare il ciclo completo di login (locale e Google), fallimento credenziali e corretto funzionamento del logout (impossibilità di accedere alle aree protette dopo la disconnessione).
+    \end{itemize}
+\end{enumerate}
+
+\subsection{User Story 2 – Visualizzazione dashboard generale}
+\label{us:dashboardGenerale}
+
+\textbf{Visualizzazione panoramica consumi energetici} \\
+Come operatore tecnico o amministratore comunale, voglio visualizzare una dashboard generale con grafici aggregati dei consumi energetici, in modo da avere una visione d'insieme immediata delle performance degli edifici pubblici.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item La dashboard mostra grafici aggregati dei consumi totali
+    \item Vengono visualizzati gli indicatori principali: sensori attivi e totali, allarmi attivi e consumi correnti di elettricità e gas
+    \item La dashboard si carica entro 10 secondi per il 95\% delle richieste
+    \item I dati vengono aggiornati automaticamente
+\end{itemize}
+
+\paragraph*{TASKS – User Story 2:}
+\begin{enumerate}
+    \item \textbf{Progettare il layout della dashboard}
+    \begin{itemize}
+        \item Creare wireframe con disposizione ottimale di grafici e indicatori
+        \item Assicurare design responsive per tablet con schermo minimo di 10 pollici
+    \end{itemize}
+    \item \textbf{Implementare i grafici di visualizzazione dati}
+    \begin{itemize}
+        \item Sviluppare grafici per consumi aggregati utilizzando librerie appropriate
+        \item Creare indicatori visivi per temperature e performance
+    \end{itemize}
+    \item \textbf{Implementare il sistema di aggiornamento automatico}
+    \begin{itemize}
+        \item Configurare refresh automatico dei dati ogni 90 secondi (intervallo configurabile)
+    \end{itemize}
+    \item \textbf{Ottimizzare le query al database}
+    \begin{itemize}
+        \item Assicurare tempi di risposta inferiori a 10 secondi
+        \item Implementare indici appropriati sulle collezioni
+    \end{itemize}
+    \item \textbf{Testare le performance}
+    \begin{itemize}
+        \item Verificare i tempi di caricamento con carichi simultanei di 20 utenti
+        \item Testare la responsività su diversi dispositivi
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 3 – Ricerca edifici con criteri multipli}
+\label{us:ricercaEdifici}
+
+\textbf{Ricerca edifici con criteri multipli} \\
+Come operatore tecnico o amministratore, voglio cercare gli edifici pubblici monitorati utilizzando nome, indirizzo o tipologia di edificio, in modo da trovare rapidamente l'edificio di mio interesse.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può inserire uno o più criteri di ricerca
+    \item Il sistema restituisce risultati che corrispondono a tutti i criteri inseriti
+    \item La ricerca si completa entro 5 secondi
+    \item I risultati mostrano nome edificio, indirizzo, tipologia impianto e stato operativo
+\end{itemize}
+
+\paragraph*{TASKS – User Story 3:}
+\begin{enumerate}
+    \item \textbf{Creare l'interfaccia di ricerca}
+    \begin{itemize}
+        \item Implementare campi di input per nome, indirizzo e tipologia di edificio
+        \item Aggiungere pulsante di ricerca e reset
+    \end{itemize}
+    \item \textbf{Implementare la logica di ricerca}
+    \begin{itemize}
+        \item Sviluppare query che combinano i criteri inseriti con operatore AND
+    \end{itemize}
+    \item \textbf{Visualizzare i risultati}
+    \begin{itemize}
+        \item Creare una tabella o lista con i dettagli degli edifici trovati
+        \item Includere tutti i campi richiesti (nome, indirizzo, superficie, tipologia, stato, ultimo aggiornamento)
+    \end{itemize}
+    \item \textbf{Ottimizzare le performance}
+    \begin{itemize}
+        \item Creare indici appropriati sulle colonne di ricerca
+        \item Assicurare tempi di risposta inferiori a 5 secondi
+    \end{itemize}
+    \item \textbf{Gestire i casi limite}
+    \begin{itemize}
+        \item Mostrare messaggio appropriato quando non ci sono risultati
+        \item Validare gli input prima della ricerca
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 4 – Visualizzazione dettaglio edificio}
+\label{us:dettaglioEdificio}
+
+\textbf{Visualizzazione completa dati edificio} \\
+Come operatore tecnico o amministratore, voglio visualizzare tutti i dettagli di un edificio selezionato inclusi dati anagrafici, misurazioni in tempo reale e grafici storici, in modo da analizzare i consumi energetici in differenti intervalli di tempo avendo una visione completa delle sue condizioni.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item La schermata mostra informazioni anagrafiche complete (nome, indirizzo, superficie, anno costruzione)
+    \item Vengono visualizzati i dati in tempo reale (temperatura interna, esterna, consumo istantaneo)
+    \item Sono presenti grafici storici dei consumi e temperature
+    \item Viene mostrato lo stato di funzionamento dei sensori
+    \item L'utente può selezionare diversi intervalli temporali per i grafici storici scegliendo tra intervalli predefiniti (ultimi 7, 30, 90 o 365 giorni) oppure tramite la scelta di due date distinte
+\end{itemize}
+
+\paragraph*{TASKS – User Story 4:}
+\begin{enumerate}
+    \item \textbf{Creare il layout della pagina dettaglio}
+    \begin{itemize}
+        \item Organizzare le informazioni in sezioni logiche
+        \item Assicurare una gerarchia visiva chiara
+    \end{itemize}
+    \item \textbf{Implementare la visualizzazione dati anagrafici}
+    \begin{itemize}
+        \item Recuperare e mostrare tutti i dati dell'edificio dal database
+        \item Formattare le informazioni in modo leggibile
+    \end{itemize}
+    \item \textbf{Sviluppare la sezione dati in tempo reale}
+    \begin{itemize}
+        \item Implementare visualizzazione dei valori correnti con aggiornamento automatico
+        \item Utilizzare indicatori visivi appropriati (gauge, termometri, ecc.)
+    \end{itemize}
+    \item \textbf{Creare i grafici storici}
+    \begin{itemize}
+        \item Implementare grafici interattivi per consumi e temperature
+        \item Permettere la selezione di intervalli temporali diversi
+    \end{itemize}
+    \item \textbf{Aggiornare dinamicamente i grafici}
+    \begin{itemize}
+        \item Implementare il refresh dei grafici al cambio di selezione
+        \item Assicurare transizioni fluide tra le visualizzazioni
+    \end{itemize}
+    \item \textbf{Mostrare lo stato dei sensori}
+    \begin{itemize}
+        \item Visualizzare lista sensori con indicatori di stato (attivo/offline)
+        \item Mostrare data ultimo aggiornamento per ogni sensore
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 5 – Esportazione dati}
+\label{us:esportazioneDati}
+
+\textbf{Esportazione dati in formato CSV} \\
+Come amministratore comunale, voglio esportare i dati dei consumi energetici in formato CSV, in modo da poterli analizzare con strumenti esterni o includere in report personalizzati.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può selezionare uno o più edifici per l'esportazione
+    \item L'utente può specificare il periodo temporale di interesse
+    \item Il file CSV contiene le rilevazioni selezionate (timestamp, edificio, sensore, tipologia, valore, unità di misura)
+    \item Il download del file avviene immediatamente dopo la generazione
+    \item I dati sono formattati correttamente per l'importazione in fogli di calcolo
+    \item Sono disponibili inoltre esportazioni in formato JSON (rilevazioni e backup del database) e report aggregati in PDF/Excel
+\end{itemize}
+
+\paragraph*{TASKS – User Story 5:}
+\begin{enumerate}
+    \item \textbf{Creare l'interfaccia di esportazione}
+    \begin{itemize}
+        \item Implementare form per selezione edifici e periodo temporale
+        \item Aggiungere opzione per formato CSV
+    \end{itemize}
+    \item \textbf{Implementare la logica di generazione CSV}
+    \begin{itemize}
+        \item Estrarre i dati dal database secondo i criteri selezionati
+        \item Formattare i dati in formato CSV standard
+    \end{itemize}
+    \item \textbf{Includere tutte le informazioni necessarie}
+    \begin{itemize}
+        \item Assicurare che timestamp, edificio, sensore, tipologia, valore e unità di misura siano presenti
+        \item Aggiungere intestazioni colonne appropriate
+    \end{itemize}
+    \item \textbf{Gestire il download del file}
+    \begin{itemize}
+        \item Implementare il trigger di download automatico
+        \item Nominare il file in modo descrittivo (wattguard-consumption-{start}-{end}.csv)
+    \end{itemize}
+    \item \textbf{Testare la funzionalità}
+    \begin{itemize}
+        \item Verificare la corretta formattazione del CSV
+        \item Testare l'importazione in Excel e altri strumenti
+        \item Testare la qualità di stampa
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 6 – Gestione utenti (creazione account)}
+\label{us:creazioneAccount}
+
+\textbf{Creazione account operatore/amministratore tramite invito} \\
+Come amministratore comunale, voglio creare nuovi inviti per gli operatori tecnici e amministratori, specificando l'email e il ruolo, in modo da gestire centralmente gli accessi al sistema.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'amministratore può accedere a una sezione dedicata alla gestione utenti
+    \item È possibile inserire i dati richiesti (email e ruolo del nuovo utente)
+    \item Il sistema invia un'email automatica all'utente con il link di invito univoco
+    \item Al primo accesso l'utente imposta la propria password oppure accetta l'invito tramite Google
+    \item Il sistema valida l'unicità dell'email
+    \item L'amministratore può revocare gli inviti pendenti
+\end{itemize}
+
+\paragraph*{TASKS – User Story 6:}
+\begin{enumerate}
+    \item \textbf{Creare l'interfaccia di gestione utenti}
+    \begin{itemize}
+        \item Implementare form per l'inserimento dell'email e del ruolo dell'invitato
+        \item Implementare l'elenco degli inviti e la loro revoca
+    \end{itemize}
+    \item \textbf{Implementare la logica di creazione dell'invito}
+    \begin{itemize}
+        \item Validare i dati inseriti (formato email, campi obbligatori)
+        \item Verificare l'unicità dell'indirizzo email
+    \end{itemize}
+    \item \textbf{Generare il token di invito}
+    \begin{itemize}
+        \item Generare un token di invito sicuro, memorizzato come hash
+        \item Associare al token l'email e il ruolo dell'invitato, con scadenza (7 giorni)
+    \end{itemize}
+    \item \textbf{Implementare l'invio email automatico}
+    \begin{itemize}
+        \item Configurare il template email con il link di invito e le istruzioni
+        \item Inviare email all'indirizzo specificato
+    \end{itemize}
+    \item \textbf{Tracciare l'operazione}
+    \begin{itemize}
+        \item Registrare l'amministratore che ha creato l'invito
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 7 – Gestione utenti (modifica ruolo)}
+\label{us:modificaPermessi}
+
+\textbf{Modifica ruolo operatore/amministratore} \\
+Come amministratore comunale, voglio modificare il ruolo di un operatore tecnico/amministratore esistente, in modo da adattare i suoi accessi alle nuove responsabilità o esigenze organizzative.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'amministratore può visualizzare la lista degli utenti esistenti
+    \item È possibile selezionare un utente e modificarne il ruolo (operatore/amministratore)
+    \item Le modifiche vengono salvate immediatamente
+    \item L'amministratore non può modificare il proprio ruolo
+\end{itemize}
+
+\paragraph*{TASKS – User Story 7:}
+\begin{enumerate}
+    \item \textbf{Creare la visualizzazione lista operatori}
+    \begin{itemize}
+        \item Implementare tabella con tutti gli operatori e il loro ruolo attuale
+        \item Aggiungere pulsante di modifica per ogni operatore
+    \end{itemize}
+    \item \textbf{Implementare l'interfaccia di modifica ruolo}
+    \begin{itemize}
+        \item Creare selettore del ruolo (operatore/amministratore)
+        \item Pre-popolare con il ruolo attuale dell'operatore
+    \end{itemize}
+    \item \textbf{Implementare la logica di aggiornamento}
+    \begin{itemize}
+        \item Validare le modifiche prima del salvataggio
+        \item Aggiornare il database con il nuovo ruolo
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 8 – Configurazione soglie di allarme}
+\label{us:soglieAllarme}
+
+\textbf{Definizione soglie personalizzate} \\
+Come operatore tecnico o amministratore comunale, voglio configurare le soglie di allarme dei sensori (valore minimo e massimo, ad esempio per temperatura e consumi), in modo da ricevere segnalazioni solo per situazioni realmente anomale.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può definire per ciascun sensore la soglia minima e massima del valore misurato
+    \item Il sistema verifica la coerenza dei valori (soglia minima inferiore alla massima)
+    \item Le soglie possono essere rimosse dal sensore quando non più necessarie
+    \item Le soglie sono associate ai singoli sensori e possono quindi variare per edificio e grandezza monitorata
+    \item Al superamento di una soglia il sistema genera un allarme automatico e invia una notifica email
+\end{itemize}
+
+\paragraph*{TASKS – User Story 8:}
+\begin{enumerate}
+    \item \textbf{Creare l'interfaccia di configurazione soglie}
+    \begin{itemize}
+        \item Implementare form con campi per la soglia minima e massima del sensore
+        \item Applicare le soglie a livello di singolo sensore
+    \end{itemize}
+    \item \textbf{Implementare la logica di validazione}
+    \begin{itemize}
+        \item Verificare che i valori inseriti siano coerenti
+        \item Validare i range di valori accettabili
+    \end{itemize}
+    \item \textbf{Salvare le configurazioni}
+    \begin{itemize}
+        \item Memorizzare le soglie nel database associate al sensore
+        \item Rimuovere le soglie e gli allarmi associati quando vengono azzerate
+    \end{itemize}
+    \item \textbf{Testare il sistema di soglie}
+    \begin{itemize}
+        \item Verificare che le soglie vengano applicate correttamente
+        \item Testare la generazione di allarmi al superamento soglie
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 9 – Confronto delle performance tra edifici}
+\label{us:analisiComparative}
+
+\textbf{Confronto performance tra edifici} \\
+Come amministratore comunale, voglio confrontare le performance energetiche di diversi edifici affiancando i loro indicatori, in modo da identificare gli edifici più e meno efficienti.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può selezionare più edifici da confrontare (fino a 3)
+    \item Vengono mostrati affiancati gli indicatori di efficienza calcolati per ciascun edificio (energia consumata, dispersione termica stimata, COP)
+    \item Il confronto si basa sulle metriche calcolate dal backend per ogni singolo edificio (efficienza termica nel periodo selezionato)
+    \item Il sistema facilita l'identificazione degli edifici più e meno efficienti
+\end{itemize}
+
+\paragraph*{TASKS – User Story 9:}
+\begin{enumerate}
+    \item \textbf{Creare l'interfaccia di selezione edifici}
+    \begin{itemize}
+        \item Implementare controlli per selezionare gli edifici da confrontare (massimo 3)
+        \item Mostrare le informazioni base degli edifici selezionati
+    \end{itemize}
+    \item \textbf{Implementare le visualizzazioni comparative}
+    \begin{itemize}
+        \item Creare grafici che mostrano gli indicatori di efficienza dei diversi edifici affiancati
+        \item Utilizzare colori distinti per ogni edificio
+    \end{itemize}
+    \item \textbf{Utilizzare gli indicatori di performance}
+    \begin{itemize}
+        \item Recuperare le metriche di efficienza per ciascun edificio dall'endpoint dedicato
+        \item Evidenziare gli edifici più e meno efficienti con indicatori visivi
+    \end{itemize}
+    \item \textbf{Verificare il comportamento del confronto}
+    \begin{itemize}
+        \item Testare il confronto con periodi temporali diversi
+        \item Testare la gestione di edifici privi di dati di efficienza
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 10 – Gestione edifici e configurazione sensori}
+\label{us:aggiuntaEdificio}
+
+\textbf{Aggiunta nuovo edificio al sistema} \\
+Come operatore tecnico/amministratore, voglio aggiungere un nuovo edificio al sistema inserendo tutti i dati anagrafici e associando i sensori, in modo da iniziare a monitorare i consumi energetici.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può inserire nome, indirizzo, superficie e tipologia impianto
+    \item È possibile associare sensori (temperatura e consumo) specificando posizione fisica
+    \item Il sistema valida i dati inseriti (campi obbligatori, tipologia esistente)
+    \item I sensori trasmettono misurazioni a intervalli configurabili per ciascun sensore (valore predefinito: 90 secondi)
+\end{itemize}
+
+\paragraph*{TASKS – User Story 10:}
+\begin{enumerate}
+    \item \textbf{Creare il form di inserimento edificio}
+    \begin{itemize}
+        \item Aggiungere i campi nel form per tutti le informazioni anagrafiche
+        \item Aggiungere un sistema di validazione client-side per tutti i campi obbligatori
+    \end{itemize}
+    \item \textbf{Implementare la validazione dei dati di input}
+    \begin{itemize}
+        \item Verificare la presenza dei campi obbligatori e la validità dei formati
+        \item Mostrare errore in caso di dati non validi
+    \end{itemize}
+    \item \textbf{Creare l'interfaccia di associazione sensori}
+    \begin{itemize}
+        \item Permettere l'aggiunta di sensori di temperatura e di consumo
+        \item Raccogliere informazioni su posizione fisica e tipologia
+    \end{itemize}
+    \item \textbf{Configurare la frequenza trasmissione dati}
+    \begin{itemize}
+        \item Impostare l'intervallo di trasmissione dei sensori (valore predefinito: 90 secondi)
+        \item Verificare la corretta ricezione dei dati
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 11 – Gestione notifiche di allarme}
+\label{us:notificheAllarme}
+
+\textbf{Visualizzazione e gestione allarmi attivi} \\
+Come operatore tecnico o amministratore, voglio visualizzare tutte le notifiche di allarme attive in un pannello dedicato ordinato per timestamp, in modo da gestire prioritariamente gli allarmi più recenti o critici.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item Tutte le notifiche attive sono elencate in un pannello dedicato
+    \item Le notifiche sono ordinate per timestamp (più recenti prime)
+    \item È possibile visualizzare i dettagli di ogni allarme (edificio, valori rilevati, soglie)
+    \item L'operatore può prendere in carico le notifiche e chiuderle dopo la risoluzione
+    \item Il sistema registra l'operatore e il timestamp di presa in carico e di risoluzione
+\end{itemize}
+
+\paragraph*{TASKS – User Story 11:}
+\begin{enumerate}
+    \item \textbf{Creare il pannello notifiche allarmi}
+    \begin{itemize}
+        \item Implementare lista ordinata per timestamp
+        \item Utilizzare indicatori visivi per priorità (colori, icone)
+    \end{itemize}
+    \item \textbf{Implementare la visualizzazione dettagli}
+    \begin{itemize}
+        \item Creare modal o pannello espandibile per i dettagli allarme
+        \item Mostrare edificio coinvolto, tipo di allarme, valori rilevati e soglie
+    \end{itemize}
+    \item \textbf{Implementare la funzione di chiusura allarme}
+    \begin{itemize}
+        \item Aggiungere pulsante per prendere in carico ogni notifica (stato \texttt{acknowledged})
+        \item Aggiungere pulsante per risolvere l'allarme (stato \texttt{resolved})
+    \end{itemize}
+    \item \textbf{Registrare le operazioni di gestione}
+    \begin{itemize}
+        \item Registrare operatore e timestamp di presa in carico e di risoluzione sull'allarme
+        \item Gli allarmi chiusi restano consultabili tramite il filtro per stato
+    \end{itemize}
+    \item \textbf{Implementare filtri e ricerca}
+    \begin{itemize}
+        \item Permettere filtro per stato (attivi, presi in carico, risolti)
+        \item Aggiungere ricerca per edificio specifico
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 12 – Visualizzazione stato sensori}
+\label{us:statoSensori}
+
+\textbf{Monitoraggio stato di tutti i sensori} \\
+Come operatore tecnico/amministratore, voglio visualizzare lo stato operativo di tutti i sensori installati negli edifici con indicazione se sono attivi o offline, in modo da identificare rapidamente eventuali malfunzionamenti.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item Viene mostrato un elenco completo dei sensori installati (temperatura e consumo)
+    \item Per ogni sensore è indicato lo stato (attivo/offline)
+    \item È visibile la data dell'ultimo aggiornamento dati
+    \item I sensori offline sono evidenziati visivamente
+\end{itemize}
+
+\paragraph*{TASKS – User Story 12:}
+\begin{enumerate}
+    \item \textbf{Creare la visualizzazione lista sensori}
+    \begin{itemize}
+        \item Implementare tabella o griglia con tutti i sensori organizzati per edificio
+    \end{itemize}
+    \item \textbf{Implementare gli indicatori di stato}
+    \begin{itemize}
+        \item Utilizzare icone o colori per stato attivo/offline
+        \item Evidenziare in modo prominente i sensori offline
+    \end{itemize}
+    \item \textbf{Mostrare informazioni dettagliate}
+    \begin{itemize}
+        \item Includere l'edificio di appartenenza
+        \item Mostrare timestamp ultimo aggiornamento
+    \end{itemize}
+    \item \textbf{Implementare sistema di verifica stato}
+    \begin{itemize}
+        \item Controllare periodicamente la ricezione dati dai sensori
+        \item Aggiornare automaticamente lo stato in base all'attività
+    \end{itemize}
+    \item \textbf{Aggiungere funzionalità di filtro e ricerca}
+    \begin{itemize}
+        \item Permettere filtro per stato (attivi, offline, tutti)
+        \item Implementare ricerca per edificio
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 13 – Monitoraggio tempo reale}
+\label{us:monitoraggioTempoReale}
+
+\textbf{Visualizzazione dati in tempo reale con aggiornamento automatico} \\
+Come operatore tecnico/amministratore, voglio monitorare in tempo reale i dati di ogni edificio con aggiornamento automatico ogni 90 secondi, in modo da avere sempre i valori più recenti senza dover ricaricare manualmente la pagina.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item I dati si aggiornano automaticamente ogni 90 secondi (intervallo configurabile)
+    \item Vengono mostrati temperatura interna, esterna e consumo istantaneo
+    \item È presente un grafico delle ultime 24 ore
+    \item L'invio di notifiche email automatiche per variazioni significative è implementato per gli allarmi generati dal sistema (superamento delle soglie e calo di efficienza energetica);
+\end{itemize}
+
+\paragraph*{TASKS – User Story 13:}
+\begin{enumerate}
+    \item \textbf{Implementare l'aggiornamento automatico}
+    \begin{itemize}
+        \item Configurare polling ogni 90 secondi per recuperare nuovi dati
+        \item Aggiornare i valori visualizzati senza reload della pagina
+    \end{itemize}
+    \item \textbf{Visualizzare i parametri richiesti}
+    \begin{itemize}
+        \item Mostrare temperatura interna, esterna e consumo con indicatori chiari
+        \item Utilizzare visualizzazioni appropriate (gauge, numeri grandi, ecc.)
+    \end{itemize}
+    \item \textbf{Implementare il grafico delle 24 ore}
+    \begin{itemize}
+        \item Creare grafico a linee con andamento temporale
+        \item Aggiornare il grafico con i nuovi dati
+    \end{itemize}
+    \item \textbf{Segnalare i malfunzionamenti dei sensori}
+    \begin{itemize}
+        \item Evidenziare nell'interfaccia i sensori offline o in errore
+        \item Indicare la data dell'ultima rilevazione per ogni sensore
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 14 – Gestione edifici (rimozione)}
+\label{us:rimozioneEdificio}
+
+\textbf{Rimozione edificio dismesso} \\
+Come operatore tecnico/amministratore, voglio poter rimuovere dal sistema gli edifici che sono stati dismessi o non sono più monitorati, in modo da mantenere il database aggiornato e contenere solo informazioni attuali.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può selezionare un edificio da rimuovere
+    \item Il sistema richiede conferma prima della rimozione definitiva
+    \item Vengono rimossi a cascata anche i sensori, gli allarmi e le rilevazioni associati
+    \item L'operazione è consentita agli utenti con ruolo amministratore o operatore
+\end{itemize}
+
+\paragraph*{TASKS – User Story 14:}
+\begin{enumerate}
+    \item \textbf{Creare l'interfaccia di rimozione}
+    \begin{itemize}
+        \item Aggiungere pulsante ``Rimuovi edificio'' nella pagina di dettaglio
+        \item Implementare lista edifici con opzione di rimozione
+    \end{itemize}
+    \item \textbf{Implementare la conferma rimozione}
+    \begin{itemize}
+        \item Creare modal di conferma con dettagli edificio
+        \item Richiedere conferma esplicita dall'operatore
+    \end{itemize}
+    \item \textbf{Gestire la cancellazione a cascata}
+    \begin{itemize}
+        \item Eliminare le rilevazioni associate all'edificio
+        \item Eliminare tutti gli allarmi e i sensori associati
+    \end{itemize}
+    \item \textbf{Rimuovere edificio e sensori associati}
+    \begin{itemize}
+        \item Eliminare l'edificio dal database attivo
+        \item Gestire correttamente le relazioni nel database
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 15 – Gestione edifici (modifica)}
+\label{us:modificaEdificio}
+
+\textbf{Modifica edificio} \\
+Come operatore tecnico/amministratore, voglio poter modificare nel sistema un edificio che ha subito degli aggiornamenti, in modo da mantenere il database aggiornato e contenere solo informazioni attuali.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può modificare l'edificio selezionato
+    \item Il sistema valida i dati prima del salvataggio
+    \item Vengono mantenuti tutti i sensori associati
+    \item Lo storico dei dati viene preservato
+    \item Vengono registrati sia l'autore della modifica sia il momento della modifica 
+\end{itemize}
+
+\paragraph*{TASKS – User Story 15:}
+\begin{enumerate}
+    \item \textbf{Creare l'interfaccia di modifica}
+    \begin{itemize}
+        \item Aggiungere pulsante ``Modifica edificio'' nella pagina di dettaglio
+    \end{itemize}
+    \item \textbf{Implementare la modifica}
+    \begin{itemize}
+        \item Creare modal da compilare con i dettagli dell'edificio
+        \item Richiedere conferma esplicita dall'operatore
+    \end{itemize}
+    \item \textbf{Gestire l'aggiornamento dei dati}
+    \begin{itemize}
+        \item Aggiornare l'edificio dal database attivo
+        \item Mantenere tutti i sensori associati
+        \item Gestire correttamente le relazioni nel database
+    \end{itemize}
+    \item \textbf{Tracciare la modifica}
+    \begin{itemize}
+        \item Salvare l'operatore che ha effettuato la modifica
+        \item Aggiornare il timestamp di quando è stata effettuata la modifica
+    \end{itemize}
+\end{enumerate}
+
+\subsection{User Story 16 – Accettazione invito e primo accesso}
+\label{us:accettazioneInvito}
+
+\textbf{Completamento della registrazione tramite invito} \\
+Come utente invitato alla piattaforma, voglio completare la registrazione impostando la mia password tramite il link ricevuto, in modo da poter accedere al sistema con il ruolo che mi è stato assegnato.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item Il link di invito è univoco e ha scadenza 7 giorni dopo l'invio
+    \item L'utente può scegliere tra la creazione dell'account con password o tramite l'uso del Single Sign-On di Google
+    \item Il sistema mostra un messaggio di errore quando il token è scaduto, revocato o già utilizzato
+    \item Dopo la registrazione, l'utente viene autenticato e reindirizzato alla dashboard principale
+    \item Nell'invito viene specificato anche il ruolo assegnato
+\end{itemize}
+
+\paragraph*{TASKS – User Story 16:}
+\begin{enumerate}
+    \item \textbf{Creare la pagina di accettazione invito}
+    \begin{itemize}
+        \item Implementare la pagina di registrazione accessibile solo tramite link
+        \item Mostrare email e ruolo associati all'invito
+    \end{itemize}
+    \item \textbf{Validare il token di invito}
+    \begin{itemize}
+        \item Verificare validità, scadenza e stato dell'invito
+        \item Gestire gli inviti scaduti, revocati o già accettati
+    \end{itemize}
+    \item \textbf{Gestire le due modalità di registrazione}
+    \begin{itemize}
+        \item Implementare il form di impostazione password e nome
+        \item Implementare l'accettazione dell'invito tramite Google
+    \end{itemize}
+    \item \textbf{Completare la creazione dell'account}
+    \begin{itemize}
+        \item Creare l'account con il ruolo dell'invito
+        \item Autenticare l'utente e reindirizzarlo alla dashboard
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 17 – Reset della password}
+\label{us:resetPassword}
+
+\textbf{Recupero dell'accesso tramite password dimenticata} \\
+Come utente, voglio recuperare l'accesso al mio account tramite la procedura "Password dimenticata", in modo da reimpostare la mia password in autonomia.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può richiedere il reset inserendo la propria email
+    \item Il sistema invia un link di reset con token monouso e scadenza (1 ora)
+    \item La risposta alla richiesta è generica per evitare l'enumerazione delle email
+    \item Il token può essere utilizzato una sola volta
+    \item Dopo il reset l'utente può accedere con la nuova password
+\end{itemize}
+
+\paragraph*{TASKS – User Story 17:}
+\begin{enumerate}
+    \item \textbf{Implementare la richiesta di reset}
+    \begin{itemize}
+        \item Creare la pagina di inserimento email
+        \item Generare un token sicuro, memorizzato come hash, con scadenza
+    \end{itemize}
+    \item \textbf{Implementare l'invio email}
+    \begin{itemize}
+        \item Configurare il template email con il link di reset
+        \item Inviare l'email solo se l'account esiste
+    \end{itemize}
+    \item \textbf{Implementare la validazione e il reset}
+    \begin{itemize}
+        \item Validare il token prima del reset
+        \item Aggiornare la password e invalidare il token dopo l'uso
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 18 – Soglie di efficienza energetica (COP)}
+\label{us:efficienzaCop}
+
+\textbf{Configurazione della soglia minima di efficienza} \\
+Come operatore tecnico o amministratore, voglio configurare la soglia minima di efficienza (COP) per un edificio, in modo da ricevere allarmi automatici quando l'efficienza energetica scende sotto soglia.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'utente può attivare o disattivare la soglia di efficienza per ciascun edificio
+    \item È possibile definire il valore minimo di COP accettabile
+    \item Il sistema valuta periodicamente l'efficienza dell'edificio su una finestra di 24 ore
+    \item Se l'efficienza scende sotto soglia, il sistema genera un allarme automatico e invia una notifica email
+    \item La soglia non è disponibile per gli edifici a teleriscaldamento
+    \item Gli allarmi di efficienza vengono risolti automaticamente al rientro sopra soglia
+\end{itemize}
+
+\paragraph*{TASKS – User Story 18:}
+\begin{enumerate}
+    \item \textbf{Creare l'interfaccia di configurazione efficienza}
+    \begin{itemize}
+        \item Implementare toggle di attivazione e campo per la soglia minima di COP
+        \item Escludere la configurazione per gli edifici a teleriscaldamento
+    \end{itemize}
+    \item \textbf{Implementare la valutazione periodica}
+    \begin{itemize}
+        \item Calcolare l'efficienza media su una finestra di 24 ore
+        \item Confrontare il valore calcolato con la soglia configurata
+    \end{itemize}
+    \item \textbf{Gestire gli allarmi di efficienza}
+    \begin{itemize}
+        \item Generare l'allarme al superamento di una soglia
+        \item Chiusura automatica degli allarmi al rientro dentro la soglia
+    \end{itemize}
+    \item \textbf{Testare il sistema di soglie di efficienza}
+    \begin{itemize}
+        \item Verificare la generazione e la risoluzione degli allarmi
+        \item Testare gli edifici privi di dati sufficienti
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{User Story 19 – Visualizzazione edifici su mappa}
+\label{us:mappaEdifici}
+
+\textbf{Visualizzazione degli edifici su mappa interattiva} \\
+Come operatore tecnico o amministratore, voglio visualizzare gli edifici comunali monitorati su una mappa interattiva, in modo da identificare rapidamente la dislocazione sul territorio e lo stato delle strutture.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item La mappa mostra un indicatore per ciascun edificio monitorato sul territorio comunale.
+    \item Ogni indicatore è differenziato cromaticamente in base allo stato operativo dello stabile (verde per attivo, giallo per inattivo, rosso per dismesso).
+    \item Cliccando su un indicatore viene mostrato un riepilogo sintetico (nome, indirizzo, stato) con pulsante di collegamento diretto alla pagina di dettaglio dell'edificio.
+    \item Le coordinate geografiche vengono determinate automaticamente dall'indirizzo tramite un servizio di geocoding, con anche la possibilità di cambiare manuale in fase di gestione edificio.
+\end{itemize}
+
+\paragraph*{TASKS – User Story 19:}
+\begin{enumerate}
+    \item \textbf{Creare la vista cartografica}
+    \begin{itemize}
+        \item Integrare il componente mappa interattiva nel layout applicativo.
+        \item Posizionare i marker in base alle coordinate memorizzate nel database.
+    \end{itemize}
+    \item \textbf{Implementare la legenda e gli indicatori di stato}
+    \begin{itemize}
+        \item Associare la codifica cromatica ai marker conformi alla legenda (attivo, inattivo, dismesso).
+        \item Configurare i popup informativi al passaggio del mouse o al click.
+    \end{itemize}
+    \item \textbf{Gestire geocoding e navigazione}
+    \begin{itemize}
+        \item Integrare il geocoding automatico dell'indirizzo e la gestione delle eccezioni per indirizzi non localizzabili.
+        \item Aggiungere il link di navigazione diretta dal marker alla dashboard di dettaglio edificio.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{User Story 20 – Disabilitazione account utente}
+\label{us:disabilitazioneAccount}
+
+\textbf{Disabilitazione e riabilitazione temporanea degli account} \\
+Come amministratore comunale, voglio poter disabilitare o riabilitare temporaneamente l'accesso di un utente senza cancellarne l'account, in modo da revocare tempestivamente i permessi preservando così lo storico delle attività svolte.
+
+\paragraph*{Criteri di accettazione:}
+\begin{itemize}
+    \item L'amministratore può modificare lo stato di un account (attivo/disabilitato) direttamente dalla tabella di gestione utenti.
+    \item Un utente con account disabilitato non può effettuare il login né tramite credenziali locali né tramite Google (il sistema mostra un chiaro avviso di account sospeso).
+    \item La disabilitazione invalida le eventuali sessioni attive dell'utente coinvolto.
+    \item L'amministratore non può in alcun caso disabilitare, revocare o eliminare il proprio account personale.
+    \item Gli account disabilitati sono chiaramente riconoscibili visivamente nella lista utenti.
+    \item Lo storico delle modifiche pregresse resta associato all'utente anche in stato disabilitato.
+\end{itemize}
+
+\paragraph*{TASKS – User Story 20:}
+\begin{enumerate}
+    \item \textbf{Adeguamento del modello dati utente}
+    \begin{itemize}
+        \item Introdurre il campo di stato operativo nel modello dell'utente.
+        \item Implementare gestione utenti nelle API per consentire la commutazione dello stato.
+    \end{itemize}
+    \item \textbf{Interfaccia di amministrazione utenti}
+    \begin{itemize}
+        \item Inserire nella tabella utenti il pulsante per disabilitare o riabilitare l'utenza.
+        \item Evidenziare graficamente gli utenti disabilitati rispetto a quelli attivi.
+    \end{itemize}
+    \item \textbf{Vincoli di sicurezza e controllo accessi}
+    \begin{itemize}
+        \item Verificare lo stato dell'account nei middleware di autenticazione (locale e Google) bloccando gli utenti disabilitati.
+        \item Impedire via codice e interfaccia l'auto-disabilitazione dell'amministratore collegato.
+    \end{itemize}
+    \item \textbf{Revoca immediata delle sessioni}
+    \begin{itemize}
+        \item Invalidare i token JWT/sessioni attive al momento della disabilitazione.
+    \end{itemize}
+\end{enumerate}

@@ -1,0 +1,351 @@
+<mxfile host="app.diagrams.net" pages="10">
+  <diagram name="DiagrammaGenerale" id="5rLVQnT44rCrgmkd_61g">
+    <mxGraphModel dx="1830" dy="1762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1312" pageHeight="1520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="oEbsEfq3veLGa6tAH9ky-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="ConfigurazioneSistema" vertex="1">
+          <mxGeometry height="230" width="250" x="1405" y="890" as="geometry" />
+        </mxCell>
+        <mxCell id="oEbsEfq3veLGa6tAH9ky-2" edge="1" parent="oEbsEfq3veLGa6tAH9ky-1" source="oEbsEfq3veLGa6tAH9ky-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="oEbsEfq3veLGa6tAH9ky-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="oEbsEfq3veLGa6tAH9ky-3" parent="oEbsEfq3veLGa6tAH9ky-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ polling.intervalSeconds = 90&lt;br&gt;+ polling.autoPollingEnabled = true&lt;br&gt;+ notifications.emailEnabled = true&lt;br&gt;+ database.dataRetentionDays = 365&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="110" width="250" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="oEbsEfq3veLGa6tAH9ky-4" parent="oEbsEfq3veLGa6tAH9ky-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ getOrCreate(): singleton&lt;br&gt;+ serializeConfig(doc)&lt;br&gt;+ getConfig()&lt;br&gt;+ updateConfig(dati)" vertex="1">
+          <mxGeometry height="76" width="250" y="154" as="geometry" />
+        </mxCell>
+        <mxCell id="T_55nfcwFDAB_pc6mJxH-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="TipologiaEdificio" vertex="1">
+          <mxGeometry height="276" width="220" x="1780" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="T_55nfcwFDAB_pc6mJxH-2" parent="T_55nfcwFDAB_pc6mJxH-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ name : String&amp;nbsp;&lt;br&gt;+ description: String&lt;br&gt;+ createdAt: String&lt;div&gt;+ updatedAt : Date&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="220" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="T_55nfcwFDAB_pc6mJxH-3" parent="T_55nfcwFDAB_pc6mJxH-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;fontFamily=Helvetica;fontColor=default;" value="+ toBuildingTypeDTO(bt)&lt;br&gt;+ listBuildingTypes()&lt;br&gt;+ getBuildingType(id)&lt;br&gt;+ createBuildingType(dati)&lt;br&gt;+ updateBuildingType(id, dati)&amp;nbsp;&lt;br&gt;+ deleteBuildingType(id)" vertex="1">
+          <mxGeometry height="142" width="220" y="134" as="geometry" />
+        </mxCell>
+        <mxCell id="-eUDdIge8A5NSsHQLOdF-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="TokenResetPassword" vertex="1">
+          <mxGeometry height="250" width="190" x="1360" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="-eUDdIge8A5NSsHQLOdF-2" parent="-eUDdIge8A5NSsHQLOdF-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="- id : ObjectId (_id)&lt;br&gt;- userId: ObjectId&lt;br&gt;- tokenHash : String&amp;nbsp;&lt;br&gt;- expiresAt : Date&amp;nbsp;&lt;br&gt;- usedAt: Date" vertex="1">
+          <mxGeometry height="130" width="190" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="-eUDdIge8A5NSsHQLOdF-3" parent="-eUDdIge8A5NSsHQLOdF-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;fontFamily=Helvetica;fontColor=default;" value="+ requestReset(email)&lt;br&gt;+ verifyToken(token)&lt;br&gt;+ confirmReset(token, password)" vertex="1">
+          <mxGeometry height="76" width="190" y="174" as="geometry" />
+        </mxCell>
+        <mxCell id="LmoHc8QrsqqHJATzWA-2-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Invito" vertex="1">
+          <mxGeometry height="360" width="300" x="1380" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="LmoHc8QrsqqHJATzWA-2-2" parent="LmoHc8QrsqqHJATzWA-2-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ email : String&lt;br&gt;+ role : admin | operator&lt;br&gt;+ tokenHash : SHA-256&lt;br&gt;+ status : String&amp;nbsp;&lt;br&gt;+ expiresAt : Date&lt;div&gt;+ createdBy: ObjectId&lt;br&gt;+ acceptedAt: ObjectId&lt;/div&gt;" vertex="1">
+          <mxGeometry height="190" width="300" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="LmoHc8QrsqqHJATzWA-2-3" edge="1" parent="LmoHc8QrsqqHJATzWA-2-1" source="LmoHc8QrsqqHJATzWA-2-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;fontColor=default;resizable=0;" target="LmoHc8QrsqqHJATzWA-2-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="LmoHc8QrsqqHJATzWA-2-4" parent="LmoHc8QrsqqHJATzWA-2-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ toInviteDto(invite)&lt;br&gt;+ toCreateInviteDto(invite)&lt;br&gt;+ validateInviteToken(token)&lt;br&gt;+ createInvite(email, role) [admin]&lt;br&gt;+ listOrValidate(?token=)&lt;br&gt;+ getInvite(id) [admin]&lt;br&gt;+ revokeInvite(id) [admin]&lt;br&gt;+ acceptInvite(id, token, pwd|idToken)" vertex="1">
+          <mxGeometry height="126" width="300" y="234" as="geometry" />
+        </mxCell>
+        <mxCell id="T6mFdiVgLqK0amXUWQId-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Allarme" vertex="1">
+          <mxGeometry height="440" width="290" x="1750" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="T6mFdiVgLqK0amXUWQId-2" parent="T6mFdiVgLqK0amXUWQId-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ building: ObjectId&lt;br&gt;+ sensor: ObjectId&lt;br&gt;+ type : String&lt;div&gt;+ thresholdType : min | max&lt;br&gt;+ severity : low | medium | high | critical&lt;br&gt;+ value: number&lt;/div&gt;&lt;div&gt;+ unit: String&lt;/div&gt;&lt;div&gt;+ limit: number&lt;br&gt;+ status : active | acknowledged | resolved&amp;nbsp;&lt;br&gt;+ acknowledgedBy : ObjectId&lt;/div&gt;&lt;div&gt;+acknowledgeAt: Date&lt;/div&gt;&lt;div&gt;+ resolvedBy: ObjectId&lt;/div&gt;&lt;div&gt;+ resolvedAt: Date&lt;/div&gt;" vertex="1">
+          <mxGeometry height="210" width="290" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="T6mFdiVgLqK0amXUWQId-3" parent="T6mFdiVgLqK0amXUWQId-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ computeDeviationSeverity(value, limit)&lt;br&gt;+ raiseThreshold(dati)&lt;br&gt;+ raiseEfficiency(building, cop)&lt;br&gt;+ acknowledge(id, actor)&lt;br&gt;+ resolveManually(id, actor)&lt;br&gt;+ resolveEfficiencyForBuilding(b)&lt;br&gt;+ pruneForRemovedThresholds()&lt;br&gt;+ deleteForBuilding(b) / deleteForSensor(s)&lt;br&gt;+ toAlertDTO(a)&lt;br&gt;+ listAlerts(filtri)&lt;div&gt;+getAlert(id)&lt;br&gt;+ dispatchAlertNotifications()&lt;/div&gt;" vertex="1">
+          <mxGeometry height="186" width="290" y="254" as="geometry" />
+        </mxCell>
+        <mxCell id="IjOTDCD_j_nW2hW7UJY7-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Rilevazione" vertex="1">
+          <mxGeometry height="390" width="240" x="2230" y="565" as="geometry" />
+        </mxCell>
+        <mxCell id="IjOTDCD_j_nW2hW7UJY7-2" parent="IjOTDCD_j_nW2hW7UJY7-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ timestamp : Date&lt;br&gt;+ value : Number&lt;br&gt;+ unit : String&lt;br&gt;+ metadata.sensor : ObjectId&lt;br&gt;+ metadata.building : ObjectId&lt;br&gt;+ metadata.sensorType : String" vertex="1">
+          <mxGeometry height="190" width="240" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="IjOTDCD_j_nW2hW7UJY7-3" parent="IjOTDCD_j_nW2hW7UJY7-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ toSensorReadingDTO(r)&lt;br&gt;+ ingestReading(input)&lt;br&gt;+ handleMqttMessage(topic, msg)&lt;br&gt;+ computeSensorReading()&lt;br&gt;+ listBySensor(id)&lt;br&gt;+ listByBuilding(id)&lt;br&gt;+ exportReadings(format)&lt;br&gt;+ getTimeseries(hour|day|week)&lt;br&gt;+ serializeCsv()" vertex="1">
+          <mxGeometry height="156" width="240" y="234" as="geometry" />
+        </mxCell>
+        <mxCell id="ZrsPEgdI8vUaqtX8VMvp-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Sensore" vertex="1">
+          <mxGeometry height="460" width="230" x="2250" y="1020" as="geometry" />
+        </mxCell>
+        <mxCell id="ZrsPEgdI8vUaqtX8VMvp-2" parent="ZrsPEgdI8vUaqtX8VMvp-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ building : ObjectId&lt;div&gt;+ sensorType : String&lt;br&gt;+ location : String&lt;br&gt;+ serialNumber : String&lt;br&gt;+ installationDate : Date&amp;nbsp;&lt;br&gt;+ status : String&lt;br&gt;+ lastReading : Object&lt;br&gt;+ transmissionInterval : Number&amp;nbsp;&lt;/div&gt;&lt;div&gt;+ minThreshold: Number&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ maxThreshold: Number&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ createdBy: ObjectId&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ updatedBy: ObjectId&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="270" width="230" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="ZrsPEgdI8vUaqtX8VMvp-3" parent="ZrsPEgdI8vUaqtX8VMvp-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ isActive(): Boolean&lt;br&gt;+ updateStatus([newStatus])&lt;br&gt;+ toSensorDTO(s)&lt;br&gt;+ listSensors(filtri)&lt;br&gt;+ createSensor(dati)&lt;br&gt;+ getSensor(id)&lt;br&gt;+ updateSensor(id, dati)&lt;br&gt;+ deleteSensor(id)&lt;br&gt;+ connectAndSubscribe()" vertex="1">
+          <mxGeometry height="146" width="230" y="314" as="geometry" />
+        </mxCell>
+        <mxCell id="_PJcxmBY8RkvSuMBEZ1O-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Edificio" vertex="1">
+          <mxGeometry height="500" width="360" x="2190" y="15" as="geometry" />
+        </mxCell>
+        <mxCell id="_PJcxmBY8RkvSuMBEZ1O-2" parent="_PJcxmBY8RkvSuMBEZ1O-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ name : String&lt;div&gt;&amp;nbsp;+ address : String&lt;br&gt;+ surface : Number&amp;nbsp;&lt;/div&gt;&lt;div&gt;+ ceilingHeight : Number = 3.0&lt;br&gt;+ location : GeoJSON Point [lng, lat]&lt;br&gt;+ buildingType : ObjectId&lt;br&gt;+ heatingSystemType : String&lt;br&gt;+ constructionYear : Number&lt;/div&gt;&lt;div&gt;+ geographicZone : Number&lt;br&gt;+ status : String&lt;br&gt;+ efficiencyThresholds: Object {enabled, minCop}&lt;br&gt;+ createdBy : ObjectId&lt;/div&gt;&lt;div&gt;+ updatedBy! : ObjectId&lt;/div&gt;" vertex="1">
+          <mxGeometry height="230" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="_PJcxmBY8RkvSuMBEZ1O-3" parent="_PJcxmBY8RkvSuMBEZ1O-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ toBuildingSummaryDTO() / DetailDTO()&lt;br&gt;+ searchBuildings(filtri)&lt;br&gt;+ createBuilding(dati)&lt;br&gt;+ getBuilding(id)&lt;br&gt;+ updateBuilding(id, dati)&lt;br&gt;+ deleteBuilding(id) cascade&lt;br&gt;+ getHistory(id) /readings&lt;br&gt;+ calculateBuildingEfficiency()&lt;br&gt;+ classifyHeatingSystem()&lt;br&gt;+ aggregateDailyConsumption()&lt;br&gt;+ aggregateConsumption()&lt;br&gt;+ buildReportData() + serialize Pdf/Xlsx&lt;br&gt;+ getCoordinates() / getAvgHistTemp()&lt;br&gt;+ evaluateEfficiencyAlerts() [cron]&lt;br&gt;+ advanceThermostat() / computeReading()" vertex="1">
+          <mxGeometry height="226" width="360" y="274" as="geometry" />
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-14" edge="1" parent="_PJcxmBY8RkvSuMBEZ1O-1" style="edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERoneToMany;startArrow=ERzeroToOne;rounded=0;fontFamily=Helvetica;fontColor=default;resizable=0;exitX=0.849;exitY=0.985;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1.009;entryY=0.556;entryDx=0;entryDy=0;entryPerimeter=0;" target="ZrsPEgdI8vUaqtX8VMvp-2" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="360" y="484.9999999999999" as="sourcePoint" />
+            <mxPoint x="347.80999999999995" y="1190.48" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-15" connectable="0" parent="Qi31iBJSyYpHlzmVLtyE-14" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=12;fontColor=default;" value="misura&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry relative="1" x="0.1343" y="-4" as="geometry">
+            <mxPoint y="1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-1" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Utente" vertex="1">
+          <mxGeometry height="450" width="340" x="1750" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-2" parent="Qi31iBJSyYpHlzmVLtyE-1" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ email : String&lt;br&gt;+ name : String&lt;br&gt;+ role : String&lt;div&gt;+ isDisabled : Boolean&lt;br&gt;+ language : String&lt;br&gt;+ passwordHash : String&lt;br&gt;+ googleSub : String&lt;br&gt;+ lastLoginAt : Date&lt;br&gt;+ passwordUpdatedAt : Date&lt;br&gt;+ createdAt : Date&amp;nbsp;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ updatedAt : Date&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="230" width="340" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-3" parent="Qi31iBJSyYpHlzmVLtyE-1" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ pre(&#39;save&#39;) hook (passwordUpdatedAt)&lt;br&gt;+ toUserDto(user): UserDto&lt;br&gt;+ toPublicUserDto(user)&lt;br&gt;+ login(email, password | idToken): JWT&lt;br&gt;+ getCurrentSession()&lt;br&gt;+ updateOwnProfile(name, language)&lt;br&gt;+ listUsers() / getUser(id)&lt;br&gt;+ updateUser(id, role, isDisabled)&lt;br&gt;+ deleteUser(id) [admin]&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="176" width="340" y="274" as="geometry" />
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-5" edge="1" parent="1" source="LmoHc8QrsqqHJATzWA-2-2" style="edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;startArrow=ERmandOne;rounded=0;fontFamily=Helvetica;fontColor=default;resizable=0;exitX=0.991;exitY=0.818;exitDx=0;exitDy=0;exitPerimeter=0;entryX=-0.009;entryY=0.612;entryDx=0;entryDy=0;entryPerimeter=0;" target="Qi31iBJSyYpHlzmVLtyE-2" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="1870" y="370" as="sourcePoint" />
+            <mxPoint x="1970" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-6" connectable="0" parent="Qi31iBJSyYpHlzmVLtyE-5" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=12;fontColor=default;" value="Crea un" vertex="1">
+          <mxGeometry relative="1" x="0.1415" y="-1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-7" edge="1" parent="1" source="Qi31iBJSyYpHlzmVLtyE-1" style="edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToMany;startArrow=ERzeroToOne;rounded=0;fontFamily=Helvetica;fontColor=default;resizable=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=-0.003;entryY=0.968;entryDx=0;entryDy=0;entryPerimeter=0;" target="_PJcxmBY8RkvSuMBEZ1O-2" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="1870" y="370" as="sourcePoint" />
+            <mxPoint x="1970" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-8" connectable="0" parent="Qi31iBJSyYpHlzmVLtyE-7" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=12;fontColor=default;" value="modifica molti" vertex="1">
+          <mxGeometry relative="1" x="-0.0435" y="-4" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-10" edge="1" parent="1" source="T6mFdiVgLqK0amXUWQId-2" style="edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERzeroToOne;startArrow=ERzeroToMany;rounded=0;fontFamily=Helvetica;fontColor=default;resizable=0;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=-0.01;entryY=0.649;entryDx=0;entryDy=0;entryPerimeter=0;startFill=0;endFill=0;" target="_PJcxmBY8RkvSuMBEZ1O-3" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="2080" y="530" as="sourcePoint" />
+            <mxPoint x="2180" y="430" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-11" connectable="0" parent="Qi31iBJSyYpHlzmVLtyE-10" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=12;fontColor=default;" value="produce" vertex="1">
+          <mxGeometry relative="1" x="0.0703" y="-4" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-12" edge="1" parent="1" style="edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERmandOne;startArrow=ERmandOne;rounded=0;fontFamily=Helvetica;fontColor=default;resizable=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" target="T_55nfcwFDAB_pc6mJxH-2" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="2040.0000000000005" y="1009" as="sourcePoint" />
+            <mxPoint x="2035.0000000000005" y="1099" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-13" connectable="0" parent="Qi31iBJSyYpHlzmVLtyE-12" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=12;fontColor=default;" value="classifica" vertex="1">
+          <mxGeometry relative="1" x="-0.1081" y="-4" as="geometry">
+            <mxPoint y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-16" edge="1" parent="1" source="LmoHc8QrsqqHJATzWA-2-4" style="fontSize=12;html=1;endArrow=ERzeroToMany;startArrow=ERzeroToOne;rounded=0;fontFamily=Helvetica;fontColor=default;resizable=0;exitX=0.033;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" target="-eUDdIge8A5NSsHQLOdF-1" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <Array as="points">
+              <mxPoint x="1390" y="480" />
+            </Array>
+            <mxPoint x="1340" y="330" as="sourcePoint" />
+            <mxPoint x="1370" y="614.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Qi31iBJSyYpHlzmVLtyE-18" connectable="0" parent="Qi31iBJSyYpHlzmVLtyE-16" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=12;fontColor=default;" value="Resetta" vertex="1">
+          <mxGeometry relative="1" x="-0.1615" y="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dJpqH4K-K3BXfkJWWpvc-1" edge="1" parent="1" source="ZrsPEgdI8vUaqtX8VMvp-2" style="fontSize=12;html=1;endArrow=ERoneToMany;rounded=0;fontFamily=Helvetica;fontColor=default;resizable=0;exitX=-0.006;exitY=0.332;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.647;entryDx=0;entryDy=0;entryPerimeter=0;" target="IjOTDCD_j_nW2hW7UJY7-3" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <Array as="points">
+              <mxPoint x="2190" y="1080" />
+              <mxPoint x="2190" y="980" />
+            </Array>
+            <mxPoint x="2110" y="990" as="sourcePoint" />
+            <mxPoint x="2210" y="890" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dJpqH4K-K3BXfkJWWpvc-3" connectable="0" parent="dJpqH4K-K3BXfkJWWpvc-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=12;fontColor=default;" value="registra" vertex="1">
+          <mxGeometry relative="1" x="-0.0152" y="2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dJpqH4K-K3BXfkJWWpvc-4" edge="1" parent="1" source="_PJcxmBY8RkvSuMBEZ1O-3" style="fontSize=12;html=1;endArrow=ERzeroToMany;endFill=1;rounded=0;fontFamily=Helvetica;fontColor=default;resizable=0;exitX=0.704;exitY=0.997;exitDx=0;exitDy=0;exitPerimeter=0;" target="IjOTDCD_j_nW2hW7UJY7-1" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="2450" y="600" as="sourcePoint" />
+            <mxPoint x="2550" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dJpqH4K-K3BXfkJWWpvc-5" connectable="0" parent="dJpqH4K-K3BXfkJWWpvc-4" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Helvetica;fontSize=12;fontColor=default;" value="ha molte" vertex="1">
+          <mxGeometry relative="1" x="-0.064" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="HGheNneKN_8ygfF7x8qv" name="Utente">
+    <mxGraphModel dx="2175" dy="1220" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGU-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Utente" vertex="1">
+          <mxGeometry height="450" width="360" x="240" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="WGU-attr" parent="WGU-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ email : String&lt;br&gt;+ name : String&lt;br&gt;+ role : admin | operator&lt;br&gt;+ isDisabled : Boolean&lt;br&gt;+ language : String&lt;br&gt;+ passwordHash : String&lt;br&gt;+ googleSub : String&lt;br&gt;+ lastLoginAt : Date&lt;br&gt;+ passwordUpdatedAt : Date&lt;br&gt;+ createdAt : Date&amp;nbsp;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ updatedAt : Date&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="230" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="WGU-meth" parent="WGU-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ pre(&#39;save&#39;) hook (passwordUpdatedAt)&lt;br&gt;+ toUserDto(user): UserDto&lt;br&gt;+ toPublicUserDto(user)&lt;br&gt;+ login(email, password | idToken): JWT&lt;br&gt;+ getCurrentSession()&lt;br&gt;+ updateOwnProfile(name, language)&lt;br&gt;+ listUsers() / getUser(id) [admin]&lt;br&gt;+ updateUser(id, role, isDisabled) [admin]&lt;br&gt;+ deleteUser(id) [admin]&lt;br&gt;+ acceptInvite() -&amp;gt; createUser&lt;br&gt;+ seedInitialRecords()" vertex="1">
+          <mxGeometry height="176" width="360" y="274" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="Nudmvs-mw_S1z1w8YK1x" name="Edificio">
+    <mxGraphModel dx="707" dy="397" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGE-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Edificio" vertex="1">
+          <mxGeometry height="500" width="360" x="234" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="WGE-attr" parent="WGE-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ name : String&lt;div&gt;&amp;nbsp;+ address : String&lt;br&gt;+ surface : Number&amp;nbsp;&lt;/div&gt;&lt;div&gt;+ ceilingHeight : Number = 3.0&lt;br&gt;+ location : GeoJSON Point [lng, lat]&lt;br&gt;+ buildingType : ObjectId&lt;br&gt;+ heatingSystemType : String&lt;br&gt;+ constructionYear : Number&lt;/div&gt;&lt;div&gt;+ geographicZone : Number&lt;br&gt;+ status : String&lt;br&gt;+ efficiencyThresholds: Object {enabled, minCop}&lt;br&gt;+ createdBy : ObjectId&lt;/div&gt;&lt;div&gt;+ updatedBy! : ObjectId&lt;/div&gt;" vertex="1">
+          <mxGeometry height="230" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="WGE-meth" parent="WGE-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ toBuildingSummaryDTO() / DetailDTO()&lt;br&gt;+ searchBuildings(filtri)&lt;br&gt;+ createBuilding(dati)&lt;br&gt;+ getBuilding(id)&lt;br&gt;+ updateBuilding(id, dati)&lt;br&gt;+ deleteBuilding(id) cascade&lt;br&gt;+ getHistory(id) /readings&lt;br&gt;+ calculateBuildingEfficiency()&lt;br&gt;+ classifyHeatingSystem()&lt;br&gt;+ aggregateDailyConsumption()&lt;br&gt;+ aggregateConsumption()&lt;br&gt;+ buildReportData() + serialize Pdf/Xlsx&lt;br&gt;+ getCoordinates() / getAvgHistTemp()&lt;br&gt;+ evaluateEfficiencyAlerts() [cron]&lt;br&gt;+ advanceThermostat() / computeReading()" vertex="1">
+          <mxGeometry height="226" width="360" y="274" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="DsoMonRv7A5Ccze8GBaF" name="Sensore">
+    <mxGraphModel dx="857" dy="481" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGS-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Sensore" vertex="1">
+          <mxGeometry height="460" width="360" x="240" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="WGS-attr" parent="WGS-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ building : ObjectId&lt;div&gt;+ sensorType : String&lt;br&gt;+ location : String&lt;br&gt;+ serialNumber : String&lt;br&gt;+ installationDate : Date&amp;nbsp;&lt;br&gt;+ status : String&lt;br&gt;+ lastReading : Object&lt;br&gt;+ transmissionInterval : Number&amp;nbsp;&lt;/div&gt;&lt;div&gt;+ minThreshold: Number&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ maxThreshold: Number&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ createdBy: ObjectId&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;+ updatedBy: ObjectId&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="270" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="WGS-meth" parent="WGS-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ isActive(): Boolean&lt;br&gt;+ updateStatus([newStatus])&lt;br&gt;+ toSensorDTO(s)&lt;br&gt;+ listSensors(filtri)&lt;br&gt;+ createSensor(dati)&lt;br&gt;+ getSensor(id)&lt;br&gt;+ updateSensor(id, dati)&lt;br&gt;+ deleteSensor(id)&lt;br&gt;+ connectAndSubscribe()" vertex="1">
+          <mxGeometry height="146" width="360" y="314" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="6FxS_oXs7cEW9R26NMl_" name="Rilevazione">
+    <mxGraphModel dx="725" dy="407" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGR-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Rilevazione" vertex="1">
+          <mxGeometry height="390" width="360" x="240" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="WGR-attr" parent="WGR-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ timestamp : Date&lt;br&gt;+ value : Number&lt;br&gt;+ unit : String&lt;br&gt;+ metadata.sensor : ObjectId&lt;br&gt;+ metadata.building : ObjectId&lt;br&gt;+ metadata.sensorType : String" vertex="1">
+          <mxGeometry height="190" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="WGR-meth" parent="WGR-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ toSensorReadingDTO(r)&lt;br&gt;+ ingestReading(input)&lt;br&gt;+ handleMqttMessage(topic, msg)&lt;br&gt;+ computeSensorReading()&lt;br&gt;+ listBySensor(id)&lt;br&gt;+ listByBuilding(id)&lt;br&gt;+ exportReadings(format)&lt;br&gt;+ getTimeseries(hour|day|week)&lt;br&gt;+ serializeCsv()" vertex="1">
+          <mxGeometry height="156" width="360" y="234" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="qFw7nPONeeeXCqqj_1Rm" name="Allarme">
+    <mxGraphModel dx="884" dy="496" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGA-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Allarme" vertex="1">
+          <mxGeometry height="440" width="360" x="240" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="WGA-attr" parent="WGA-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ building: ObjectId&lt;br&gt;+ sensor: ObjectId&lt;br&gt;+ type : String&lt;div&gt;+ thresholdType : min | max&lt;br&gt;+ severity : low | medium | high | critical&lt;br&gt;+ value: number&lt;/div&gt;&lt;div&gt;+ unit: String&lt;/div&gt;&lt;div&gt;+ limit: number&lt;br&gt;+ status : active | acknowledged | resolved&amp;nbsp;&lt;br&gt;+ acknowledgedBy : ObjectId&lt;/div&gt;&lt;div&gt;+acknowledgeAt: Date&lt;/div&gt;&lt;div&gt;+ resolvedBy: ObjectId&lt;/div&gt;&lt;div&gt;+ resolvedAt: Date&lt;/div&gt;" vertex="1">
+          <mxGeometry height="210" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="WGA-meth" parent="WGA-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ computeDeviationSeverity(value, limit)&lt;br&gt;+ raiseThreshold(dati)&lt;br&gt;+ raiseEfficiency(building, cop)&lt;br&gt;+ acknowledge(id, actor)&lt;br&gt;+ resolveManually(id, actor)&lt;br&gt;+ resolveEfficiencyForBuilding(b)&lt;br&gt;+ pruneForRemovedThresholds()&lt;br&gt;+ deleteForBuilding(b) / deleteForSensor(s)&lt;br&gt;+ toAlertDTO(a)&lt;br&gt;+ listAlerts(filtri)&lt;div&gt;+getAlert(id)&lt;br&gt;+ dispatchAlertNotifications()&lt;/div&gt;" vertex="1">
+          <mxGeometry height="186" width="360" y="254" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="caf5ed884fc9428b" name="Invito">
+    <mxGraphModel dx="744" dy="417" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGI-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="Invito" vertex="1">
+          <mxGeometry height="360" width="360" x="240" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="WGI-attr" parent="WGI-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ email : String&lt;br&gt;+ role : admin | operator&lt;br&gt;+ tokenHash : SHA-256&lt;br&gt;+ status : pending | accepted | revoked | expired&amp;nbsp;&lt;br&gt;+ expiresAt : Date&lt;div&gt;+ createdBy: ObjectId&lt;br&gt;+ acceptedAt: ObjectId&lt;/div&gt;" vertex="1">
+          <mxGeometry height="190" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="mc2hcVXnDd0LUVZOP4n8-1" edge="1" parent="WGI-box" source="WGI-meth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;fontColor=default;resizable=0;" target="WGI-attr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WGI-meth" parent="WGI-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ toInviteDto(invite)&lt;br&gt;+ toCreateInviteDto(invite)&lt;br&gt;+ validateInviteToken(token)&lt;br&gt;+ createInvite(email, role) [admin]&lt;br&gt;+ listOrValidate(?token=)&lt;br&gt;+ getInvite(id) [admin]&lt;br&gt;+ revokeInvite(id) [admin]&lt;br&gt;+ acceptInvite(id, token, pwd|idToken)" vertex="1">
+          <mxGeometry height="126" width="360" y="234" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="18f8b34f92814d98" name="TokenResetPassword">
+    <mxGraphModel dx="690" dy="387" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGT-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="TokenResetPassword" vertex="1">
+          <mxGeometry height="250" width="360" x="240" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="WGT-attr" parent="WGT-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="- id : ObjectId (_id)&lt;br&gt;- userId: ObjectId&lt;br&gt;- tokenHash : String&amp;nbsp;&lt;br&gt;- expiresAt : Date&amp;nbsp;&lt;br&gt;- usedAt: Date" vertex="1">
+          <mxGeometry height="130" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="WGT-meth" parent="WGT-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;fontFamily=Helvetica;fontColor=default;" value="+ requestReset(email)&lt;br&gt;+ verifyToken(token)&lt;br&gt;+ confirmReset(token, password)" vertex="1">
+          <mxGeometry height="76" width="360" y="174" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="4f950762f942449c" name="TipologiaEdificio">
+    <mxGraphModel dx="1088" dy="610" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGB-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="TipologiaEdificio" vertex="1">
+          <mxGeometry height="276" width="360" x="240" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="WGB-attr" parent="WGB-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ id : ObjectId (_id)&lt;br&gt;+ name : String&amp;nbsp;&lt;br&gt;+ description: String&lt;br&gt;+ createdAt: String&lt;div&gt;+ updatedAt : Date&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="360" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="WGB-meth" parent="WGB-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;fontFamily=Helvetica;fontColor=default;" value="+ toBuildingTypeDTO(bt)&lt;br&gt;+ listBuildingTypes()&lt;br&gt;+ getBuildingType(id)&lt;br&gt;+ createBuildingType(dati)&lt;br&gt;+ updateBuildingType(id, dati)&amp;nbsp;&lt;br&gt;+ deleteBuildingType(id)" vertex="1">
+          <mxGeometry height="142" width="360" y="134" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="df74bfaf96d2454a" name="ConfigurazioneSistema">
+    <mxGraphModel dx="1285" dy="721" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="WGC-box" parent="1" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=44;horizontalStack=0;fontSize=12;resizeParent=0;resizeLast=1;align=center;html=1;strokeColor=default;verticalAlign=top;fontFamily=Helvetica;fontColor=default;fontStyle=1;fillColor=default;" value="ConfigurazioneSistema" vertex="1">
+          <mxGeometry height="230" width="250" x="240" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="WmTXMcaLaPNqggIZ3ynO-1" edge="1" parent="WGC-box" source="WGC-meth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="WGC-attr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="WGC-attr" parent="WGC-box" style="align=left;strokeColor=none;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ polling.intervalSeconds = 90&lt;br&gt;+ polling.autoPollingEnabled = true&lt;br&gt;+ notifications.emailEnabled = true&lt;br&gt;+ database.dataRetentionDays = 365&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="110" width="250" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="WGC-meth" parent="WGC-box" style="align=left;strokeColor=default;fillColor=none;spacingLeft=6;spacingRight=6;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;html=1;whiteSpace=wrap;" value="+ getOrCreate(): singleton&lt;br&gt;+ serializeConfig(doc)&lt;br&gt;+ getConfig()&lt;br&gt;+ updateConfig(dati)" vertex="1">
+          <mxGeometry height="76" width="250" y="154" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,3900 @@
+openapi: 3.1.0
+info:
+  title: WattGuard API
+  description: Energy monitoring and management API for WattGuard
+  version: 1.0.0
+servers:
+  - url: https://wattguard.me/api/v1
+    description: WattGuard application
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token in Authorization header
+  schemas:
+    ListInvitesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invite"
+          description: List of invites
+      required:
+        - success
+        - data
+    Invite:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          type: string
+          description: Unique invite identifier
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+          description: Email address of invitee
+        role:
+          type: string
+          enum:
+            - admin
+            - operator
+          description: User role in the system
+        status:
+          type: string
+          enum:
+            - pending
+            - accepted
+            - revoked
+            - expired
+        expiresAt:
+          $ref: "#/components/schemas/IsoDateTime"
+        createdAt:
+          description: Creation timestamp
+          anyOf:
+            - $ref: "#/components/schemas/IsoDateTime"
+            - type: "null"
+        acceptedAt:
+          description: Acceptance timestamp
+          anyOf:
+            - $ref: "#/components/schemas/IsoDateTime"
+            - type: "null"
+        createdBy:
+          description: User who created the invite
+          anyOf:
+            - anyOf:
+                - type: string
+                - type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                      pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+                  required:
+                    - email
+            - type: "null"
+      required:
+        - _id
+        - email
+        - role
+        - status
+        - expiresAt
+    IsoDateTime:
+      anyOf:
+        - type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+          description: ISO 8601 timestamp string
+        - type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: false
+          description: Indicates failure
+        error_code:
+          type: string
+          description: Machine-readable error code
+        message:
+          type: string
+          description: Error message describing what went wrong
+        details:
+          $ref: "#/components/schemas/ErrorDetails"
+      required:
+        - success
+        - error_code
+        - message
+    ErrorDetails:
+      type: object
+      propertyNames:
+        type: string
+      additionalProperties:
+        type:
+          - string
+          - number
+      description: Interpolation values for the localized error message
+    CreateInviteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/CreateInvite"
+      required:
+        - success
+        - data
+    CreateInvite:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          type: string
+          description: Unique invite identifier
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+          description: Email address of invitee
+        role:
+          type: string
+          enum:
+            - admin
+            - operator
+          description: User role in the system
+        status:
+          type: string
+          enum:
+            - pending
+            - accepted
+            - revoked
+            - expired
+        expiresAt:
+          $ref: "#/components/schemas/IsoDateTime"
+      required:
+        - _id
+        - email
+        - role
+        - status
+        - expiresAt
+    CreateInviteRequest:
+      type: object
+      properties:
+        email:
+          description: Email address
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        role:
+          type: string
+          enum:
+            - admin
+            - operator
+          description: User role in the system
+      required:
+        - email
+        - role
+    GetInviteByIdResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/Invite"
+      required:
+        - success
+        - data
+    AcceptInviteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/PublicUser"
+            token:
+              type: string
+              minLength: 1
+          required:
+            - user
+            - token
+      required:
+        - success
+        - data
+    PublicUser:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+          description: User email address
+        name:
+          description: User display name
+          type:
+            - string
+            - "null"
+        role:
+          type: string
+          enum:
+            - admin
+            - operator
+          description: User role in the system
+        language:
+          description: Preferred UI locale used for emails
+          anyOf:
+            - type: string
+              enum:
+                - en
+                - it
+                - de
+              description: Supported UI locale
+            - type: "null"
+      required:
+        - _id
+        - email
+        - role
+    ObjectId:
+      type: string
+      pattern: ^[0-9a-fA-F]{24}$
+      description: MongoDB ObjectId
+    AcceptInviteRequest:
+      anyOf:
+        - $ref: "#/components/schemas/AcceptInviteLocal"
+        - $ref: "#/components/schemas/AcceptInviteGoogle"
+    AcceptInviteLocal:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 2
+          maxLength: 64
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required:
+        - token
+        - name
+        - password
+    AcceptInviteGoogle:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        idToken:
+          type: string
+          minLength: 1
+      required:
+        - token
+        - idToken
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+          required:
+            - status
+      required:
+        - success
+        - data
+    SessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/PublicUser"
+            token:
+              type: string
+              minLength: 1
+          required:
+            - user
+            - token
+      required:
+        - success
+        - data
+    SessionRequest:
+      anyOf:
+        - $ref: "#/components/schemas/LocalSessionRequest"
+        - $ref: "#/components/schemas/GoogleSessionRequest"
+    LocalSessionRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        password:
+          type: string
+          minLength: 1
+      required:
+        - email
+        - password
+    GoogleSessionRequest:
+      type: object
+      properties:
+        idToken:
+          type: string
+          minLength: 1
+      required:
+        - idToken
+    SessionUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/User"
+      required:
+        - success
+        - data
+    User:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+          description: User email address
+        name:
+          description: User display name
+          type:
+            - string
+            - "null"
+        role:
+          type: string
+          enum:
+            - admin
+            - operator
+          description: User role in the system
+        isDisabled:
+          description: Whether the user account is disabled
+          type: boolean
+        language:
+          description: Preferred UI locale used for emails
+          anyOf:
+            - type: string
+              enum:
+                - en
+                - it
+                - de
+              description: Supported UI locale
+            - type: "null"
+        lastLoginAt:
+          description: Timestamp of last login
+          anyOf:
+            - $ref: "#/components/schemas/IsoDateTime"
+            - type: "null"
+        createdAt:
+          $ref: "#/components/schemas/IsoDateTime"
+      required:
+        - _id
+        - email
+        - role
+    UpdateSessionRequest:
+      type: object
+      properties:
+        language:
+          description: User preferred language for email alerts and UI
+          type: string
+          enum:
+            - en
+            - it
+            - de
+        name:
+          description: User display name
+          type: string
+          minLength: 2
+          maxLength: 64
+    GoogleConfigResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            clientId:
+              type: string
+              description: Configured Google OAuth Client ID
+          required:
+            - clientId
+      required:
+        - success
+        - data
+    CreateRecoveryTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Success message
+          required:
+            - message
+      required:
+        - success
+        - data
+    CreateRecoveryTokenRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+      required:
+        - email
+    ValidateRecoveryTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            valid:
+              type: boolean
+              const: true
+          required:
+            - valid
+      required:
+        - success
+        - data
+    ValidateRecoveryTokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+      required:
+        - token
+    ConfirmRecoveryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Success message
+          required:
+            - message
+      required:
+        - success
+        - data
+    ConfirmRecoveryRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required:
+        - token
+        - password
+    ListUsersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+          description: List of users
+      required:
+        - success
+        - data
+    UserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/User"
+      required:
+        - success
+        - data
+    UpdateUserRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - admin
+            - operator
+          description: User role in the system
+        isDisabled:
+          description: Whether the user account is disabled
+          type: boolean
+    ListBuildingTypesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BuildingType"
+          description: List of building types
+      required:
+        - success
+        - data
+    BuildingType:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          description: Building type name
+        description:
+          description: Optional description of the building type
+          type:
+            - string
+            - "null"
+        createdAt:
+          $ref: "#/components/schemas/IsoDateTime"
+        updatedAt:
+          $ref: "#/components/schemas/IsoDateTime"
+      required:
+        - _id
+        - name
+    BuildingTypeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/BuildingType"
+      required:
+        - success
+        - data
+    CreateBuildingTypeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Building type name
+        description:
+          description: Optional description
+          type: string
+      required:
+        - name
+    UpdateBuildingTypeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Building type name
+        description:
+          description: Optional description
+          type: string
+    SearchBuildingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            buildings:
+              type: array
+              items:
+                $ref: "#/components/schemas/BuildingSummary"
+              description: List of buildings matching search criteria
+            pagination:
+              $ref: "#/components/schemas/Pagination"
+          required:
+            - buildings
+            - pagination
+      required:
+        - success
+        - data
+    BuildingSummary:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          description: Building name
+        address:
+          type: string
+          description: Building address
+        surface:
+          type: number
+          description: Surface area in square meters
+        ceilingHeight:
+          type: number
+          description: Ceiling height in meters
+        location:
+          $ref: "#/components/schemas/GeoJSONPoint"
+        buildingType:
+          anyOf:
+            - $ref: "#/components/schemas/ObjectId"
+            - $ref: "#/components/schemas/BuildingType"
+          description: Building type (ID or populated object)
+        heatingSystemType:
+          type: string
+          description: Type of heating system
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - decommissioned
+          description: Building operational status
+        geographicZone:
+          type: string
+          description: Geographic zone
+        activeSensors:
+          default: 0
+          description: Count of active sensors
+          type: number
+        currentConsumption:
+          default: null
+          description: Latest energy meter reading in kWh, or null if unavailable
+          type:
+            - number
+            - "null"
+        updatedAt:
+          $ref: "#/components/schemas/IsoDateTime"
+      required:
+        - _id
+        - name
+        - address
+        - surface
+        - ceilingHeight
+        - location
+        - buildingType
+        - heatingSystemType
+        - status
+        - geographicZone
+    GeoJSONPoint:
+      type: object
+      properties:
+        type:
+          type: string
+          const: Point
+          description: GeoJSON type
+        coordinates:
+          type: array
+          prefixItems:
+            - type: number
+              minimum: -180
+              maximum: 180
+              description: Longitude
+            - type: number
+              minimum: -90
+              maximum: 90
+              description: Latitude
+          items: false
+          minItems: 2
+          maxItems: 2
+          description: GeoJSON coordinates [longitude, latitude]
+      required:
+        - type
+        - coordinates
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: number
+        offset:
+          type: number
+        total:
+          type: number
+      required:
+        - limit
+        - offset
+        - total
+      description: Pagination information
+    BuildingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/BuildingDetail"
+      required:
+        - success
+        - data
+    BuildingDetail:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          description: Building name
+        address:
+          type: string
+          description: Building address
+        surface:
+          type: number
+          description: Surface area in square meters
+        ceilingHeight:
+          type: number
+          description: Ceiling height in meters
+        location:
+          $ref: "#/components/schemas/GeoJSONPoint"
+        buildingType:
+          anyOf:
+            - $ref: "#/components/schemas/ObjectId"
+            - $ref: "#/components/schemas/BuildingType"
+          description: Building type (ID or populated object)
+        heatingSystemType:
+          type: string
+          description: Type of heating system
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - decommissioned
+          description: Building operational status
+        geographicZone:
+          type: string
+          description: Geographic zone
+        activeSensors:
+          default: 0
+          description: Count of active sensors
+          type: number
+        currentConsumption:
+          default: null
+          description: Latest energy meter reading in kWh, or null if unavailable
+          type:
+            - number
+            - "null"
+        updatedAt:
+          $ref: "#/components/schemas/IsoDateTime"
+        constructionYear:
+          description: Year of construction
+          anyOf:
+            - type: integer
+              minimum: -9007199254740991
+              maximum: 9007199254740991
+            - type: "null"
+        efficiencyThresholds:
+          $ref: "#/components/schemas/EfficiencyThresholds"
+        createdBy:
+          $ref: "#/components/schemas/ObjectId"
+        updatedBy:
+          $ref: "#/components/schemas/ObjectId"
+        createdAt:
+          $ref: "#/components/schemas/IsoDateTime"
+      required:
+        - _id
+        - name
+        - address
+        - surface
+        - ceilingHeight
+        - location
+        - buildingType
+        - heatingSystemType
+        - status
+        - geographicZone
+        - efficiencyThresholds
+    EfficiencyThresholds:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Enable automatic efficiency alerts
+        minCop:
+          anyOf:
+            - type: number
+              minimum: 0
+              maximum: 10
+            - type: "null"
+          description: Minimum average COP; alert when below
+      required:
+        - enabled
+        - minCop
+    CreateBuildingRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Building name
+        address:
+          type: string
+          minLength: 1
+          description: Building address
+        surface:
+          type: number
+          minimum: 1
+          description: Surface area in square meters
+        ceilingHeight:
+          default: 3
+          description: Ceiling height in meters
+          type: number
+          minimum: 0.5
+          maximum: 20
+        location:
+          $ref: "#/components/schemas/GeoJSONPoint"
+        buildingType:
+          description: Building type identifier or URI
+          type: string
+        heatingSystemType:
+          type: string
+          description: Type of heating system
+        constructionYear:
+          description: Year of construction
+          type: number
+          minimum: 1000
+          maximum: 2036
+        geographicZone:
+          type: string
+          minLength: 1
+          description: Geographic zone
+        efficiencyThresholds:
+          $ref: "#/components/schemas/EfficiencyThresholds"
+      required:
+        - name
+        - address
+        - surface
+        - location
+        - buildingType
+        - heatingSystemType
+        - geographicZone
+    UpdateBuildingRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Building name
+        address:
+          type: string
+          minLength: 1
+          description: Building address
+        surface:
+          type: number
+          minimum: 1
+          description: Surface area in square meters
+        ceilingHeight:
+          description: Ceiling height in meters
+          type: number
+          minimum: 0.5
+          maximum: 20
+        location:
+          $ref: "#/components/schemas/GeoJSONPoint"
+        buildingType:
+          description: Building type identifier or URI
+          type: string
+        heatingSystemType:
+          type: string
+          description: Type of heating system
+        constructionYear:
+          description: Year of construction
+          type: number
+          minimum: 1000
+          maximum: 2036
+        geographicZone:
+          type: string
+          minLength: 1
+          description: Geographic zone
+        efficiencyThresholds:
+          $ref: "#/components/schemas/EfficiencyThresholds"
+        status:
+          description: Building status
+          type: string
+          enum:
+            - active
+            - inactive
+            - decommissioned
+    GetBuildingHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/HistoricalDataResponse"
+      required:
+        - success
+        - data
+    HistoricalDataResponse:
+      type: object
+      properties:
+        buildingId:
+          $ref: "#/components/schemas/ObjectId"
+        buildingName:
+          type: string
+        period:
+          $ref: "#/components/schemas/Period"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoricalDataPoint"
+          description: Historical data points for graphing
+      required:
+        - buildingId
+        - buildingName
+        - period
+        - data
+    Period:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+        endDate:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+      required:
+        - startDate
+        - endDate
+    HistoricalDataPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+        value:
+          type: number
+        unit:
+          type: string
+        sensorType:
+          type: string
+          enum:
+            - internal_temp
+            - external_temp
+            - energy_meter
+            - gas_meter
+          description: Type of sensor (internal temperature, external temperature, energy
+            meter, or gas meter)
+        sensorId:
+          type: string
+      required:
+        - timestamp
+        - value
+        - unit
+        - sensorType
+    GetBuildingEfficiencyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/BuildingEfficiencyData"
+      required:
+        - success
+        - data
+    BuildingEfficiencyData:
+      type: object
+      properties:
+        buildingId:
+          $ref: "#/components/schemas/ObjectId"
+        buildingName:
+          type: string
+        period:
+          $ref: "#/components/schemas/Period"
+        metrics:
+          type: object
+          properties:
+            totalEnergyConsumed:
+              type: number
+              description: Total energy consumed in kWh
+            averageExternalTemperature:
+              description: Average external temperature during period
+              type:
+                - number
+                - "null"
+            estimatedHeatLossCoefficient:
+              description: Estimated Heat Loss Coefficient (W/K)
+              type:
+                - number
+                - "null"
+            insulationQuality:
+              description: Insulation Quality (W/(m²·K))
+              type:
+                - number
+                - "null"
+            averageCop:
+              description: Average Coefficient of Performance (COP)
+              type:
+                - number
+                - "null"
+          required:
+            - totalEnergyConsumed
+            - averageExternalTemperature
+            - estimatedHeatLossCoefficient
+            - insulationQuality
+            - averageCop
+      required:
+        - buildingId
+        - buildingName
+        - period
+        - metrics
+    ListSensorsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            sensors:
+              type: array
+              items:
+                $ref: "#/components/schemas/Sensor"
+              description: List of sensors
+            pagination:
+              $ref: "#/components/schemas/Pagination"
+          required:
+            - sensors
+            - pagination
+      required:
+        - success
+        - data
+    Sensor:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        building:
+          anyOf:
+            - $ref: "#/components/schemas/ObjectId"
+            - $ref: "#/components/schemas/PopulatedBuilding"
+          description: Building reference (ObjectId or populated object)
+        sensorType:
+          type: string
+          enum:
+            - internal_temp
+            - external_temp
+            - energy_meter
+            - gas_meter
+          description: Type of sensor (internal temperature, external temperature, energy
+            meter, or gas meter)
+        location:
+          type: string
+          description: Physical location of the sensor in the building
+        serialNumber:
+          description: Optional sensor serial number
+          type:
+            - string
+            - "null"
+        installationDate:
+          $ref: "#/components/schemas/IsoDateTime"
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - maintenance
+            - error
+          description: Sensor operational status
+        lastReading:
+          $ref: "#/components/schemas/LastReading"
+        transmissionInterval:
+          type: number
+          description: "Data transmission interval in seconds (default: 90)"
+        minThreshold:
+          description: Minimum threshold for alerts
+          type:
+            - number
+            - "null"
+        maxThreshold:
+          description: Maximum threshold for alerts
+          type:
+            - number
+            - "null"
+        createdBy:
+          $ref: "#/components/schemas/ObjectId"
+        updatedBy:
+          $ref: "#/components/schemas/ObjectId"
+        createdAt:
+          $ref: "#/components/schemas/IsoDateTime"
+        updatedAt:
+          $ref: "#/components/schemas/IsoDateTime"
+      required:
+        - _id
+        - building
+        - sensorType
+        - location
+        - installationDate
+        - status
+        - transmissionInterval
+    PopulatedBuilding:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        name:
+          type: string
+          description: Building name
+        address:
+          type: string
+          description: Building address
+      required:
+        - _id
+        - name
+        - address
+    LastReading:
+      type: object
+      properties:
+        value:
+          type: number
+          description: Reading value
+        timestamp:
+          $ref: "#/components/schemas/IsoDateTime"
+        unit:
+          type: string
+          description: Unit of measurement (e.g., °C, W, kWh)
+      required:
+        - value
+        - timestamp
+        - unit
+    SensorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/Sensor"
+      required:
+        - success
+        - data
+    CreateSensorInput:
+      type: object
+      properties:
+        building:
+          description: Building identifier or URI
+          type: string
+        sensorType:
+          type: string
+          enum:
+            - internal_temp
+            - external_temp
+            - energy_meter
+            - gas_meter
+          description: Type of sensor (internal temperature, external temperature, energy
+            meter, or gas meter)
+        location:
+          type: string
+          minLength: 1
+          description: Physical location in the building
+        serialNumber:
+          description: Optional sensor serial number
+          type: string
+        installationDate:
+          $ref: "#/components/schemas/IsoDateTime"
+        transmissionInterval:
+          description: "Transmission interval in seconds (default: 90)"
+          type: number
+          minimum: 10
+          maximum: 3600
+        minThreshold:
+          description: Minimum threshold for alerts
+          type: number
+        maxThreshold:
+          description: Maximum threshold for alerts
+          type: number
+      required:
+        - building
+        - sensorType
+        - location
+    UpdateSensorRequest:
+      type: object
+      properties:
+        sensorType:
+          type: string
+          enum:
+            - internal_temp
+            - external_temp
+            - energy_meter
+            - gas_meter
+          description: Type of sensor (internal temperature, external temperature, energy
+            meter, or gas meter)
+        location:
+          type: string
+          minLength: 1
+          description: Physical location in the building
+        serialNumber:
+          description: Optional sensor serial number
+          type: string
+        transmissionInterval:
+          description: "Transmission interval in seconds (default: 90)"
+          type: number
+          minimum: 10
+          maximum: 3600
+        minThreshold:
+          description: Minimum threshold for alerts
+          type:
+            - number
+            - "null"
+        maxThreshold:
+          description: Maximum threshold for alerts
+          type:
+            - number
+            - "null"
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - maintenance
+            - error
+          description: Sensor operational status
+    GetSensorReadingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            readings:
+              type: array
+              items:
+                $ref: "#/components/schemas/SensorReading"
+              description: List of sensor readings
+            pagination:
+              $ref: "#/components/schemas/Pagination"
+          required:
+            - readings
+            - pagination
+      required:
+        - success
+        - data
+    SensorReading:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        timestamp:
+          $ref: "#/components/schemas/IsoDateTime"
+        value:
+          type: number
+          description: Reading value
+        unit:
+          type: string
+          description: Unit of measurement
+        metadata:
+          type: object
+          properties:
+            sensor:
+              $ref: "#/components/schemas/ObjectId"
+            building:
+              $ref: "#/components/schemas/ObjectId"
+            sensorType:
+              type: string
+              enum:
+                - internal_temp
+                - external_temp
+                - energy_meter
+                - gas_meter
+              description: Type of sensor (internal temperature, external temperature, energy
+                meter, or gas meter)
+          required:
+            - sensor
+            - sensorType
+      required:
+        - timestamp
+        - value
+        - unit
+    ListAlertsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          properties:
+            alerts:
+              type: array
+              items:
+                $ref: "#/components/schemas/Alert"
+              description: List of alerts
+            pagination:
+              $ref: "#/components/schemas/Pagination"
+          required:
+            - alerts
+            - pagination
+      required:
+        - success
+        - data
+    Alert:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        id:
+          $ref: "#/components/schemas/ObjectId"
+        building:
+          anyOf:
+            - $ref: "#/components/schemas/ObjectId"
+            - $ref: "#/components/schemas/PopulatedBuilding"
+          description: Building reference (ObjectId or populated object)
+        sensor:
+          description: Sensor reference (ObjectId or populated object)
+          anyOf:
+            - $ref: "#/components/schemas/ObjectId"
+            - $ref: "#/components/schemas/PopulatedAlertSensor"
+        type:
+          type: string
+          enum:
+            - threshold_exceeded
+            - efficiency_below_threshold
+          description: Type of the alert
+        thresholdType:
+          description: Threshold direction for threshold alerts
+          anyOf:
+            - type: string
+              enum:
+                - min
+                - max
+            - type: "null"
+        severity:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+          description: Severity level
+        value:
+          description: Measured value that triggered the alert
+          type:
+            - number
+            - "null"
+        unit:
+          description: Unit of the measured value
+          type:
+            - string
+            - "null"
+        limit:
+          description: Threshold limit that was exceeded
+          type:
+            - number
+            - "null"
+        status:
+          type: string
+          enum:
+            - active
+            - acknowledged
+            - resolved
+          description: Current status
+        acknowledgedBy:
+          description: Name of the user who acknowledged
+          type:
+            - string
+            - "null"
+        acknowledgedAt:
+          description: When it was acknowledged
+          anyOf:
+            - $ref: "#/components/schemas/IsoDateTime"
+            - type: "null"
+        resolvedBy:
+          description: Name of the user who resolved
+          type:
+            - string
+            - "null"
+        resolvedAt:
+          description: When it was resolved
+          anyOf:
+            - $ref: "#/components/schemas/IsoDateTime"
+            - type: "null"
+        createdAt:
+          $ref: "#/components/schemas/IsoDateTime"
+        updatedAt:
+          $ref: "#/components/schemas/IsoDateTime"
+      required:
+        - id
+        - building
+        - type
+        - severity
+        - status
+        - createdAt
+        - updatedAt
+    PopulatedAlertSensor:
+      type: object
+      properties:
+        self:
+          type: string
+          description: Canonical URI link to this resource
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        sensorType:
+          type: string
+          enum:
+            - internal_temp
+            - external_temp
+            - energy_meter
+            - gas_meter
+          description: Type of the sensor
+        location:
+          type: string
+          description: Physical location of the sensor in the building
+      required:
+        - _id
+        - sensorType
+        - location
+    AlertResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/Alert"
+      required:
+        - success
+        - data
+    UpdateAlertStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - acknowledged
+            - resolved
+          description: New status for the alert
+      required:
+        - status
+    MetricsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/SystemMetrics"
+      required:
+        - success
+        - data
+    SystemMetrics:
+      type: object
+      properties:
+        sensors:
+          type: object
+          properties:
+            active:
+              type: number
+              description: Total active sensors across all buildings
+            total:
+              type: number
+              description: Total sensors across all buildings
+          required:
+            - active
+            - total
+        alerts:
+          type: object
+          properties:
+            active:
+              type: number
+              description: Total active alerts
+          required:
+            - active
+        consumption:
+          type: object
+          properties:
+            electricity:
+              description: Sum of current energy_meter readings (kWh)
+              type:
+                - number
+                - "null"
+            gas:
+              description: Sum of current gas_meter readings (m³)
+              type:
+                - number
+                - "null"
+          required:
+            - electricity
+            - gas
+      required:
+        - sensors
+        - alerts
+        - consumption
+    MetricsHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/MetricsHistoryData"
+      required:
+        - success
+        - data
+    MetricsHistoryData:
+      type: object
+      properties:
+        period:
+          type: object
+          properties:
+            startDate:
+              type: string
+            endDate:
+              type: string
+            interval:
+              type: string
+              enum:
+                - hour
+                - day
+                - week
+          required:
+            - startDate
+            - endDate
+            - interval
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricsHistoryDataPoint"
+      required:
+        - period
+        - data
+    MetricsHistoryDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Bucket label (ISO date or hour string)
+        electricity:
+          description: Average energy_meter reading for the bucket (kWh)
+          type:
+            - number
+            - "null"
+        gas:
+          description: Average gas_meter reading for the bucket (m³)
+          type:
+            - number
+            - "null"
+      required:
+        - date
+        - electricity
+        - gas
+    SettingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/SystemConfig"
+      required:
+        - success
+        - data
+    SystemConfig:
+      type: object
+      properties:
+        polling:
+          $ref: "#/components/schemas/PollingConfig"
+        notifications:
+          $ref: "#/components/schemas/NotificationsConfig"
+        database:
+          $ref: "#/components/schemas/DatabaseConfig"
+      required:
+        - polling
+        - notifications
+        - database
+    PollingConfig:
+      type: object
+      properties:
+        intervalSeconds:
+          type: integer
+          minimum: 10
+          maximum: 3600
+          description: Frontend refetch interval in seconds for the realtime widget
+        autoPollingEnabled:
+          type: boolean
+          description: Whether automatic polling is enabled
+      required:
+        - intervalSeconds
+        - autoPollingEnabled
+    NotificationsConfig:
+      type: object
+      properties:
+        emailEnabled:
+          type: boolean
+          description: Whether email notifications are enabled
+      required:
+        - emailEnabled
+    DatabaseConfig:
+      type: object
+      properties:
+        dataRetentionDays:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+          description: Number of days to retain historical sensor readings
+      required:
+        - dataRetentionDays
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        polling:
+          type: object
+          properties:
+            intervalSeconds:
+              type: integer
+              minimum: 10
+              maximum: 3600
+              description: Frontend refetch interval in seconds for the realtime widget
+            autoPollingEnabled:
+              type: boolean
+              description: Whether automatic polling is enabled
+        notifications:
+          type: object
+          properties:
+            emailEnabled:
+              type: boolean
+              description: Whether email notifications are enabled
+        database:
+          type: object
+          properties:
+            dataRetentionDays:
+              type: integer
+              minimum: 1
+              maximum: 9007199254740991
+              description: Number of days to retain historical sensor readings
+tags:
+  - name: Authentication
+    description: User authentication, session lifecycle, Google OAuth configuration,
+      and password recovery endpoints
+  - name: Users
+    description: User management endpoints (admin only)
+  - name: Invites
+    description: User invitation management
+  - name: Health
+    description: API health check endpoints
+  - name: Building Types
+    description: Building type management - CRUD operations for configurable
+      building types (school, office, library, etc.)
+  - name: Buildings
+    description: Building management
+  - name: Sensors
+    description: Sensor management
+  - name: Alerts
+    description: Energy efficiency and sensor alerts management
+  - name: Metrics
+    description: Building metrics and baseline statistics
+  - name: Readings
+    description: Sensor readings ingestion and historical queries
+  - name: Reports
+    description: Building energy report generation and exports
+  - name: Settings
+    description: System and dashboard settings configuration
+  - name: Backups
+    description: Database backup and restore operations
+paths:
+  /invites:
+    get:
+      operationId: getInvites
+      summary: List invites or verify by token
+      description: "Without query: lists all invites (admin only). With ?token=:
+        public lookup of a single invite for registration"
+      tags:
+        - Invites
+      responses:
+        "200":
+          description: List of invites, or single invite lookup by token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListInvitesResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Invite token not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Invite is expired or already used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+            minLength: 1
+          description: Invitation token for public lookup
+    post:
+      operationId: postInvites
+      summary: Create invite
+      description: Creates an invite and sends the registration email (admin only,
+        valid for 7 days)
+      tags:
+        - Invites
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Invite created and email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateInviteResponse"
+        "400":
+          description: Invalid request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflict - User already exists or pending invite exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Failed to send invitation email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInviteRequest"
+  /invites/{id}:
+    get:
+      operationId: getInvitesById
+      summary: Get invite by ID
+      description: Returns full invite data via its canonical ID (admin only)
+      tags:
+        - Invites
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Invite details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetInviteByIdResponse"
+        "400":
+          description: Invalid ID parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+    delete:
+      operationId: deleteInvitesById
+      summary: Revoke invite
+      description: Revokes a pending invite (admin only)
+      tags:
+        - Invites
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Invite revoked successfully
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Invite cannot be revoked (not pending)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+    patch:
+      operationId: patchInvitesById
+      summary: Accept invite
+      description: Transitions pending -> accepted on the canonical URI. Token in body
+        (never in path). Creates the account (password or Google) and opens the
+        session
+      tags:
+        - Invites
+      responses:
+        "200":
+          description: Invitation accepted successfully, user created and session
+            established
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptInviteResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid Google ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: User already exists or Google account already linked to another user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Invalid or expired invite or email mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Google OAuth not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptInviteRequest"
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check server status
+      description: Checks that the server is running (public)
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Server is running correctly
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /auth/session:
+    post:
+      operationId: postAuthSession
+      summary: Create session
+      description: Creates a session via email+password or Google ID token; returns a
+        Bearer token
+      tags:
+        - Authentication
+      responses:
+        "200":
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Invalid credentials or invalid Google ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Account is disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: User account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Unverified email or account mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: Authentication provider not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionRequest"
+    get:
+      operationId: getAuthSession
+      summary: Get current session
+      description: Returns the authenticated user and session data
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user and session information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionUserResponse"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: patchAuthSession
+      summary: Update current profile
+      description: Updates the authenticated user's name and preferences (e.g. language)
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated user information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionUserResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSessionRequest"
+  /auth/google/config:
+    get:
+      operationId: getAuthGoogleConfig
+      summary: Get Google OAuth config
+      description: Returns the public Google Client ID for the frontend SDK
+      tags:
+        - Authentication
+      responses:
+        "200":
+          description: Google configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoogleConfigResponse"
+  /auth/recovery-tokens:
+    post:
+      operationId: postAuthRecoveryTokens
+      summary: Request password recovery
+      description: Creates a recovery token and sends the email if the account exists
+      tags:
+        - Authentication
+      responses:
+        "200":
+          description: Request processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateRecoveryTokenResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRecoveryTokenRequest"
+  /auth/recovery-validations:
+    post:
+      operationId: postAuthRecoveryValidations
+      summary: Verify recovery token
+      description: Checks recovery token validity without consuming it. Token in body,
+        never in URL
+      tags:
+        - Authentication
+      responses:
+        "200":
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidateRecoveryTokenResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Token has expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateRecoveryTokenRequest"
+  /auth/recovery-confirmations:
+    post:
+      operationId: postAuthRecoveryConfirmations
+      summary: Confirm password recovery
+      description: Resets the password with a valid single-use token
+      tags:
+        - Authentication
+      responses:
+        "200":
+          description: Password recovery successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmRecoveryResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Token or user not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Token has expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmRecoveryRequest"
+  /users:
+    get:
+      operationId: getUsers
+      summary: List users
+      description: Returns all registered users (admin only)
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListUsersResponse"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /users/{id}:
+    get:
+      operationId: getUsersById
+      summary: Get user
+      description: Returns a single user by ID (admin only)
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: Invalid user ID parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+    patch:
+      operationId: patchUsersById
+      summary: Update user
+      description: Updates a user role or disabled flag (admin only, not self)
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Cannot update your own account or empty update body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+    delete:
+      operationId: deleteUsersById
+      summary: Delete user
+      description: Deletes a user (admin only, not self)
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: User deleted successfully
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Cannot delete your own account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+  /building-types:
+    get:
+      operationId: getBuildingTypes
+      summary: List building types
+      description: Returns all building types ordered by name
+      tags:
+        - Building Types
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Building types retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListBuildingTypesResponse"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin or operator role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: postBuildingTypes
+      summary: Create building type
+      description: Creates a new building type (admin only, unique name)
+      tags:
+        - Building Types
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Building type created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildingTypeResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Duplicate building type name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBuildingTypeRequest"
+  /building-types/{id}:
+    get:
+      operationId: getBuildingTypesById
+      summary: Get building type
+      description: Returns building type detail by ID
+      tags:
+        - Building Types
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Building type retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildingTypeResponse"
+        "400":
+          description: Invalid ID parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin or operator role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building type not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+    patch:
+      operationId: patchBuildingTypesById
+      summary: Update building type
+      description: Updates a building type name or description (admin only)
+      tags:
+        - Building Types
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Building type updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildingTypeResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building type not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Building type with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBuildingTypeRequest"
+    delete:
+      operationId: deleteBuildingTypesById
+      summary: Delete building type
+      description: Deletes the type if not used by buildings (admin only)
+      tags:
+        - Building Types
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Building type deleted successfully
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - Requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building type not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Cannot delete - building type is in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+  /buildings:
+    get:
+      operationId: getBuildings
+      summary: Search buildings
+      description: Searches buildings with filters, pagination and sorting
+      tags:
+        - Buildings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Buildings retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchBuildingsResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: string
+          description: "Maximum number of results (1-100, default: 50)"
+        - in: query
+          name: offset
+          schema:
+            type: string
+          description: "Number of results to skip (default: 0)"
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: Filter by building name (partial match)
+        - in: query
+          name: address
+          schema:
+            type: string
+          description: Filter by address (partial match)
+        - in: query
+          name: zone
+          schema:
+            type: string
+          description: Filter by geographic zone
+        - in: query
+          name: buildingType
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - active
+              - inactive
+              - decommissioned
+          description: Filter by operational status
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum:
+              - name
+              - createdAt
+              - updatedAt
+          description: "Sort field (default: updatedAt)"
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: "Sort order (default: desc)"
+    post:
+      operationId: postBuildings
+      summary: Create building
+      description: Creates a new building after validating type and plant
+      tags:
+        - Buildings
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Building created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildingResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBuildingRequest"
+  /buildings/{id}:
+    get:
+      operationId: getBuildingsById
+      summary: Get building
+      description: Returns detail with active sensors and consumption
+      tags:
+        - Buildings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Building details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildingResponse"
+        "400":
+          description: Invalid ID parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+    patch:
+      operationId: patchBuildingsById
+      summary: Update building
+      description: Updates data and handles efficiency/district-heating thresholds
+      tags:
+        - Buildings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Building updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildingResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBuildingRequest"
+    delete:
+      operationId: deleteBuildingsById
+      summary: Delete building
+      description: Deletes building with associated sensors, readings and alerts
+      tags:
+        - Buildings
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Building and associated data deleted successfully
+        "400":
+          description: Invalid ID parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+  /buildings/{id}/readings:
+    get:
+      operationId: getBuildingsByIdReadings
+      summary: Get reading history
+      description: Returns history for a date range, for charts. Use
+        limit=1&sortOrder=desc for the latest reading
+      tags:
+        - Buildings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Historical readings retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetBuildingHistoryResponse"
+        "400":
+          description: Invalid date range
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+          required: true
+          description: Start date for historical data
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+          required: true
+          description: End date for historical data
+        - in: query
+          name: sensorType
+          schema:
+            type: string
+            enum:
+              - internal_temp
+              - external_temp
+              - energy_meter
+              - gas_meter
+          description: Filter by sensor type
+        - in: query
+          name: interval
+          schema:
+            type: string
+            enum:
+              - minute
+              - hour
+              - day
+          description: "Data aggregation interval (default: hour)"
+        - in: query
+          name: limit
+          schema:
+            type: string
+          description: "Maximum number of points (1-1000, default: 1000). Use
+            limit=1&sortOrder=desc for the latest point"
+        - in: query
+          name: sortOrder
+          schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+          description: "Sort order by timestamp (default: asc)"
+  /buildings/{id}/efficiency:
+    get:
+      operationId: getBuildingsByIdEfficiency
+      summary: Calculate efficiency
+      description: Calculates the building thermal efficiency over the requested period
+      tags:
+        - Buildings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Efficiency metrics calculated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetBuildingEfficiencyResponse"
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+          required: true
+          description: Start date for efficiency calculation
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+          required: true
+          description: End date for efficiency calculation
+  /sensors:
+    get:
+      operationId: getSensors
+      summary: List sensors
+      description: Returns sensors filtered by building, type and status
+      tags:
+        - Sensors
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sensors retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSensorsResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: string
+          description: "Maximum number of results (1-100, default: 50)"
+        - in: query
+          name: offset
+          schema:
+            type: string
+          description: "Number of results to skip (default: 0)"
+        - in: query
+          name: building
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+        - in: query
+          name: sensorType
+          schema:
+            type: string
+            enum:
+              - internal_temp
+              - external_temp
+              - energy_meter
+              - gas_meter
+          description: Filter by sensor type
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - active
+              - inactive
+              - maintenance
+              - error
+          description: Filter by sensor status
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum:
+              - createdAt
+              - updatedAt
+              - sensorType
+              - status
+          description: "Field to sort by (default: createdAt)"
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: "Sort order (default: desc)"
+    post:
+      operationId: postSensors
+      summary: Create sensor
+      description: Creates a new sensor for an existing building
+      tags:
+        - Sensors
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Sensor created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Building not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Sensor with this serial number already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSensorInput"
+  /sensors/{id}:
+    get:
+      operationId: getSensorsById
+      summary: Get sensor
+      description: Returns sensor detail with building data
+      tags:
+        - Sensors
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sensor details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorResponse"
+        "400":
+          description: Invalid ID parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Sensor not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+    patch:
+      operationId: patchSensorsById
+      summary: Update sensor
+      description: Updates sensor configuration and thresholds
+      tags:
+        - Sensors
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sensor updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Sensor not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Sensor with this serial number already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSensorRequest"
+    delete:
+      operationId: deleteSensorsById
+      summary: Delete sensor
+      description: Deletes sensor with associated readings and alerts
+      tags:
+        - Sensors
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Sensor deleted successfully
+        "400":
+          description: Invalid ID parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Sensor not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+  /sensors/{id}/readings:
+    get:
+      operationId: getSensorsByIdReadings
+      summary: Get sensor readings
+      description: Returns sensor reading history with pagination
+      tags:
+        - Sensors
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Readings retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetSensorReadingsResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Sensor not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+        - in: query
+          name: limit
+          schema:
+            type: string
+          description: "Maximum number of results (1-100, default: 50)"
+        - in: query
+          name: offset
+          schema:
+            type: string
+          description: "Number of results to skip (default: 0)"
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+          description: Start date for filtering readings (ISO 8601)
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$
+          description: End date for filtering readings (ISO 8601)
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: "Sort order by timestamp (default: desc)"
+  /alerts:
+    get:
+      operationId: getAlerts
+      tags:
+        - Alerts
+      summary: List alerts
+      description: Returns paginated alerts with optional filters
+      responses:
+        "200":
+          description: List of alerts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAlertsResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: string
+          description: "Maximum number of results (1-100, default: 50)"
+        - in: query
+          name: offset
+          schema:
+            type: string
+          description: "Number of results to skip (default: 0)"
+        - in: query
+          name: building
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - active
+              - acknowledged
+              - resolved
+          description: Filter by alert status
+        - in: query
+          name: severity
+          schema:
+            type: string
+            enum:
+              - low
+              - medium
+              - high
+              - critical
+          description: Filter by severity
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum:
+              - createdAt
+              - updatedAt
+              - severity
+              - status
+          description: "Field to sort by (default: createdAt)"
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: "Sort order (default: desc)"
+  /alerts/{id}:
+    get:
+      operationId: getAlertsById
+      tags:
+        - Alerts
+      summary: Get alert
+      description: Returns single alert detail by ID
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Alert retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Alert not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Invalid alert ID format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+    patch:
+      operationId: patchAlertsById
+      tags:
+        - Alerts
+      summary: Update alert status
+      description: Updates an alert status (acknowledge or resolve)
+      responses:
+        "200":
+          description: Alert status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Alert not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Invalid alert status transition (already resolved or not active)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Invalid alert ID format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            $ref: "#/components/schemas/ObjectId"
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAlertStatusRequest"
+  /metrics:
+    get:
+      operationId: getMetrics
+      summary: Get system metrics
+      description: "Returns aggregated KPIs: sensors, active alerts and consumption"
+      tags:
+        - Metrics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: System metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /metrics/timeseries:
+    get:
+      operationId: getMetricsTimeseries
+      summary: Get metrics timeseries
+      description: Returns aggregated electricity and gas per interval (hour/day/week)
+      tags:
+        - Metrics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Historical metrics data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsHistoryResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            anyOf:
+              - type: string
+                format: date-time
+                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+              - type: string
+                format: date
+                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          required: true
+          description: Start of the time range (ISO 8601)
+        - in: query
+          name: endDate
+          schema:
+            anyOf:
+              - type: string
+                format: date-time
+                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+              - type: string
+                format: date
+                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          required: true
+          description: End of the time range (ISO 8601)
+        - in: query
+          name: interval
+          schema:
+            default: day
+            type: string
+            enum:
+              - hour
+              - day
+              - week
+          description: "Bucket interval for aggregation (default: day)"
+  /settings:
+    get:
+      operationId: getSettings
+      summary: Get configuration
+      description: Returns the current system configuration
+      tags:
+        - Settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: System configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettingsResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden – requires admin or operator role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: patchSettings
+      summary: Update configuration
+      description: Updates polling, notifications and retention (admin only)
+      tags:
+        - Settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: System configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettingsResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsRequest"
+  /readings:
+    get:
+      operationId: getReadings
+      summary: Export readings
+      description: Exports filtered readings for buildings and period as CSV or JSON
+        (admin only)
+      tags:
+        - Readings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Readings in requested format (CSV or JSON)
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: One or more buildings were not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: query
+          name: buildingIds
+          schema:
+            type: string
+            minLength: 1
+          description: Comma-separated list of building IDs
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          description: First date to include (YYYY-MM-DD)
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          description: Last date to include (YYYY-MM-DD)
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum:
+              - csv
+              - json
+          description: Representation format
+  /reports:
+    get:
+      operationId: getReports
+      summary: Download energy report
+      description: Generates the aggregated report for buildings and period as PDF or
+        Excel (admin only)
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Report file (PDF or Excel) containing aggregated consumption data
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid report parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: One or more buildings were not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      parameters:
+        - in: query
+          name: buildingIds
+          schema:
+            type: string
+            minLength: 1
+          required: true
+          description: Comma-separated list of building IDs to include in the report
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          required: true
+          description: First date to include (YYYY-MM-DD)
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))$
+          required: true
+          description: Last date to include (YYYY-MM-DD)
+        - in: query
+          name: format
+          schema:
+            default: pdf
+            type: string
+            enum:
+              - pdf
+              - xlsx
+          description: Report file format (pdf or xlsx)
+  /backups:
+    get:
+      operationId: getBackups
+      summary: Download backup
+      description: Generates and downloads the full JSON database backup (admin only)
+      tags:
+        - Backups
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: JSON backup file download
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Forbidden – requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

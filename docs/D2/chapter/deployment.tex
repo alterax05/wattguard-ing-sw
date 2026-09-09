@@ -1,0 +1,51 @@
+\section{Deployment}
+\label{chap:deployment}
+
+Un'istanza del backend è ospitata sulla piattaforma \emph{render.com} ed è disponibile al link \newline \href{https://wattguard.me}{wattguard.me}.
+Sia backend che frontend vengono serviti presso questo indirizzo.
+
+Il database MongoDB è invece ospitato sulla piattaforma Atlas.
+
+\subsection{Limitazioni del deployment}
+Dovute a limitazioni del piano gratuito della piattaforma Render, l'istanza dell'applicazione viene sospesa dopo 15 minuti di inattività.
+Appena viene ricevuta una nuova richiesta HTTP, l'istanza torna operativa in circa un minuto (Cold Start). Di conseguenza, la prima richiesta avrà una latenza maggiore, mentre le richieste successive avranno un tempo di risposta standard.
+
+Per superare le limitazioni imposte dalla piattaforma sono state impiegate le seguenti soluzioni: 
+\begin{itemize}
+    \item \textbf{Migrazione da SMTP a Resend}: Il piano gratuito di Render non permette connnesioni a server SMTP esterni. Per ovviare al problema si è impiegata il servizio  \textbf{Resend} e la sua libreria. Questo servizio, anch'esso gratuito, permette di mandare mail tramite richieste HTTP, aggirando le restrizioni imposte.
+    \item \textbf{Dominio certificato per le mail}: Per usufruire dei servizi di Resend è necessario possedere un dominio. Ci siamo affidati a \textbf{Namecheap} registrando il dominio \texttt{wattguard.me} e configurando i record DNS richiesti (record TXT)
+    \item \textbf{Simulatore in-process} Dato che non disponiamo né di un broker MQTT esterno, né di ulteriori risorse di calcolo per simulare una topologia di sensori realistica, tutte le misurazioni dei sensori sono create con un simulatore interno all'applicazione. Questa scelta comporta un limite: l'eventuale sospensione dell'istanza di Render comporta l'interruzione anche del simulatore, facendo apparire i sensori offline. 
+\end{itemize}
+
+\subsection{Configurazione CI/CD}
+La configurazione CI/CD basata su GitHub Action esegue le verifiche automatiche del codice ad ogni push sui rami \texttt{main} e \texttt{develop}.
+Le verifiche comprendono:
+\begin{itemize}
+    \item \texttt{bun run check} Controllo dei tipi statici da parte del compilatore TypeScript;
+    \item \texttt{bun run lint} Analisi statica del codice (linting) fornita da \texttt{oxlint};
+    \item \texttt{bun run test} Esecuzione dei test unitari e di integrazione;
+    \item  \texttt{bun run build} Generazione dei file di bundle e degli asset finali.
+\end{itemize}
+Nel caso le verifiche abbiano successo e ci si trova nel ramo \texttt{main} viene anche eseguito il deploy su Render.
+
+\subsection{Credenziali e accesso docenti}
+Per accedere al deploy dell'applicazione è possibile utilizzare i seguenti account:
+\begin{center}
+\textbf{Utente amministratore}
+    \begin{itemize}
+        \item \textbf{Email}: \texttt{admin@wattguard.local}
+        \item \textbf{Password}: \texttt{admin123}
+    \end{itemize}
+\textbf{Utente operatore}
+    \begin{itemize}
+        \item \textbf{Email}: \texttt{operator@wattguard.local}
+        \item \textbf{Password}: \texttt{operator456}
+    \end{itemize}
+\end{center}
+\vspace{1cm}
+In caso di problemi con il deployment contattare:
+\begin{itemize}
+    \item \href{mailto:michele.porcellato@studenti.unitn.it}{michele.porcellato@studenti.unitn.it}
+    \item \href{mailto:marco.piovesan-2@studenti.unitn.it}{marco.piovesan-2@studenti.unitn.it}
+    \item \href{mailto:alessio.pesaresi@studenti.unitn.it}{alessio.pesaresi@studenti.unitn.it}
+\end{itemize}

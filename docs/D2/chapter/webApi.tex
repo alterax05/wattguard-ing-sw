@@ -1,0 +1,13 @@
+\section{Web API}
+\label{chap:webApi}
+
+Le specifiche complete delle API sono state documentate secondo lo standard \textbf{OpenAPI 3.1.0} e sono consultabili su \texttt{\href{https://wattguard.me/api/v1/docs}{https://wattguard.me/api/v1/docs}}
+oppure su \href{https://raw.githubusercontent.com/alterax05/wattguard-ing-sw/refs/heads/main/docs/api-doc.yaml}{GitHub}
+
+\paragraph{Progettazione e note di design: }
+L'API segue i principi \emph{RESTful}, organizzando le risorse in modo gerarchico sotto il prefisso \texttt{/api/v1}. 
+Si è deciso inoltre di definire gli schemi di input/output con la libreria \texttt{zod}, integrandoli nel documento OpenAPI tramite la libreria hono-openapi.
+In questo modo, si riduce il rischio che la documentazione non rispecchi il comportamento effettivo del codice.
+Si è inoltre deciso di utilizzare il paradigma "\texttt{API Link}" per permettere una navigazione più semplice e intuitiva delle risorse fornite dall'API.
+
+\inputminted[breaklines, breakanywhere]{yaml}{chapter/api-doc.yaml}
